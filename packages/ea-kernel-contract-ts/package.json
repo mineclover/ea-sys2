@@ -13,7 +13,8 @@
   "scripts": {
     "sync:contracts": "node scripts/sync-contracts.mjs",
     "check:contracts": "node scripts/sync-contracts.mjs --check",
-    "build": "pnpm run sync:contracts && rm -rf lib && tsc -p tsconfig.json"
+    "build": "pnpm run sync:contracts && rm -rf lib && tsc -p tsconfig.json",
+    "test": "pnpm run build && node --test test/*.test.cjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

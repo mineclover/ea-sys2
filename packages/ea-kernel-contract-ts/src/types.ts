@@ -10,12 +10,148 @@ export interface IContractPaths {
   vectorsPath: string;
 }
 
+export type KernelLayer = "L1" | "L2" | "L3" | "L4";
+
+export type KernelFeedbackTargetType =
+  | "entity_type"
+  | "relation_type"
+  | "rule"
+  | "layer_constraint";
+
+export interface IKernelSchemaStats {
+  attributes: number;
+  entities: number;
+  relations: number;
+}
+
+export interface IKernelSchemaAttribute {
+  name: string;
+  value_type: string;
+}
+
+export interface IKernelSchemaEntity {
+  name: string;
+  layer: KernelLayer;
+  is_abstract: boolean;
+  owns: string[];
+  plays: string[];
+  description: string;
+  parent?: string;
+  owns_key?: string;
+}
+
+export interface IKernelSchemaRole {
+  name: string;
+  player: string;
+}
+
+export interface IKernelSchemaRelation {
+  name: string;
+  layer: KernelLayer;
+  roles: IKernelSchemaRole[];
+  owns: string[];
+  description: string;
+  parent?: string;
+  owns_key?: string;
+}
+
+export interface IKernelSchemaSnapshot {
+  snapshot_kind: "ea_kernel_schema_contract";
+  contract_version: string;
+  kernel_version: string;
+  generated_by: string;
+  stats: IKernelSchemaStats;
+  attributes: IKernelSchemaAttribute[];
+  entities: IKernelSchemaEntity[];
+  relations: IKernelSchemaRelation[];
+}
+
+export interface IKernelRuleCondition {
+  type: string;
+  parameters: Record<string, string>;
+}
+
+export interface IKernelRuleMetadata {
+  domain: string;
+  tags: string[];
+  category: string;
+  confidence: string;
+  source: string;
+  established_version: string;
+  rationale: string;
+  group: string;
+}
+
+export interface IKernelRule {
+  id: string;
+  source_pattern: string;
+  target_pattern: string;
+  relation: string;
+  valid: boolean;
+  priority: number;
+  conditions: IKernelRuleCondition[];
+  notes: string;
+  metadata?: IKernelRuleMetadata;
+}
+
+export interface IKernelLayerConstraint {
+  id: string;
+  source_layer: KernelLayer;
+  target_layer: KernelLayer;
+  forbidden_relations: string[];
+  allowed_pairs: [string, string][];
+  priority: number;
+  notes: string;
+}
+
+export interface IKernelRulesStats {
+  total_rules: number;
+  explicit_rules: number;
+  fallback_rules: number;
+  layer_constraints: number;
+  metadata_entries: number;
+}
+
+export interface IKernelRulesSnapshot {
+  snapshot_kind: "ea_kernel_rules_contract";
+  contract_version: string;
+  kernel_version: string;
+  generated_by: string;
+  stats: IKernelRulesStats;
+  explicit_rules: IKernelRule[];
+  fallback_rules: IKernelRule[];
+  layer_constraints: IKernelLayerConstraint[];
+}
+
+export interface IKernelJudgmentVector {
+  id: string;
+  triple: [string, string, string];
+  expected_verdict: boolean;
+  expected_confidence: string;
+  expected_winner_rule_id: string | null;
+}
+
+export interface IKernelVectorsStats {
+  vectors: number;
+  allow_vectors: number;
+  deny_vectors: number;
+}
+
+export interface IKernelJudgmentVectorsSnapshot {
+  snapshot_kind: "ea_kernel_judgment_vectors_contract";
+  contract_version: string;
+  kernel_version: string;
+  generated_by: string;
+  stats: IKernelVectorsStats;
+  vectors: IKernelJudgmentVector[];
+}
+
 export interface IKernelContractBundle {
   kernelVersion: string;
   paths: IContractPaths;
-  schema: Record<string, unknown>;
-  rules: Record<string, unknown>;
-  vectors: Record<string, unknown>;
+  schema: IKernelSchemaSnapshot;
+  rules: IKernelRulesSnapshot;
+  vectors: IKernelJudgmentVectorsSnapshot;
 }
 
 export interface IKernelContractSummary {
@@ -27,4 +163,25 @@ export interface IKernelContractSummary {
   totalRules: number;
   vectors: number;
   error?: string;
+}
+
+export interface IKernelContractIndex {
+  entityByName: ReadonlyMap<string, IKernelSchemaEntity>;
+  relationByName: ReadonlyMap<string, IKernelSchemaRelation>;
+  attributeByName: ReadonlyMap<string, IKernelSchemaAttribute>;
+  ruleById: ReadonlyMap<string, IKernelRule>;
+  fallbackRuleByRelation: ReadonlyMap<string, IKernelRule>;
+  layerConstraintById: ReadonlyMap<string, IKernelLayerConstraint>;
+  vectorById: ReadonlyMap<string, IKernelJudgmentVector>;
+}
+
+export interface IKernelContractModel {
+  bundle: IKernelContractBundle;
+  index: IKernelContractIndex;
+}
+
+export interface IKernelFeedbackTarget {
+  targetType: KernelFeedbackTargetType;
+  targetId: string;
+  canonicalId: string;
 }

@@ -146,6 +146,8 @@ def _rule_payload(
 
 
 def _layer_constraint_id(index: int, constraint: LayerConstraint) -> str:
+    if constraint.id:
+        return constraint.id
     forbidden = "-".join(constraint.forbidden_relations) if constraint.forbidden_relations else "none"
     return (
         f"lc-{index:02d}-"

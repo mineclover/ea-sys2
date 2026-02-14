@@ -4,10 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VECTORS_FILE = exports.RULES_FILE = exports.SCHEMA_FILE = exports.EA_KERNEL_CONTRACT_DIR = void 0;
+exports.validateKernelContractBundle = validateKernelContractBundle;
+exports.buildKernelContractIndex = buildKernelContractIndex;
 exports.resolveKernelContractDir = resolveKernelContractDir;
 exports.resolveKernelContractPaths = resolveKernelContractPaths;
-exports.validateKernelContractBundle = validateKernelContractBundle;
 exports.loadKernelContractBundle = loadKernelContractBundle;
+exports.buildKernelContractModel = buildKernelContractModel;
+exports.toKernelFeedbackTarget = toKernelFeedbackTarget;
+exports.parseKernelFeedbackTarget = parseKernelFeedbackTarget;
+exports.resolveKernelFeedbackTarget = resolveKernelFeedbackTarget;
+exports.getEntityRequiredKeys = getEntityRequiredKeys;
 exports.summarizeKernelContract = summarizeKernelContract;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
@@ -20,29 +26,401 @@ function asRecord(value, context) {
         throw new Error(`${context} must be an object`);
     return value;
 }
-function requireString(payload, key, context) {
+function readString(payload, key, context) {
     const value = payload[key];
-    if (typeof value !== "string")
-        throw new Error(`${context}.${key} must be a string`);
+    if (typeof value !== "string" || value.trim().length === 0)
+        throw new Error(`${context}.${key} must be a non-empty string`);
     return value;
 }
-function requireArray(payload, key, context) {
+function readOptionalString(payload, key, context) {
     const value = payload[key];
-    if (!Array.isArray(value))
+    if (value === undefined || value === null)
+        return undefined;
+    if (typeof value !== "string" || value.trim().length === 0)
+        throw new Error(`${context}.${key} must be a non-empty string`);
+    return value;
+}
+function readBoolean(payload, key, context) {
+    const value = payload[key];
+    if (typeof value !== "boolean")
+        throw new Error(`${context}.${key} must be a boolean`);
+    return value;
+}
+function readNumber(payload, key, context) {
+    const value = payload[key];
+    if (typeof value !== "number" || Number.isFinite(value) === false)
+        throw new Error(`${context}.${key} must be a finite number`);
+    return value;
+}
+function readArray(payload, key, context) {
+    const value = payload[key];
+    if (Array.isArray(value) === false)
         throw new Error(`${context}.${key} must be an array`);
     return value;
 }
-function requireObject(payload, key, context) {
-    const value = payload[key];
-    if (typeof value !== "object" || value === null || Array.isArray(value))
-        throw new Error(`${context}.${key} must be an object`);
-    return value;
+function readStringArray(payload, key, context) {
+    return readArray(payload, key, context).map((value, index) => {
+        if (typeof value !== "string")
+            throw new Error(`${context}.${key}[${index}] must be a string`);
+        return value;
+    });
+}
+function readLayer(value, context) {
+    if (value === "L1" || value === "L2" || value === "L3" || value === "L4")
+        return value;
+    throw new Error(`${context} must be one of L1/L2/L3/L4`);
 }
 function loadJson(filePath) {
     if (!node_fs_1.default.existsSync(filePath))
         throw new Error(`contract snapshot not found: ${filePath}`);
     const raw = node_fs_1.default.readFileSync(filePath, "utf8");
     return asRecord(JSON.parse(raw), filePath);
+}
+function parseSchemaSnapshot(payload) {
+    const context = "schema";
+    const snapshotKind = readString(payload, "snapshot_kind", context);
+    if (snapshotKind !== "ea_kernel_schema_contract")
+        throw new Error(`schema.snapshot_kind unexpected: ${snapshotKind}`);
+    const stats = asRecord(payload.stats, "schema.stats");
+    const attributes = readArray(payload, "attributes", context).map((entry, index) => parseSchemaAttribute(asRecord(entry, `schema.attributes[${index}]`), index));
+    const entities = readArray(payload, "entities", context).map((entry, index) => parseSchemaEntity(asRecord(entry, `schema.entities[${index}]`), index));
+    const relations = readArray(payload, "relations", context).map((entry, index) => parseSchemaRelation(asRecord(entry, `schema.relations[${index}]`), index));
+    return {
+        snapshot_kind: "ea_kernel_schema_contract",
+        contract_version: readString(payload, "contract_version", context),
+        kernel_version: readString(payload, "kernel_version", context),
+        generated_by: readString(payload, "generated_by", context),
+        stats: {
+            attributes: readNumber(stats, "attributes", "schema.stats"),
+            entities: readNumber(stats, "entities", "schema.stats"),
+            relations: readNumber(stats, "relations", "schema.stats"),
+        },
+        attributes,
+        entities,
+        relations,
+    };
+}
+function parseSchemaAttribute(payload, index) {
+    const context = `schema.attributes[${index}]`;
+    return {
+        name: readString(payload, "name", context),
+        value_type: readString(payload, "value_type", context),
+    };
+}
+function parseSchemaEntity(payload, index) {
+    const context = `schema.entities[${index}]`;
+    return {
+        name: readString(payload, "name", context),
+        layer: readLayer(payload.layer, `${context}.layer`),
+        is_abstract: readBoolean(payload, "is_abstract", context),
+        owns: readStringArray(payload, "owns", context),
+        plays: readStringArray(payload, "plays", context),
+        description: readString(payload, "description", context),
+        parent: readOptionalString(payload, "parent", context),
+        owns_key: readOptionalString(payload, "owns_key", context),
+    };
+}
+function parseSchemaRelation(payload, index) {
+    const context = `schema.relations[${index}]`;
+    const roles = readArray(payload, "roles", context).map((entry, roleIndex) => parseSchemaRole(asRecord(entry, `${context}.roles[${roleIndex}]`), index, roleIndex));
+    return {
+        name: readString(payload, "name", context),
+        layer: readLayer(payload.layer, `${context}.layer`),
+        roles,
+        owns: readStringArray(payload, "owns", context),
+        description: readString(payload, "description", context),
+        parent: readOptionalString(payload, "parent", context),
+        owns_key: readOptionalString(payload, "owns_key", context),
+    };
+}
+function parseSchemaRole(payload, relationIndex, roleIndex) {
+    const context = `schema.relations[${relationIndex}].roles[${roleIndex}]`;
+    return {
+        name: readString(payload, "name", context),
+        player: readString(payload, "player", context),
+    };
+}
+function parseRulesSnapshot(payload) {
+    const context = "rules";
+    const snapshotKind = readString(payload, "snapshot_kind", context);
+    if (snapshotKind !== "ea_kernel_rules_contract")
+        throw new Error(`rules.snapshot_kind unexpected: ${snapshotKind}`);
+    const stats = asRecord(payload.stats, "rules.stats");
+    const explicitRules = readArray(payload, "explicit_rules", context).map((entry, index) => parseRule(asRecord(entry, `rules.explicit_rules[${index}]`), index, false));
+    const fallbackRules = readArray(payload, "fallback_rules", context).map((entry, index) => parseRule(asRecord(entry, `rules.fallback_rules[${index}]`), index, true));
+    const layerConstraints = readArray(payload, "layer_constraints", context).map((entry, index) => parseLayerConstraint(asRecord(entry, `rules.layer_constraints[${index}]`), index));
+    return {
+        snapshot_kind: "ea_kernel_rules_contract",
+        contract_version: readString(payload, "contract_version", context),
+        kernel_version: readString(payload, "kernel_version", context),
+        generated_by: readString(payload, "generated_by", context),
+        stats: {
+            total_rules: readNumber(stats, "total_rules", "rules.stats"),
+            explicit_rules: readNumber(stats, "explicit_rules", "rules.stats"),
+            fallback_rules: readNumber(stats, "fallback_rules", "rules.stats"),
+            layer_constraints: readNumber(stats, "layer_constraints", "rules.stats"),
+            metadata_entries: readNumber(stats, "metadata_entries", "rules.stats"),
+        },
+        explicit_rules: explicitRules,
+        fallback_rules: fallbackRules,
+        layer_constraints: layerConstraints,
+    };
+}
+function parseRule(payload, index, isFallback) {
+    const context = isFallback
+        ? `rules.fallback_rules[${index}]`
+        : `rules.explicit_rules[${index}]`;
+    const conditions = readArray(payload, "conditions", context).map((entry, conditionIndex) => parseRuleCondition(asRecord(entry, `${context}.conditions[${conditionIndex}]`), context, conditionIndex));
+    const metadataValue = payload.metadata;
+    const metadata = metadataValue === undefined
+        ? undefined
+        : parseRuleMetadata(asRecord(metadataValue, `${context}.metadata`), context);
+    return {
+        id: readString(payload, "id", context),
+        source_pattern: readString(payload, "source_pattern", context),
+        target_pattern: readString(payload, "target_pattern", context),
+        relation: readString(payload, "relation", context),
+        valid: readBoolean(payload, "valid", context),
+        priority: readNumber(payload, "priority", context),
+        conditions,
+        notes: readString(payload, "notes", context),
+        ...(metadata ? { metadata } : {}),
+    };
+}
+function parseRuleCondition(payload, context, index) {
+    const conditionContext = `${context}.conditions[${index}]`;
+    const parametersRaw = payload.parameters;
+    const parameterObject = parametersRaw === undefined
+        ? {}
+        : asRecord(parametersRaw, `${conditionContext}.parameters`);
+    const parameters = {};
+    for (const [key, value] of Object.entries(parameterObject)) {
+        if (typeof value !== "string")
+            throw new Error(`${conditionContext}.parameters.${key} must be a string`);
+        parameters[key] = value;
+    }
+    return {
+        type: readString(payload, "type", conditionContext),
+        parameters,
+    };
+}
+function parseRuleMetadata(payload, context) {
+    return {
+        domain: readString(payload, "domain", `${context}.metadata`),
+        tags: readStringArray(payload, "tags", `${context}.metadata`),
+        category: readString(payload, "category", `${context}.metadata`),
+        confidence: readString(payload, "confidence", `${context}.metadata`),
+        source: readString(payload, "source", `${context}.metadata`),
+        established_version: readString(payload, "established_version", `${context}.metadata`),
+        rationale: readString(payload, "rationale", `${context}.metadata`),
+        group: readString(payload, "group", `${context}.metadata`),
+    };
+}
+function parseLayerConstraint(payload, index) {
+    const context = `rules.layer_constraints[${index}]`;
+    const allowedPairsRaw = readArray(payload, "allowed_pairs", context);
+    const allowedPairs = allowedPairsRaw.map((entry, pairIndex) => {
+        if (Array.isArray(entry) === false || entry.length !== 2)
+            throw new Error(`${context}.allowed_pairs[${pairIndex}] must contain 2 items`);
+        const source = entry[0];
+        const target = entry[1];
+        if (typeof source !== "string" || typeof target !== "string")
+            throw new Error(`${context}.allowed_pairs[${pairIndex}] must contain strings`);
+        return [source, target];
+    });
+    return {
+        id: readString(payload, "id", context),
+        source_layer: readLayer(payload.source_layer, `${context}.source_layer`),
+        target_layer: readLayer(payload.target_layer, `${context}.target_layer`),
+        forbidden_relations: readStringArray(payload, "forbidden_relations", context),
+        allowed_pairs: allowedPairs,
+        priority: readNumber(payload, "priority", context),
+        notes: readString(payload, "notes", context),
+    };
+}
+function parseVectorsSnapshot(payload) {
+    const context = "vectors";
+    const snapshotKind = readString(payload, "snapshot_kind", context);
+    if (snapshotKind !== "ea_kernel_judgment_vectors_contract")
+        throw new Error(`vectors.snapshot_kind unexpected: ${snapshotKind}`);
+    const stats = asRecord(payload.stats, "vectors.stats");
+    const vectors = readArray(payload, "vectors", context).map((entry, index) => parseVector(asRecord(entry, `vectors.vectors[${index}]`), index));
+    return {
+        snapshot_kind: "ea_kernel_judgment_vectors_contract",
+        contract_version: readString(payload, "contract_version", context),
+        kernel_version: readString(payload, "kernel_version", context),
+        generated_by: readString(payload, "generated_by", context),
+        stats: {
+            vectors: readNumber(stats, "vectors", "vectors.stats"),
+            allow_vectors: readNumber(stats, "allow_vectors", "vectors.stats"),
+            deny_vectors: readNumber(stats, "deny_vectors", "vectors.stats"),
+        },
+        vectors,
+    };
+}
+function parseVector(payload, index) {
+    const context = `vectors.vectors[${index}]`;
+    const tripleRaw = readArray(payload, "triple", context);
+    if (tripleRaw.length !== 3)
+        throw new Error(`${context}.triple must contain 3 items`);
+    const source = tripleRaw[0];
+    const target = tripleRaw[1];
+    const relation = tripleRaw[2];
+    if (typeof source !== "string" ||
+        typeof target !== "string" ||
+        typeof relation !== "string")
+        throw new Error(`${context}.triple must contain strings`);
+    const winnerRuleIdRaw = payload.expected_winner_rule_id;
+    if (winnerRuleIdRaw !== null &&
+        winnerRuleIdRaw !== undefined &&
+        typeof winnerRuleIdRaw !== "string")
+        throw new Error(`${context}.expected_winner_rule_id must be string or null`);
+    return {
+        id: readString(payload, "id", context),
+        triple: [source, target, relation],
+        expected_verdict: readBoolean(payload, "expected_verdict", context),
+        expected_confidence: readString(payload, "expected_confidence", context),
+        expected_winner_rule_id: winnerRuleIdRaw === undefined ? null : winnerRuleIdRaw,
+    };
+}
+function checkUnique(values, context, issues) {
+    const seen = new Set();
+    for (const value of values) {
+        if (seen.has(value))
+            issues.push(`${context} duplicated: ${value}`);
+        seen.add(value);
+    }
+}
+function patternBase(pattern) {
+    return pattern.endsWith("*") ? pattern.slice(0, -1) : pattern;
+}
+function isKnownPattern(pattern, entities) {
+    if (pattern === "*")
+        return true;
+    const base = patternBase(pattern);
+    return entities.has(base);
+}
+function validateKernelContractBundle(bundle) {
+    const issues = [];
+    const entityNames = bundle.schema.entities.map((entity) => entity.name);
+    const relationNames = bundle.schema.relations.map((relation) => relation.name);
+    const attributeNames = bundle.schema.attributes.map((attribute) => attribute.name);
+    const relationSet = new Set(relationNames);
+    const entitySet = new Set(entityNames);
+    checkUnique(attributeNames, "schema.attributes.name", issues);
+    checkUnique(entityNames, "schema.entities.name", issues);
+    checkUnique(relationNames, "schema.relations.name", issues);
+    for (const entity of bundle.schema.entities) {
+        if (entity.parent !== undefined && entitySet.has(entity.parent) === false)
+            issues.push(`schema.entities.parent unknown: ${entity.name} -> ${entity.parent}`);
+        if (entity.owns_key !== undefined && attributeNames.includes(entity.owns_key) === false)
+            issues.push(`schema.entities.owns_key unknown attribute: ${entity.name} -> ${entity.owns_key}`);
+        for (const own of entity.owns)
+            if (attributeNames.includes(own) === false)
+                issues.push(`schema.entities.owns unknown attribute: ${entity.name} -> ${own}`);
+    }
+    for (const relation of bundle.schema.relations) {
+        if (relation.parent !== undefined &&
+            relationSet.has(relation.parent) === false)
+            issues.push(`schema.relations.parent unknown: ${relation.name} -> ${relation.parent}`);
+        if (relation.owns_key !== undefined &&
+            attributeNames.includes(relation.owns_key) === false)
+            issues.push(`schema.relations.owns_key unknown attribute: ${relation.name} -> ${relation.owns_key}`);
+        for (const own of relation.owns)
+            if (attributeNames.includes(own) === false)
+                issues.push(`schema.relations.owns unknown attribute: ${relation.name} -> ${own}`);
+        for (const role of relation.roles)
+            if (entitySet.has(role.player) === false)
+                issues.push(`schema.relations.roles.player unknown entity: ${relation.name}:${role.name} -> ${role.player}`);
+    }
+    const explicitRules = bundle.rules.explicit_rules;
+    const fallbackRules = bundle.rules.fallback_rules;
+    const allRules = [...explicitRules, ...fallbackRules];
+    checkUnique(allRules.map((rule) => rule.id), "rules.rule.id", issues);
+    for (const rule of allRules) {
+        if (relationSet.has(rule.relation) === false)
+            issues.push(`rules.rule relation unknown: ${rule.id} -> ${rule.relation}`);
+        if (isKnownPattern(rule.source_pattern, entitySet) === false)
+            issues.push(`rules.rule source_pattern unknown: ${rule.id} -> ${rule.source_pattern}`);
+        if (isKnownPattern(rule.target_pattern, entitySet) === false)
+            issues.push(`rules.rule target_pattern unknown: ${rule.id} -> ${rule.target_pattern}`);
+    }
+    checkUnique(fallbackRules.map((rule) => rule.relation), "rules.fallback_rules.relation", issues);
+    const metadataCount = explicitRules.filter((rule) => rule.metadata !== undefined).length;
+    if (metadataCount !== bundle.rules.stats.metadata_entries)
+        issues.push(`rules.stats.metadata_entries mismatch: expected=${bundle.rules.stats.metadata_entries} actual=${metadataCount}`);
+    for (const constraint of bundle.rules.layer_constraints) {
+        for (const relation of constraint.forbidden_relations)
+            if (relationSet.has(relation) === false)
+                issues.push(`rules.layer_constraints.forbidden_relations unknown relation: ${constraint.id} -> ${relation}`);
+        for (const [source, target] of constraint.allowed_pairs) {
+            if (isKnownPattern(source, entitySet) === false)
+                issues.push(`rules.layer_constraints.allowed_pairs source unknown: ${constraint.id} -> ${source}`);
+            if (isKnownPattern(target, entitySet) === false)
+                issues.push(`rules.layer_constraints.allowed_pairs target unknown: ${constraint.id} -> ${target}`);
+        }
+    }
+    checkUnique(bundle.rules.layer_constraints.map((constraint) => constraint.id), "rules.layer_constraints.id", issues);
+    const allRuleIds = new Set(allRules.map((rule) => rule.id));
+    const vectorIds = bundle.vectors.vectors.map((vector) => vector.id);
+    checkUnique(vectorIds, "vectors.vectors.id", issues);
+    for (const vector of bundle.vectors.vectors) {
+        const [source, target, relation] = vector.triple;
+        if (entitySet.has(source) === false)
+            issues.push(`vectors.triple source unknown: ${vector.id} -> ${source}`);
+        if (entitySet.has(target) === false)
+            issues.push(`vectors.triple target unknown: ${vector.id} -> ${target}`);
+        if (relationSet.has(relation) === false)
+            issues.push(`vectors.triple relation unknown: ${vector.id} -> ${relation}`);
+        if (vector.expected_winner_rule_id !== null &&
+            allRuleIds.has(vector.expected_winner_rule_id) === false)
+            issues.push(`vectors.expected_winner_rule_id unknown: ${vector.id} -> ${vector.expected_winner_rule_id}`);
+    }
+    if (bundle.schema.stats.attributes !== bundle.schema.attributes.length)
+        issues.push(`schema.stats.attributes mismatch: expected=${bundle.schema.stats.attributes} actual=${bundle.schema.attributes.length}`);
+    if (bundle.schema.stats.entities !== bundle.schema.entities.length)
+        issues.push(`schema.stats.entities mismatch: expected=${bundle.schema.stats.entities} actual=${bundle.schema.entities.length}`);
+    if (bundle.schema.stats.relations !== bundle.schema.relations.length)
+        issues.push(`schema.stats.relations mismatch: expected=${bundle.schema.stats.relations} actual=${bundle.schema.relations.length}`);
+    if (bundle.rules.stats.explicit_rules !== explicitRules.length)
+        issues.push(`rules.stats.explicit_rules mismatch: expected=${bundle.rules.stats.explicit_rules} actual=${explicitRules.length}`);
+    if (bundle.rules.stats.fallback_rules !== fallbackRules.length)
+        issues.push(`rules.stats.fallback_rules mismatch: expected=${bundle.rules.stats.fallback_rules} actual=${fallbackRules.length}`);
+    if (bundle.rules.stats.layer_constraints !== bundle.rules.layer_constraints.length)
+        issues.push(`rules.stats.layer_constraints mismatch: expected=${bundle.rules.stats.layer_constraints} actual=${bundle.rules.layer_constraints.length}`);
+    const totalRules = explicitRules.length + fallbackRules.length;
+    if (bundle.rules.stats.total_rules !== totalRules)
+        issues.push(`rules.stats.total_rules mismatch: expected=${bundle.rules.stats.total_rules} actual=${totalRules}`);
+    if (bundle.vectors.stats.vectors !== bundle.vectors.vectors.length)
+        issues.push(`vectors.stats.vectors mismatch: expected=${bundle.vectors.stats.vectors} actual=${bundle.vectors.vectors.length}`);
+    const allowVectors = bundle.vectors.vectors.filter((vector) => vector.expected_verdict).length;
+    const denyVectors = bundle.vectors.vectors.length - allowVectors;
+    if (bundle.vectors.stats.allow_vectors !== allowVectors)
+        issues.push(`vectors.stats.allow_vectors mismatch: expected=${bundle.vectors.stats.allow_vectors} actual=${allowVectors}`);
+    if (bundle.vectors.stats.deny_vectors !== denyVectors)
+        issues.push(`vectors.stats.deny_vectors mismatch: expected=${bundle.vectors.stats.deny_vectors} actual=${denyVectors}`);
+    const versions = new Set([
+        bundle.schema.kernel_version,
+        bundle.rules.kernel_version,
+        bundle.vectors.kernel_version,
+    ]);
+    if (versions.size > 1)
+        issues.push(`kernel_version mismatch across snapshots: ${Array.from(versions).join(", ")}`);
+    return issues;
+}
+function buildKernelContractIndex(bundle) {
+    return {
+        entityByName: new Map(bundle.schema.entities.map((entity) => [entity.name, entity])),
+        relationByName: new Map(bundle.schema.relations.map((relation) => [relation.name, relation])),
+        attributeByName: new Map(bundle.schema.attributes.map((attribute) => [attribute.name, attribute])),
+        ruleById: new Map([...bundle.rules.explicit_rules, ...bundle.rules.fallback_rules].map((rule) => [
+            rule.id,
+            rule,
+        ])),
+        fallbackRuleByRelation: new Map(bundle.rules.fallback_rules.map((rule) => [rule.relation, rule])),
+        layerConstraintById: new Map(bundle.rules.layer_constraints.map((constraint) => [constraint.id, constraint])),
+        vectorById: new Map(bundle.vectors.vectors.map((vector) => [vector.id, vector])),
+    };
 }
 function resolveKernelContractDir(options) {
     const explicit = options === null || options === void 0 ? void 0 : options.contractDir;
@@ -63,55 +441,13 @@ function resolveKernelContractPaths(options) {
         vectorsPath: node_path_1.default.join(contractDir, exports.VECTORS_FILE),
     };
 }
-function validateKernelContractBundle(bundle) {
-    const issues = [];
-    try {
-        const schemaKind = requireString(bundle.schema, "snapshot_kind", "schema");
-        const schemaVersion = requireString(bundle.schema, "kernel_version", "schema");
-        requireObject(bundle.schema, "stats", "schema");
-        requireArray(bundle.schema, "entities", "schema");
-        if (schemaKind !== "ea_kernel_schema_contract")
-            issues.push(`schema.snapshot_kind unexpected: ${schemaKind}`);
-        const rulesKind = requireString(bundle.rules, "snapshot_kind", "rules");
-        const rulesVersion = requireString(bundle.rules, "kernel_version", "rules");
-        requireObject(bundle.rules, "stats", "rules");
-        requireArray(bundle.rules, "explicit_rules", "rules");
-        requireArray(bundle.rules, "fallback_rules", "rules");
-        const layerConstraints = requireArray(bundle.rules, "layer_constraints", "rules");
-        const constraintIds = new Set();
-        for (const [index, row] of layerConstraints.entries()) {
-            const constraint = asRecord(row, `rules.layer_constraints[${index}]`);
-            const constraintId = requireString(constraint, "id", `rules.layer_constraints[${index}]`);
-            if (constraintIds.has(constraintId))
-                issues.push(`rules.layer_constraints.id duplicated: ${constraintId}`);
-            constraintIds.add(constraintId);
-        }
-        if (rulesKind !== "ea_kernel_rules_contract")
-            issues.push(`rules.snapshot_kind unexpected: ${rulesKind}`);
-        const vectorsKind = requireString(bundle.vectors, "snapshot_kind", "vectors");
-        const vectorsVersion = requireString(bundle.vectors, "kernel_version", "vectors");
-        requireObject(bundle.vectors, "stats", "vectors");
-        requireArray(bundle.vectors, "vectors", "vectors");
-        if (vectorsKind !== "ea_kernel_judgment_vectors_contract")
-            issues.push(`vectors.snapshot_kind unexpected: ${vectorsKind}`);
-        const versions = new Set([schemaVersion, rulesVersion, vectorsVersion]);
-        if (versions.size > 1)
-            issues.push(`kernel_version mismatch across snapshots: ${Array.from(versions).join(", ")}`);
-    }
-    catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        issues.push(message);
-    }
-    return issues;
-}
 function loadKernelContractBundle(options) {
     const paths = resolveKernelContractPaths(options);
-    const schema = loadJson(paths.schemaPath);
-    const rules = loadJson(paths.rulesPath);
-    const vectors = loadJson(paths.vectorsPath);
-    const kernelVersion = requireString(schema, "kernel_version", "schema");
+    const schema = parseSchemaSnapshot(loadJson(paths.schemaPath));
+    const rules = parseRulesSnapshot(loadJson(paths.rulesPath));
+    const vectors = parseVectorsSnapshot(loadJson(paths.vectorsPath));
     const bundle = {
-        kernelVersion,
+        kernelVersion: schema.kernel_version,
         paths,
         schema,
         rules,
@@ -124,27 +460,111 @@ function loadKernelContractBundle(options) {
     }
     return bundle;
 }
+function buildKernelContractModel(options) {
+    const bundle = loadKernelContractBundle(options);
+    return {
+        bundle,
+        index: buildKernelContractIndex(bundle),
+    };
+}
+function toKernelFeedbackTarget(targetType, targetId) {
+    const trimmed = targetId.trim();
+    if (trimmed.length === 0)
+        throw new Error("feedback targetId cannot be empty");
+    return {
+        targetType,
+        targetId: trimmed,
+        canonicalId: `${targetType}:${trimmed}`,
+    };
+}
+function parseKernelFeedbackTarget(raw) {
+    const normalized = raw.trim();
+    const index = normalized.indexOf(":");
+    if (index <= 0 || index === normalized.length - 1)
+        throw new Error(`invalid feedback target format: ${raw}`);
+    const rawType = normalized.slice(0, index);
+    const rawTargetId = normalized.slice(index + 1);
+    const targetType = asFeedbackTargetType(rawType);
+    if (targetType === undefined)
+        throw new Error(`unsupported feedback target type: ${rawType}`);
+    return toKernelFeedbackTarget(targetType, rawTargetId);
+}
+function resolveKernelFeedbackTarget(raw, model) {
+    const parsed = parseKernelFeedbackTarget(raw);
+    switch (parsed.targetType) {
+        case "entity_type": {
+            if (model.index.entityByName.has(parsed.targetId) === false)
+                throw new Error(`unknown entity_type target: ${parsed.targetId}`);
+            return parsed;
+        }
+        case "relation_type": {
+            if (model.index.relationByName.has(parsed.targetId) === false)
+                throw new Error(`unknown relation_type target: ${parsed.targetId}`);
+            return parsed;
+        }
+        case "rule": {
+            if (model.index.ruleById.has(parsed.targetId) === false)
+                throw new Error(`unknown rule target: ${parsed.targetId}`);
+            return parsed;
+        }
+        case "layer_constraint": {
+            if (model.index.layerConstraintById.has(parsed.targetId) === false)
+                throw new Error(`unknown layer_constraint target: ${parsed.targetId}`);
+            return parsed;
+        }
+    }
+}
+function asFeedbackTargetType(raw) {
+    switch (raw) {
+        case "entity_type":
+        case "relation_type":
+        case "rule":
+        case "layer_constraint":
+            return raw;
+        default:
+            return undefined;
+    }
+}
+function getEntityRequiredKeys(model, entityName) {
+    const entity = model.index.entityByName.get(entityName);
+    if (entity === undefined)
+        throw new Error(`unknown entity type: ${entityName}`);
+    const lineage = [];
+    let cursor = entity;
+    while (cursor !== undefined) {
+        lineage.unshift(cursor);
+        cursor =
+            cursor.parent === undefined
+                ? undefined
+                : model.index.entityByName.get(cursor.parent);
+    }
+    const required = new Set();
+    for (const row of lineage) {
+        if (row.owns_key !== undefined)
+            required.add(row.owns_key);
+        for (const key of row.owns)
+            required.add(key);
+    }
+    return Array.from(required);
+}
 function summarizeKernelContract(options) {
-    var _a, _b, _c, _d, _e;
+    var _a;
     try {
         const bundle = loadKernelContractBundle(options);
-        const schemaStats = bundle.schema.stats;
-        const rulesStats = bundle.rules.stats;
-        const vectorsStats = bundle.vectors.stats;
         return {
             available: true,
             contractDir: bundle.paths.contractDir,
             kernelVersion: bundle.kernelVersion,
-            entityCount: Number((_a = schemaStats === null || schemaStats === void 0 ? void 0 : schemaStats.entities) !== null && _a !== void 0 ? _a : 0),
-            relationCount: Number((_b = schemaStats === null || schemaStats === void 0 ? void 0 : schemaStats.relations) !== null && _b !== void 0 ? _b : 0),
-            totalRules: Number((_c = rulesStats === null || rulesStats === void 0 ? void 0 : rulesStats.total_rules) !== null && _c !== void 0 ? _c : 0),
-            vectors: Number((_d = vectorsStats === null || vectorsStats === void 0 ? void 0 : vectorsStats.vectors) !== null && _d !== void 0 ? _d : 0),
+            entityCount: bundle.schema.stats.entities,
+            relationCount: bundle.schema.stats.relations,
+            totalRules: bundle.rules.stats.total_rules,
+            vectors: bundle.vectors.stats.vectors,
         };
     }
     catch (error) {
         return {
             available: false,
-            contractDir: (_e = process.env.EA_KERNEL_CONTRACT_DIR) !== null && _e !== void 0 ? _e : null,
+            contractDir: (_a = process.env.EA_KERNEL_CONTRACT_DIR) !== null && _a !== void 0 ? _a : null,
             kernelVersion: null,
             entityCount: 0,
             relationCount: 0,

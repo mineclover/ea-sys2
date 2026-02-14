@@ -37,6 +37,26 @@ class RuleLoadError(Exception):
     """Raised when a TOML rule file cannot be parsed or validated."""
 
 
+def _default_layer_constraint_id(
+    *,
+    index: int,
+    source_layer: str,
+    target_layer: str,
+    forbidden_relations: list[str],
+) -> str:
+    forbidden: str = (
+        "-".join(forbidden_relations)
+        if len(forbidden_relations) > 0
+        else "none"
+    )
+    return (
+        f"lc-{index:02d}-"
+        f"{source_layer.lower()}-"
+        f"{target_layer.lower()}-"
+        f"{forbidden}"
+    )
+
+
 def _parse_condition(raw: str | dict[str, Any]) -> KernelRuleCondition:
     """Parse a condition entry (string or dict with type+params)."""
     if isinstance(raw, str):
@@ -80,7 +100,20 @@ def _parse_layer_constraint(data: dict[str, Any], index: int) -> LayerConstraint
         raise RuleLoadError(f"Layer constraint #{index}: invalid target_layer {tgt!r}")
     forbidden = data.get("forbidden", [])
     allowed = tuple(tuple(pair) for pair in data.get("allowed_pairs", []))
+    raw_id = data.get("id")
+    if raw_id is None:
+        constraint_id = _default_layer_constraint_id(
+            index=index,
+            source_layer=src,
+            target_layer=tgt,
+            forbidden_relations=forbidden,
+        )
+    elif isinstance(raw_id, str) and raw_id.strip():
+        constraint_id = raw_id.strip()
+    else:
+        raise RuleLoadError(f"Layer constraint #{index}: invalid id {raw_id!r}")
     return LayerConstraint(
+        id=constraint_id,
         source_layer=_LAYER_MAP[src],
         target_layer=_LAYER_MAP[tgt],
         forbidden_relations=tuple(forbidden),
@@ -140,6 +173,9 @@ def load_from_content(
     constraints = tuple(
         _parse_layer_constraint(lc, i) for i, lc in enumerate(constraints_raw)
     )
+    ids = [constraint.id for constraint in constraints]
+    if len(ids) != len(set(ids)):
+        raise RuleLoadError("Layer constraints must have unique id values")
 
     expected_constraints = meta.get("total_layer_constraints")
     if expected_constraints is not None and len(constraints) != expected_constraints:

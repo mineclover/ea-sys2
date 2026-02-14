@@ -147,6 +147,7 @@ class TestRoundTrip:
 
     def test_layer_constraint_association(self):
         c = self.constraints[0]
+        assert c.id == "lc-00-l4-l4-association"
         assert c.source_layer == Layer.L4
         assert c.target_layer == Layer.L4
         assert c.forbidden_relations == ("association",)
@@ -155,6 +156,7 @@ class TestRoundTrip:
 
     def test_layer_constraint_connector(self):
         c = self.constraints[1]
+        assert c.id == "lc-01-l4-l4-connector"
         assert c.forbidden_relations == ("connector",)
         assert c.allowed_pairs == ()
 
@@ -237,6 +239,23 @@ class TestLoaderErrors:
             total_layer_constraints = 5
         """)
         with pytest.raises(RuleLoadError, match="Expected 5"):
+            load_kernel_rules(p)
+
+    def test_duplicate_constraint_ids(self):
+        p = _write_toml("""\
+            [[layer_constraints]]
+            id = "lc-dup"
+            source_layer = "L4"
+            target_layer = "L4"
+            forbidden = ["association"]
+
+            [[layer_constraints]]
+            id = "lc-dup"
+            source_layer = "L4"
+            target_layer = "L4"
+            forbidden = ["connector"]
+        """)
+        with pytest.raises(RuleLoadError, match="unique id"):
             load_kernel_rules(p)
 
     def test_invalid_layer_in_constraint(self):

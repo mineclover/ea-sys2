@@ -26,6 +26,7 @@ fallback_relations = [
 # ═══════════════════════════════════════════════════════════════════
 
 [[layer_constraints]]
+id = "lc-00-l4-l4-association"
 source_layer = "L4"
 target_layer = "L4"
 forbidden = ["association"]
@@ -34,6 +35,7 @@ priority = 90
 notes = "L4 entities cannot form L2 association (except step*↔state for realization/motivation)"
 
 [[layer_constraints]]
+id = "lc-01-l4-l4-connector"
 source_layer = "L4"
 target_layer = "L4"
 forbidden = ["connector"]

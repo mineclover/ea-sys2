@@ -1,6 +1,6 @@
 # @ea-sys2/kernel-contract-sdk
 
-TypeScript SDK package for deterministic `ea-kernel` contract snapshots.
+TypeScript SDK for deterministic `ea-kernel` contract snapshots.
 
 ## What It Provides
 
@@ -8,8 +8,12 @@ TypeScript SDK package for deterministic `ea-kernel` contract snapshots.
   - `kernel_schema.snapshot.json`
   - `kernel_rules.snapshot.json`
   - `kernel_judgment_vectors.snapshot.json`
-- Bundle shape validation (including `layer_constraints[].id` uniqueness)
-- Summary helper for backend diagnostics
+- Strict shape and integrity validation:
+  - snapshot kind / kernel version consistency
+  - unique ids and names
+  - schema-reference integrity (rules, roles, layer constraints, vectors)
+- Prebuilt runtime index for fast lookup in Nestia/backends
+- Feedback-target utilities for canonical governance ids
 
 ## Directory Resolution Order
 
@@ -30,20 +34,39 @@ This build automatically syncs latest snapshots from:
 ## Usage
 
 ```ts
-import { loadKernelContractBundle } from "@ea-sys2/kernel-contract-sdk";
+import {
+  buildKernelContractModel,
+  getEntityRequiredKeys,
+  resolveKernelFeedbackTarget,
+} from "@ea-sys2/kernel-contract-sdk";
 
-const bundle = loadKernelContractBundle();
-console.log(bundle.kernelVersion);
+const model = buildKernelContractModel();
+const required = getEntityRequiredKeys(model, "structure");
+const target = resolveKernelFeedbackTarget(
+  "layer_constraint:lc-00-l4-l4-association",
+  model,
+);
+
+console.log(model.bundle.kernelVersion);
+console.log(required);
+console.log(target.canonicalId);
 ```
+
+## Feedback Canonical IDs
+
+- `entity_type:{entityName}`
+- `relation_type:{relationName}`
+- `rule:{ruleId}`
+- `layer_constraint:{constraintId}`
 
 ## Consume From `ea-web`
 
-For local cross-repo development, add a file dependency in `ea-web`:
+Use workspace consumption (recommended in mono/submodule setup):
 
 ```json
 {
   "dependencies": {
-    "@ea-sys2/kernel-contract-sdk": "file:/Users/junwoobang/workflow/ea-sys2/packages/ea-kernel-contract-ts"
+    "@ea-sys2/kernel-contract-sdk": "workspace:*"
   }
 }
 ```

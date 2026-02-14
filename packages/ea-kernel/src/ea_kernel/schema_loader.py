@@ -29,6 +29,26 @@ class SchemaLoadError(Exception):
     """Raised when a schema TOML file cannot be parsed or validated."""
 
 
+def _default_layer_constraint_id(
+    *,
+    index: int,
+    source_layer: str,
+    target_layer: str,
+    forbidden_relations: list[str],
+) -> str:
+    forbidden: str = (
+        "-".join(forbidden_relations)
+        if len(forbidden_relations) > 0
+        else "none"
+    )
+    return (
+        f"lc-{index:02d}-"
+        f"{source_layer.lower()}-"
+        f"{target_layer.lower()}-"
+        f"{forbidden}"
+    )
+
+
 def load_kernel_schema(
     path: Path | None = None,
 ) -> tuple[str, KernelSchema, tuple[KernelAttribute, ...],
@@ -143,16 +163,35 @@ def load_kernel_schema(
                 raise SchemaLoadError(
                     f"Layer constraint #{i}: invalid layer ({src!r} -> {tgt!r})"
                 )
+            forbidden_relations = list(lc_data.get("forbidden", []))
+            raw_constraint_id = lc_data.get("id")
+            if raw_constraint_id is None:
+                constraint_id = _default_layer_constraint_id(
+                    index=i,
+                    source_layer=src,
+                    target_layer=tgt,
+                    forbidden_relations=forbidden_relations,
+                )
+            elif isinstance(raw_constraint_id, str) and raw_constraint_id.strip():
+                constraint_id = raw_constraint_id.strip()
+            else:
+                raise SchemaLoadError(
+                    f"Layer constraint #{i}: invalid id {raw_constraint_id!r}"
+                )
             parsed_constraints.append(LayerConstraint(
+                id=constraint_id,
                 source_layer=_LAYER_MAP[src],
                 target_layer=_LAYER_MAP[tgt],
-                forbidden_relations=tuple(lc_data.get("forbidden", [])),
+                forbidden_relations=tuple(forbidden_relations),
                 allowed_pairs=tuple(
                     tuple(pair) for pair in lc_data.get("allowed_pairs", [])
                 ),
                 priority=lc_data.get("priority", 90),
                 notes=lc_data.get("notes", ""),
             ))
+        ids = [constraint.id for constraint in parsed_constraints]
+        if len(ids) != len(set(ids)):
+            raise SchemaLoadError("Layer constraints must have unique id values")
 
         # Parse rules
         for rule_key, r_data in rules_doc.get("rules", {}).items():

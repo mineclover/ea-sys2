@@ -58,6 +58,7 @@ class KernelValidityRule:
 class LayerConstraint:
     """Declares that entities in source_layer cannot use specified L2 relations
     with entities in target_layer, except for allowed pairs."""
+    id: str
     source_layer: Layer
     target_layer: Layer
     forbidden_relations: tuple[str, ...]

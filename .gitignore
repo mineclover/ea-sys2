@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+output/
+target/
+*.log
+*backup*/
+*.db.backup*
+/data/
+/governance_data/
+/packages/ea-kernel/data/
+.deepeval/
+
+# Environment
+.env
+.env.local
+.coverage
+
+# Node / JS (web-kernel-viz)
+node_modules/
+.pnp
+.pnp.*
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+.vercel

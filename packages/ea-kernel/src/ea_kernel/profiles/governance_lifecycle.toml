@@ -1,0 +1,811 @@
+# Governance Lifecycle Kernel Profile — Self-modeling
+#
+# ea-kernel의 Governance Lifecycle 시스템을 ea-kernel 자체로 모델링.
+# 구현 전 구조적 타당성 검증 목적.
+#
+# 37 elements, 12 relations, 규칙 ~50개
+# 7 categories → 7 kernel types
+
+[profile]
+name = "GovernanceLifecycle"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "gl"
+standard = "ea-kernel Governance Lifecycle v1"
+organization = "ea-system"
+
+[categories]
+ActiveComponent = "structure"      # 능동적 엔진/서비스 (JudgmentEngine, Analyzer, ...)
+PassiveAsset = "item"              # 수동적 데이터 자산 (Rule, Report, Record, ...)
+BehavioralStep = "step"            # 행위 단위 (AuthorRule, ExecuteJudgment, ...)
+LifecycleState = "state"           # 상태 (RuleDraft, RuleApproved, ...)
+TriggerEvent = "event"             # 트리거 (RuleSubmitted, CorpusUpdated, ...)
+EvalCondition = "expression"       # 평가 조건 (QualityGate, PromotionCriteria, ...)
+AssetGroup = "package"             # 자산 그룹 (RuleCorpus, ProfileRegistry, ...)
+
+# ═══════════════════════════════════════════════════════════════════
+# S1: Rule Authoring — 규칙 저작
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "RuleAsset"
+layer = "Authoring"
+category = "PassiveAsset"
+description = "규칙 + 메타데이터 + 출처 + 생명주기를 묶은 자산 단위"
+
+[[elements]]
+name = "RuleCorpus"
+layer = "Authoring"
+category = "AssetGroup"
+description = "규칙 자산의 버전 관리되는 집합"
+
+[[elements]]
+name = "CorpusVersion"
+layer = "Authoring"
+category = "PassiveAsset"
+description = "Corpus의 시점별 스냅샷 식별자 (판단 재현용)"
+
+[[elements]]
+name = "QualityGate"
+layer = "Authoring"
+category = "EvalCondition"
+description = "규칙 품질 검사 (dead rule, conflict, coverage)"
+
+[[elements]]
+name = "RuleAuthor"
+layer = "Authoring"
+category = "ActiveComponent"
+description = "규칙을 작성하는 행위자"
+
+[[elements]]
+name = "Reviewer"
+layer = "Authoring"
+category = "ActiveComponent"
+description = "규칙을 검토·승인하는 행위자"
+
+# ═══════════════════════════════════════════════════════════════════
+# S2: Judgment Execution — 판단 실행
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "JudgmentEngine"
+layer = "Judgment"
+category = "ActiveComponent"
+description = "근거 기반 판단 실행 엔진 (RuleCorpus.judge 래핑)"
+
+[[elements]]
+name = "JudgmentReport"
+layer = "Judgment"
+category = "PassiveAsset"
+description = "판단 결과 (verdict, evidence, confidence, conflicts)"
+
+[[elements]]
+name = "ReferenceStats"
+layer = "Judgment"
+category = "PassiveAsset"
+description = "유사 판단 통계 (레퍼런스 보강)"
+
+# ═══════════════════════════════════════════════════════════════════
+# S3: Decision Recording — 판단 기록
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "DecisionStore"
+layer = "Recording"
+category = "ActiveComponent"
+description = "판단 기록 영속화 저장소"
+
+[[elements]]
+name = "DecisionRecord"
+layer = "Recording"
+category = "PassiveAsset"
+description = "개별 판단 기록 (triple + verdict + context)"
+
+[[elements]]
+name = "JudgmentStat"
+layer = "Recording"
+category = "PassiveAsset"
+description = "triple별 판단 통계 집계"
+
+# ═══════════════════════════════════════════════════════════════════
+# S4: Evidence Analysis — 근거 분석
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "EvidenceAnalyzer"
+layer = "Analysis"
+category = "ActiveComponent"
+description = "축적된 판단에서 패턴·실효성 분석"
+
+[[elements]]
+name = "RuleEffectiveness"
+layer = "Analysis"
+category = "PassiveAsset"
+description = "규칙별 실효성 측정 (eval/win/override/shadow)"
+
+[[elements]]
+name = "ConflictHotspot"
+layer = "Analysis"
+category = "PassiveAsset"
+description = "반복적 충돌 지점 탐지 결과"
+
+[[elements]]
+name = "UsageProfile"
+layer = "Analysis"
+category = "PassiveAsset"
+description = "프로파일 사용 통계 (reference grade 판정)"
+
+[[elements]]
+name = "AnalysisReport"
+layer = "Analysis"
+category = "PassiveAsset"
+description = "S4 종합 산출물"
+
+# ═══════════════════════════════════════════════════════════════════
+# S5: Rule Evolution — 규칙 진화
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "PromotionEngine"
+layer = "Evolution"
+category = "ActiveComponent"
+description = "신뢰도 승격 조건 검증 및 제안 생성"
+
+[[elements]]
+name = "WhatIfSimulator"
+layer = "Evolution"
+category = "ActiveComponent"
+description = "규칙 변경 시뮬레이션 (verdict 영향 예측)"
+
+[[elements]]
+name = "RuleChangeProposal"
+layer = "Evolution"
+category = "PassiveAsset"
+description = "규칙 변경 제안서 (rationale + WhatIf 결과)"
+
+[[elements]]
+name = "LifecycleController"
+layer = "Evolution"
+category = "ActiveComponent"
+description = "이벤트 기반 자동화 및 생명주기 제어 (Phase 5)"
+
+[[elements]]
+name = "PromotionCriteria"
+layer = "Evolution"
+category = "EvalCondition"
+description = "신뢰도 승격 조건 (min_eval, min_win_rate, ...)"
+
+# ═══════════════════════════════════════════════════════════════════
+# S6: Impact Propagation — 영향 전파
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ImpactEvaluator"
+layer = "Propagation"
+category = "ActiveComponent"
+description = "규칙 변경의 기존 모델 영향 평가"
+
+[[elements]]
+name = "ImpactReport"
+layer = "Propagation"
+category = "PassiveAsset"
+description = "영향 보고서 (verdict 변경 목록)"
+
+[[elements]]
+name = "RuleChangeSet"
+layer = "Propagation"
+category = "PassiveAsset"
+description = "Corpus 버전 간 규칙 변경 내역"
+
+# ═══════════════════════════════════════════════════════════════════
+# Behavioral Steps — 6단계 라이프사이클 행위 단위
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "AuthorRule"
+layer = "Authoring"
+category = "BehavioralStep"
+description = "S1: 규칙 저작 행위 — RuleAsset 생성"
+
+[[elements]]
+name = "ExecuteJudgment"
+layer = "Judgment"
+category = "BehavioralStep"
+description = "S2: 판단 실행 행위 — JudgmentReport 생산"
+
+[[elements]]
+name = "RecordDecision"
+layer = "Recording"
+category = "BehavioralStep"
+description = "S3: 판단 기록 행위 — DecisionRecord 영속화"
+
+[[elements]]
+name = "AnalyzeEvidence"
+layer = "Analysis"
+category = "BehavioralStep"
+description = "S4: 근거 분석 행위 — AnalysisReport 생산"
+
+[[elements]]
+name = "ProposeEvolution"
+layer = "Evolution"
+category = "BehavioralStep"
+description = "S5: 규칙 진화 행위 — RuleChangeProposal 생산"
+
+[[elements]]
+name = "EvaluateImpact"
+layer = "Propagation"
+category = "BehavioralStep"
+description = "S6: 영향 평가 행위 — ImpactReport 생산"
+
+# ═══════════════════════════════════════════════════════════════════
+# Lifecycle States — 규칙 생명주기 상태
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "RuleDraft"
+layer = "Lifecycle"
+category = "LifecycleState"
+description = "초안 — 판단에 사용되지 않음"
+
+[[elements]]
+name = "RuleReview"
+layer = "Lifecycle"
+category = "LifecycleState"
+description = "검토 중 — 판단에 사용되지 않음"
+
+[[elements]]
+name = "RuleApproved"
+layer = "Lifecycle"
+category = "LifecycleState"
+description = "승인됨 — 활성 판단에 사용"
+
+[[elements]]
+name = "RuleDeprecated"
+layer = "Lifecycle"
+category = "LifecycleState"
+description = "폐기됨 — 새 판단에 미사용, 이력 유지"
+
+# ═══════════════════════════════════════════════════════════════════
+# Trigger Events — 단계 간 트리거
+# ═══════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "RuleSubmitted"
+layer = "Lifecycle"
+category = "TriggerEvent"
+description = "규칙 초안 제출 이벤트"
+
+[[elements]]
+name = "RuleApprovedEvent"
+layer = "Lifecycle"
+category = "TriggerEvent"
+description = "규칙 승인 완료 이벤트 → Corpus 갱신 트리거"
+
+[[elements]]
+name = "CorpusUpdated"
+layer = "Lifecycle"
+category = "TriggerEvent"
+description = "Corpus 버전 갱신 이벤트 → 영향 평가 트리거"
+
+# ═══════════════════════════════════════════════════════════════════
+# Relations — 12 domain relations mapped to kernel relations
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "contains"
+kernel_relation = "membership"
+description = "AssetGroup이 Asset을 포함"
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "ActiveComponent가 PassiveAsset을 생산 (데이터 흐름)"
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "ActiveComponent가 PassiveAsset을 소비 (데이터 흐름)"
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event가 Step을 트리거"
+
+[[relations]]
+name = "precedes"
+kernel_relation = "succession"
+description = "Step 간 실행 순서"
+
+[[relations]]
+name = "transitions_to"
+kernel_relation = "transition"
+description = "State에서 State로 전이"
+
+[[relations]]
+name = "guards"
+kernel_relation = "guarding"
+description = "Condition이 State 전이를 보호"
+
+[[relations]]
+name = "delegates"
+kernel_relation = "association"
+description = "ActiveComponent 간 위임"
+
+[[relations]]
+name = "references"
+kernel_relation = "association"
+description = "Asset이 다른 Asset을 참조"
+
+[[relations]]
+name = "enriches"
+kernel_relation = "feature_typing"
+description = "PassiveAsset이 다른 Asset을 풍부화 (typing)"
+
+[[relations]]
+name = "snapshots"
+kernel_relation = "feature_typing"
+description = "CorpusVersion이 RuleCorpus를 스냅샷"
+
+[[relations]]
+name = "evaluates"
+kernel_relation = "connector"
+description = "EvalCondition이 Asset을 평가"
+
+# ═══════════════════════════════════════════════════════════════════
+# Validity Rules
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Containment: AssetGroup contains PassiveAsset ──────────────
+
+[[rules]]
+id = "gl-contain-01"
+source = "@AssetGroup"
+target = "@PassiveAsset"
+relation = "contains"
+valid = true
+priority = 40
+notes = "AssetGroup contains PassiveAsset"
+
+[[rules]]
+id = "gl-contain-02"
+source = "@ActiveComponent"
+target = "@PassiveAsset"
+relation = "contains"
+valid = false
+priority = 80
+notes = "ActiveComponent는 PassiveAsset을 포함하지 않음 (produces/consumes 사용)"
+
+# ── Data Flow: produces / consumes ─────────────────────────────
+
+[[rules]]
+id = "gl-produce-01"
+source = "@ActiveComponent"
+target = "@PassiveAsset"
+relation = "produces"
+valid = true
+priority = 40
+notes = "ActiveComponent가 PassiveAsset을 생산"
+
+[[rules]]
+id = "gl-produce-02"
+source = "@PassiveAsset"
+target = "@ActiveComponent"
+relation = "produces"
+valid = false
+priority = 80
+notes = "PassiveAsset은 생산 주체가 될 수 없음"
+
+[[rules]]
+id = "gl-produce-03"
+source = "@PassiveAsset"
+target = "@PassiveAsset"
+relation = "produces"
+valid = false
+priority = 80
+notes = "PassiveAsset끼리는 produces 불가 (references 사용)"
+
+[[rules]]
+id = "gl-consume-01"
+source = "@ActiveComponent"
+target = "@PassiveAsset"
+relation = "consumes"
+valid = true
+priority = 40
+notes = "ActiveComponent가 PassiveAsset을 소비"
+
+[[rules]]
+id = "gl-consume-02"
+source = "@PassiveAsset"
+target = "@ActiveComponent"
+relation = "consumes"
+valid = false
+priority = 80
+notes = "PassiveAsset은 소비 주체가 될 수 없음"
+
+# ── S1→S2 Flow: JudgmentEngine consumes RuleCorpus ────────────
+
+[[rules]]
+id = "gl-s1s2-01"
+source = "JudgmentEngine"
+target = "RuleAsset"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S2: JudgmentEngine이 RuleAsset 기반으로 판단"
+
+[[rules]]
+id = "gl-s1s2-02"
+source = "JudgmentEngine"
+target = "CorpusVersion"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S2: JudgmentEngine이 특정 CorpusVersion으로 판단"
+
+# ── S2→S3 Flow: DecisionStore records JudgmentReport ──────────
+
+[[rules]]
+id = "gl-s2s3-01"
+source = "JudgmentEngine"
+target = "JudgmentReport"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S2→S3: JudgmentEngine이 JudgmentReport 생산"
+
+[[rules]]
+id = "gl-s2s3-02"
+source = "DecisionStore"
+target = "DecisionRecord"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S3: DecisionStore가 DecisionRecord 생산"
+
+[[rules]]
+id = "gl-s2s3-03"
+source = "DecisionStore"
+target = "JudgmentReport"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S3: DecisionStore가 JudgmentReport를 소비하여 기록"
+
+# ── S3→S4 Flow: EvidenceAnalyzer consumes records ─────────────
+
+[[rules]]
+id = "gl-s3s4-01"
+source = "EvidenceAnalyzer"
+target = "DecisionRecord"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S4: EvidenceAnalyzer가 DecisionRecord 분석"
+
+[[rules]]
+id = "gl-s3s4-02"
+source = "EvidenceAnalyzer"
+target = "JudgmentStat"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S4: EvidenceAnalyzer가 JudgmentStat 활용"
+
+[[rules]]
+id = "gl-s3s4-03"
+source = "EvidenceAnalyzer"
+target = "AnalysisReport"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S4: EvidenceAnalyzer가 AnalysisReport 생산"
+
+[[rules]]
+id = "gl-s3s4-04"
+source = "EvidenceAnalyzer"
+target = "RuleEffectiveness"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S4: EvidenceAnalyzer가 RuleEffectiveness 계산"
+
+[[rules]]
+id = "gl-s3s4-05"
+source = "EvidenceAnalyzer"
+target = "ConflictHotspot"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S4: EvidenceAnalyzer가 ConflictHotspot 탐지"
+
+[[rules]]
+id = "gl-s3s4-06"
+source = "EvidenceAnalyzer"
+target = "UsageProfile"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S4: EvidenceAnalyzer가 UsageProfile 통계"
+
+# ── S4→S5 Flow: PromotionEngine consumes analysis ─────────────
+
+[[rules]]
+id = "gl-s4s5-01"
+source = "PromotionEngine"
+target = "AnalysisReport"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S5: PromotionEngine이 AnalysisReport 기반 제안"
+
+[[rules]]
+id = "gl-s4s5-02"
+source = "PromotionEngine"
+target = "RuleChangeProposal"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S5: PromotionEngine이 RuleChangeProposal 생산"
+
+[[rules]]
+id = "gl-s4s5-03"
+source = "WhatIfSimulator"
+target = "RuleChangeProposal"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S5: WhatIfSimulator가 RuleChangeProposal 시뮬레이션"
+
+# ── S5→S6 Flow: ImpactEvaluator ───────────────────────────────
+
+[[rules]]
+id = "gl-s5s6-01"
+source = "ImpactEvaluator"
+target = "RuleChangeSet"
+relation = "consumes"
+valid = true
+priority = 50
+notes = "S6: ImpactEvaluator가 RuleChangeSet 평가"
+
+[[rules]]
+id = "gl-s5s6-02"
+source = "ImpactEvaluator"
+target = "ImpactReport"
+relation = "produces"
+valid = true
+priority = 50
+notes = "S6: ImpactEvaluator가 ImpactReport 생산"
+
+# ── Delegation: ActiveComponent delegates ──────────────────────
+
+[[rules]]
+id = "gl-delegate-01"
+source = "@ActiveComponent"
+target = "@ActiveComponent"
+relation = "delegates"
+valid = true
+priority = 40
+notes = "ActiveComponent 간 위임 (JudgmentEngine → DecisionStore)"
+
+[[rules]]
+id = "gl-delegate-03"
+source = "LifecycleController"
+target = "PromotionEngine"
+relation = "delegates"
+valid = true
+priority = 50
+notes = "Automation: Controller가 PromotionEngine에 위임"
+
+[[rules]]
+id = "gl-delegate-04"
+source = "LifecycleController"
+target = "ImpactEvaluator"
+relation = "delegates"
+valid = true
+priority = 50
+notes = "Automation: Controller가 ImpactEvaluator에 위임"
+
+[[rules]]
+id = "gl-delegate-02"
+source = "@PassiveAsset"
+target = "@ActiveComponent"
+relation = "delegates"
+valid = false
+priority = 80
+notes = "PassiveAsset은 위임 주체가 될 수 없음"
+
+# ── References: Asset references Asset ─────────────────────────
+
+[[rules]]
+id = "gl-ref-01"
+source = "@PassiveAsset"
+target = "@PassiveAsset"
+relation = "references"
+valid = true
+priority = 40
+notes = "PassiveAsset 간 참조 (DecisionRecord → CorpusVersion)"
+
+[[rules]]
+id = "gl-ref-02"
+source = "@ActiveComponent"
+target = "@ActiveComponent"
+relation = "references"
+valid = true
+priority = 40
+notes = "ActiveComponent 간 참조"
+
+# ── Triggering: Event triggers Step behavior ───────────────────
+
+[[rules]]
+id = "gl-trigger-01"
+source = "@TriggerEvent"
+target = "@BehavioralStep"
+relation = "triggers"
+valid = true
+priority = 60
+notes = "TriggerEvent가 BehavioralStep을 트리거"
+
+[[rules]]
+id = "gl-trigger-02"
+source = "@ActiveComponent"
+target = "@BehavioralStep"
+relation = "triggers"
+valid = false
+priority = 80
+notes = "ActiveComponent는 직접 trigger 불가 (Event를 통해야 함)"
+
+# ── Succession: Step ordering ──────────────────────────────────
+
+[[rules]]
+id = "gl-succ-01"
+source = "@BehavioralStep"
+target = "@BehavioralStep"
+relation = "precedes"
+valid = true
+priority = 60
+notes = "BehavioralStep 간 순서 강제"
+
+[[rules]]
+id = "gl-succ-02"
+source = "@TriggerEvent"
+target = "@BehavioralStep"
+relation = "precedes"
+valid = true
+priority = 50
+notes = "TriggerEvent 후 BehavioralStep"
+
+[[rules]]
+id = "gl-succ-03"
+source = "@BehavioralStep"
+target = "@TriggerEvent"
+relation = "precedes"
+valid = true
+priority = 50
+notes = "BehavioralStep이 TriggerEvent 발생"
+
+# ── State transitions: Rule lifecycle ──────────────────────────
+
+[[rules]]
+id = "gl-trans-01"
+source = "RuleDraft"
+target = "RuleReview"
+relation = "transitions_to"
+valid = true
+priority = 60
+notes = "DRAFT → REVIEW"
+
+[[rules]]
+id = "gl-trans-02"
+source = "RuleReview"
+target = "RuleApproved"
+relation = "transitions_to"
+valid = true
+priority = 60
+notes = "REVIEW → APPROVED (검토 통과)"
+
+[[rules]]
+id = "gl-trans-03"
+source = "RuleReview"
+target = "RuleDraft"
+relation = "transitions_to"
+valid = true
+priority = 60
+notes = "REVIEW → DRAFT (반려)"
+
+[[rules]]
+id = "gl-trans-04"
+source = "RuleApproved"
+target = "RuleDeprecated"
+relation = "transitions_to"
+valid = true
+priority = 60
+notes = "APPROVED → DEPRECATED (폐기)"
+
+[[rules]]
+id = "gl-trans-05"
+source = "RuleDraft"
+target = "RuleApproved"
+relation = "transitions_to"
+valid = false
+priority = 80
+notes = "DRAFT → APPROVED 직접 전이 불가 (반드시 REVIEW 거쳐야 함)"
+
+[[rules]]
+id = "gl-trans-06"
+source = "RuleDraft"
+target = "RuleDeprecated"
+relation = "transitions_to"
+valid = false
+priority = 80
+notes = "DRAFT → DEPRECATED 직접 전이 불가"
+
+[[rules]]
+id = "gl-trans-07"
+source = "RuleDeprecated"
+target = "RuleApproved"
+relation = "transitions_to"
+valid = false
+priority = 80
+notes = "DEPRECATED → APPROVED 복원 불가 (새 규칙 작성 필요)"
+
+[[rules]]
+id = "gl-trans-08"
+source = "RuleApproved"
+target = "RuleDraft"
+relation = "transitions_to"
+valid = false
+priority = 80
+notes = "APPROVED → DRAFT 역행 불가"
+
+# ── Guarding: Condition guards state transition ────────────────
+
+[[rules]]
+id = "gl-guard-01"
+source = "@LifecycleState"
+target = "@EvalCondition"
+relation = "guards"
+valid = true
+priority = 60
+notes = "EvalCondition이 State 전이를 보호 (QualityGate → RuleApproved)"
+
+# ── Enrichment: typing ─────────────────────────────────────────
+
+[[rules]]
+id = "gl-enrich-01"
+source = "ReferenceStats"
+target = "JudgmentReport"
+relation = "enriches"
+valid = true
+priority = 50
+notes = "ReferenceStats가 JudgmentReport를 보강"
+
+[[rules]]
+id = "gl-snap-01"
+source = "CorpusVersion"
+target = "RuleCorpus"
+relation = "snapshots"
+valid = true
+priority = 50
+notes = "CorpusVersion이 RuleCorpus를 스냅샷"
+
+# ── Evaluation: EvalCondition evaluates Asset ──────────────────
+
+[[rules]]
+id = "gl-eval-01"
+source = "@EvalCondition"
+target = "@PassiveAsset"
+relation = "evaluates"
+valid = true
+priority = 50
+notes = "EvalCondition이 PassiveAsset을 평가"
+
+[[rules]]
+id = "gl-eval-02"
+source = "@EvalCondition"
+target = "@ActiveComponent"
+relation = "evaluates"
+valid = false
+priority = 80
+notes = "EvalCondition은 ActiveComponent를 평가하지 않음 (결과물을 평가)"

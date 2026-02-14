@@ -1,0 +1,277 @@
+## ea-kernel: Lightweight Kernel Metamodel Schema
+##
+## 4-layer progressive abstraction:
+##   L1 Structure    → "무엇이 존재하는가"
+##   L2 Relationship → "어떻게 연결되는가"
+##   L3 Behavioral   → "이 연결은 행위를 가진다"
+##   L4 Concrete     → "구체적으로 어떤 행위인가"
+##
+## Design: UML 2.5.1 구조 참고, KerML 철학 (Feature ⊂ Type) 기반
+
+
+define
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Attributes
+# ═══════════════════════════════════════════════════════════════════════════════
+
+attribute uid, value string;
+attribute name, value string;
+attribute description, value string;
+attribute qualified_name, value string;
+attribute is_abstract, value boolean;
+attribute is_composite, value boolean;
+attribute is_derived, value boolean;
+attribute is_readonly, value boolean;
+attribute is_ordered, value boolean;
+attribute is_unique, value boolean;
+attribute multiplicity_lower, value integer;
+attribute multiplicity_upper, value integer;           ## -1 = unlimited (*)
+attribute visibility, value string;                 ## public | private | protected | package
+attribute direction, value string;                  ## in | out | inout
+attribute guard_expr, value string;                 ## guard condition expression
+attribute ordering, value string;                   ## FIFO | LIFO | unordered
+attribute layer, value string;                      ## L1 | L2 | L3 | L4
+attribute kind, value string;                       ## subtype discriminator within a level
+attribute execution_mode, value string;             ## sequential | parallel | async
+attribute join_mode, value string;                  ## all | any | first
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L1 Structure — "무엇이 존재하는가"
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Hierarchy:
+#   element
+#   └── namespace
+#       └── metatype (KerML: Type — classifies instances)
+#           ├── feature (KerML insight: Feature IS a Type)
+#           │   ├── port          [L1] — access/interaction point
+#           │   ├── step          [L4]
+#           │   │   └── action    [L4]
+#           │   ├── event         [L4] — state change trigger
+#           │   └── expression    [L4]
+#           ├── classifier
+#           │   ├── structure     (= active, UML Class)
+#           │   ├── item          (= passive, data-bearing)
+#           │   └── datatype
+#           └── state             [L4]
+
+entity element @abstract,
+    owns uid @key,
+    owns name,
+    owns description,
+    owns qualified_name,
+    owns layer,
+    plays membership:member,
+    plays ownership:owned;
+
+entity namespace @abstract, sub element,
+    owns visibility,
+    plays membership:container,
+    plays ownership:owner;
+
+entity metatype @abstract, sub namespace,
+    owns is_abstract,
+    plays specialization:supertype,
+    plays specialization:subtype,
+    plays feature_typing:typing,
+    plays association:source_end,
+    plays association:target_end;
+
+entity feature, sub metatype,
+    owns multiplicity_lower,
+    owns multiplicity_upper,
+    owns is_ordered,
+    owns is_unique,
+    owns is_derived,
+    owns is_composite,
+    owns is_readonly,
+    plays feature_typing:typed_feature,
+    plays connector:source,
+    plays connector:target,
+    plays redefinition:original,
+    plays redefinition:redefining,
+    plays subsetting:subsetted,
+    plays subsetting:subsetting_feature;
+
+entity port, sub feature;
+## port inherits connector:source, connector:target from feature
+
+entity classifier @abstract, sub metatype;
+
+entity structure, sub classifier;
+
+entity item, sub classifier;
+
+entity datatype, sub classifier;
+
+entity package, sub namespace,
+    plays association:source_end,
+    plays association:target_end;
+
+
+# ─── L4 Concrete entities (extend L1 hierarchy) ──────────────────────────────
+
+entity step, sub feature,
+    plays succession:predecessor,
+    plays succession:successor,
+    plays triggering:responding;
+
+entity action, sub step;
+
+entity event, sub feature,
+    plays succession:predecessor,
+    plays succession:successor;
+## event inherits triggering:trigger_source from feature
+
+entity expression, sub feature,
+    owns kind;
+
+entity state, sub metatype,
+    plays guarding:guarded_element,
+    plays transition:source_state,
+    plays transition:target_state;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L2 Relationship — "어떻게 연결되는가"
+# ═══════════════════════════════════════════════════════════════════════════════
+
+relation membership,
+    owns uid @key,
+    relates container,
+    relates member;
+
+relation ownership,
+    owns uid @key,
+    owns is_composite,
+    relates owner,
+    relates owned;
+
+relation specialization,
+    owns uid @key,
+    relates supertype,
+    relates subtype;
+
+relation feature_typing,
+    owns uid @key,
+    relates typed_feature,
+    relates typing;
+
+relation association,
+    owns uid @key,
+    owns name,
+    owns is_derived,
+    relates source_end,
+    relates target_end;
+
+relation connector,
+    owns uid @key,
+    owns name,
+    relates source,
+    relates target;
+
+relation redefinition,
+    owns uid @key,
+    relates original,
+    relates redefining;
+
+relation subsetting,
+    owns uid @key,
+    relates subsetted,
+    relates subsetting_feature;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L3 Behavioral — "이 연결은 행위를 가진다"
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# L3 relations are subtypes of L2 relations.
+# A Flow IS a Connector with behavioral semantics.
+# This enables polymorphic queries: querying Connector returns Flow too.
+
+relation flow, sub connector,
+    owns direction,
+    owns ordering;
+
+relation succession, sub connector,
+    relates predecessor as source,
+    relates successor as target,
+    owns guard_expr,
+    owns execution_mode,
+    owns join_mode;
+
+relation interaction, sub connector,
+    owns kind;
+
+relation triggering,
+    owns uid @key,
+    relates trigger_source,
+    relates responding;
+
+relation guarding,
+    owns uid @key,
+    owns guard_expr,
+    relates guarded_element,
+    relates condition;
+
+relation transition,
+    owns uid @key,
+    owns guard_expr,
+    relates source_state,
+    relates target_state;
+
+## Role players for L3
+feature plays triggering:trigger_source;
+expression plays guarding:condition;
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L4 Concrete — implicit through L1 entity subtypes + L3 relation instances
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# L4 has no new schema types — it emerges from:
+#   - L1 concrete entities: step, action, state, expression
+#   - L3 behavioral relations: flow, succession, triggering, guarding
+#   - Combined: action --succession--> action (sequencing)
+#                state --succession[guard]--> state (transition)
+#
+# This is the kernel's key insight: behavior = structure + qualified relations.
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Infrastructure — Rule Corpus (메타모델 계층 외부)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+attribute rule_id, value string;
+attribute source_pattern, value string;
+attribute target_pattern, value string;
+attribute relationship_name, value string;
+attribute is_valid, value boolean;
+attribute rule_priority, value integer;
+attribute rule_notes, value string;
+attribute rule_domain, value string;
+attribute rule_tag, value string;
+attribute rule_category, value string;
+attribute rule_confidence, value string;
+attribute rule_source, value string;
+attribute established_version, value string;
+attribute rationale, value string;
+
+entity validity_rule,
+    owns rule_id @key,
+    owns source_pattern,
+    owns target_pattern,
+    owns relationship_name,
+    owns is_valid,
+    owns rule_priority,
+    owns rule_notes,
+    owns rule_domain,
+    owns rule_tag,
+    owns rule_category,
+    owns rule_confidence,
+    owns rule_source,
+    owns established_version,
+    owns rationale;

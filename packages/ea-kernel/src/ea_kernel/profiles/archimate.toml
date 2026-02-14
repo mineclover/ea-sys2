@@ -1,0 +1,865 @@
+# ArchiMate 3.2 Kernel Profile
+#
+# 58 elements, 11 relations, 44 rules (36 allow + 8 deny, NO fallback rules)
+# 17 categories → 11 kernel types
+
+[profile]
+name = "ArchiMate"
+version = "3.2"
+kernel_version = "2.5.0"
+id_prefix = "am"
+standard = "ArchiMate 3.2"
+organization = "The Open Group"
+
+[categories]
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Event = "event"
+PassiveStructure = "item"
+Composite = "package"
+Executable = "action"
+Goal = "state"
+Outcome = "state"
+Assessment = "expression"
+Constraint = "expression"
+Driver = "feature"
+Principle = "feature"
+Requirement = "feature"
+Junction = "feature"
+Meaning = "datatype"
+Value = "datatype"
+
+# ═══════════════════════════════════════════════════════════════════
+# Elements — 58 ArchiMate elements across 7 layers + Cross-layer
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Motivation (10) ───────────────────────────────────────────────
+
+[[elements]]
+name = "Stakeholder"
+layer = "Motivation"
+category = "ActiveStructure"
+description = "Individual, team, or organization with interest"
+
+[[elements]]
+name = "Driver"
+layer = "Motivation"
+category = "Driver"
+description = "External or internal condition that motivates change"
+
+[[elements]]
+name = "Assessment"
+layer = "Motivation"
+category = "Assessment"
+description = "Appraisal of a driver"
+
+[[elements]]
+name = "Goal"
+layer = "Motivation"
+category = "Goal"
+description = "Desired end state"
+
+[[elements]]
+name = "Outcome"
+layer = "Motivation"
+category = "Outcome"
+description = "Measurable end result"
+
+[[elements]]
+name = "Principle"
+layer = "Motivation"
+category = "Principle"
+description = "Qualitative statement of intent"
+
+[[elements]]
+name = "Requirement"
+layer = "Motivation"
+category = "Requirement"
+description = "Formal statement of need"
+
+[[elements]]
+name = "Constraint"
+layer = "Motivation"
+category = "Constraint"
+description = "Restriction on the way the system is realized"
+
+[[elements]]
+name = "Meaning"
+layer = "Motivation"
+category = "Meaning"
+description = "Knowledge or expertise assigned to a concept"
+
+[[elements]]
+name = "Value"
+layer = "Motivation"
+category = "Value"
+description = "Relative worth or importance"
+
+# ── Strategy (4) ──────────────────────────────────────────────────
+
+[[elements]]
+name = "Resource"
+layer = "Strategy"
+category = "ActiveStructure"
+description = "Asset owned or controlled"
+
+[[elements]]
+name = "Capability"
+layer = "Strategy"
+category = "ActiveStructure"
+description = "Ability to achieve outcome through activities"
+
+[[elements]]
+name = "CourseOfAction"
+layer = "Strategy"
+category = "Executable"
+description = "Approach or plan for achieving goals"
+
+[[elements]]
+name = "ValueStream"
+layer = "Strategy"
+category = "Behavior"
+description = "Sequence of activities that creates value"
+
+# ── Business (13) ─────────────────────────────────────────────────
+
+[[elements]]
+name = "BusinessActor"
+layer = "Business"
+category = "ActiveStructure"
+description = "Organizational entity that performs behavior"
+
+[[elements]]
+name = "BusinessRole"
+layer = "Business"
+category = "ActiveStructure"
+description = "Named role performed by an actor"
+
+[[elements]]
+name = "BusinessCollaboration"
+layer = "Business"
+category = "ActiveStructure"
+description = "Aggregate of roles working together"
+
+[[elements]]
+name = "BusinessInterface"
+layer = "Business"
+category = "Interface"
+description = "External access point to a business service"
+
+[[elements]]
+name = "BusinessProcess"
+layer = "Business"
+category = "Behavior"
+description = "Sequence of activities producing a result"
+
+[[elements]]
+name = "BusinessFunction"
+layer = "Business"
+category = "Behavior"
+description = "Organizational capability element"
+
+[[elements]]
+name = "BusinessInteraction"
+layer = "Business"
+category = "Behavior"
+description = "Behavior performed by a collaboration"
+
+[[elements]]
+name = "BusinessEvent"
+layer = "Business"
+category = "Event"
+description = "Organizational state change that triggers behavior"
+
+[[elements]]
+name = "BusinessService"
+layer = "Business"
+category = "Behavior"
+description = "Externally visible behavior element"
+
+[[elements]]
+name = "BusinessObject"
+layer = "Business"
+category = "PassiveStructure"
+description = "Information element manipulated by behavior"
+
+[[elements]]
+name = "Contract"
+layer = "Business"
+category = "PassiveStructure"
+description = "Formal agreement between parties"
+
+[[elements]]
+name = "Representation"
+layer = "Business"
+category = "PassiveStructure"
+description = "Perceptible form of a business object"
+
+[[elements]]
+name = "Product"
+layer = "Business"
+category = "Composite"
+description = "Coherent collection of services"
+
+# ── Application (9) ───────────────────────────────────────────────
+
+[[elements]]
+name = "ApplicationComponent"
+layer = "Application"
+category = "ActiveStructure"
+description = "Modular, deployable unit of application functionality"
+
+[[elements]]
+name = "ApplicationCollaboration"
+layer = "Application"
+category = "ActiveStructure"
+description = "Aggregate of application components"
+
+[[elements]]
+name = "ApplicationInterface"
+layer = "Application"
+category = "Interface"
+description = "External access point for application services"
+
+[[elements]]
+name = "ApplicationProcess"
+layer = "Application"
+category = "Behavior"
+description = "Sequence of application activities"
+
+[[elements]]
+name = "ApplicationFunction"
+layer = "Application"
+category = "Behavior"
+description = "Automated behavior performed by a component"
+
+[[elements]]
+name = "ApplicationInteraction"
+layer = "Application"
+category = "Behavior"
+description = "Behavior performed by a collaboration"
+
+[[elements]]
+name = "ApplicationEvent"
+layer = "Application"
+category = "Event"
+description = "Application state change that triggers behavior"
+
+[[elements]]
+name = "ApplicationService"
+layer = "Application"
+category = "Behavior"
+description = "Externally visible application behavior"
+
+[[elements]]
+name = "DataObject"
+layer = "Application"
+category = "PassiveStructure"
+description = "Data structured for automated processing"
+
+# ── Technology (13) ───────────────────────────────────────────────
+
+[[elements]]
+name = "Node"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Computational or physical resource"
+
+[[elements]]
+name = "Device"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Physical IT resource"
+
+[[elements]]
+name = "SystemSoftware"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Software that provides infrastructure services"
+
+[[elements]]
+name = "TechnologyCollaboration"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Aggregate of technology nodes"
+
+[[elements]]
+name = "TechnologyInterface"
+layer = "Technology"
+category = "Interface"
+description = "External access point for technology services"
+
+[[elements]]
+name = "Path"
+layer = "Technology"
+category = "Interface"
+description = "Link between two or more technology nodes"
+
+[[elements]]
+name = "CommunicationNetwork"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Set of infrastructure for data transport"
+
+[[elements]]
+name = "TechnologyProcess"
+layer = "Technology"
+category = "Behavior"
+description = "Sequence of technology activities"
+
+[[elements]]
+name = "TechnologyFunction"
+layer = "Technology"
+category = "Behavior"
+description = "Internal technology behavior"
+
+[[elements]]
+name = "TechnologyInteraction"
+layer = "Technology"
+category = "Behavior"
+description = "Behavior performed by technology collaboration"
+
+[[elements]]
+name = "TechnologyEvent"
+layer = "Technology"
+category = "Event"
+description = "Technology state change that triggers behavior"
+
+[[elements]]
+name = "TechnologyService"
+layer = "Technology"
+category = "Behavior"
+description = "Externally visible technology behavior"
+
+[[elements]]
+name = "Artifact"
+layer = "Technology"
+category = "PassiveStructure"
+description = "Piece of data used or produced"
+
+# ── Physical (4) ──────────────────────────────────────────────────
+
+[[elements]]
+name = "Equipment"
+layer = "Physical"
+category = "ActiveStructure"
+description = "Physical machine or tool"
+
+[[elements]]
+name = "Facility"
+layer = "Physical"
+category = "ActiveStructure"
+description = "Physical structure that houses equipment"
+
+[[elements]]
+name = "DistributionNetwork"
+layer = "Physical"
+category = "ActiveStructure"
+description = "Physical network for material transport"
+
+[[elements]]
+name = "Material"
+layer = "Physical"
+category = "PassiveStructure"
+description = "Tangible physical element"
+
+# ── Implementation & Migration (5) ────────────────────────────────
+
+[[elements]]
+name = "WorkPackage"
+layer = "Implementation"
+category = "Executable"
+description = "Series of actions for achieving a result"
+
+[[elements]]
+name = "Deliverable"
+layer = "Implementation"
+category = "PassiveStructure"
+description = "Precisely-defined outcome of a work package"
+
+[[elements]]
+name = "ImplementationEvent"
+layer = "Implementation"
+category = "Event"
+description = "State change that triggers migration behavior"
+
+[[elements]]
+name = "Plateau"
+layer = "Implementation"
+category = "Composite"
+description = "Relatively stable state of the architecture"
+
+[[elements]]
+name = "Gap"
+layer = "Implementation"
+category = "Assessment"
+description = "Difference between two plateaus"
+
+# ── Cross-layer (3) ───────────────────────────────────────────────
+
+[[elements]]
+name = "Grouping"
+layer = "Cross-layer"
+category = "Composite"
+description = "Aggregation of elements for documentation"
+
+[[elements]]
+name = "Location"
+layer = "Cross-layer"
+category = "Composite"
+description = "Conceptual or physical place"
+
+[[elements]]
+name = "Junction"
+layer = "Cross-layer"
+category = "Junction"
+description = "Routing point for relationships"
+
+# ═══════════════════════════════════════════════════════════════════
+# Relations — 11 ArchiMate relationship types
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "Composition"
+kernel_relation = "ownership"
+description = "Part-whole with lifecycle dependency"
+
+[[relations]]
+name = "Aggregation"
+kernel_relation = "membership"
+description = "Part-whole without lifecycle dependency"
+
+[[relations]]
+name = "Assignment"
+kernel_relation = "association"
+description = "Allocation of active structure to behavior"
+
+[[relations]]
+name = "Realization"
+kernel_relation = "specialization"
+description = "Concrete element realizes abstract element"
+
+[[relations]]
+name = "Serving"
+kernel_relation = "association"
+description = "Element provides functionality to another"
+
+[[relations]]
+name = "Access"
+kernel_relation = "association"
+description = "Behavior element accesses passive structure"
+
+[[relations]]
+name = "Influence"
+kernel_relation = "association"
+description = "Motivation element influences another"
+
+[[relations]]
+name = "Triggering"
+kernel_relation = "succession"
+description = "Temporal causal relationship"
+
+[[relations]]
+name = "Flow"
+kernel_relation = "flow"
+description = "Transfer of data or material"
+
+[[relations]]
+name = "Specialization"
+kernel_relation = "specialization"
+description = "Element is a specialization of another"
+
+[[relations]]
+name = "Association"
+kernel_relation = "association"
+description = "Unspecified structural relationship"
+
+# ═══════════════════════════════════════════════════════════════════
+# Validity Rules — 36 allow + 8 deny = 44 explicit rules
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Composition (ownership): ActiveStructure owns PassiveStructure/Interface ──
+
+[[rules]]
+id = "am-comp-01"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "Composition"
+priority = 40
+notes = "Active structure composes passive structure"
+
+[[rules]]
+id = "am-comp-02"
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "Composition"
+priority = 40
+notes = "Active structure composes interface"
+
+[[rules]]
+id = "am-comp-03"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "Composition"
+priority = 40
+notes = "Active structure composes behavior"
+
+[[rules]]
+id = "am-comp-04"
+source = "@Composite"
+target = "@Behavior"
+relation = "Composition"
+priority = 40
+notes = "Composite composes behavior"
+
+[[rules]]
+id = "am-comp-05"
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "Composition"
+priority = 40
+notes = "Composite composes active structure"
+
+# ── Aggregation (membership): broader containment ─────────────────
+
+[[rules]]
+id = "am-agg-01"
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "Aggregation"
+priority = 40
+notes = "Active structure aggregates active structure"
+
+[[rules]]
+id = "am-agg-02"
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "Aggregation"
+priority = 40
+notes = "Composite aggregates active structure"
+
+[[rules]]
+id = "am-agg-03"
+source = "@Composite"
+target = "@Behavior"
+relation = "Aggregation"
+priority = 40
+notes = "Composite aggregates behavior"
+
+[[rules]]
+id = "am-agg-04"
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "Aggregation"
+priority = 40
+notes = "Composite aggregates passive structure"
+
+# ── Assignment (association): active structure → behavior ─────────
+
+[[rules]]
+id = "am-assign-01"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "Assignment"
+priority = 40
+notes = "Active structure is assigned to behavior"
+
+[[rules]]
+id = "am-assign-02"
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "Assignment"
+priority = 50
+notes = "Active structure assigned to active structure (node→software)"
+
+# ── Realization (specialization): concrete → abstract ─────────────
+
+[[rules]]
+id = "am-real-01"
+source = "@Behavior"
+target = "@Behavior"
+relation = "Realization"
+priority = 40
+notes = "Behavior realizes behavior"
+
+[[rules]]
+id = "am-real-02"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "Realization"
+priority = 40
+notes = "Active structure realizes passive structure"
+
+[[rules]]
+id = "am-real-03"
+source = "@PassiveStructure"
+target = "@PassiveStructure"
+relation = "Realization"
+priority = 40
+notes = "Passive structure realizes passive structure"
+
+[[rules]]
+id = "am-real-04"
+source = "@Behavior"
+target = "@Goal"
+relation = "Realization"
+priority = 50
+notes = "Behavior realizes goal"
+
+[[rules]]
+id = "am-real-05"
+source = "@Behavior"
+target = "@Outcome"
+relation = "Realization"
+priority = 50
+notes = "Behavior realizes outcome"
+
+# ── Serving (association): provider → consumer ────────────────────
+
+[[rules]]
+id = "am-serv-01"
+source = "@Behavior"
+target = "@ActiveStructure"
+relation = "Serving"
+priority = 40
+notes = "Behavior serves active structure"
+
+[[rules]]
+id = "am-serv-02"
+source = "@Behavior"
+target = "@Behavior"
+relation = "Serving"
+priority = 40
+notes = "Behavior serves behavior"
+
+[[rules]]
+id = "am-serv-03"
+source = "@Interface"
+target = "@ActiveStructure"
+relation = "Serving"
+priority = 50
+notes = "Interface serves active structure"
+
+# ── Access (association): behavior → passive structure ────────────
+
+[[rules]]
+id = "am-acc-01"
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "Access"
+priority = 40
+notes = "Behavior accesses passive structure"
+
+[[rules]]
+id = "am-acc-02"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "Access"
+priority = 50
+notes = "Active structure accesses passive structure"
+
+# ── Influence (association): motivation elements ──────────────────
+
+[[rules]]
+id = "am-inf-01"
+source = "@Driver"
+target = "@Goal"
+relation = "Influence"
+priority = 40
+notes = "Driver influences goal"
+
+[[rules]]
+id = "am-inf-02"
+source = "@Assessment"
+target = "@Goal"
+relation = "Influence"
+priority = 40
+notes = "Assessment influences goal"
+
+[[rules]]
+id = "am-inf-03"
+source = "@Goal"
+target = "@Goal"
+relation = "Influence"
+priority = 40
+notes = "Goal influences goal"
+
+[[rules]]
+id = "am-inf-04"
+source = "@Principle"
+target = "@Requirement"
+relation = "Influence"
+priority = 40
+notes = "Principle influences requirement"
+
+[[rules]]
+id = "am-inf-05"
+source = "@Constraint"
+target = "@Requirement"
+relation = "Influence"
+priority = 40
+notes = "Constraint influences requirement"
+
+[[rules]]
+id = "am-inf-06"
+source = "@Requirement"
+target = "@Behavior"
+relation = "Influence"
+priority = 50
+notes = "Requirement influences behavior"
+
+# ── Triggering (succession): temporal ordering ────────────────────
+
+[[rules]]
+id = "am-trig-01"
+source = "@Event"
+target = "@Behavior"
+relation = "Triggering"
+priority = 40
+notes = "Event triggers behavior"
+
+[[rules]]
+id = "am-trig-02"
+source = "@Behavior"
+target = "@Behavior"
+relation = "Triggering"
+priority = 40
+notes = "Behavior triggers behavior"
+
+[[rules]]
+id = "am-trig-03"
+source = "@Behavior"
+target = "@Event"
+relation = "Triggering"
+priority = 40
+notes = "Behavior triggers event"
+
+[[rules]]
+id = "am-trig-04"
+source = "@Event"
+target = "@Event"
+relation = "Triggering"
+priority = 40
+notes = "Event triggers event"
+
+# ── Flow (flow): data/material transfer ───────────────────────────
+
+[[rules]]
+id = "am-flow-01"
+source = "@Behavior"
+target = "@Behavior"
+relation = "Flow"
+priority = 40
+notes = "Flow between behaviors"
+
+[[rules]]
+id = "am-flow-02"
+source = "@Event"
+target = "@Behavior"
+relation = "Flow"
+priority = 40
+notes = "Flow from event to behavior"
+
+[[rules]]
+id = "am-flow-03"
+source = "@Behavior"
+target = "@Event"
+relation = "Flow"
+priority = 40
+notes = "Flow from behavior to event"
+
+# ── Specialization (specialization): same category ────────────────
+
+[[rules]]
+id = "am-spec-01"
+source = "*"
+target = "*"
+relation = "Specialization"
+priority = 40
+conditions = ["SAME_CATEGORY"]
+notes = "Specialization within same category only"
+
+# ── Association: general ──────────────────────────────────────────
+
+[[rules]]
+id = "am-assoc-01"
+source = "*"
+target = "*"
+relation = "Association"
+priority = 40
+notes = "General association between any elements"
+
+# ── Deny rules ────────────────────────────────────────────────────
+
+[[rules]]
+id = "am-deny-01"
+source = "@PassiveStructure"
+target = "@ActiveStructure"
+relation = "Composition"
+valid = false
+priority = 80
+notes = "Passive structure cannot compose active structure"
+
+[[rules]]
+id = "am-deny-02"
+source = "@Behavior"
+target = "@ActiveStructure"
+relation = "Composition"
+valid = false
+priority = 80
+notes = "Behavior cannot compose active structure"
+
+[[rules]]
+id = "am-deny-03"
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "Assignment"
+valid = false
+priority = 80
+notes = "Passive structure cannot be assigned to behavior"
+
+[[rules]]
+id = "am-deny-04"
+source = "@Event"
+target = "@PassiveStructure"
+relation = "Triggering"
+valid = false
+priority = 80
+notes = "Event cannot trigger passive structure"
+
+[[rules]]
+id = "am-deny-05"
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "Triggering"
+valid = false
+priority = 80
+notes = "Passive structure cannot trigger behavior"
+
+[[rules]]
+id = "am-deny-06"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "Triggering"
+valid = false
+priority = 80
+notes = "Active structure cannot trigger passive structure"
+
+[[rules]]
+id = "am-deny-09"
+source = "@PassiveStructure"
+target = "@ActiveStructure"
+relation = "Access"
+valid = false
+priority = 80
+notes = "Passive structure cannot access active structure"
+
+[[rules]]
+id = "am-deny-10"
+source = "@Junction"
+target = "@Junction"
+relation = "Specialization"
+valid = false
+priority = 80
+notes = "Junction cannot specialize junction"

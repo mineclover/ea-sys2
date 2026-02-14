@@ -1,0 +1,191 @@
+{
+  "active_models": [
+    "RalphTUIImplementation.kernel"
+  ],
+  "db_contract": {
+    "decisions.db": {
+      "required_tables": [
+        "schema_version",
+        "decision_records",
+        "judgment_statistics"
+      ],
+      "row_counts": {
+        "decision_records": 0,
+        "judgment_statistics": 0,
+        "schema_version": 1
+      },
+      "schema_version": 1,
+      "tables": [
+        "decision_records",
+        "judgment_statistics",
+        "schema_version"
+      ]
+    },
+    "profiles.db": {
+      "required_tables": [
+        "schema_info",
+        "profile_versions",
+        "profile_tags",
+        "model_registry",
+        "model_versions",
+        "validation_runs"
+      ],
+      "row_counts": {
+        "model_registry": 6,
+        "model_versions": 6,
+        "profile_tags": 0,
+        "profile_versions": 0,
+        "schema_info": 1,
+        "validation_runs": 7
+      },
+      "schema_version": 2,
+      "tables": [
+        "model_registry",
+        "model_versions",
+        "profile_tags",
+        "profile_versions",
+        "schema_info",
+        "validation_runs"
+      ]
+    },
+    "rules.db": {
+      "required_tables": [
+        "schema_version",
+        "rule_assets",
+        "rule_asset_history"
+      ],
+      "row_counts": {
+        "rule_asset_history": 0,
+        "rule_assets": 0,
+        "schema_version": 1
+      },
+      "schema_version": 1,
+      "tables": [
+        "rule_asset_history",
+        "rule_assets",
+        "schema_version"
+      ]
+    },
+    "versions.db": {
+      "required_tables": [
+        "schema_version",
+        "corpus_versions",
+        "version_entries"
+      ],
+      "row_counts": {
+        "corpus_versions": 0,
+        "schema_version": 1,
+        "version_entries": 0
+      },
+      "schema_version": 1,
+      "tables": [
+        "corpus_versions",
+        "schema_version",
+        "version_entries"
+      ]
+    }
+  },
+  "generated_by": "kernel_governance_reference_snapshot.py",
+  "model_registry": [
+    {
+      "model_name": "RalphTUIImplementation.decision",
+      "status": "registered",
+      "validation_runs": 1,
+      "version": "0.2.0"
+    },
+    {
+      "model_name": "RalphTUIImplementation.flow",
+      "status": "registered",
+      "validation_runs": 1,
+      "version": "0.2.0"
+    },
+    {
+      "model_name": "RalphTUIImplementation.governance",
+      "status": "registered",
+      "validation_runs": 1,
+      "version": "0.2.0"
+    },
+    {
+      "model_name": "RalphTUIImplementation.infra",
+      "status": "registered",
+      "validation_runs": 1,
+      "version": "0.2.0"
+    },
+    {
+      "model_name": "RalphTUIImplementation.kernel",
+      "status": "active",
+      "validation_runs": 2,
+      "version": "0.2.0"
+    },
+    {
+      "model_name": "RalphTUIImplementation.needs",
+      "status": "registered",
+      "validation_runs": 1,
+      "version": "0.2.0"
+    }
+  ],
+  "reference_version": "1.0.0",
+  "seed_profiles": [
+    {
+      "content_hash": "f921224773c14db31411418be8b4452c770ffde0a7f3709b6cd7ee3e279f89ae",
+      "elements": 7,
+      "file": "00-infra.toml",
+      "layer": "infra",
+      "model_name": "RalphTUIImplementation.infra",
+      "relations": 9,
+      "rules": 9,
+      "version": "0.2.0"
+    },
+    {
+      "content_hash": "9c5dd139a60f045eda437a27e7dc3cf2178d28a89d1ac6f312dd6a327e32de3e",
+      "elements": 12,
+      "file": "10-governance.toml",
+      "layer": "governance",
+      "model_name": "RalphTUIImplementation.governance",
+      "relations": 9,
+      "rules": 18,
+      "version": "0.2.0"
+    },
+    {
+      "content_hash": "4a69a50a02baaef12f826e07f1d8be3038d1d6d525f6e51210e9a5ef00be173b",
+      "elements": 10,
+      "file": "20-decision.toml",
+      "layer": "decision",
+      "model_name": "RalphTUIImplementation.decision",
+      "relations": 9,
+      "rules": 15,
+      "version": "0.2.0"
+    },
+    {
+      "content_hash": "cd9d3b13c763f2460c3cc2a9224300decc0390f82d7b82f5b77590876c9bbaeb",
+      "elements": 5,
+      "file": "30-needs.toml",
+      "layer": "needs",
+      "model_name": "RalphTUIImplementation.needs",
+      "relations": 9,
+      "rules": 9,
+      "version": "0.2.0"
+    },
+    {
+      "content_hash": "eef12d557b51e863088754699f33a6e98a159a1315c998f6e51f94ae310f46ac",
+      "elements": 13,
+      "file": "40-kernel.toml",
+      "layer": "kernel",
+      "model_name": "RalphTUIImplementation.kernel",
+      "relations": 9,
+      "rules": 30,
+      "version": "0.2.0"
+    },
+    {
+      "content_hash": "a398456b517d6aa1b7005d113773e2b7a5f26a905df45ff2167bcbc389ff62dc",
+      "elements": 19,
+      "file": "50-flow.toml",
+      "layer": "flow",
+      "model_name": "RalphTUIImplementation.flow",
+      "relations": 9,
+      "rules": 46,
+      "version": "0.2.0"
+    }
+  ],
+  "snapshot_kind": "kernel_governance_db_reference"
+}

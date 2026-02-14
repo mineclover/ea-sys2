@@ -1,0 +1,995 @@
+# TOGAF 10 Kernel Profile
+#
+# 54 elements, 18 relations, 56 explicit rules (46 allow + 10 deny)
+# 10 categories → 10 kernel types (datatype unused)
+#
+# Pattern conventions:
+#   @Category  — matches elements by category (e.g., @Behavior)
+#   #Layer     — matches elements by layer (e.g., #Business)
+#   ElementName — exact element match
+
+[profile]
+name = "TOGAF"
+version = "10"
+kernel_version = "2.5.0"
+id_prefix = "tg"
+standard = "TOGAF 10"
+organization = "The Open Group"
+
+[categories]
+ActiveStructure = "structure"
+Behavior = "step"
+PassiveStructure = "item"
+Event = "event"
+Interface = "port"
+Composite = "package"
+Executable = "action"
+Goal = "state"
+Assessment = "expression"
+Governance = "feature"
+
+# ═══════════════════════════════════════════════════════════════════
+# Elements — 54 TOGAF elements across 4 architecture domains
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Business Architecture (18) ──────────────────────────────────────
+
+# ActiveStructure (5) — structure
+[[elements]]
+name = "Stakeholder"
+layer = "Business"
+category = "ActiveStructure"
+description = "Individual or organization with interest in the architecture"
+
+[[elements]]
+name = "Capability"
+layer = "Business"
+category = "ActiveStructure"
+description = "Ability that an organization possesses"
+
+[[elements]]
+name = "Actor"
+layer = "Business"
+category = "ActiveStructure"
+description = "Person or system that performs behavior"
+
+[[elements]]
+name = "Role"
+layer = "Business"
+category = "ActiveStructure"
+description = "Named set of responsibilities"
+
+[[elements]]
+name = "OrganizationUnit"
+layer = "Business"
+category = "ActiveStructure"
+description = "Self-contained unit of resources"
+
+# Behavior (4) — step
+[[elements]]
+name = "ValueStream"
+layer = "Business"
+category = "Behavior"
+description = "Sequence of activities creating stakeholder value"
+
+[[elements]]
+name = "BusinessFunction"
+layer = "Business"
+category = "Behavior"
+description = "Organizational capability element"
+
+[[elements]]
+name = "BusinessService"
+layer = "Business"
+category = "Behavior"
+description = "Externally visible behavior unit"
+
+[[elements]]
+name = "BusinessProcess"
+layer = "Business"
+category = "Behavior"
+description = "Sequence of activities producing a defined outcome"
+
+# PassiveStructure (1) — item
+[[elements]]
+name = "Contract"
+layer = "Business"
+category = "PassiveStructure"
+description = "Formal agreement between parties"
+
+# Event (1) — event
+[[elements]]
+name = "Event"
+layer = "Business"
+category = "Event"
+description = "Business state change that triggers behavior"
+
+# Executable (1) — action
+[[elements]]
+name = "CourseOfAction"
+layer = "Business"
+category = "Executable"
+description = "Direction or plan for achieving goals"
+
+# Goal (2) — state
+[[elements]]
+name = "Goal"
+layer = "Business"
+category = "Goal"
+description = "Desired end state"
+
+[[elements]]
+name = "Objective"
+layer = "Business"
+category = "Goal"
+description = "Measurable target supporting a goal"
+
+# Assessment (1) — expression
+[[elements]]
+name = "Constraint"
+layer = "Business"
+category = "Assessment"
+description = "Restriction on the architecture"
+
+# Governance (3) — feature
+[[elements]]
+name = "Driver"
+layer = "Business"
+category = "Governance"
+description = "External or internal condition motivating change"
+
+[[elements]]
+name = "Principle"
+layer = "Business"
+category = "Governance"
+description = "Qualitative statement of intent"
+
+[[elements]]
+name = "Requirement"
+layer = "Business"
+category = "Governance"
+description = "Formal statement of need"
+
+# ── Data Architecture (11) ──────────────────────────────────────────
+
+# PassiveStructure (4) — item
+[[elements]]
+name = "DataEntity"
+layer = "Data"
+category = "PassiveStructure"
+description = "Logical unit of data"
+
+[[elements]]
+name = "LogicalDataComponent"
+layer = "Data"
+category = "PassiveStructure"
+description = "Application-independent boundary of data management"
+
+[[elements]]
+name = "PhysicalDataComponent"
+layer = "Data"
+category = "PassiveStructure"
+description = "Physical boundary of data management"
+
+[[elements]]
+name = "DataModel"
+layer = "Data"
+category = "PassiveStructure"
+description = "Formal description of data structure"
+
+# Behavior (1) — step
+[[elements]]
+name = "DataService"
+layer = "Data"
+category = "Behavior"
+description = "Data processing service"
+
+# Assessment (3) — expression
+[[elements]]
+name = "DataQualityRule"
+layer = "Data"
+category = "Assessment"
+description = "Rule for data quality measurement"
+
+[[elements]]
+name = "Assumption"
+layer = "Data"
+category = "Assessment"
+description = "Accepted statement about the environment"
+
+[[elements]]
+name = "Measure"
+layer = "Data"
+category = "Assessment"
+description = "Metric for evaluating architecture attributes"
+
+# Governance (2) — feature
+[[elements]]
+name = "DataLifecyclePolicy"
+layer = "Data"
+category = "Governance"
+description = "Policy governing data lifecycle stages"
+
+[[elements]]
+name = "DataIntegrationPattern"
+layer = "Data"
+category = "Governance"
+description = "Standard pattern for data integration"
+
+# Composite (1) — package
+[[elements]]
+name = "Location"
+layer = "Data"
+category = "Composite"
+description = "Conceptual or physical place"
+
+# ── Application Architecture (10) ──────────────────────────────────
+
+# ActiveStructure (2) — structure
+[[elements]]
+name = "LogicalApplicationComponent"
+layer = "Application"
+category = "ActiveStructure"
+description = "Application-independent encapsulation of functionality"
+
+[[elements]]
+name = "PhysicalApplicationComponent"
+layer = "Application"
+category = "ActiveStructure"
+description = "Deployable unit of application functionality"
+
+# Behavior (4) — step
+[[elements]]
+name = "ApplicationService"
+layer = "Application"
+category = "Behavior"
+description = "Externally visible application behavior"
+
+[[elements]]
+name = "ApplicationFunction"
+layer = "Application"
+category = "Behavior"
+description = "Automated behavior performed by a component"
+
+[[elements]]
+name = "ApplicationCollaboration"
+layer = "Application"
+category = "Behavior"
+description = "Cooperative behavior between components"
+
+[[elements]]
+name = "InformationSystemService"
+layer = "Application"
+category = "Behavior"
+description = "Cross-application information system service"
+
+# Interface (1) — port
+[[elements]]
+name = "ApplicationInterface"
+layer = "Application"
+category = "Interface"
+description = "External access point for application services"
+
+# Event (1) — event
+[[elements]]
+name = "ApplicationEvent"
+layer = "Application"
+category = "Event"
+description = "Application state change that triggers behavior"
+
+# PassiveStructure (1) — item
+[[elements]]
+name = "SoftwareEngineeringArtifact"
+layer = "Application"
+category = "PassiveStructure"
+description = "Deliverable produced by software engineering"
+
+# Governance (1) — feature
+[[elements]]
+name = "Control"
+layer = "Application"
+category = "Governance"
+description = "Mechanism that ensures policy adherence"
+
+# ── Technology Architecture (13) ────────────────────────────────────
+
+# ActiveStructure (6) — structure
+[[elements]]
+name = "LogicalTechnologyComponent"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Technology-independent encapsulation of infrastructure"
+
+[[elements]]
+name = "PhysicalTechnologyComponent"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Deployable unit of technology infrastructure"
+
+[[elements]]
+name = "CommunicationNetwork"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Set of infrastructure for data transport"
+
+[[elements]]
+name = "Node"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Computational or physical resource hosting artifacts"
+
+[[elements]]
+name = "Device"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Physical IT resource"
+
+[[elements]]
+name = "SystemSoftware"
+layer = "Technology"
+category = "ActiveStructure"
+description = "Software providing infrastructure services"
+
+# Behavior (1) — step
+[[elements]]
+name = "PlatformService"
+layer = "Technology"
+category = "Behavior"
+description = "Externally visible technology platform behavior"
+
+# Interface (1) — port
+[[elements]]
+name = "TechnologyInterface"
+layer = "Technology"
+category = "Interface"
+description = "External access point for technology services"
+
+# PassiveStructure (2) — item
+[[elements]]
+name = "Artifact"
+layer = "Technology"
+category = "PassiveStructure"
+description = "Piece of data used or produced by technology"
+
+[[elements]]
+name = "Deliverable"
+layer = "Technology"
+category = "PassiveStructure"
+description = "Precisely-defined outcome of a work package"
+
+# Composite (1) — package
+[[elements]]
+name = "Product"
+layer = "Technology"
+category = "Composite"
+description = "Coherent collection of services"
+
+# Executable (2) — action
+[[elements]]
+name = "WorkPackage"
+layer = "Technology"
+category = "Executable"
+description = "Series of actions for achieving a result"
+
+[[elements]]
+name = "ImplementationProject"
+layer = "Technology"
+category = "Executable"
+description = "Managed change initiative"
+
+# ── Migration & Governance (2) ──────────────────────────────────────
+
+# Composite (1) — package
+[[elements]]
+name = "TransitionArchitecture"
+layer = "Migration"
+category = "Composite"
+description = "Intermediate architecture state during transformation"
+
+# Assessment (1) — expression
+[[elements]]
+name = "Gap"
+layer = "Migration"
+category = "Assessment"
+description = "Difference between baseline and target architecture"
+
+# ═══════════════════════════════════════════════════════════════════
+# Relations — 18 TOGAF relationship types
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "decomposition"
+kernel_relation = "ownership"
+description = "Part-whole structural breakdown"
+
+[[relations]]
+name = "grouping"
+kernel_relation = "membership"
+description = "Logical grouping of elements"
+
+[[relations]]
+name = "assignment"
+kernel_relation = "association"
+description = "Allocation of resource to behavior"
+
+[[relations]]
+name = "realization"
+kernel_relation = "specialization"
+description = "Concrete element realizes abstract element"
+
+[[relations]]
+name = "hosting"
+kernel_relation = "association"
+description = "Technology hosts application or data"
+
+[[relations]]
+name = "uses"
+kernel_relation = "association"
+description = "Element uses another element"
+
+[[relations]]
+name = "provides"
+kernel_relation = "association"
+description = "Element provides capability or service"
+
+[[relations]]
+name = "consumes"
+kernel_relation = "association"
+description = "Element consumes resource or service"
+
+[[relations]]
+name = "accesses"
+kernel_relation = "association"
+description = "Behavior element accesses data"
+
+[[relations]]
+name = "triggers"
+kernel_relation = "succession"
+description = "Temporal causal relationship"
+
+[[relations]]
+name = "flows"
+kernel_relation = "flow"
+description = "Transfer of data between elements"
+
+[[relations]]
+name = "governs"
+kernel_relation = "association"
+description = "Governance element constrains another"
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Constraint restricts element"
+
+[[relations]]
+name = "influences"
+kernel_relation = "association"
+description = "Motivation element influences another"
+
+[[relations]]
+name = "traces"
+kernel_relation = "association"
+description = "Traceability between elements"
+
+[[relations]]
+name = "derives"
+kernel_relation = "specialization"
+description = "Element is derived from another"
+
+[[relations]]
+name = "specialization"
+kernel_relation = "specialization"
+description = "Element is a specialization of another"
+
+[[relations]]
+name = "association"
+kernel_relation = "association"
+description = "General unspecified relationship"
+
+# ═══════════════════════════════════════════════════════════════════
+# Validity Rules — 46 allow + 10 deny = 56 explicit rules
+#
+# Priority bands:
+#   40  = broad category allows
+#   50  = specific category allows
+#   60  = cross-category allows
+#   80  = explicit denials
+# ═══════════════════════════════════════════════════════════════════
+
+# ── decomposition (ownership): structural breakdown ───────────────
+
+[[rules]]
+id = "tg-decomp-01"
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "decomposition"
+priority = 40
+notes = "Active structure decomposes into active structure"
+
+[[rules]]
+id = "tg-decomp-02"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "decomposition"
+priority = 40
+notes = "Active structure decomposes into behavior"
+
+[[rules]]
+id = "tg-decomp-03"
+source = "@Behavior"
+target = "@Behavior"
+relation = "decomposition"
+priority = 40
+notes = "Behavior decomposes into sub-behaviors"
+
+[[rules]]
+id = "tg-decomp-04"
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "decomposition"
+priority = 40
+notes = "Composite decomposes into active structure"
+
+[[rules]]
+id = "tg-decomp-05"
+source = "@Composite"
+target = "@Behavior"
+relation = "decomposition"
+priority = 40
+notes = "Composite decomposes into behavior"
+
+[[rules]]
+id = "tg-decomp-06"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "decomposition"
+priority = 40
+notes = "Active structure decomposes into passive structure"
+
+# ── grouping (membership): logical containment ────────────────────
+
+[[rules]]
+id = "tg-group-01"
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "grouping"
+priority = 40
+notes = "Composite groups active structure"
+
+[[rules]]
+id = "tg-group-02"
+source = "@Composite"
+target = "@Behavior"
+relation = "grouping"
+priority = 40
+notes = "Composite groups behavior"
+
+[[rules]]
+id = "tg-group-03"
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "grouping"
+priority = 40
+notes = "Composite groups passive structure"
+
+# ── assignment (association): resource to behavior ────────────────
+
+[[rules]]
+id = "tg-assign-01"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "assignment"
+priority = 40
+notes = "Active structure assigned to behavior"
+
+[[rules]]
+id = "tg-assign-02"
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "assignment"
+priority = 50
+notes = "Active structure assigned to active structure (hosting)"
+
+# ── realization (specialization): concrete realizes abstract ──────
+
+[[rules]]
+id = "tg-real-01"
+source = "@Behavior"
+target = "@Behavior"
+relation = "realization"
+priority = 40
+notes = "Behavior realizes behavior"
+
+[[rules]]
+id = "tg-real-02"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "realization"
+priority = 40
+notes = "Active structure realizes passive structure"
+
+[[rules]]
+id = "tg-real-03"
+source = "@PassiveStructure"
+target = "@PassiveStructure"
+relation = "realization"
+priority = 40
+notes = "Passive structure realizes passive structure"
+
+[[rules]]
+id = "tg-real-04"
+source = "@Behavior"
+target = "@Goal"
+relation = "realization"
+priority = 50
+notes = "Behavior realizes goal"
+
+# ── hosting (association): technology to application/data ─────────
+
+[[rules]]
+id = "tg-host-01"
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "hosting"
+priority = 40
+notes = "Technology hosts application component"
+
+[[rules]]
+id = "tg-host-02"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "hosting"
+priority = 40
+notes = "Technology hosts data component"
+
+# ── uses (association): element uses another ──────────────────────
+
+[[rules]]
+id = "tg-uses-01"
+source = "@Behavior"
+target = "@Behavior"
+relation = "uses"
+priority = 40
+notes = "Behavior uses behavior"
+
+[[rules]]
+id = "tg-uses-02"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "uses"
+priority = 40
+notes = "Active structure uses behavior (service)"
+
+[[rules]]
+id = "tg-uses-03"
+source = "@Behavior"
+target = "@Interface"
+relation = "uses"
+priority = 50
+notes = "Behavior uses interface"
+
+# ── provides (association): element provides service ──────────────
+
+[[rules]]
+id = "tg-prov-01"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "provides"
+priority = 40
+notes = "Active structure provides behavior (service)"
+
+[[rules]]
+id = "tg-prov-02"
+source = "@Interface"
+target = "@Behavior"
+relation = "provides"
+priority = 50
+notes = "Interface provides behavior"
+
+# ── consumes (association): element consumes service ──────────────
+
+[[rules]]
+id = "tg-cons-01"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "consumes"
+priority = 40
+notes = "Active structure consumes behavior (service)"
+
+[[rules]]
+id = "tg-cons-02"
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 40
+notes = "Behavior consumes passive structure (data)"
+
+# ── accesses (association): behavior accesses data ────────────────
+
+[[rules]]
+id = "tg-acc-01"
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "accesses"
+priority = 40
+notes = "Behavior accesses passive structure"
+
+[[rules]]
+id = "tg-acc-02"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "accesses"
+priority = 50
+notes = "Active structure accesses passive structure"
+
+# ── triggers (succession): temporal ordering ──────────────────────
+
+[[rules]]
+id = "tg-trig-01"
+source = "@Event"
+target = "@Behavior"
+relation = "triggers"
+priority = 40
+notes = "Event triggers behavior"
+
+[[rules]]
+id = "tg-trig-02"
+source = "@Behavior"
+target = "@Behavior"
+relation = "triggers"
+priority = 40
+notes = "Behavior triggers behavior"
+
+[[rules]]
+id = "tg-trig-03"
+source = "@Behavior"
+target = "@Event"
+relation = "triggers"
+priority = 40
+notes = "Behavior triggers event"
+
+[[rules]]
+id = "tg-trig-04"
+source = "@Event"
+target = "@Event"
+relation = "triggers"
+priority = 40
+notes = "Event triggers event"
+
+# ── flows (flow): data transfer ───────────────────────────────────
+
+[[rules]]
+id = "tg-flow-01"
+source = "@Behavior"
+target = "@Behavior"
+relation = "flows"
+priority = 40
+notes = "Flow between behaviors"
+
+[[rules]]
+id = "tg-flow-02"
+source = "@Event"
+target = "@Behavior"
+relation = "flows"
+priority = 40
+notes = "Flow from event to behavior"
+
+[[rules]]
+id = "tg-flow-03"
+source = "@Behavior"
+target = "@Event"
+relation = "flows"
+priority = 40
+notes = "Flow from behavior to event"
+
+# ── governs (association): governance relationships ───────────────
+
+[[rules]]
+id = "tg-gov-01"
+source = "@Governance"
+target = "@Behavior"
+relation = "governs"
+priority = 40
+notes = "Governance element governs behavior"
+
+[[rules]]
+id = "tg-gov-02"
+source = "@Governance"
+target = "@ActiveStructure"
+relation = "governs"
+priority = 40
+notes = "Governance element governs active structure"
+
+[[rules]]
+id = "tg-gov-03"
+source = "@Governance"
+target = "@PassiveStructure"
+relation = "governs"
+priority = 40
+notes = "Governance element governs passive structure"
+
+# ── constrains (association): constraint restricts ────────────────
+
+[[rules]]
+id = "tg-constr-01"
+source = "@Assessment"
+target = "@Behavior"
+relation = "constrains"
+priority = 40
+notes = "Assessment constrains behavior"
+
+[[rules]]
+id = "tg-constr-02"
+source = "@Assessment"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 40
+notes = "Assessment constrains active structure"
+
+# ── influences (association): motivation influence ────────────────
+
+[[rules]]
+id = "tg-inf-01"
+source = "@Governance"
+target = "@Goal"
+relation = "influences"
+priority = 40
+notes = "Governance element influences goal"
+
+[[rules]]
+id = "tg-inf-02"
+source = "@Assessment"
+target = "@Goal"
+relation = "influences"
+priority = 40
+notes = "Assessment influences goal"
+
+[[rules]]
+id = "tg-inf-03"
+source = "@Goal"
+target = "@Goal"
+relation = "influences"
+priority = 40
+notes = "Goal influences goal"
+
+# ── traces (association): traceability ────────────────────────────
+
+[[rules]]
+id = "tg-trace-01"
+source = "*"
+target = "*"
+relation = "traces"
+priority = 40
+notes = "General traceability between any elements"
+
+# ── derives (specialization): derivation ──────────────────────────
+
+[[rules]]
+id = "tg-deriv-01"
+source = "@PassiveStructure"
+target = "@PassiveStructure"
+relation = "derives"
+priority = 40
+notes = "Passive structure derives from passive structure"
+
+[[rules]]
+id = "tg-deriv-02"
+source = "@Behavior"
+target = "@Behavior"
+relation = "derives"
+priority = 40
+notes = "Behavior derives from behavior"
+
+# ── specialization (specialization): same category ────────────────
+
+[[rules]]
+id = "tg-spec-01"
+source = "*"
+target = "*"
+relation = "specialization"
+priority = 40
+conditions = ["SAME_CATEGORY"]
+notes = "Specialization within same category only"
+
+# ── association: general ──────────────────────────────────────────
+
+[[rules]]
+id = "tg-assoc-01"
+source = "*"
+target = "*"
+relation = "association"
+priority = 40
+notes = "General association between any elements"
+
+# ── Deny rules ────────────────────────────────────────────────────
+
+[[rules]]
+id = "tg-deny-01"
+source = "@PassiveStructure"
+target = "@ActiveStructure"
+relation = "decomposition"
+valid = false
+priority = 80
+notes = "Passive structure cannot decompose active structure"
+
+[[rules]]
+id = "tg-deny-02"
+source = "@Behavior"
+target = "@ActiveStructure"
+relation = "decomposition"
+valid = false
+priority = 80
+notes = "Behavior cannot decompose active structure"
+
+[[rules]]
+id = "tg-deny-03"
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "assignment"
+valid = false
+priority = 80
+notes = "Passive structure cannot be assigned to behavior"
+
+[[rules]]
+id = "tg-deny-04"
+source = "@Event"
+target = "@PassiveStructure"
+relation = "triggers"
+valid = false
+priority = 80
+notes = "Event cannot trigger passive structure"
+
+[[rules]]
+id = "tg-deny-05"
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "triggers"
+valid = false
+priority = 80
+notes = "Passive structure cannot trigger behavior"
+
+[[rules]]
+id = "tg-deny-06"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "triggers"
+valid = false
+priority = 80
+notes = "Active structure cannot trigger passive structure"
+
+[[rules]]
+id = "tg-deny-07"
+source = "@PassiveStructure"
+target = "@ActiveStructure"
+relation = "accesses"
+valid = false
+priority = 80
+notes = "Passive structure cannot access active structure"
+
+[[rules]]
+id = "tg-deny-08"
+source = "@Behavior"
+target = "@ActiveStructure"
+relation = "governs"
+valid = false
+priority = 80
+notes = "Behavior cannot govern active structure"
+
+[[rules]]
+id = "tg-deny-09"
+source = "@Event"
+target = "@Goal"
+relation = "realization"
+valid = false
+priority = 80
+notes = "Event cannot realize goal"
+
+[[rules]]
+id = "tg-deny-12"
+source = "@PassiveStructure"
+target = "@ActiveStructure"
+relation = "realization"
+valid = false
+priority = 80
+notes = "Passive structure cannot realize active structure"

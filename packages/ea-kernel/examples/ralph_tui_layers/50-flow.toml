@@ -1,0 +1,444 @@
+# Ralph TUI Layer Fragment: Flow
+# Standalone-valid layer profile.
+
+[profile]
+name = "RalphTUIImplementation"
+version = "0.2.0"
+kernel_version = "2.5.0"
+id_prefix = "rt"
+standard = "Ralph TUI Internal Architecture"
+organization = "subsy"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "FlowLayer"
+layer = "Flow"
+category = "Composite"
+description = "Execution loop boundary."
+
+[[elements]]
+name = "SyncTrackerStep"
+layer = "Flow"
+category = "Behavior"
+description = "Synchronize tracker before selection."
+
+[[elements]]
+name = "SelectTaskStep"
+layer = "Flow"
+category = "Behavior"
+description = "Pick next task candidate."
+
+[[elements]]
+name = "BuildPromptStep"
+layer = "Flow"
+category = "Behavior"
+description = "Build execution prompt with context."
+
+[[elements]]
+name = "ExecuteAgentAction"
+layer = "Flow"
+category = "Executable"
+description = "Run configured coding agent."
+
+[[elements]]
+name = "DetectCompletionStep"
+layer = "Flow"
+category = "Behavior"
+description = "Evaluate agent output for completion."
+
+[[elements]]
+name = "UpdateTrackerStep"
+layer = "Flow"
+category = "Behavior"
+description = "Update tracker task status."
+
+[[elements]]
+name = "PersistIterationStep"
+layer = "Flow"
+category = "Behavior"
+description = "Persist session and iteration artifacts."
+
+[[elements]]
+name = "MergeParallelAction"
+layer = "Flow"
+category = "Executable"
+description = "Merge worker outputs and resolve conflicts."
+
+# Context stubs for standalone validation of category/exact-name rules.
+[[elements]]
+name = "ExecutionEngine"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Core autonomous iteration engine."
+
+[[elements]]
+name = "AgentPluginPort"
+layer = "Infra"
+category = "Interface"
+description = "Adapter boundary to agent CLIs."
+
+[[elements]]
+name = "SessionLockGuard"
+layer = "Governance"
+category = "Governance"
+description = "Ensures single active session ownership."
+
+[[elements]]
+name = "RateLimitPolicy"
+layer = "Decision"
+category = "Assessment"
+description = "Retry and fallback strategy for rate limits."
+
+[[elements]]
+name = "ExecutionStatusEvent"
+layer = "Governance"
+category = "Event"
+description = "Execution state change event."
+
+[[elements]]
+name = "TaskBacklog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Unified task list from tracker plugins."
+
+[[elements]]
+name = "PrdDocument"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Product requirements source document."
+
+[[elements]]
+name = "IterationContext"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Cross-iteration context and progress summary."
+
+[[elements]]
+name = "SessionStateStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Persistent session state storage."
+
+[[elements]]
+name = "IterationLogStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Persistent iteration log storage."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "contains"
+priority = 50
+notes = "Components own steps."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "contains"
+priority = 50
+notes = "Components expose interfaces."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 50
+notes = "Components own local state artifacts."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "registers"
+priority = 50
+notes = "Registries register plugin ports."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Governance"
+relation = "registers"
+priority = 50
+notes = "Components register runtime guards."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "coordinates"
+priority = 50
+notes = "Core structures coordinate flow steps."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Executable"
+relation = "coordinates"
+priority = 50
+notes = "Core structures coordinate executable actions."
+
+[[rules]]
+source = "@Behavior"
+target = "@Behavior"
+relation = "coordinates"
+priority = 40
+notes = "Flow steps collaborate."
+
+[[rules]]
+source = "@Behavior"
+target = "@Executable"
+relation = "coordinates"
+priority = 40
+notes = "Flow steps delegate to actions."
+
+[[rules]]
+source = "@Executable"
+target = "@Behavior"
+relation = "coordinates"
+priority = 40
+notes = "Actions hand control back to steps."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "depends_on"
+priority = 50
+notes = "Components depend on persisted artifacts."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "depends_on"
+priority = 50
+notes = "Steps depend on task and context data."
+
+[[rules]]
+source = "@Executable"
+target = "@PassiveStructure"
+relation = "depends_on"
+priority = 50
+notes = "Actions depend on mutable runtime data."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Assessment"
+relation = "depends_on"
+priority = 50
+notes = "Components depend on decision policies."
+
+[[rules]]
+source = "@Behavior"
+target = "@Assessment"
+relation = "depends_on"
+priority = 50
+notes = "Steps are policy-driven."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "Steps produce artifacts."
+
+[[rules]]
+source = "@Executable"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "Actions produce artifacts."
+
+[[rules]]
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "consumes"
+priority = 50
+notes = "Steps consume artifacts."
+
+[[rules]]
+source = "@PassiveStructure"
+target = "@Executable"
+relation = "consumes"
+priority = 50
+notes = "Actions consume artifacts."
+
+[[rules]]
+source = "@Behavior"
+target = "@Behavior"
+relation = "next"
+priority = 50
+notes = "Step to step transition."
+
+[[rules]]
+source = "@Behavior"
+target = "@Executable"
+relation = "next"
+priority = 50
+notes = "Step to action transition."
+
+[[rules]]
+source = "@Executable"
+target = "@Behavior"
+relation = "next"
+priority = 50
+notes = "Action to step transition."
+
+[[rules]]
+source = "@Executable"
+target = "@Executable"
+relation = "next"
+priority = 50
+notes = "Action chaining."
+
+[[rules]]
+source = "@Event"
+target = "@Behavior"
+relation = "triggers"
+priority = 50
+notes = "Events trigger steps."
+
+[[rules]]
+source = "@Event"
+target = "@Executable"
+relation = "triggers"
+priority = 50
+notes = "Events trigger actions."
+
+[[rules]]
+source = "SyncTrackerStep"
+target = "SelectTaskStep"
+relation = "next"
+priority = 70
+notes = "Loop order: sync before selection."
+
+[[rules]]
+source = "SelectTaskStep"
+target = "BuildPromptStep"
+relation = "next"
+priority = 70
+notes = "Loop order: selection before prompt build."
+
+[[rules]]
+source = "BuildPromptStep"
+target = "ExecuteAgentAction"
+relation = "next"
+priority = 70
+notes = "Loop order: prompt build before execution."
+
+[[rules]]
+source = "ExecuteAgentAction"
+target = "DetectCompletionStep"
+relation = "next"
+priority = 70
+notes = "Loop order: execution before completion detection."
+
+[[rules]]
+source = "DetectCompletionStep"
+target = "UpdateTrackerStep"
+relation = "next"
+priority = 70
+notes = "Loop order: detect completion before tracker update."
+
+[[rules]]
+source = "UpdateTrackerStep"
+target = "PersistIterationStep"
+relation = "next"
+priority = 70
+notes = "Loop order: update tracker before persistence."
+
+[[rules]]
+source = "TaskBacklog"
+target = "SelectTaskStep"
+relation = "consumes"
+priority = 70
+notes = "Selection consumes task backlog."
+
+[[rules]]
+source = "PrdDocument"
+target = "BuildPromptStep"
+relation = "consumes"
+priority = 70
+notes = "Prompt build consumes PRD input."
+
+[[rules]]
+source = "IterationContext"
+target = "BuildPromptStep"
+relation = "consumes"
+priority = 70
+notes = "Prompt build consumes iteration context."
+
+[[rules]]
+source = "ExecuteAgentAction"
+target = "IterationLogStore"
+relation = "produces"
+priority = 70
+notes = "Execution produces iteration logs."
+
+[[rules]]
+source = "UpdateTrackerStep"
+target = "TaskBacklog"
+relation = "produces"
+priority = 70
+notes = "Tracker update mutates backlog state."
+
+[[rules]]
+source = "PersistIterationStep"
+target = "SessionStateStore"
+relation = "produces"
+priority = 70
+notes = "Persistence step writes session state."
+

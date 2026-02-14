@@ -1,0 +1,669 @@
+# BPMN 2.0 Kernel Profile
+#
+# 27 elements, 8 relations, 49 rules (27 allow + 8 deny + 14 builder-generated fallback)
+# 8 categories → 8 kernel types (missing: datatype, feature, state)
+
+[profile]
+name = "BPMN"
+version = "2.0"
+kernel_version = "2.5.0"
+id_prefix = "bp"
+standard = "BPMN 2.0"
+organization = "OMG"
+
+[categories]
+Activity = "step"
+Task = "action"
+Event = "event"
+Gateway = "expression"
+Participant = "structure"
+Data = "item"
+Container = "package"
+Connector = "port"
+
+# ═══════════════════════════════════════════════════════════════════
+# Elements — 27 BPMN 2.0 elements across 3 layers
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Orchestration Layer (19) ──────────────────────────────────────
+
+# Activity (2) — step
+[[elements]]
+name = "Process"
+layer = "Orchestration"
+category = "Activity"
+description = "Top-level process container for activities"
+
+[[elements]]
+name = "SubProcess"
+layer = "Orchestration"
+category = "Activity"
+description = "Embedded process within a process"
+
+# Task (5) — action
+[[elements]]
+name = "Task"
+layer = "Orchestration"
+category = "Task"
+description = "Atomic work unit within a process"
+
+[[elements]]
+name = "ServiceTask"
+layer = "Orchestration"
+category = "Task"
+description = "Task invoking an external service"
+
+[[elements]]
+name = "UserTask"
+layer = "Orchestration"
+category = "Task"
+description = "Task performed by a human with system assistance"
+
+[[elements]]
+name = "ScriptTask"
+layer = "Orchestration"
+category = "Task"
+description = "Task executing an automated script"
+
+[[elements]]
+name = "BusinessRuleTask"
+layer = "Orchestration"
+category = "Task"
+description = "Task evaluating a business rule"
+
+# Event (8) — event
+[[elements]]
+name = "StartEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Process initiation trigger"
+
+[[elements]]
+name = "EndEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Process termination point"
+
+[[elements]]
+name = "IntermediateThrowEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Event thrown during process execution"
+
+[[elements]]
+name = "IntermediateCatchEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Event caught during process execution"
+
+[[elements]]
+name = "BoundaryEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Event attached to an activity boundary"
+
+[[elements]]
+name = "TimerEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Time-triggered event"
+
+[[elements]]
+name = "MessageEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Message-triggered event"
+
+[[elements]]
+name = "ErrorEvent"
+layer = "Orchestration"
+category = "Event"
+description = "Error-triggered event"
+
+# Gateway (4) — expression
+[[elements]]
+name = "ExclusiveGateway"
+layer = "Orchestration"
+category = "Gateway"
+description = "XOR routing — exactly one path"
+
+[[elements]]
+name = "ParallelGateway"
+layer = "Orchestration"
+category = "Gateway"
+description = "AND routing — all paths"
+
+[[elements]]
+name = "InclusiveGateway"
+layer = "Orchestration"
+category = "Gateway"
+description = "OR routing — one or more paths"
+
+[[elements]]
+name = "EventBasedGateway"
+layer = "Orchestration"
+category = "Gateway"
+description = "Routing based on event occurrence"
+
+# ── Collaboration Layer (6) ───────────────────────────────────────
+
+# Participant (2) — structure
+[[elements]]
+name = "Pool"
+layer = "Collaboration"
+category = "Participant"
+description = "Participant container in a collaboration"
+
+[[elements]]
+name = "Lane"
+layer = "Collaboration"
+category = "Participant"
+description = "Sub-partition within a pool for role assignment"
+
+# Data (1) — item
+[[elements]]
+name = "Message"
+layer = "Collaboration"
+category = "Data"
+description = "Communication payload between participants"
+
+# Container (2) — package
+[[elements]]
+name = "Collaboration"
+layer = "Collaboration"
+category = "Container"
+description = "Top-level collaboration container"
+
+[[elements]]
+name = "Choreography"
+layer = "Collaboration"
+category = "Container"
+description = "Multi-party interaction specification"
+
+# Connector (1) — port
+[[elements]]
+name = "MessageEndpoint"
+layer = "Collaboration"
+category = "Connector"
+description = "Communication endpoint for message exchange"
+
+# ── DataFlow Layer (2) ────────────────────────────────────────────
+
+# Data (2) — item
+[[elements]]
+name = "DataObject"
+layer = "DataFlow"
+category = "Data"
+description = "Data produced or consumed by activities"
+
+[[elements]]
+name = "DataStore"
+layer = "DataFlow"
+category = "Data"
+description = "Persistent data repository"
+
+# ═══════════════════════════════════════════════════════════════════
+# Relations — 8 BPMN 2.0 relationship types → 7 kernel relations
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "sequenceFlow"
+kernel_relation = "succession"
+description = "Temporal ordering of flow objects"
+
+[[relations]]
+name = "messageFlow"
+kernel_relation = "flow"
+description = "Message exchange between pools"
+
+[[relations]]
+name = "dataAssociation"
+kernel_relation = "flow"
+description = "Data input/output between data and activities"
+
+[[relations]]
+name = "bpmnAssociation"
+kernel_relation = "association"
+description = "Artifact linkage to flow objects"
+
+[[relations]]
+name = "composition"
+kernel_relation = "ownership"
+description = "Subprocess containment"
+
+[[relations]]
+name = "containment"
+kernel_relation = "membership"
+description = "Pool/Lane containment"
+
+[[relations]]
+name = "eventTrigger"
+kernel_relation = "triggering"
+description = "Event triggers activity"
+
+[[relations]]
+name = "bpmnSpecialization"
+kernel_relation = "specialization"
+description = "Type refinement"
+
+# ═══════════════════════════════════════════════════════════════════
+# Validity Rules
+# ═══════════════════════════════════════════════════════════════════
+
+# ── sequenceFlow (succession): temporal ordering ──────────────────
+
+[[rules]]
+id = "bp-seq-01"
+source = "@Activity"
+target = "@Activity"
+relation = "sequenceFlow"
+priority = 40
+notes = "Activity → Activity sequence flow"
+
+[[rules]]
+id = "bp-seq-02"
+source = "@Activity"
+target = "@Event"
+relation = "sequenceFlow"
+priority = 40
+notes = "Activity → Event sequence flow"
+
+[[rules]]
+id = "bp-seq-03"
+source = "@Activity"
+target = "@Gateway"
+relation = "sequenceFlow"
+priority = 40
+notes = "Activity → Gateway sequence flow"
+
+[[rules]]
+id = "bp-seq-04"
+source = "@Event"
+target = "@Activity"
+relation = "sequenceFlow"
+priority = 40
+notes = "Event → Activity sequence flow"
+
+[[rules]]
+id = "bp-seq-05"
+source = "@Event"
+target = "@Gateway"
+relation = "sequenceFlow"
+priority = 40
+notes = "Event → Gateway sequence flow"
+
+[[rules]]
+id = "bp-seq-06"
+source = "@Event"
+target = "@Event"
+relation = "sequenceFlow"
+priority = 40
+notes = "Event → Event sequence flow"
+
+[[rules]]
+id = "bp-seq-07"
+source = "@Gateway"
+target = "@Activity"
+relation = "sequenceFlow"
+priority = 40
+notes = "Gateway → Activity sequence flow"
+
+[[rules]]
+id = "bp-seq-08"
+source = "@Gateway"
+target = "@Event"
+relation = "sequenceFlow"
+priority = 40
+notes = "Gateway → Event sequence flow"
+
+[[rules]]
+id = "bp-seq-09"
+source = "@Gateway"
+target = "@Gateway"
+relation = "sequenceFlow"
+priority = 40
+notes = "Gateway → Gateway sequence flow"
+
+[[rules]]
+id = "bp-seq-10"
+source = "@Task"
+target = "@Task"
+relation = "sequenceFlow"
+priority = 50
+notes = "Task → Task sequence flow"
+
+[[rules]]
+id = "bp-seq-11"
+source = "@Task"
+target = "@Gateway"
+relation = "sequenceFlow"
+priority = 50
+notes = "Task → Gateway sequence flow"
+
+[[rules]]
+id = "bp-seq-12"
+source = "@Task"
+target = "@Event"
+relation = "sequenceFlow"
+priority = 50
+notes = "Task → Event sequence flow"
+
+[[rules]]
+id = "bp-seq-13"
+source = "@Event"
+target = "@Task"
+relation = "sequenceFlow"
+priority = 50
+notes = "Event → Task sequence flow"
+
+[[rules]]
+id = "bp-seq-14"
+source = "@Gateway"
+target = "@Task"
+relation = "sequenceFlow"
+priority = 50
+notes = "Gateway → Task sequence flow"
+
+[[rules]]
+id = "bp-seq-15"
+source = "@Activity"
+target = "@Task"
+relation = "sequenceFlow"
+priority = 50
+notes = "Activity → Task sequence flow"
+
+[[rules]]
+id = "bp-seq-16"
+source = "@Task"
+target = "@Activity"
+relation = "sequenceFlow"
+priority = 50
+notes = "Task → Activity sequence flow"
+
+# ── messageFlow (flow): inter-pool communication ──────────────────
+
+[[rules]]
+id = "bp-msg-01"
+source = "@Connector"
+target = "@Connector"
+relation = "messageFlow"
+priority = 40
+notes = "Endpoint → Endpoint message flow"
+
+[[rules]]
+id = "bp-msg-02"
+source = "@Activity"
+target = "@Activity"
+relation = "messageFlow"
+priority = 40
+notes = "Activity → Activity message flow"
+
+[[rules]]
+id = "bp-msg-03"
+source = "@Event"
+target = "@Event"
+relation = "messageFlow"
+priority = 40
+notes = "Event → Event message flow"
+
+# ── dataAssociation (flow): data input/output ─────────────────────
+
+[[rules]]
+id = "bp-data-01"
+source = "@Data"
+target = "@Activity"
+relation = "dataAssociation"
+priority = 40
+notes = "Data → Activity input association"
+
+[[rules]]
+id = "bp-data-02"
+source = "@Activity"
+target = "@Data"
+relation = "dataAssociation"
+priority = 40
+notes = "Activity → Data output association"
+
+[[rules]]
+id = "bp-data-03"
+source = "@Data"
+target = "@Task"
+relation = "dataAssociation"
+priority = 50
+notes = "Data → Task input association"
+
+[[rules]]
+id = "bp-data-04"
+source = "@Task"
+target = "@Data"
+relation = "dataAssociation"
+priority = 50
+notes = "Task → Data output association"
+
+# ── composition (ownership): subprocess containment ───────────────
+
+[[rules]]
+id = "bp-comp-01"
+source = "@Activity"
+target = "@Task"
+relation = "composition"
+priority = 40
+notes = "Activity composes Task"
+
+[[rules]]
+id = "bp-comp-02"
+source = "@Activity"
+target = "@Event"
+relation = "composition"
+priority = 40
+notes = "Activity composes Event"
+
+[[rules]]
+id = "bp-comp-03"
+source = "@Activity"
+target = "@Gateway"
+relation = "composition"
+priority = 40
+notes = "Activity composes Gateway"
+
+[[rules]]
+id = "bp-comp-04"
+source = "@Activity"
+target = "@Activity"
+relation = "composition"
+priority = 40
+notes = "Activity composes sub-Activity"
+
+# ── containment (membership): pool/lane containment ──────────────
+
+[[rules]]
+id = "bp-mem-01"
+source = "@Participant"
+target = "@Activity"
+relation = "containment"
+priority = 40
+notes = "Participant contains Activity"
+
+[[rules]]
+id = "bp-mem-02"
+source = "@Participant"
+target = "@Task"
+relation = "containment"
+priority = 40
+notes = "Participant contains Task"
+
+[[rules]]
+id = "bp-mem-03"
+source = "@Participant"
+target = "@Event"
+relation = "containment"
+priority = 40
+notes = "Participant contains Event"
+
+[[rules]]
+id = "bp-mem-04"
+source = "@Participant"
+target = "@Gateway"
+relation = "containment"
+priority = 40
+notes = "Participant contains Gateway"
+
+[[rules]]
+id = "bp-mem-05"
+source = "@Participant"
+target = "@Data"
+relation = "containment"
+priority = 40
+notes = "Participant contains Data"
+
+[[rules]]
+id = "bp-mem-06"
+source = "@Participant"
+target = "@Connector"
+relation = "containment"
+priority = 40
+notes = "Participant contains message endpoint"
+
+[[rules]]
+id = "bp-mem-07"
+source = "@Container"
+target = "@Participant"
+relation = "containment"
+priority = 40
+notes = "Container contains Participant"
+
+[[rules]]
+id = "bp-mem-08"
+source = "@Participant"
+target = "@Participant"
+relation = "containment"
+priority = 50
+notes = "Participant nesting (Pool → Lane)"
+
+# ── eventTrigger (triggering): event triggers activity ────────────
+
+[[rules]]
+id = "bp-trig-01"
+source = "@Event"
+target = "@Task"
+relation = "eventTrigger"
+priority = 40
+notes = "Event triggers Task"
+
+[[rules]]
+id = "bp-trig-02"
+source = "@Event"
+target = "@Activity"
+relation = "eventTrigger"
+priority = 40
+notes = "Event triggers Activity"
+
+# ── bpmnAssociation (association): artifact links ─────────────────
+
+[[rules]]
+id = "bp-assoc-01"
+source = "@Data"
+target = "@Activity"
+relation = "bpmnAssociation"
+priority = 40
+notes = "Data associated with Activity"
+
+[[rules]]
+id = "bp-assoc-02"
+source = "@Data"
+target = "@Task"
+relation = "bpmnAssociation"
+priority = 40
+notes = "Data associated with Task"
+
+# ── bpmnSpecialization (specialization): type refinement ──────────
+
+[[rules]]
+id = "bp-spec-01"
+source = "@Task"
+target = "@Task"
+relation = "bpmnSpecialization"
+priority = 40
+notes = "Task specializes Task"
+
+[[rules]]
+id = "bp-spec-02"
+source = "@Event"
+target = "@Event"
+relation = "bpmnSpecialization"
+priority = 40
+notes = "Event specializes Event"
+
+# ── Deny rules ────────────────────────────────────────────────────
+
+[[rules]]
+id = "bp-deny-01"
+source = "@Data"
+target = "@Activity"
+relation = "sequenceFlow"
+valid = false
+priority = 80
+notes = "Data cannot participate in sequence flow with Activity"
+
+[[rules]]
+id = "bp-deny-02"
+source = "@Data"
+target = "@Task"
+relation = "sequenceFlow"
+valid = false
+priority = 80
+notes = "Data cannot participate in sequence flow with Task"
+
+[[rules]]
+id = "bp-deny-03"
+source = "@Data"
+target = "@Participant"
+relation = "messageFlow"
+valid = false
+priority = 80
+notes = "Data cannot send message flow to Participant"
+
+[[rules]]
+id = "bp-deny-04"
+source = "@Participant"
+target = "@Participant"
+relation = "sequenceFlow"
+valid = false
+priority = 80
+notes = "Participant cannot have sequence flow to Participant"
+
+[[rules]]
+id = "bp-deny-05"
+source = "@Event"
+target = "@Data"
+relation = "composition"
+valid = false
+priority = 80
+notes = "Event cannot compose Data"
+
+[[rules]]
+id = "bp-deny-06"
+source = "@Gateway"
+target = "@Data"
+relation = "composition"
+valid = false
+priority = 80
+notes = "Gateway cannot compose Data"
+
+[[rules]]
+id = "bp-deny-07"
+source = "@Container"
+target = "@Task"
+relation = "composition"
+valid = false
+priority = 80
+notes = "Container cannot directly compose Task (only via Activity)"
+
+[[rules]]
+id = "bp-deny-08"
+source = "@Data"
+target = "@Gateway"
+relation = "sequenceFlow"
+valid = false
+priority = 80
+notes = "Data cannot have sequence flow to Gateway"

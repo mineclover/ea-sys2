@@ -1,0 +1,92 @@
+{
+    "profiles": [
+        {
+            "name": "marketing",
+            "description": "Marketing Operational Profile",
+            "rules": [
+                {
+                    "id": "rule:marketing:structure_owns_package",
+                    "source_pattern": "structure",
+                    "target_pattern": "package",
+                    "relationship_name": "ownership",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Marketing Departments (Structure) manage Campaigns (Package)"
+                },
+                {
+                    "id": "rule:marketing:action_triggers_event",
+                    "source_pattern": "action",
+                    "target_pattern": "event",
+                    "relationship_name": "triggering",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Executon of Campaign Steps triggers Events"
+                },
+                {
+                    "id": "rule:marketing:package_contains_action",
+                    "source_pattern": "package",
+                    "target_pattern": "action",
+                    "relationship_name": "membership",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Campaign (Package) contains specific Actions"
+                }
+            ]
+        },
+        {
+            "name": "crm",
+            "description": "Customer Relationship Management Profile",
+            "rules": [
+                {
+                    "id": "rule:crm:structure_associates_structure",
+                    "source_pattern": "structure",
+                    "target_pattern": "structure",
+                    "relationship_name": "association",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Customer (Structure) is associated with Contact (Structure)"
+                },
+                {
+                    "id": "rule:crm:item_flows_action",
+                    "source_pattern": "item",
+                    "target_pattern": "action",
+                    "relationship_name": "flow",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Customer Data (Item) flows into Support Process (Action)"
+                }
+            ]
+        },
+        {
+            "name": "sales",
+            "description": "Sales Process Profile",
+            "rules": [
+                {
+                    "id": "rule:sales:state_transition",
+                    "source_pattern": "state",
+                    "target_pattern": "state",
+                    "relationship_name": "transition",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Opportunity Stages transition to each other"
+                },
+                {
+                    "id": "rule:sales:action_ownership",
+                    "source_pattern": "structure",
+                    "target_pattern": "action",
+                    "relationship_name": "ownership",
+                    "valid": true,
+                    "priority": 100,
+                    "conditions": [],
+                    "notes": "Sales Rep (Structure) owns Sales Call (Action)"
+                }
+            ]
+        }
+    ]
+}

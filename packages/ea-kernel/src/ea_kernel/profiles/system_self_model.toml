@@ -1,0 +1,85 @@
+# System Self-Model Profile
+# Defines the architecture of the EA System itself
+
+[profile]
+name = "SystemSelfModel"
+version = "1.0.0"
+kernel_version = "1.0.0"
+description = "Meta-model of the EA System (Kernel, Flow, Decision, Governance)"
+
+[categories]
+"Physics/Structure" = "structure"
+"Body/Action" = "action"
+"Brain/Intent" = "structure"
+"Orchestration" = "structure"
+"Meta-Op" = "action"
+
+[[elements]]
+name = "ea:kernel:schema"
+layer = "Logic"
+category = "Physics/Structure"
+description = "Defines structural truth and constraints."
+
+[[elements]]
+name = "ea:flow:metastep"
+layer = "Logic"
+category = "Body/Action"
+description = "Defines reusable logic patterns and data transformation schemas."
+
+[[elements]]
+name = "ea:decision:pattern"
+layer = "Authoring"
+category = "Brain/Intent"
+description = "Defines architectural decision types and reasoning patterns."
+
+[[elements]]
+name = "ea:governance:transaction"
+layer = "Judgment"
+category = "Meta-Op"
+description = "Ensures atomic execution of meta-modeling operations."
+
+
+[[relations]]
+name = "targets"
+source = "ea:decision:pattern"
+target = "ea:kernel:schema"
+kernel_relation = "association"
+description = "Decision patterns target specific Kernel schema areas for context or change."
+
+[[relations]]
+name = "grounds"
+source = "ea:kernel:schema"
+target = "ea:flow:metastep"
+kernel_relation = "ownership"
+description = "Kernel provides structural grounding for reusable Flow logic patterns."
+
+[[relations]]
+name = "enwraps"
+source = "ea:governance:transaction"
+target = "ea:governance:transaction"
+kernel_relation = "ownership"
+description = "Transactions provide atomic safety for modeling operations."
+
+[[rules]]
+source = "ea:decision:pattern"
+target = "ea:kernel:schema"
+relation = "targets"
+notes = "Decisions target the kernel."
+
+[[rules]]
+source = "ea:kernel:schema"
+target = "ea:flow:metastep"
+relation = "grounds"
+notes = "Kernel grounds the flows."
+
+[[rules]]
+source = "ea:governance:transaction"
+target = "ea:governance:transaction"
+relation = "enwraps"
+notes = "Transactions enwrap themselves (meta-op)."
+
+[[validity_rules]]
+rule_id = "flow_must_anchor_kernel"
+description = "All Flow steps must have a valid kernel_anchor."
+logic = "all(step.kernel_anchor is not None for step in flow)"
+level = "L2"

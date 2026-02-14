@@ -1,0 +1,1139 @@
+# Kernel Metamodel Validity Rules — v2.5.0
+#
+# Defines what relationships are permitted between kernel entities.
+# Priority bands:
+#   1       = deny-by-default fallback (one per relation)
+#   40-50   = broad metatype-level allows
+#   60      = general structural patterns
+#   70      = specific behavioral patterns
+#   80-90   = explicit prohibitions (override allows)
+
+[meta]
+kernel_version = "2.5.0"
+total_explicit_rules = 67
+total_explicit_metadata = 67
+total_layer_constraints = 2
+
+fallback_relations = [
+    "membership", "ownership", "specialization", "feature_typing",
+    "association", "connector", "redefinition", "subsetting",
+    "flow", "succession", "interaction", "triggering", "guarding",
+    "transition",
+]
+
+# ═══════════════════════════════════════════════════════════════════
+# Layer Constraints
+# ═══════════════════════════════════════════════════════════════════
+
+[[layer_constraints]]
+source_layer = "L4"
+target_layer = "L4"
+forbidden = ["association"]
+allowed_pairs = [["step*", "state"], ["state", "step*"]]
+priority = 90
+notes = "L4 entities cannot form L2 association (except step*↔state for realization/motivation)"
+
+[[layer_constraints]]
+source_layer = "L4"
+target_layer = "L4"
+forbidden = ["connector"]
+allowed_pairs = []
+priority = 90
+notes = "L4 behavioral entities cannot use connector (use succession instead)"
+
+# ═══════════════════════════════════════════════════════════════════
+# Membership rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.mem-01]
+source = "namespace*"
+target = "element*"
+relation = "membership"
+valid = true
+priority = 40
+conditions = ["LAYER_ORDER"]
+notes = "Namespace contains elements (container layer <= member layer)"
+[rules.mem-01.metadata]
+domain = "kernel"
+tags = ["containment", "namespace"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §7.4 Namespaces"
+established_version = "1.0.0"
+rationale = "Namespaces are the fundamental containment mechanism; layer ordering ensures abstraction coherence"
+
+[rules.mem-02]
+source = "package"
+target = "package"
+relation = "membership"
+priority = 60
+notes = "Package nesting"
+[rules.mem-02.metadata]
+domain = "kernel"
+tags = ["containment", "package"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §7.4 Namespaces"
+established_version = "1.0.0"
+rationale = "Package nesting is a fundamental namespace containment pattern"
+
+# ═══════════════════════════════════════════════════════════════════
+# Ownership rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.own-01]
+source = "namespace*"
+target = "element*"
+relation = "ownership"
+priority = 40
+conditions = ["LAYER_ORDER"]
+notes = "Namespace owns elements (owner layer <= owned layer)"
+[rules.own-01.metadata]
+domain = "kernel"
+tags = ["containment", "ownership"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §7.4 Namespaces"
+established_version = "1.0.0"
+rationale = "Ownership establishes lifecycle dependency between namespace and its owned elements"
+
+[rules.own-02]
+source = "metatype*"
+target = "feature*"
+relation = "ownership"
+priority = 60
+notes = "Metatype owns its features (classifier→feature, state→feature)"
+[rules.own-02.metadata]
+domain = "kernel"
+tags = ["containment", "feature-ownership"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §9.9 Classifier"
+established_version = "1.0.0"
+rationale = "Metatypes own their features as structural constituents"
+
+[rules.own-03]
+source = "feature*"
+target = "feature*"
+relation = "ownership"
+priority = 70
+conditions = ["SAME_BRANCH"]
+notes = "Feature owns nested features — must be same entity branch"
+[rules.own-03.metadata]
+domain = "kernel"
+tags = ["containment", "nested-feature"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §9.9 Classifier"
+established_version = "2.0.0"
+rationale = "Nested feature ownership requires same entity branch to maintain structural coherence"
+
+[rules.own-04]
+source = "item"
+target = "structure"
+relation = "ownership"
+valid = false
+priority = 80
+notes = "Item(passive) cannot own Structure(active)"
+[rules.own-04.metadata]
+domain = "kernel"
+tags = ["prohibition", "passive-active"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §7.4 Namespaces"
+established_version = "1.0.0"
+rationale = "Passive element (item) cannot own an active element (structure) — violates abstraction direction"
+
+# ═══════════════════════════════════════════════════════════════════
+# Specialization rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.spec-01]
+source = "metatype*"
+target = "metatype*"
+relation = "specialization"
+priority = 40
+notes = "Metatype specialization (supertype → subtype)"
+[rules.spec-01.metadata]
+domain = "kernel"
+tags = ["inheritance", "type-theory"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Type specialization is a fundamental type-theoretic operation; metatypes form a strict hierarchy"
+
+[rules.spec-02]
+source = "classifier*"
+target = "classifier*"
+relation = "specialization"
+priority = 50
+notes = "Classifier specialization"
+[rules.spec-02.metadata]
+domain = "kernel"
+tags = ["inheritance", "classifier"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Classifier-level specialization refines the metatype hierarchy at classifier granularity"
+
+[rules.spec-03]
+source = "feature*"
+target = "feature*"
+relation = "specialization"
+priority = 50
+conditions = ["SAME_BRANCH"]
+notes = "Feature specialization (same entity branch)"
+[rules.spec-03.metadata]
+domain = "kernel"
+tags = ["inheritance", "feature"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Feature specialization constrained to same entity branch to prevent cross-hierarchy inheritance"
+
+[rules.spec-04]
+source = "classifier*"
+target = "feature*"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "Classifier cannot specialize a feature"
+[rules.spec-04.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Classifier and feature are distinct metacategories; cross-category specialization is invalid"
+
+[rules.spec-05]
+source = "feature*"
+target = "classifier*"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "Feature cannot specialize a classifier"
+[rules.spec-05.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Feature cannot specialize classifier — distinct metacategories"
+
+[rules.spec-06]
+source = "state"
+target = "state"
+relation = "specialization"
+priority = 60
+notes = "State can specialize state"
+[rules.spec-06.metadata]
+domain = "kernel"
+tags = ["inheritance", "state"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "State specialization enables hierarchical state machine composition"
+
+[rules.spec-07]
+source = "state"
+target = "feature"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "State cannot specialize a plain feature"
+[rules.spec-07.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "State is L4 behavioral; cannot specialize a plain structural feature"
+
+[rules.spec-08]
+source = "feature"
+target = "state"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "Plain feature cannot specialize state"
+[rules.spec-08.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Plain feature cannot specialize state — structural cannot inherit from behavioral"
+
+[rules.spec-09]
+source = "item"
+target = "structure"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "Item(passive) cannot specialize Structure(active)"
+[rules.spec-09.metadata]
+domain = "kernel"
+tags = ["prohibition", "passive-active"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "Item (passive) and structure (active) have incompatible semantics"
+
+[rules.spec-10]
+source = "state"
+target = "step*"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "State cannot specialize step/action"
+[rules.spec-10.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.0.0"
+rationale = "State (condition) and step/action (behavior) are distinct behavioral categories"
+
+[rules.spec-11]
+source = "state"
+target = "item"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "State cannot specialize item"
+[rules.spec-11.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-layer"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.2.0"
+rationale = "State (L4 behavioral) cannot specialize item (L1 structural)"
+
+[rules.spec-12]
+source = "event"
+target = "state"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "Event cannot specialize state"
+[rules.spec-12.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.2.0"
+rationale = "Event (trigger) and state (condition) have distinct behavioral semantics"
+
+[rules.spec-13]
+source = "expression"
+target = "step*"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "Expression cannot specialize step/action"
+[rules.spec-13.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.2.0"
+rationale = "Expression (evaluatable) cannot specialize step/action (executable)"
+
+[rules.spec-14]
+source = "state"
+target = "structure"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "State cannot specialize structure"
+[rules.spec-14.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-layer"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.2.0"
+rationale = "State (L4 behavioral) cannot specialize structure (L1 structural)"
+
+[rules.spec-15]
+source = "state"
+target = "datatype"
+relation = "specialization"
+valid = false
+priority = 80
+notes = "State cannot specialize datatype"
+[rules.spec-15.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §9.9 Generalization"
+established_version = "1.2.0"
+rationale = "State (behavioral) cannot specialize datatype (value type)"
+
+# ═══════════════════════════════════════════════════════════════════
+# Feature typing rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.ftyp-01]
+source = "feature*"
+target = "metatype*"
+relation = "feature_typing"
+priority = 40
+notes = "Feature typed by metatype"
+[rules.ftyp-01.metadata]
+domain = "kernel"
+tags = ["typing", "feature"]
+category = "structural"
+confidence = "common"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.0.0"
+rationale = "Feature typing establishes the type of values a feature can hold"
+
+[rules.ftyp-02]
+source = "feature*"
+target = "classifier*"
+relation = "feature_typing"
+priority = 50
+notes = "Feature typed by classifier"
+[rules.ftyp-02.metadata]
+domain = "kernel"
+tags = ["typing", "classifier"]
+category = "structural"
+confidence = "common"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.0.0"
+rationale = "Classifier-level feature typing provides concrete type constraints"
+
+[rules.ftyp-03]
+source = "feature*"
+target = "datatype"
+relation = "feature_typing"
+priority = 60
+notes = "Feature typed by datatype"
+[rules.ftyp-03.metadata]
+domain = "kernel"
+tags = ["typing", "datatype"]
+category = "structural"
+confidence = "common"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.0.0"
+rationale = "Datatype typing constrains features to value types"
+
+[rules.ftyp-04]
+source = "step"
+target = "metatype*"
+relation = "feature_typing"
+priority = 60
+notes = "Step can be typed by metatype"
+[rules.ftyp-04.metadata]
+domain = "kernel"
+tags = ["typing", "step"]
+category = "structural"
+confidence = "common"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.5.0"
+rationale = "Step (as a feature subtype) can be typed to constrain its behavioral contract"
+
+[rules.ftyp-05]
+source = "event"
+target = "metatype*"
+relation = "feature_typing"
+valid = false
+priority = 80
+notes = "Event cannot be typed (not a structural attribute)"
+[rules.ftyp-05.metadata]
+domain = "kernel"
+tags = ["prohibition", "typing"]
+category = "structural"
+confidence = "universal"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.5.0"
+rationale = "Events are triggers, not structural attributes; typing is semantically invalid"
+
+[rules.ftyp-06]
+source = "expression"
+target = "metatype*"
+relation = "feature_typing"
+valid = false
+priority = 80
+notes = "Expression cannot be typed (evaluatable, not a structural attribute)"
+[rules.ftyp-06.metadata]
+domain = "kernel"
+tags = ["prohibition", "typing"]
+category = "structural"
+confidence = "universal"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.5.0"
+rationale = "Expressions are evaluatable constructs; direct typing is semantically inappropriate"
+
+[rules.ftyp-07]
+source = "port"
+target = "datatype"
+relation = "feature_typing"
+valid = false
+priority = 80
+notes = "Port cannot be typed by value type (use classifier instead)"
+[rules.ftyp-07.metadata]
+domain = "kernel"
+tags = ["prohibition", "typing", "port"]
+category = "structural"
+confidence = "universal"
+source = "KerML §7.3 Feature Typing"
+established_version = "1.0.0"
+rationale = "Port requires classifier typing for interaction semantics; value type typing is insufficient"
+
+# ═══════════════════════════════════════════════════════════════════
+# Association rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.assoc-01]
+source = "metatype*"
+target = "metatype*"
+relation = "association"
+priority = 40
+notes = "Structural association between metatypes"
+[rules.assoc-01.metadata]
+domain = "kernel"
+tags = ["structural", "connection"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.0.0"
+rationale = "Association is the primary structural connection mechanism between metatypes"
+
+[rules.assoc-02]
+source = "classifier*"
+target = "classifier*"
+relation = "association"
+priority = 50
+notes = "Classifier-level association"
+[rules.assoc-02.metadata]
+domain = "kernel"
+tags = ["structural", "classifier"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.0.0"
+rationale = "Classifier-level association refines metatype association at classifier granularity"
+
+[rules.assoc-03]
+source = "item"
+target = "step*"
+relation = "association"
+valid = false
+priority = 80
+notes = "Item(passive) cannot directly associate with step/action(behavior)"
+[rules.assoc-03.metadata]
+domain = "kernel"
+tags = ["prohibition", "passive-active"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.0.0"
+rationale = "Item (passive data) cannot directly associate with step/action (behavior); use flow instead"
+
+[rules.assoc-04]
+source = "item"
+target = "structure"
+relation = "association"
+valid = false
+priority = 80
+notes = "Item(passive) cannot directly associate with structure(active)"
+[rules.assoc-04.metadata]
+domain = "kernel"
+tags = ["prohibition", "passive-active"]
+category = "structural"
+confidence = "universal"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.1.0"
+rationale = "Item (passive) cannot associate with structure (active); incompatible semantic roles"
+
+[rules.assoc-05]
+source = "package"
+target = "metatype*"
+relation = "association"
+priority = 45
+notes = "Package associates with metatypes"
+[rules.assoc-05.metadata]
+domain = "kernel"
+tags = ["structural", "package"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.0.0"
+rationale = "Package can form associations with metatypes for cross-cutting concerns"
+
+[rules.assoc-06]
+source = "metatype*"
+target = "package"
+relation = "association"
+priority = 45
+notes = "Metatype associates with packages"
+[rules.assoc-06.metadata]
+domain = "kernel"
+tags = ["structural", "package"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.0.0"
+rationale = "Metatype can form associations with packages for cross-cutting concerns"
+
+[rules.assoc-07]
+source = "package"
+target = "package"
+relation = "association"
+priority = 45
+notes = "Package-level association"
+[rules.assoc-07.metadata]
+domain = "kernel"
+tags = ["structural", "package"]
+category = "structural"
+confidence = "common"
+source = "UML 2.5.1 §11.5 Associations"
+established_version = "1.0.0"
+rationale = "Package-to-package association enables inter-package dependency modeling"
+
+# ═══════════════════════════════════════════════════════════════════
+# Connector rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.conn-01]
+source = "feature*"
+target = "feature*"
+relation = "connector"
+priority = 40
+notes = "Connector links features"
+[rules.conn-01.metadata]
+domain = "kernel"
+tags = ["structural", "connector"]
+category = "structural"
+confidence = "common"
+source = "KerML §8.2 Connectors"
+established_version = "1.0.0"
+rationale = "Connector establishes a binding link between features for data/signal exchange"
+
+# ═══════════════════════════════════════════════════════════════════
+# Redefinition rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.redef-01]
+source = "feature*"
+target = "feature*"
+relation = "redefinition"
+priority = 40
+notes = "Feature redefines another feature"
+[rules.redef-01.metadata]
+domain = "kernel"
+tags = ["refinement", "feature"]
+category = "structural"
+confidence = "common"
+source = "KerML §7.3 Redefinition"
+established_version = "1.0.0"
+rationale = "Redefinition allows a feature in a subtype to replace an inherited feature"
+
+[rules.redef-02]
+source = "step*"
+target = "feature"
+relation = "redefinition"
+valid = false
+priority = 80
+notes = "Behavioral step/action cannot redefine structural attribute"
+[rules.redef-02.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "KerML §7.3 Redefinition"
+established_version = "1.5.0"
+rationale = "Behavioral step cannot redefine a structural attribute — category mismatch"
+
+[rules.redef-03]
+source = "event"
+target = "feature"
+relation = "redefinition"
+valid = false
+priority = 80
+notes = "Event cannot redefine structural attribute"
+[rules.redef-03.metadata]
+domain = "kernel"
+tags = ["prohibition", "cross-category"]
+category = "structural"
+confidence = "universal"
+source = "KerML §7.3 Redefinition"
+established_version = "1.5.0"
+rationale = "Event (trigger) cannot redefine a structural attribute — semantic mismatch"
+
+# ═══════════════════════════════════════════════════════════════════
+# Subsetting rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.sub-01]
+source = "feature*"
+target = "feature*"
+relation = "subsetting"
+priority = 40
+notes = "Feature subsets another feature"
+[rules.sub-01.metadata]
+domain = "kernel"
+tags = ["refinement", "feature"]
+category = "structural"
+confidence = "common"
+source = "KerML §7.3 Subsetting"
+established_version = "1.0.0"
+rationale = "Subsetting constrains a feature's values to be a subset of another feature's values"
+
+# ═══════════════════════════════════════════════════════════════════
+# Flow rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.flow-01]
+source = "feature*"
+target = "feature*"
+relation = "flow"
+priority = 40
+notes = "Data/object flow between features"
+[rules.flow-01.metadata]
+domain = "kernel"
+tags = ["dataflow", "behavioral"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.4 Transfers"
+established_version = "1.0.0"
+rationale = "Flow qualifies a connector with data/object transfer semantics between features"
+
+[rules.flow-02]
+source = "item"
+target = "feature*"
+relation = "flow"
+priority = 50
+notes = "Item provides data to feature (data input)"
+[rules.flow-02.metadata]
+domain = "kernel"
+tags = ["dataflow", "input"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.4 Transfers"
+established_version = "1.0.0"
+rationale = "Item as data source can flow data to features as input"
+
+[rules.flow-03]
+source = "feature*"
+target = "item"
+relation = "flow"
+priority = 50
+notes = "Feature outputs data to item (data output)"
+[rules.flow-03.metadata]
+domain = "kernel"
+tags = ["dataflow", "output"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.4 Transfers"
+established_version = "1.5.0"
+rationale = "Feature can flow data to item as output destination"
+
+# ═══════════════════════════════════════════════════════════════════
+# Succession rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.succ-01]
+source = "step*"
+target = "step*"
+relation = "succession"
+priority = 70
+notes = "Step/Action temporal ordering"
+[rules.succ-01.metadata]
+domain = "kernel"
+tags = ["temporal", "behavioral", "ordering"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.0.0"
+rationale = "Succession establishes temporal ordering between behavioral steps"
+
+[rules.succ-02]
+source = "event"
+target = "step*"
+relation = "succession"
+priority = 60
+notes = "Event triggers step/action succession"
+[rules.succ-02.metadata]
+domain = "kernel"
+tags = ["temporal", "event-trigger"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.0.0"
+rationale = "Event can precede step in temporal ordering for event-driven behavior"
+
+[rules.succ-03]
+source = "step*"
+target = "event"
+relation = "succession"
+priority = 60
+notes = "Step/Action followed by event"
+[rules.succ-03.metadata]
+domain = "kernel"
+tags = ["temporal", "event-emission"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.0.0"
+rationale = "Step can emit an event as its temporal successor"
+
+[rules.succ-04]
+source = "event"
+target = "event"
+relation = "succession"
+priority = 60
+notes = "Event chain succession"
+[rules.succ-04.metadata]
+domain = "kernel"
+tags = ["temporal", "event-chain"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.0.0"
+rationale = "Event chaining enables cascading event propagation"
+
+[rules.succ-05]
+source = "expression"
+target = "step*"
+relation = "succession"
+priority = 50
+notes = "Expression routes to step/action (gateway split)"
+[rules.succ-05.metadata]
+domain = "kernel"
+tags = ["temporal", "gateway"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.0.0"
+rationale = "Expression as decision point can route to different steps (gateway split)"
+
+[rules.succ-06]
+source = "step*"
+target = "expression"
+relation = "succession"
+priority = 50
+notes = "Step/action routes to expression (gateway merge)"
+[rules.succ-06.metadata]
+domain = "kernel"
+tags = ["temporal", "gateway"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.0.0"
+rationale = "Step can route to expression for gateway merge/decision"
+
+[rules.succ-07]
+source = "expression"
+target = "event"
+relation = "succession"
+priority = 50
+notes = "Expression routes to event"
+[rules.succ-07.metadata]
+domain = "kernel"
+tags = ["temporal", "gateway"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.2.0"
+rationale = "Expression can route to event for conditional event emission"
+
+[rules.succ-08]
+source = "event"
+target = "expression"
+relation = "succession"
+priority = 50
+notes = "Event routes to expression"
+[rules.succ-08.metadata]
+domain = "kernel"
+tags = ["temporal", "gateway"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.2.0"
+rationale = "Event can route to expression for event-driven decision"
+
+[rules.succ-09]
+source = "expression"
+target = "expression"
+relation = "succession"
+priority = 50
+notes = "Expression chain (gateway routing)"
+[rules.succ-09.metadata]
+domain = "kernel"
+tags = ["temporal", "gateway"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.3 Successions"
+established_version = "1.2.0"
+rationale = "Expression chaining enables cascading gateway decisions"
+
+# ═══════════════════════════════════════════════════════════════════
+# Interaction rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.inter-01]
+source = "feature*"
+target = "feature*"
+relation = "interaction"
+priority = 40
+notes = "Message exchange between features"
+[rules.inter-01.metadata]
+domain = "kernel"
+tags = ["message", "behavioral"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.2 Interactions"
+established_version = "1.0.0"
+rationale = "Interaction qualifies message exchange semantics between features"
+
+[rules.inter-02]
+source = "port"
+target = "port"
+relation = "interaction"
+valid = false
+priority = 80
+notes = "Port↔port interaction denied (use connector instead)"
+[rules.inter-02.metadata]
+domain = "kernel"
+tags = ["prohibition", "port"]
+category = "behavioral"
+confidence = "universal"
+source = "KerML §8.2 Interactions"
+established_version = "1.0.0"
+rationale = "Port-to-port communication uses connector, not interaction; interaction is message-level"
+
+[rules.inter-03]
+source = "step*"
+target = "step*"
+relation = "interaction"
+valid = false
+priority = 80
+notes = "Step/action↔step/action interaction denied"
+[rules.inter-03.metadata]
+domain = "kernel"
+tags = ["prohibition", "behavioral"]
+category = "behavioral"
+confidence = "universal"
+source = "KerML §8.2 Interactions"
+established_version = "1.0.0"
+rationale = "Steps interact via succession, not interaction; interaction is for feature-level message exchange"
+
+[rules.inter-04]
+source = "feature"
+target = "feature"
+relation = "interaction"
+valid = false
+priority = 80
+notes = "Plain feature↔feature interaction denied (use port or event)"
+[rules.inter-04.metadata]
+domain = "kernel"
+tags = ["prohibition", "feature"]
+category = "behavioral"
+confidence = "universal"
+source = "KerML §8.2 Interactions"
+established_version = "1.0.0"
+rationale = "Plain features need specialized subtypes (port, event) for interaction semantics"
+
+# ═══════════════════════════════════════════════════════════════════
+# Triggering rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.trig-01]
+source = "event"
+target = "step"
+relation = "triggering"
+priority = 60
+notes = "Event triggers a step"
+[rules.trig-01.metadata]
+domain = "kernel"
+tags = ["trigger", "event-driven"]
+category = "behavioral"
+confidence = "common"
+source = "KerML+UML §13.3 Triggers"
+established_version = "1.0.0"
+rationale = "Event triggering a step is the fundamental event-driven behavioral pattern"
+
+[rules.trig-02]
+source = "event"
+target = "action"
+relation = "triggering"
+priority = 70
+notes = "Event triggers an action"
+[rules.trig-02.metadata]
+domain = "kernel"
+tags = ["trigger", "event-driven"]
+category = "behavioral"
+confidence = "common"
+source = "KerML+UML §13.3 Triggers"
+established_version = "1.5.0"
+rationale = "Event triggering an action provides concrete behavioral activation"
+
+[rules.trig-03]
+source = "classifier*"
+target = "step*"
+relation = "triggering"
+valid = false
+priority = 90
+notes = "Classifier cannot directly trigger a step"
+[rules.trig-03.metadata]
+domain = "kernel"
+tags = ["prohibition", "trigger"]
+category = "behavioral"
+confidence = "universal"
+source = "KerML+UML §13.3 Triggers"
+established_version = "1.0.0"
+rationale = "Classifiers are structural; only events can trigger behavioral steps"
+
+[rules.trig-04]
+source = "package"
+target = "step*"
+relation = "triggering"
+valid = false
+priority = 90
+notes = "Package cannot trigger a step"
+[rules.trig-04.metadata]
+domain = "kernel"
+tags = ["prohibition", "trigger"]
+category = "behavioral"
+confidence = "universal"
+source = "KerML+UML §13.3 Triggers"
+established_version = "1.5.0"
+rationale = "Packages are namespace containers; they have no behavioral triggering capability"
+
+# ═══════════════════════════════════════════════════════════════════
+# Guarding rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.guard-01]
+source = "state"
+target = "expression"
+relation = "guarding"
+priority = 60
+notes = "State guarded by expression condition"
+[rules.guard-01.metadata]
+domain = "kernel"
+tags = ["guard", "state-machine"]
+category = "behavioral"
+confidence = "common"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "Guard expressions control state transition eligibility"
+
+[rules.guard-02]
+source = "state"
+target = "feature"
+relation = "guarding"
+valid = false
+priority = 80
+notes = "State cannot be guarded by a plain feature"
+[rules.guard-02.metadata]
+domain = "kernel"
+tags = ["prohibition", "guard"]
+category = "behavioral"
+confidence = "universal"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "Guard requires evaluatable expression, not a structural feature"
+
+[rules.guard-03]
+source = "feature*"
+target = "expression"
+relation = "guarding"
+valid = false
+priority = 80
+notes = "Only state can be guarded, not arbitrary features"
+[rules.guard-03.metadata]
+domain = "kernel"
+tags = ["prohibition", "guard"]
+category = "behavioral"
+confidence = "universal"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "Guarding is a state-machine concept; only states have guard semantics"
+
+[rules.guard-04]
+source = "state"
+target = "step*"
+relation = "guarding"
+valid = false
+priority = 80
+notes = "State cannot be guarded by step/action (use expression)"
+[rules.guard-04.metadata]
+domain = "kernel"
+tags = ["prohibition", "guard"]
+category = "behavioral"
+confidence = "universal"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "Guard must be an evaluatable expression, not a behavioral step"
+
+[rules.guard-05]
+source = "state"
+target = "event"
+relation = "guarding"
+valid = false
+priority = 80
+notes = "State cannot be guarded by event (use expression)"
+[rules.guard-05.metadata]
+domain = "kernel"
+tags = ["prohibition", "guard"]
+category = "behavioral"
+confidence = "universal"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "Guard must be an evaluatable expression, not an event trigger"
+
+[rules.guard-06]
+source = "state"
+target = "port"
+relation = "guarding"
+valid = false
+priority = 80
+notes = "State cannot be guarded by port (use expression)"
+[rules.guard-06.metadata]
+domain = "kernel"
+tags = ["prohibition", "guard"]
+category = "behavioral"
+confidence = "universal"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "Guard must be an evaluatable expression, not a communication port"
+
+# ═══════════════════════════════════════════════════════════════════
+# Transition rules
+# ═══════════════════════════════════════════════════════════════════
+
+[rules.trans-01]
+source = "state"
+target = "state"
+relation = "transition"
+valid = true
+priority = 60
+notes = "State transitions to another state when guard condition is met"
+
+[rules.trans-01.metadata]
+domain = "kernel"
+tags = ["state-machine", "behavioral", "lifecycle"]
+category = "behavioral"
+confidence = "universal"
+source = "UML 2.5.1 §14.2 StateMachine"
+established_version = "2.0.0"
+rationale = "State transition은 상태 머신의 기본 메커니즘. guard_expr 충족 시 source_state에서 target_state로 전이한다."

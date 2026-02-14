@@ -1,0 +1,443 @@
+# Kernel Metamodel Schema — v2.5.0
+#
+# Single source of truth for the kernel schema:
+#   20 attributes, 15 entities, 14 relations
+# Mirrors the TypeDB schema in kernel.tql.
+
+[meta]
+kernel_version = "2.5.0"
+total_attributes = 20
+total_entities = 15
+total_relations = 14
+
+# ═══════════════════════════════════════════════════════════════════
+# Attributes — 20 value-typed fields
+# ═══════════════════════════════════════════════════════════════════
+
+[[attributes]]
+name = "uid"
+value_type = "string"
+
+[[attributes]]
+name = "name"
+value_type = "string"
+
+[[attributes]]
+name = "description"
+value_type = "string"
+
+[[attributes]]
+name = "qualified_name"
+value_type = "string"
+
+[[attributes]]
+name = "is_abstract"
+value_type = "boolean"
+
+[[attributes]]
+name = "is_composite"
+value_type = "boolean"
+
+[[attributes]]
+name = "is_derived"
+value_type = "boolean"
+
+[[attributes]]
+name = "is_readonly"
+value_type = "boolean"
+
+[[attributes]]
+name = "is_ordered"
+value_type = "boolean"
+
+[[attributes]]
+name = "is_unique"
+value_type = "boolean"
+
+[[attributes]]
+name = "multiplicity_lower"
+value_type = "integer"
+
+[[attributes]]
+name = "multiplicity_upper"
+value_type = "integer"
+
+[[attributes]]
+name = "visibility"
+value_type = "string"
+
+[[attributes]]
+name = "direction"
+value_type = "string"
+
+[[attributes]]
+name = "guard_expr"
+value_type = "string"
+
+[[attributes]]
+name = "ordering"
+value_type = "string"
+
+[[attributes]]
+name = "layer"
+value_type = "string"
+
+[[attributes]]
+name = "kind"
+value_type = "string"
+
+[[attributes]]
+name = "execution_mode"
+value_type = "string"
+
+[[attributes]]
+name = "join_mode"
+value_type = "string"
+
+# ═══════════════════════════════════════════════════════════════════
+# L1 Structure — entities (10)
+# ═══════════════════════════════════════════════════════════════════
+
+[[entities]]
+name = "element"
+layer = "L1"
+is_abstract = true
+owns_key = "uid"
+owns = ["name", "description", "qualified_name", "layer"]
+plays = ["membership:member", "ownership:owned"]
+description = "Root of all kernel elements"
+
+[[entities]]
+name = "namespace"
+layer = "L1"
+parent = "element"
+is_abstract = true
+owns = ["visibility"]
+plays = ["membership:container", "ownership:owner"]
+description = "Element that can contain other named elements"
+
+[[entities]]
+name = "metatype"
+layer = "L1"
+parent = "namespace"
+is_abstract = true
+owns = ["is_abstract"]
+plays = [
+    "specialization:supertype",
+    "specialization:subtype",
+    "feature_typing:typing",
+    "association:source_end",
+    "association:target_end",
+]
+description = "Classifies instances — KerML Type equivalent"
+
+[[entities]]
+name = "feature"
+layer = "L1"
+parent = "metatype"
+owns = [
+    "multiplicity_lower", "multiplicity_upper",
+    "is_ordered", "is_unique",
+    "is_derived", "is_composite", "is_readonly",
+]
+plays = [
+    "feature_typing:typed_feature",
+    "connector:source", "connector:target",
+    "redefinition:original", "redefinition:redefining",
+    "subsetting:subsetted", "subsetting:subsetting_feature",
+]
+description = "Typed characteristic of a metatype — KerML Feature (is also a Type)"
+
+[[entities]]
+name = "port"
+layer = "L1"
+parent = "feature"
+plays = ["connector:source", "connector:target"]
+description = "Access or interaction point exposed by a structure"
+
+[[entities]]
+name = "classifier"
+layer = "L1"
+parent = "metatype"
+is_abstract = true
+description = "Metatype that can be instantiated"
+
+[[entities]]
+name = "structure"
+layer = "L1"
+parent = "classifier"
+description = "Active structured classifier — equivalent to UML Class"
+
+[[entities]]
+name = "item"
+layer = "L1"
+parent = "classifier"
+description = "Passive classifier with identity — data-bearing object"
+
+[[entities]]
+name = "datatype"
+layer = "L1"
+parent = "classifier"
+description = "Value type without identity"
+
+[[entities]]
+name = "package"
+layer = "L1"
+parent = "namespace"
+plays = ["association:source_end", "association:target_end"]
+description = "Concrete namespace container — groups elements"
+
+# ═══════════════════════════════════════════════════════════════════
+# L4 Concrete — entities (5)
+# ═══════════════════════════════════════════════════════════════════
+
+[[entities]]
+name = "step"
+layer = "L4"
+parent = "feature"
+plays = [
+    "succession:predecessor", "succession:successor",
+    "triggering:responding",
+]
+description = "Unit of behavior — a feature that participates in successions"
+
+[[entities]]
+name = "action"
+layer = "L4"
+parent = "step"
+description = "Executable step — concrete unit of computation"
+
+[[entities]]
+name = "event"
+layer = "L4"
+parent = "feature"
+plays = [
+    "triggering:trigger_source",
+    "succession:predecessor", "succession:successor",
+]
+description = "State change occurrence that triggers behavior"
+
+[[entities]]
+name = "expression"
+layer = "L4"
+parent = "feature"
+owns = ["kind"]
+plays = ["guarding:condition"]
+description = "Evaluatable value computation — composable via ownership"
+
+[[entities]]
+name = "state"
+layer = "L4"
+parent = "metatype"
+plays = [
+    "guarding:guarded_element",
+    "transition:source_state",
+    "transition:target_state",
+]
+description = "Behavioral state — classifies situations within a lifecycle"
+
+# ═══════════════════════════════════════════════════════════════════
+# L2 Relationship — relations (8)
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "membership"
+layer = "L2"
+owns_key = "uid"
+description = "Element belongs to a namespace"
+
+[[relations.roles]]
+name = "container"
+player = "namespace"
+
+[[relations.roles]]
+name = "member"
+player = "element"
+
+
+[[relations]]
+name = "ownership"
+layer = "L2"
+owns_key = "uid"
+owns = ["is_composite"]
+description = "Compositional ownership of elements"
+
+[[relations.roles]]
+name = "owner"
+player = "namespace"
+
+[[relations.roles]]
+name = "owned"
+player = "element"
+
+
+[[relations]]
+name = "specialization"
+layer = "L2"
+owns_key = "uid"
+description = "Subtype relationship — inheritance of features"
+
+[[relations.roles]]
+name = "supertype"
+player = "metatype"
+
+[[relations.roles]]
+name = "subtype"
+player = "metatype"
+
+
+[[relations]]
+name = "feature_typing"
+layer = "L2"
+owns_key = "uid"
+description = "Feature is typed by a metatype"
+
+[[relations.roles]]
+name = "typed_feature"
+player = "feature"
+
+[[relations.roles]]
+name = "typing"
+player = "metatype"
+
+
+[[relations]]
+name = "association"
+layer = "L2"
+owns_key = "uid"
+owns = ["name", "is_derived"]
+description = "Structural connection between metatypes"
+
+[[relations.roles]]
+name = "source_end"
+player = "metatype"
+
+[[relations.roles]]
+name = "target_end"
+player = "metatype"
+
+
+[[relations]]
+name = "connector"
+layer = "L2"
+owns_key = "uid"
+owns = ["name"]
+description = "Link between features — base for behavioral qualification"
+
+[[relations.roles]]
+name = "source"
+player = "feature"
+
+[[relations.roles]]
+name = "target"
+player = "feature"
+
+
+[[relations]]
+name = "redefinition"
+layer = "L2"
+owns_key = "uid"
+description = "Feature redefines another feature in a specialization context"
+
+[[relations.roles]]
+name = "original"
+player = "feature"
+
+[[relations.roles]]
+name = "redefining"
+player = "feature"
+
+
+[[relations]]
+name = "subsetting"
+layer = "L2"
+owns_key = "uid"
+description = "Feature values are a subset of another feature's values"
+
+[[relations.roles]]
+name = "subsetted"
+player = "feature"
+
+[[relations.roles]]
+name = "subsetting_feature"
+player = "feature"
+
+# ═══════════════════════════════════════════════════════════════════
+# L3 Behavioral — relations (6)
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "flow"
+layer = "L3"
+parent = "connector"
+owns = ["direction", "ordering"]
+description = "Data/object flow along a connector — behavioral Connector"
+
+[[relations]]
+name = "succession"
+layer = "L3"
+parent = "connector"
+owns = ["guard_expr", "execution_mode", "join_mode"]
+description = "Temporal ordering with execution semantics"
+
+[[relations.roles]]
+name = "predecessor"
+player = "feature"
+
+[[relations.roles]]
+name = "successor"
+player = "feature"
+
+
+[[relations]]
+name = "interaction"
+layer = "L3"
+parent = "connector"
+owns = ["kind"]
+description = "Message exchange between features"
+
+[[relations]]
+name = "triggering"
+layer = "L3"
+owns_key = "uid"
+description = "Event triggers a behavioral response"
+
+[[relations.roles]]
+name = "trigger_source"
+player = "feature"
+
+[[relations.roles]]
+name = "responding"
+player = "step"
+
+
+[[relations]]
+name = "guarding"
+layer = "L3"
+owns_key = "uid"
+owns = ["guard_expr"]
+description = "Condition guards a behavioral element"
+
+[[relations.roles]]
+name = "guarded_element"
+player = "state"
+
+[[relations.roles]]
+name = "condition"
+player = "expression"
+
+
+[[relations]]
+name = "transition"
+layer = "L3"
+owns_key = "uid"
+owns = ["guard_expr"]
+description = "State transition — guard condition 충족 시 source에서 target 상태로 전이"
+
+[[relations.roles]]
+name = "source_state"
+player = "state"
+
+[[relations.roles]]
+name = "target_state"
+player = "state"

@@ -1,0 +1,246 @@
+# Kernel Self Profile
+# Represents ea-kernel itself as a kernel-domain model.
+
+[profile]
+name = "KernelSelfProfile"
+version = "1.0.0"
+kernel_version = "2.5.0"
+id_prefix = "ks"
+standard = "EA Kernel Internal Spec"
+organization = "ea-kernel"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[elements]]
+name = "KernelLayer"
+layer = "Kernel"
+category = "Composite"
+description = "Kernel specification boundary."
+
+[[elements]]
+name = "KernelSpecBuilder"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Builds validated KERNEL_SPEC from schema + rule corpus."
+
+[[elements]]
+name = "KernelSchemaLoader"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Loads core kernel schema from TOML sources."
+
+[[elements]]
+name = "KernelRuleSpecLoader"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Loads and parses kernel validity rules."
+
+[[elements]]
+name = "KernelRuleCorpus"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Holds executable rule corpus for judgment."
+
+[[elements]]
+name = "KernelRuleVerifier"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Verifies kernel rule consistency and expected behavior."
+
+[[elements]]
+name = "KernelInstanceValidator"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Validates model instances against kernel constraints."
+
+[[elements]]
+name = "KernelJudgmentService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Executes governance-aware rule judgments."
+
+[[elements]]
+name = "KernelProfileLoader"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Loads domain profiles mapped onto the kernel."
+
+[[elements]]
+name = "KernelProfileRegistry"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Registers and resolves profile assets."
+
+[[elements]]
+name = "KernelModelRegistrationService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Registers/validates/activates model versions in governance DB."
+
+[[elements]]
+name = "KernelGovernanceFacade"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Unified governance facade over rule, decision, and version stores."
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership relation."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency linkage."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven trigger relation."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Constraint linkage."
+
+[[rules]]
+source = "@Composite"
+target = "*"
+relation = "contains"
+priority = 40
+notes = "Kernel layer package can contain all kernel components."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 35
+notes = "Kernel structures may own subordinate kernel structures."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "coordinates"
+priority = 45
+notes = "Kernel structures coordinate runtime behavior."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "depends_on"
+priority = 45
+notes = "Kernel structures may depend on other kernel structures."
+
+[[rules]]
+source = "KernelSpecBuilder"
+target = "KernelSchemaLoader"
+relation = "depends_on"
+priority = 70
+notes = "Spec builder depends on schema loader."
+
+[[rules]]
+source = "KernelSpecBuilder"
+target = "KernelRuleSpecLoader"
+relation = "depends_on"
+priority = 70
+notes = "Spec builder depends on rule loader."
+
+[[rules]]
+source = "KernelRuleSpecLoader"
+target = "KernelRuleCorpus"
+relation = "coordinates"
+priority = 65
+notes = "Loaded rules are materialized as executable corpus."
+
+[[rules]]
+source = "KernelRuleCorpus"
+target = "KernelRuleVerifier"
+relation = "coordinates"
+priority = 65
+notes = "Corpus is verified for consistency."
+
+[[rules]]
+source = "KernelRuleCorpus"
+target = "KernelJudgmentService"
+relation = "depends_on"
+priority = 65
+notes = "Judgment service executes against corpus."
+
+[[rules]]
+source = "KernelProfileRegistry"
+target = "KernelProfileLoader"
+relation = "depends_on"
+priority = 65
+notes = "Registry loads profile assets via loader."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "KernelProfileLoader"
+relation = "depends_on"
+priority = 70
+notes = "Registration service parses profile payloads."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "KernelProfileRegistry"
+relation = "coordinates"
+priority = 65
+notes = "Registration service coordinates with profile registry."
+
+[[rules]]
+source = "KernelGovernanceFacade"
+target = "KernelJudgmentService"
+relation = "depends_on"
+priority = 70
+notes = "Governance facade routes evaluation to judgment service."
+
+[[rules]]
+source = "KernelGovernanceFacade"
+target = "KernelRuleCorpus"
+relation = "depends_on"
+priority = 65
+notes = "Governance facade rebuilds and uses active corpus."
+
+[[rules]]
+source = "KernelGovernanceFacade"
+target = "KernelModelRegistrationService"
+relation = "constrains"
+priority = 60
+notes = "Governance policy constrains model registration lifecycle."

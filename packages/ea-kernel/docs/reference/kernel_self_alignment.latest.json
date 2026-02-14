@@ -1,0 +1,204 @@
+{
+  "coverage_percent": 100.0,
+  "details": [
+    {
+      "element": "KernelGovernanceFacade",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Governance facade class exists.",
+          "exists": true,
+          "file": "governance.py",
+          "lines": [
+            41
+          ],
+          "pattern": "class GovernanceSystem"
+        }
+      ]
+    },
+    {
+      "element": "KernelInstanceValidator",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "InstanceValidator class exists.",
+          "exists": true,
+          "file": "instance_validator.py",
+          "lines": [
+            17
+          ],
+          "pattern": "class InstanceValidator"
+        }
+      ]
+    },
+    {
+      "element": "KernelJudgmentService",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "JudgmentService class exists.",
+          "exists": true,
+          "file": "judgment_service.py",
+          "lines": [
+            121
+          ],
+          "pattern": "class JudgmentService"
+        }
+      ]
+    },
+    {
+      "element": "KernelLayer",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Kernel validated spec object exists.",
+          "exists": true,
+          "file": "spec.py",
+          "lines": [
+            30
+          ],
+          "pattern": "KERNEL_SPEC = build_validated_schema\\(\\)"
+        }
+      ]
+    },
+    {
+      "element": "KernelModelRegistrationService",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Model registration service class exists.",
+          "exists": true,
+          "file": "model_registration.py",
+          "lines": [
+            79
+          ],
+          "pattern": "class KernelModelRegistrationService"
+        }
+      ]
+    },
+    {
+      "element": "KernelProfileLoader",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Profile loader function exists.",
+          "exists": true,
+          "file": "profile_loader.py",
+          "lines": [
+            60
+          ],
+          "pattern": "def load_profile\\("
+        }
+      ]
+    },
+    {
+      "element": "KernelProfileRegistry",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "ProfileRegistry class exists.",
+          "exists": true,
+          "file": "profile_registry.py",
+          "lines": [
+            12
+          ],
+          "pattern": "class ProfileRegistry"
+        }
+      ]
+    },
+    {
+      "element": "KernelRuleCorpus",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "RuleCorpus class exists.",
+          "exists": true,
+          "file": "rule_corpus.py",
+          "lines": [
+            33
+          ],
+          "pattern": "class RuleCorpus"
+        }
+      ]
+    },
+    {
+      "element": "KernelRuleSpecLoader",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Kernel rule loader function exists.",
+          "exists": true,
+          "file": "spec_loader.py",
+          "lines": [
+            160
+          ],
+          "pattern": "def load_kernel_rules\\("
+        }
+      ]
+    },
+    {
+      "element": "KernelRuleVerifier",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "RuleVerifier class exists.",
+          "exists": true,
+          "file": "rule_verifier.py",
+          "lines": [
+            26
+          ],
+          "pattern": "class RuleVerifier"
+        }
+      ]
+    },
+    {
+      "element": "KernelSchemaLoader",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Kernel schema loader wiring exists.",
+          "exists": true,
+          "file": "definition.py",
+          "lines": [
+            7,
+            10
+          ],
+          "pattern": "load_kernel_schema"
+        }
+      ]
+    },
+    {
+      "element": "KernelSpecBuilder",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Kernel spec builder function exists.",
+          "exists": true,
+          "file": "spec.py",
+          "lines": [
+            19
+          ],
+          "pattern": "def build_validated_schema\\(\\)"
+        }
+      ]
+    }
+  ],
+  "kernel_src": "/Users/junwoobang/workflow/ea-sys2/packages/ea-kernel/src/ea_kernel",
+  "matched_element_count": 12,
+  "missing_elements": [],
+  "model_element_count": 12,
+  "profile_path": "/Users/junwoobang/workflow/ea-sys2/packages/ea-kernel/examples/kernel_self_profile.toml",
+  "unmapped_elements": []
+}

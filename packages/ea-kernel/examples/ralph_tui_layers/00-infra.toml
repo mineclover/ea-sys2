@@ -1,0 +1,112 @@
+# Ralph TUI Layer Fragment: Infra
+# Standalone-valid layer profile.
+
+[profile]
+name = "RalphTUIImplementation"
+version = "0.2.0"
+kernel_version = "2.5.0"
+id_prefix = "rt"
+standard = "Ralph TUI Internal Architecture"
+organization = "subsy"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "InfraLayer"
+layer = "Infra"
+category = "Composite"
+description = "Infrastructure integration boundary."
+
+[[elements]]
+name = "AgentPluginPort"
+layer = "Infra"
+category = "Interface"
+description = "Adapter boundary to agent CLIs."
+
+[[elements]]
+name = "TrackerPluginPort"
+layer = "Infra"
+category = "Interface"
+description = "Adapter boundary to tracker providers."
+
+[[elements]]
+name = "RemoteServer"
+layer = "Infra"
+category = "ActiveStructure"
+description = "Remote listener server for distributed control."
+
+[[elements]]
+name = "WorktreeManager"
+layer = "Infra"
+category = "ActiveStructure"
+description = "Git worktree provisioning for parallel tasks."
+
+[[elements]]
+name = "SessionStateStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Persistent session state storage."
+
+[[elements]]
+name = "IterationLogStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Persistent iteration log storage."
+

@@ -1,0 +1,585 @@
+# Zachman Framework 6.0 Kernel Profile
+#
+# 36 elements (6 interrogatives x 6 perspectives), 12 relations, 31 rules (31 allow + 0 deny)
+# 6 categories -> 6 kernel types
+
+[profile]
+name = "Zachman"
+version = "6.0"
+kernel_version = "2.5.0"
+id_prefix = "zf"
+standard = "Zachman Framework 6.0"
+organization = "Zachman International"
+
+[categories]
+What = "item"
+How = "step"
+Where = "package"
+Who = "structure"
+When = "event"
+Why = "state"
+
+# ═══════════════════════════════════════════════════════════════════
+# Elements — 36 Zachman cells (6 interrogatives x 6 perspectives)
+# ═══════════════════════════════════════════════════════════════════
+
+# ── What (Data) -> item ──────────────────────────────────────────
+
+[[elements]]
+name = "ScopeData"
+layer = "Scope"
+category = "What"
+description = "Significant business entities at executive scope"
+
+[[elements]]
+name = "EnterpriseData"
+layer = "Enterprise"
+category = "What"
+description = "Business entity model at enterprise level"
+
+[[elements]]
+name = "SystemData"
+layer = "System"
+category = "What"
+description = "Logical data model at system designer level"
+
+[[elements]]
+name = "TechnologyData"
+layer = "Technology"
+category = "What"
+description = "Physical data model at technology level"
+
+[[elements]]
+name = "DetailData"
+layer = "Detail"
+category = "What"
+description = "Data definition at implementation detail level"
+
+[[elements]]
+name = "OperationalData"
+layer = "Operational"
+category = "What"
+description = "Operational data instances"
+
+# ── How (Process) -> step ────────────────────────────────────────
+
+[[elements]]
+name = "ScopeProcess"
+layer = "Scope"
+category = "How"
+description = "Business process list at executive scope"
+
+[[elements]]
+name = "EnterpriseProcess"
+layer = "Enterprise"
+category = "How"
+description = "Business process model at enterprise level"
+
+[[elements]]
+name = "SystemProcess"
+layer = "System"
+category = "How"
+description = "Application architecture at system level"
+
+[[elements]]
+name = "TechnologyProcess"
+layer = "Technology"
+category = "How"
+description = "System design at technology level"
+
+[[elements]]
+name = "DetailProcess"
+layer = "Detail"
+category = "How"
+description = "Program specification at detail level"
+
+[[elements]]
+name = "OperationalProcess"
+layer = "Operational"
+category = "How"
+description = "Operational process instances"
+
+# ── Where (Network) -> package ───────────────────────────────────
+
+[[elements]]
+name = "ScopeNetwork"
+layer = "Scope"
+category = "Where"
+description = "Business locations at executive scope"
+
+[[elements]]
+name = "EnterpriseNetwork"
+layer = "Enterprise"
+category = "Where"
+description = "Logistics network at enterprise level"
+
+[[elements]]
+name = "SystemNetwork"
+layer = "System"
+category = "Where"
+description = "Distributed system architecture at system level"
+
+[[elements]]
+name = "TechnologyNetwork"
+layer = "Technology"
+category = "Where"
+description = "Technology architecture at technology level"
+
+[[elements]]
+name = "DetailNetwork"
+layer = "Detail"
+category = "Where"
+description = "Network architecture at detail level"
+
+[[elements]]
+name = "OperationalNetwork"
+layer = "Operational"
+category = "Where"
+description = "Operational network instances"
+
+# ── Who (Organization) -> structure ──────────────────────────────
+
+[[elements]]
+name = "ScopeOrganization"
+layer = "Scope"
+category = "Who"
+description = "Important organizational units at executive scope"
+
+[[elements]]
+name = "EnterpriseOrganization"
+layer = "Enterprise"
+category = "Who"
+description = "Organization model at enterprise level"
+
+[[elements]]
+name = "SystemOrganization"
+layer = "System"
+category = "Who"
+description = "User interface architecture at system level"
+
+[[elements]]
+name = "TechnologyOrganization"
+layer = "Technology"
+category = "Who"
+description = "Security architecture at technology level"
+
+[[elements]]
+name = "DetailOrganization"
+layer = "Detail"
+category = "Who"
+description = "Role definitions at detail level"
+
+[[elements]]
+name = "OperationalOrganization"
+layer = "Operational"
+category = "Who"
+description = "Operational organization instances"
+
+# ── When (Time) -> event ─────────────────────────────────────────
+
+[[elements]]
+name = "ScopeSchedule"
+layer = "Scope"
+category = "When"
+description = "Major business events at executive scope"
+
+[[elements]]
+name = "EnterpriseSchedule"
+layer = "Enterprise"
+category = "When"
+description = "Master schedule at enterprise level"
+
+[[elements]]
+name = "SystemSchedule"
+layer = "System"
+category = "When"
+description = "Processing structure at system level"
+
+[[elements]]
+name = "TechnologySchedule"
+layer = "Technology"
+category = "When"
+description = "Control structure at technology level"
+
+[[elements]]
+name = "DetailSchedule"
+layer = "Detail"
+category = "When"
+description = "Timing definition at detail level"
+
+[[elements]]
+name = "OperationalSchedule"
+layer = "Operational"
+category = "When"
+description = "Operational schedule instances"
+
+# ── Why (Strategy) -> state ──────────────────────────────────────
+
+[[elements]]
+name = "ScopeStrategy"
+layer = "Scope"
+category = "Why"
+description = "Business goals at executive scope"
+
+[[elements]]
+name = "EnterpriseStrategy"
+layer = "Enterprise"
+category = "Why"
+description = "Business plan at enterprise level"
+
+[[elements]]
+name = "SystemStrategy"
+layer = "System"
+category = "Why"
+description = "Business rule model at system level"
+
+[[elements]]
+name = "TechnologyStrategy"
+layer = "Technology"
+category = "Why"
+description = "Rule design at technology level"
+
+[[elements]]
+name = "DetailStrategy"
+layer = "Detail"
+category = "Why"
+description = "Rule specification at detail level"
+
+[[elements]]
+name = "OperationalStrategy"
+layer = "Operational"
+category = "Why"
+description = "Operational strategy instances"
+
+# ═══════════════════════════════════════════════════════════════════
+# Relations — 12 Zachman relationship types
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "transforms_to"
+kernel_relation = "specialization"
+description = "Vertical refinement between perspectives"
+
+[[relations]]
+name = "derives_from"
+kernel_relation = "specialization"
+description = "Derivation from higher abstraction"
+
+[[relations]]
+name = "composition"
+kernel_relation = "ownership"
+description = "Part-whole structural relationship"
+
+[[relations]]
+name = "aggregation"
+kernel_relation = "membership"
+description = "Grouping without lifecycle dependency"
+
+[[relations]]
+name = "uses"
+kernel_relation = "association"
+description = "Element uses another element"
+
+[[relations]]
+name = "located_at"
+kernel_relation = "association"
+description = "Element is located at a place"
+
+[[relations]]
+name = "performed_by"
+kernel_relation = "association"
+description = "Process performed by organizational unit"
+
+[[relations]]
+name = "triggered_by"
+kernel_relation = "succession"
+description = "Process or event triggered by a schedule"
+
+[[relations]]
+name = "motivated_by"
+kernel_relation = "association"
+description = "Element motivated by strategy"
+
+[[relations]]
+name = "flow"
+kernel_relation = "flow"
+description = "Data or process flow between elements"
+
+[[relations]]
+name = "triggers"
+kernel_relation = "succession"
+description = "Temporal causal relationship"
+
+[[relations]]
+name = "association"
+kernel_relation = "association"
+description = "General unspecified relationship"
+
+# ═══════════════════════════════════════════════════════════════════
+# Validity Rules — 31 allow rules (no fallback rules)
+# ═══════════════════════════════════════════════════════════════════
+
+# ── transforms_to (specialization): vertical refinement ──────────
+
+[[rules]]
+id = "zf-trans-01"
+source = "*"
+target = "*"
+relation = "transforms_to"
+priority = 50
+conditions = ["SAME_CATEGORY"]
+notes = "Vertical transformation within same interrogative column"
+
+# ── derives_from (specialization): column derivation ─────────────
+
+[[rules]]
+id = "zf-deriv-01"
+source = "@What"
+target = "@What"
+relation = "derives_from"
+priority = 40
+notes = "What column derivation"
+
+[[rules]]
+id = "zf-deriv-02"
+source = "@How"
+target = "@How"
+relation = "derives_from"
+priority = 40
+notes = "How column derivation"
+
+[[rules]]
+id = "zf-deriv-03"
+source = "@Where"
+target = "@Where"
+relation = "derives_from"
+priority = 40
+notes = "Where column derivation"
+
+[[rules]]
+id = "zf-deriv-04"
+source = "@Who"
+target = "@Who"
+relation = "derives_from"
+priority = 40
+notes = "Who column derivation"
+
+[[rules]]
+id = "zf-deriv-05"
+source = "@When"
+target = "@When"
+relation = "derives_from"
+priority = 40
+notes = "When column derivation"
+
+[[rules]]
+id = "zf-deriv-06"
+source = "@Why"
+target = "@Why"
+relation = "derives_from"
+priority = 40
+notes = "Why column derivation"
+
+# ── composition (ownership): part-whole within same column ───────
+
+[[rules]]
+id = "zf-comp-01"
+source = "@What"
+target = "@What"
+relation = "composition"
+priority = 40
+notes = "What column composition"
+
+[[rules]]
+id = "zf-comp-02"
+source = "@Where"
+target = "@Where"
+relation = "composition"
+priority = 40
+notes = "Where column composition"
+
+[[rules]]
+id = "zf-comp-03"
+source = "@Who"
+target = "@Who"
+relation = "composition"
+priority = 40
+notes = "Who column composition"
+
+# ── aggregation (membership): grouping ───────────────────────────
+
+[[rules]]
+id = "zf-agg-01"
+source = "@Where"
+target = "@What"
+relation = "aggregation"
+priority = 40
+notes = "Network aggregates data elements"
+
+[[rules]]
+id = "zf-agg-02"
+source = "@Where"
+target = "@How"
+relation = "aggregation"
+priority = 40
+notes = "Network aggregates processes"
+
+[[rules]]
+id = "zf-agg-03"
+source = "@Where"
+target = "@Who"
+relation = "aggregation"
+priority = 40
+notes = "Network aggregates organizations"
+
+# ── uses (association): horizontal cross-column ──────────────────
+
+[[rules]]
+id = "zf-uses-01"
+source = "@How"
+target = "@What"
+relation = "uses"
+priority = 50
+notes = "Process uses data"
+
+[[rules]]
+id = "zf-uses-02"
+source = "@Who"
+target = "@What"
+relation = "uses"
+priority = 50
+notes = "Organization uses data"
+
+# ── located_at (association): entity at location ─────────────────
+
+[[rules]]
+id = "zf-loc-01"
+source = "@Who"
+target = "@Where"
+relation = "located_at"
+priority = 50
+notes = "Organization located at network"
+
+[[rules]]
+id = "zf-loc-02"
+source = "@What"
+target = "@Where"
+relation = "located_at"
+priority = 50
+notes = "Data located at network"
+
+# ── performed_by (association): process to organization ──────────
+
+[[rules]]
+id = "zf-perf-01"
+source = "@How"
+target = "@Who"
+relation = "performed_by"
+priority = 50
+notes = "Process performed by organization"
+
+# ── triggered_by (succession): process triggered by schedule ─────
+
+[[rules]]
+id = "zf-trigby-01"
+source = "@How"
+target = "@When"
+relation = "triggered_by"
+priority = 50
+notes = "Process triggered by schedule"
+
+[[rules]]
+id = "zf-trigby-02"
+source = "@When"
+target = "@When"
+relation = "triggered_by"
+priority = 40
+notes = "Schedule triggered by schedule"
+
+# ── motivated_by (association): element motivated by strategy ────
+
+[[rules]]
+id = "zf-motiv-01"
+source = "@How"
+target = "@Why"
+relation = "motivated_by"
+priority = 50
+notes = "Process motivated by strategy"
+
+[[rules]]
+id = "zf-motiv-02"
+source = "@Who"
+target = "@Why"
+relation = "motivated_by"
+priority = 50
+notes = "Organization motivated by strategy"
+
+[[rules]]
+id = "zf-motiv-03"
+source = "@What"
+target = "@Why"
+relation = "motivated_by"
+priority = 50
+notes = "Data motivated by strategy"
+
+# ── flow (flow): data/process flow ───────────────────────────────
+
+[[rules]]
+id = "zf-flow-01"
+source = "@How"
+target = "@How"
+relation = "flow"
+priority = 40
+notes = "Process to process flow"
+
+[[rules]]
+id = "zf-flow-02"
+source = "@What"
+target = "@How"
+relation = "flow"
+priority = 50
+notes = "Data to process flow"
+
+[[rules]]
+id = "zf-flow-03"
+source = "@How"
+target = "@What"
+relation = "flow"
+priority = 50
+notes = "Process to data flow"
+
+# ── triggers (succession): temporal causal ───────────────────────
+
+[[rules]]
+id = "zf-trig-01"
+source = "@When"
+target = "@How"
+relation = "triggers"
+priority = 40
+notes = "Schedule triggers process"
+
+[[rules]]
+id = "zf-trig-02"
+source = "@When"
+target = "@When"
+relation = "triggers"
+priority = 40
+notes = "Schedule triggers schedule"
+
+[[rules]]
+id = "zf-trig-03"
+source = "@How"
+target = "@How"
+relation = "triggers"
+priority = 40
+notes = "Process triggers process"
+
+# ── association: general ─────────────────────────────────────────
+
+[[rules]]
+id = "zf-assoc-01"
+source = "*"
+target = "*"
+relation = "association"
+priority = 40
+notes = "General association between any elements"

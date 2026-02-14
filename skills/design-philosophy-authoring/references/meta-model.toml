@@ -1,0 +1,218 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Design Philosophy Document — Section Meta-Model
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ea-kernel CLAUDE.md에서 추출한 정규 섹션 구조.
+# 모든 패키지 CLAUDE.md는 이 스키마를 따른다.
+#
+# 용어:
+#   section  — 문서의 ## 단위 블록
+#   slot     — 섹션 내 채워야 할 변수
+#   rule     — 섹션 작성 시 준수할 제약
+
+[meta_model]
+version = "1.0.0"
+benchmark = "packages/ea-kernel/CLAUDE.md"
+
+# ──────────────────────────────────────────────
+# S1: Title + One-liner
+# ──────────────────────────────────────────────
+
+[sections.S1]
+name = "Title + One-liner"
+heading = "# {pkg} — Coding Conventions & Module Rules"
+required = true
+
+[sections.S1.slots]
+identity    = "패키지의 정체성/역할 (한 구절)"
+basis       = "이론적 기반/설계 철학 출처"
+dependency  = "기술 제약 또는 의존성 정보"
+
+[sections.S1.rules]
+format  = "3요소를 마침표로 구분한 1~2문장"
+example = "경량 커널 메타모델. UML 2.5.1 구조 참고 + KerML 설계 철학 기반. Python >=3.11, core는 zero dependency."
+
+# ──────────────────────────────────────────────
+# S2: Design Philosophy
+# ──────────────────────────────────────────────
+
+[sections.S2]
+name = "Design Philosophy"
+heading = "## Design Philosophy"
+required = true
+
+[sections.S2.slots]
+layer_count      = "계층 수 (정수)"
+model_name       = "계층 모델 이름 (e.g. progressive abstraction, Narrative Abstraction)"
+layer_list       = "각 계층: Prefix+번호 + 이름 + 역할 + 대표 타입"
+core_principle   = "패키지 본질을 한 문장으로 집약"
+
+[sections.S2.rules]
+layer_format   = "**{Prefix}{N} {Name}**: {역할} — {대표 타입, ...}"
+principle_format = "핵심 원칙: **{한 문장}**"
+principle_rule   = "반드시 한 줄. 복수 원칙은 S3 Domain Principles로 분리"
+
+# ──────────────────────────────────────────────
+# S3: Domain Principles
+# ──────────────────────────────────────────────
+
+[sections.S3]
+name = "Domain Principles"
+heading = "## {Domain} Design Principles"
+required = true
+
+[sections.S3.slots]
+domain         = "패키지 고유 도메인명 (e.g. Profile, Decision Process, Execution)"
+reference_link = "별도 설계 문서 경로 (없으면 생략)"
+principles     = "핵심 요약 bullets (3~5개)"
+
+[sections.S3.rules]
+bullet_format = "{원칙명}: {설명} — {부연 또는 Kernel 동형성}"
+max_bullets   = 5
+reference_note = "참조 문서가 있으면 '→ {path} 참조' 줄 선행, 없으면 생략"
+
+# ──────────────────────────────────────────────
+# S4: Module Structure
+# ──────────────────────────────────────────────
+
+[sections.S4]
+name = "Module Structure"
+heading = "## Module Structure (flat)"
+required = true
+
+[sections.S4.slots]
+tree = "파일 트리 (코드 블록)"
+
+[sections.S4.rules]
+file_format  = "├── {file}  # {LayerTag}: {한 줄 설명}"
+layer_tag    = "모든 파일에 해당 Layer/Plane 태그 일관 부여"
+immature_pkg = "v0.x 패키지는 ### 현재 구조의 한계 + ### 목표 구조 서브섹션 허용"
+mature_pkg   = "성숙 패키지는 서브섹션 없이 현재=목표"
+
+[sections.S4.subsections.limitations]
+heading   = "### 현재 구조의 한계 ({version})"
+condition = "current != target"
+format    = "산문 1단락. 중복·고아·부재를 간결히 진단"
+
+[sections.S4.subsections.target]
+heading   = "### 목표 구조"
+condition = "current != target"
+format    = "코드 블록 트리 + 마이그레이션 산문 1~2문장"
+
+# ──────────────────────────────────────────────
+# S5: Import Convention
+# ──────────────────────────────────────────────
+
+[sections.S5]
+name = "Import Convention"
+heading = "## Import Convention"
+required = true
+
+[sections.S5.rules]
+format  = "**절대 경로 중심**. + 코드 블록 2줄 import 예시"
+example = """
+```python
+from {pkg}.{module1} import {Type1}, {Type2}
+from {pkg}.{module2} import {Type3}
+```
+"""
+
+# ──────────────────────────────────────────────
+# S6: Typing Convention
+# ──────────────────────────────────────────────
+
+[sections.S6]
+name = "Typing Convention"
+heading = "## Typing Convention"
+required = true
+
+[sections.S6.rules]
+format = "한 줄 bullet: Python 3.11+ 현대 문법"
+fixed  = "- Python 3.11+ 현대 문법: `list[]`, `dict[]`, `str | None`"
+
+# ──────────────────────────────────────────────
+# S7: Module Rules
+# ──────────────────────────────────────────────
+
+[sections.S7]
+name = "Module Rules"
+heading = "## Module Rules"
+required = true
+
+[sections.S7.file_size]
+heading = "### File Size"
+format  = "목표 700줄, 경고 1000줄, 강제분할 1500줄. {패키지 고유 예외}"
+
+[sections.S7.dependency_direction]
+heading = "### Dependency Direction"
+
+[sections.S7.dependency_direction.rules]
+graph_format = "화살표 코드 블록: {source} ← {consumer} ({import 대상})"
+immature_pkg = "현재 + 목표 두 그래프. 성숙 패키지는 단일 그래프"
+prose_count  = 3
+prose_roles  = [
+    "금지 규칙 + Kernel 동형성 설명",
+    "import 전략 (lazy import, string ID 간접 참조 등)",
+    "고아 모듈 처리 또는 마이그레이션 방침",
+]
+
+[sections.S7.test_convention]
+heading = "### Test Convention"
+format  = "bullets: 절대 경로 import / self-contained / 패키지 고유 마커"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 평가 기준
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[evaluation]
+description = "작성된 문서를 메타모델에 대해 평가하는 기준"
+
+[[evaluation.criteria]]
+id       = "structural_conformance"
+question = "S1~S7 전 섹션이 순서대로 존재하는가?"
+severity = "error"
+
+[[evaluation.criteria]]
+id       = "single_principle"
+question = "S2 핵심 원칙이 정확히 한 줄인가? (복수 bullets → S3로 분리)"
+severity = "error"
+
+[[evaluation.criteria]]
+id       = "one_liner_triad"
+question = "S1 One-liner가 정체성·기반·의존성 3요소를 포함하는가?"
+severity = "error"
+
+[[evaluation.criteria]]
+id       = "layer_tags"
+question = "S4 Module Structure의 모든 파일에 Layer/Plane 태그가 일관 부여되었는가?"
+severity = "warning"
+
+[[evaluation.criteria]]
+id       = "dep_prose"
+question = "S7 Dependency Direction에 화살표 그래프 + 산문 3줄이 있는가?"
+severity = "error"
+
+[[evaluation.criteria]]
+id       = "dep_prohibition"
+question = "산문에 금지 규칙이 명시되고, Kernel 동형성('이는 Kernel의 X가 Y를 모르는 것과 동일')이 언급되는가?"
+severity = "warning"
+
+[[evaluation.criteria]]
+id       = "immature_subsections"
+question = "미성숙 패키지(v0.x)에 한계/목표 서브섹션이 있는가? 성숙 패키지에 불필요한 서브섹션이 없는가?"
+severity = "warning"
+
+[[evaluation.criteria]]
+id       = "type_accuracy"
+question = "현재 모듈명·타입명이 실제 코드와 일치하는가?"
+severity = "error"
+
+[[evaluation.criteria]]
+id       = "migration_path"
+question = "목표 구조가 현재 코드의 점진적 마이그레이션 경로를 제공하는가?"
+severity = "warning"
+
+[[evaluation.criteria]]
+id       = "tone_consistency"
+question = "벤치마크(ea-kernel)와 톤·밀도·길이가 일관되는가?"
+severity = "warning"

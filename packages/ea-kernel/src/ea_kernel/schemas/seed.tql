@@ -1,0 +1,70 @@
+## ea-kernel: Seed data — built-in primitive types and root namespace
+##
+## These are the foundational instances that every kernel deployment starts with.
+
+insert
+
+## ─── Root namespace ──────────────────────────────────────────────────────────
+
+$root isa package,
+    has uid "kernel:root",
+    has name "kernel",
+    has description "Root namespace of the kernel metamodel",
+    has layer "L1",
+    has visibility "public";
+
+
+## ─── Primitive datatypes ─────────────────────────────────────────────────────
+
+$boolean isa datatype,
+    has uid "kernel:type/boolean",
+    has name "Boolean",
+    has description "Logical true/false value",
+    has layer "L1",
+    has is_abstract false;
+
+$integer isa datatype,
+    has uid "kernel:type/integer",
+    has name "Integer",
+    has description "Whole number value",
+    has layer "L1",
+    has is_abstract false;
+
+$real isa datatype,
+    has uid "kernel:type/real",
+    has name "Real",
+    has description "Floating-point number value",
+    has layer "L1",
+    has is_abstract false;
+
+$string isa datatype,
+    has uid "kernel:type/string",
+    has name "String",
+    has description "Character sequence value",
+    has layer "L1",
+    has is_abstract false;
+
+$unlimited isa datatype,
+    has uid "kernel:type/unlimited_natural",
+    has name "UnlimitedNatural",
+    has description "Non-negative integer or unlimited (*)",
+    has layer "L1",
+    has is_abstract false;
+
+
+## ─── Membership: primitives belong to root ───────────────────────────────────
+
+(container: $root, member: $boolean) isa membership,
+    has uid "kernel:membership/root/boolean";
+
+(container: $root, member: $integer) isa membership,
+    has uid "kernel:membership/root/integer";
+
+(container: $root, member: $real) isa membership,
+    has uid "kernel:membership/root/real";
+
+(container: $root, member: $string) isa membership,
+    has uid "kernel:membership/root/string";
+
+(container: $root, member: $unlimited) isa membership,
+    has uid "kernel:membership/root/unlimited_natural";

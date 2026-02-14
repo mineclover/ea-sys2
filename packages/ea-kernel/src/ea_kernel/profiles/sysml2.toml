@@ -1,0 +1,654 @@
+# SysML 2.0 Kernel Profile
+#
+# 25 elements, 13 relations, 43 rules (33 allow + 10 deny + 14 builder-generated fallback)
+# 11 categories → 11 kernel types (all homogeneous)
+
+[profile]
+name = "SysML"
+version = "2.0"
+kernel_version = "2.5.0"
+id_prefix = "sm"
+standard = "SysML 2.0 / KerML"
+organization = "OMG"
+
+[categories]
+ActiveStructure = "structure"
+Property = "feature"
+Port = "port"
+DataType = "datatype"
+Container = "package"
+Behavior = "step"
+Execution = "action"
+StateMachine = "state"
+Event = "event"
+PassiveStructure = "item"
+Constraint = "expression"
+
+# ═══════════════════════════════════════════════════════════════════
+# Elements — 25 SysML 2.0 elements across 4 layers
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Structure Layer (10) ────────────────────────────────────────
+
+# ActiveStructure (3) — structure
+[[elements]]
+name = "Part"
+layer = "Structure"
+category = "ActiveStructure"
+description = "System component with owned features"
+
+[[elements]]
+name = "Block"
+layer = "Structure"
+category = "ActiveStructure"
+description = "Structural type definition"
+
+[[elements]]
+name = "InterfaceBlock"
+layer = "Structure"
+category = "ActiveStructure"
+description = "Interface specification type"
+
+# Property (3) — feature
+[[elements]]
+name = "PartProperty"
+layer = "Structure"
+category = "Property"
+description = "Owned structural attribute"
+
+[[elements]]
+name = "FlowProperty"
+layer = "Structure"
+category = "Property"
+description = "Flow-capable property"
+
+[[elements]]
+name = "ReferenceProperty"
+layer = "Structure"
+category = "Property"
+description = "Cross-reference to another part"
+
+# Port (2) — port
+[[elements]]
+name = "FlowPort"
+layer = "Structure"
+category = "Port"
+description = "Data/material flow endpoint"
+
+[[elements]]
+name = "ProxyPort"
+layer = "Structure"
+category = "Port"
+description = "Interface-exposing connection point"
+
+# DataType (1) — datatype
+[[elements]]
+name = "ValueType"
+layer = "Structure"
+category = "DataType"
+description = "Primitive/measurement value type"
+
+# Container (1) — package
+[[elements]]
+name = "ModelPackage"
+layer = "Structure"
+category = "Container"
+description = "Organizational grouping"
+
+# ── Behavior Layer (6) ──────────────────────────────────────────
+
+# Behavior (2) — step
+[[elements]]
+name = "Activity"
+layer = "Behavior"
+category = "Behavior"
+description = "Composed behavioral specification"
+
+[[elements]]
+name = "TransitionUsage"
+layer = "Behavior"
+category = "Behavior"
+description = "State-to-state transition"
+
+# Execution (3) — action
+[[elements]]
+name = "Action"
+layer = "Behavior"
+category = "Execution"
+description = "Atomic execution unit"
+
+[[elements]]
+name = "AcceptEventAction"
+layer = "Behavior"
+category = "Execution"
+description = "Event-receiving action"
+
+[[elements]]
+name = "SendSignalAction"
+layer = "Behavior"
+category = "Execution"
+description = "Signal-sending action"
+
+# StateMachine (1) — state
+[[elements]]
+name = "State"
+layer = "Behavior"
+category = "StateMachine"
+description = "Behavioral state"
+
+# ── Interaction Layer (4) ───────────────────────────────────────
+
+# Event (3) — event
+[[elements]]
+name = "EventOccurrence"
+layer = "Interaction"
+category = "Event"
+description = "Generic event occurrence"
+
+[[elements]]
+name = "ChangeEvent"
+layer = "Interaction"
+category = "Event"
+description = "Value-change triggered event"
+
+[[elements]]
+name = "TimeEvent"
+layer = "Interaction"
+category = "Event"
+description = "Time-triggered event"
+
+# PassiveStructure (1) — item
+[[elements]]
+name = "Signal"
+layer = "Interaction"
+category = "PassiveStructure"
+description = "Signal type for communication"
+
+# ── Constraint Layer (5) ────────────────────────────────────────
+
+# Constraint (4) — expression
+[[elements]]
+name = "GuardExpression"
+layer = "Constraint"
+category = "Constraint"
+description = "Transition guard condition"
+
+[[elements]]
+name = "ConstraintUsage"
+layer = "Constraint"
+category = "Constraint"
+description = "General structural constraint"
+
+[[elements]]
+name = "ObjectiveFunction"
+layer = "Constraint"
+category = "Constraint"
+description = "Optimization/analysis objective"
+
+[[elements]]
+name = "VerificationCase"
+layer = "Constraint"
+category = "Constraint"
+description = "Verification/analysis case specification"
+
+# PassiveStructure (1) — item
+[[elements]]
+name = "Requirement"
+layer = "Constraint"
+category = "PassiveStructure"
+description = "Captured system requirement"
+
+# ═══════════════════════════════════════════════════════════════════
+# Relations — 13 SysML 2.0 relationship types → 13 kernel relations
+# ═══════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "composition"
+kernel_relation = "ownership"
+description = "Part owns Property/Port"
+
+[[relations]]
+name = "containment"
+kernel_relation = "membership"
+description = "Package contains elements"
+
+[[relations]]
+name = "generalization"
+kernel_relation = "specialization"
+description = "Block specializes Block"
+
+[[relations]]
+name = "typing"
+kernel_relation = "feature_typing"
+description = "Property typed by ValueType/Block"
+
+[[relations]]
+name = "connection"
+kernel_relation = "connector"
+description = "Port connects to Port"
+
+[[relations]]
+name = "redefines"
+kernel_relation = "redefinition"
+description = "Property redefines inherited Property"
+
+[[relations]]
+name = "subsets"
+kernel_relation = "subsetting"
+description = "Property subsets parent Property"
+
+[[relations]]
+name = "allocation"
+kernel_relation = "association"
+description = "Structure allocated to Behavior"
+
+[[relations]]
+name = "dataFlow"
+kernel_relation = "flow"
+description = "Data flows between Ports/Actions"
+
+[[relations]]
+name = "controlFlow"
+kernel_relation = "succession"
+description = "Temporal ordering of Steps/Actions"
+
+[[relations]]
+name = "messaging"
+kernel_relation = "interaction"
+description = "Message exchange between Ports"
+
+[[relations]]
+name = "eventTrigger"
+kernel_relation = "triggering"
+description = "Event triggers Action/Activity"
+
+[[relations]]
+name = "guard"
+kernel_relation = "guarding"
+description = "Guard expression on State"
+
+# ═══════════════════════════════════════════════════════════════════
+# Validity Rules
+# ═══════════════════════════════════════════════════════════════════
+
+# ── composition (ownership): Part owns features ──────────────────
+
+[[rules]]
+id = "sm-comp-01"
+source = "@ActiveStructure"
+target = "@Property"
+relation = "composition"
+priority = 40
+notes = "Active structure composes property"
+
+[[rules]]
+id = "sm-comp-02"
+source = "@ActiveStructure"
+target = "@Port"
+relation = "composition"
+priority = 40
+notes = "Active structure composes port"
+
+[[rules]]
+id = "sm-comp-03"
+source = "@Container"
+target = "@ActiveStructure"
+relation = "composition"
+priority = 40
+notes = "Package owns Block"
+
+# ── containment (membership): Package contains anything ──────────
+
+[[rules]]
+id = "sm-contain-01"
+source = "@Container"
+target = "*"
+relation = "containment"
+priority = 40
+notes = "Package contains any element"
+
+# ── generalization (specialization): same-category specialization ─
+
+[[rules]]
+id = "sm-gen-01"
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "generalization"
+priority = 40
+notes = "Block specializes Block"
+
+[[rules]]
+id = "sm-gen-02"
+source = "@Behavior"
+target = "@Behavior"
+relation = "generalization"
+priority = 40
+notes = "Activity specializes Activity"
+
+[[rules]]
+id = "sm-gen-03"
+source = "@StateMachine"
+target = "@StateMachine"
+relation = "generalization"
+priority = 40
+notes = "State specializes State"
+
+[[rules]]
+id = "sm-gen-04"
+source = "@DataType"
+target = "@DataType"
+relation = "generalization"
+priority = 40
+notes = "ValueType specializes ValueType"
+
+# ── typing (feature_typing): feature typed by type ────────────────
+
+[[rules]]
+id = "sm-typ-01"
+source = "@Property"
+target = "@DataType"
+relation = "typing"
+priority = 40
+notes = "Property typed by ValueType"
+
+[[rules]]
+id = "sm-typ-02"
+source = "@Property"
+target = "@ActiveStructure"
+relation = "typing"
+priority = 40
+notes = "Property typed by Block"
+
+[[rules]]
+id = "sm-typ-03"
+source = "@Port"
+target = "@ActiveStructure"
+relation = "typing"
+priority = 40
+notes = "Port typed by InterfaceBlock"
+
+# ── connection (connector): port/property links ───────────────────
+
+[[rules]]
+id = "sm-conn-01"
+source = "@Port"
+target = "@Port"
+relation = "connection"
+priority = 40
+notes = "Port connects to Port"
+
+[[rules]]
+id = "sm-conn-02"
+source = "@Property"
+target = "@Property"
+relation = "connection"
+priority = 40
+notes = "Property connects to Property"
+
+# ── redefines (redefinition): feature redefinition ────────────────
+
+[[rules]]
+id = "sm-redef-01"
+source = "@Property"
+target = "@Property"
+relation = "redefines"
+priority = 40
+notes = "Property redefines Property"
+
+[[rules]]
+id = "sm-redef-02"
+source = "@Port"
+target = "@Port"
+relation = "redefines"
+priority = 40
+notes = "Port redefines Port"
+
+# ── subsets (subsetting): property/port subsetting ────────────────
+
+[[rules]]
+id = "sm-sub-01"
+source = "@Property"
+target = "@Property"
+relation = "subsets"
+priority = 40
+notes = "Property subsets Property"
+
+[[rules]]
+id = "sm-sub-02"
+source = "@Port"
+target = "@Port"
+relation = "subsets"
+priority = 40
+notes = "Port subsets Port"
+
+# ── allocation (association): structure to behavior/constraint ────
+
+[[rules]]
+id = "sm-alloc-01"
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "allocation"
+priority = 40
+notes = "Structure allocated to Behavior"
+
+[[rules]]
+id = "sm-alloc-02"
+source = "@ActiveStructure"
+target = "@Execution"
+relation = "allocation"
+priority = 40
+notes = "Structure allocated to Execution"
+
+[[rules]]
+id = "sm-alloc-03"
+source = "@ActiveStructure"
+target = "@Constraint"
+relation = "allocation"
+priority = 40
+notes = "Structure allocated to Constraint"
+
+[[rules]]
+id = "sm-alloc-04"
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "allocation"
+priority = 40
+notes = "Structure allocated to PassiveStructure"
+
+# ── dataFlow (flow): data/material transfer ───────────────────────
+
+[[rules]]
+id = "sm-flow-01"
+source = "@Port"
+target = "@Port"
+relation = "dataFlow"
+priority = 40
+notes = "Data flow between Ports"
+
+[[rules]]
+id = "sm-flow-02"
+source = "@Execution"
+target = "@Execution"
+relation = "dataFlow"
+priority = 40
+notes = "Data flow between Actions"
+
+[[rules]]
+id = "sm-flow-03"
+source = "@Property"
+target = "@Property"
+relation = "dataFlow"
+priority = 40
+notes = "Data flow between Properties"
+
+[[rules]]
+id = "sm-flow-04"
+source = "@Execution"
+target = "@Behavior"
+relation = "dataFlow"
+priority = 50
+notes = "Data flow from Action to Activity"
+
+# ── controlFlow (succession): temporal ordering ───────────────────
+
+[[rules]]
+id = "sm-ctrl-01"
+source = "@Behavior"
+target = "@Behavior"
+relation = "controlFlow"
+priority = 40
+notes = "Control flow between behaviors"
+
+[[rules]]
+id = "sm-ctrl-02"
+source = "@Execution"
+target = "@Execution"
+relation = "controlFlow"
+priority = 40
+notes = "Control flow between actions"
+
+[[rules]]
+id = "sm-ctrl-03"
+source = "@Execution"
+target = "@Behavior"
+relation = "controlFlow"
+priority = 50
+notes = "Action to Activity control flow"
+
+# ── messaging (interaction): message exchange ─────────────────────
+
+[[rules]]
+id = "sm-msg-01"
+source = "@Port"
+target = "@Port"
+relation = "messaging"
+priority = 40
+notes = "Message exchange between Ports"
+
+[[rules]]
+id = "sm-msg-02"
+source = "@Execution"
+target = "@Execution"
+relation = "messaging"
+priority = 40
+notes = "Message exchange between Actions"
+
+# ── eventTrigger (triggering): event triggers behavior ────────────
+
+[[rules]]
+id = "sm-trig-01"
+source = "@Event"
+target = "@Execution"
+relation = "eventTrigger"
+priority = 40
+notes = "Event triggers Action"
+
+[[rules]]
+id = "sm-trig-02"
+source = "@Event"
+target = "@Behavior"
+relation = "eventTrigger"
+priority = 40
+notes = "Event triggers Activity"
+
+# ── guard (guarding): guard expression on state ───────────────────
+
+[[rules]]
+id = "sm-guard-01"
+source = "@StateMachine"
+target = "@Constraint"
+relation = "guard"
+priority = 40
+notes = "State guarded by Constraint expression"
+
+# ── Deny rules ────────────────────────────────────────────────────
+
+[[rules]]
+id = "sm-deny-01"
+source = "@Port"
+target = "@DataType"
+relation = "typing"
+valid = false
+priority = 80
+notes = "Port typed only by InterfaceBlock, not DataType"
+
+[[rules]]
+id = "sm-deny-02"
+source = "@Event"
+target = "*"
+relation = "typing"
+valid = false
+priority = 80
+notes = "Event is not a typing source"
+
+[[rules]]
+id = "sm-deny-03"
+source = "@Constraint"
+target = "*"
+relation = "typing"
+valid = false
+priority = 80
+notes = "Expression is not a typing source"
+
+[[rules]]
+id = "sm-deny-04"
+source = "@Execution"
+target = "@Property"
+relation = "redefines"
+valid = false
+priority = 80
+notes = "Action cannot redefine Property"
+
+[[rules]]
+id = "sm-deny-05"
+source = "@Event"
+target = "@Property"
+relation = "redefines"
+valid = false
+priority = 80
+notes = "Event cannot redefine Property"
+
+[[rules]]
+id = "sm-deny-06"
+source = "@Property"
+target = "@Property"
+relation = "messaging"
+valid = false
+priority = 80
+notes = "Property cannot exchange messages"
+
+[[rules]]
+id = "sm-deny-07"
+source = "@Property"
+target = "@Execution"
+relation = "eventTrigger"
+valid = false
+priority = 80
+notes = "Property cannot trigger Action"
+
+[[rules]]
+id = "sm-deny-08"
+source = "@Port"
+target = "@Execution"
+relation = "eventTrigger"
+valid = false
+priority = 80
+notes = "Port cannot directly trigger (Event does)"
+
+[[rules]]
+id = "sm-deny-09"
+source = "@Constraint"
+target = "@Execution"
+relation = "eventTrigger"
+valid = false
+priority = 80
+notes = "Expression cannot trigger Action"
+
+[[rules]]
+id = "sm-deny-10"
+source = "@Behavior"
+target = "@Behavior"
+relation = "messaging"
+valid = false
+priority = 80
+notes = "Activity cannot directly exchange messages (Port does)"

@@ -1,0 +1,206 @@
+# Ralph TUI Layer Fragment: Governance
+# Standalone-valid layer profile.
+
+[profile]
+name = "RalphTUIImplementation"
+version = "0.2.0"
+kernel_version = "2.5.0"
+id_prefix = "rt"
+standard = "Ralph TUI Internal Architecture"
+organization = "subsy"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "GovernanceLayer"
+layer = "Governance"
+category = "Composite"
+description = "Runtime governance boundary."
+
+[[elements]]
+name = "SessionLockGuard"
+layer = "Governance"
+category = "Governance"
+description = "Ensures single active session ownership."
+
+[[elements]]
+name = "SandboxGuard"
+layer = "Governance"
+category = "Governance"
+description = "Controls sandbox isolation rules."
+
+[[elements]]
+name = "AutoCommitGuard"
+layer = "Governance"
+category = "Governance"
+description = "Controls auto-commit gate for completed work."
+
+[[elements]]
+name = "AuditLog"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Audit trail for execution and remote control."
+
+[[elements]]
+name = "ExecutionStatusEvent"
+layer = "Governance"
+category = "Event"
+description = "Execution state change event."
+
+[[elements]]
+name = "ConflictDetectedEvent"
+layer = "Governance"
+category = "Event"
+description = "Parallel merge conflict detected event."
+
+# Context stubs for standalone validation of exact-name rules.
+[[elements]]
+name = "ExecutionEngine"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Core autonomous iteration engine."
+
+[[elements]]
+name = "PersistIterationStep"
+layer = "Flow"
+category = "Behavior"
+description = "Persist session and iteration artifacts."
+
+[[elements]]
+name = "MergeParallelAction"
+layer = "Flow"
+category = "Executable"
+description = "Merge worker outputs and resolve conflicts."
+
+[[elements]]
+name = "UpdateTrackerStep"
+layer = "Flow"
+category = "Behavior"
+description = "Update tracker task status."
+
+[[elements]]
+name = "AgentPluginPort"
+layer = "Infra"
+category = "Interface"
+description = "Adapter boundary to agent CLIs."
+
+[[rules]]
+source = "@Governance"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 60
+notes = "Runtime guards constrain components."
+
+[[rules]]
+source = "@Governance"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Runtime guards constrain steps."
+
+[[rules]]
+source = "@Governance"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Runtime guards constrain actions."
+
+[[rules]]
+source = "@Governance"
+target = "@Interface"
+relation = "constrains"
+priority = 60
+notes = "Runtime guards constrain integration ports."
+
+[[rules]]
+source = "ExecutionStatusEvent"
+target = "PersistIterationStep"
+relation = "triggers"
+priority = 70
+notes = "Status changes trigger persistence."
+
+[[rules]]
+source = "ConflictDetectedEvent"
+target = "MergeParallelAction"
+relation = "triggers"
+priority = 70
+notes = "Conflict event triggers merge action."
+
+[[rules]]
+source = "SessionLockGuard"
+target = "ExecutionEngine"
+relation = "constrains"
+priority = 70
+notes = "Session lock guard constrains execution."
+
+[[rules]]
+source = "SandboxGuard"
+target = "AgentPluginPort"
+relation = "constrains"
+priority = 70
+notes = "Sandbox guard constrains agent integration."
+
+[[rules]]
+source = "AutoCommitGuard"
+target = "UpdateTrackerStep"
+relation = "constrains"
+priority = 70
+notes = "Auto commit guard constrains tracker updates."
+

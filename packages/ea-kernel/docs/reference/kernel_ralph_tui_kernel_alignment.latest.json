@@ -1,0 +1,237 @@
+{
+  "coverage_percent": 100.0,
+  "details": [
+    {
+      "element": "AgentRegistry",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Agent plugin registry exists.",
+          "exists": true,
+          "file": "src/plugins/agents/registry.ts",
+          "lines": [
+            58
+          ],
+          "pattern": "export class AgentRegistry"
+        }
+      ]
+    },
+    {
+      "element": "CliEntryPoint",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "CLI command dispatch exists.",
+          "exists": true,
+          "file": "src/cli.tsx",
+          "lines": [
+            137
+          ],
+          "pattern": "function handleSubcommand"
+        }
+      ]
+    },
+    {
+      "element": "ConfigManager",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Config builder exists.",
+          "exists": true,
+          "file": "src/config/index.ts",
+          "lines": [
+            523
+          ],
+          "pattern": "export async function buildConfig"
+        },
+        {
+          "description": "Config validator exists.",
+          "exists": true,
+          "file": "src/config/index.ts",
+          "lines": [
+            616
+          ],
+          "pattern": "export async function validateConfig"
+        }
+      ]
+    },
+    {
+      "element": "ExecutionEngine",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Core execution engine class exists.",
+          "exists": true,
+          "file": "src/engine/index.ts",
+          "lines": [
+            144
+          ],
+          "pattern": "export class ExecutionEngine"
+        }
+      ]
+    },
+    {
+      "element": "KernelLayer",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Top-level module exposes kernel command/runtime surface.",
+          "exists": true,
+          "file": "src/index.ts",
+          "lines": [
+            7
+          ],
+          "pattern": "export \\* from './commands/index\\.js';"
+        }
+      ]
+    },
+    {
+      "element": "ParallelExecutor",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Parallel executor class exists.",
+          "exists": true,
+          "file": "src/parallel/index.ts",
+          "lines": [
+            57
+          ],
+          "pattern": "export class ParallelExecutor"
+        }
+      ]
+    },
+    {
+      "element": "PromptTemplateEngine",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Prompt rendering function exists.",
+          "exists": true,
+          "file": "src/templates/engine.ts",
+          "lines": [
+            453
+          ],
+          "pattern": "export function renderPrompt"
+        }
+      ]
+    },
+    {
+      "element": "RateLimitDetector",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Rate limit detector exists.",
+          "exists": true,
+          "file": "src/engine/rate-limit-detector.ts",
+          "lines": [
+            142
+          ],
+          "pattern": "export class RateLimitDetector"
+        }
+      ]
+    },
+    {
+      "element": "RemoteServer",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Remote server class exists.",
+          "exists": true,
+          "file": "src/remote/server.ts",
+          "lines": [
+            228
+          ],
+          "pattern": "export class RemoteServer"
+        }
+      ]
+    },
+    {
+      "element": "SessionManager",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Session creation function exists.",
+          "exists": true,
+          "file": "src/session/index.ts",
+          "lines": [
+            215
+          ],
+          "pattern": "export async function createSession"
+        },
+        {
+          "description": "Session status check function exists.",
+          "exists": true,
+          "file": "src/session/index.ts",
+          "lines": [
+            128
+          ],
+          "pattern": "export async function checkSession"
+        }
+      ]
+    },
+    {
+      "element": "StructuredLogger",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Structured logger exists.",
+          "exists": true,
+          "file": "src/logs/structured-logger.ts",
+          "lines": [
+            72
+          ],
+          "pattern": "export class StructuredLogger"
+        }
+      ]
+    },
+    {
+      "element": "TrackerRegistry",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "Tracker plugin registry exists.",
+          "exists": true,
+          "file": "src/plugins/trackers/registry.ts",
+          "lines": [
+            58
+          ],
+          "pattern": "export class TrackerRegistry"
+        }
+      ]
+    },
+    {
+      "element": "TuiRuntime",
+      "mapped": true,
+      "matched": true,
+      "rules": [
+        {
+          "description": "TUI runtime component contract exists.",
+          "exists": true,
+          "file": "src/tui/components/RunApp.tsx",
+          "lines": [
+            85
+          ],
+          "pattern": "export interface RunAppProps"
+        }
+      ]
+    }
+  ],
+  "matched_element_count": 13,
+  "missing_elements": [],
+  "model_element_count": 13,
+  "profile_path": "/Users/junwoobang/workflow/ea-sys2/packages/ea-kernel/examples/ralph_tui_layers/40-kernel.toml",
+  "reference_root": "/Users/junwoobang/workflow/ea-sys2/reference",
+  "unmapped_elements": []
+}

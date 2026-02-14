@@ -1,0 +1,446 @@
+# FruitRetail Profile
+# A kernel profile modeling a typical fruit retail business
+
+[profile]
+name = "FruitRetail"
+version = "1.0.0"
+kernel_version = "2.5.0"
+standard = "Fruit Retail Business Model"
+organization = "Retail Example"
+
+[domain_layers]
+layers = ["operational", "tactical", "strategic"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L1 Elements: Static Structural Elements
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "Store"
+kernel_type = "structure"
+layer = "operational"
+category = "@business"
+description = "Physical fruit retail store location"
+
+[[elements]]
+name = "Supplier"
+kernel_type = "structure"
+layer = "operational"
+category = "@business"
+description = "Fruit supplier (wholesale provider)"
+
+[[elements]]
+name = "Product"
+kernel_type = "item"
+layer = "operational"
+category = "@business"
+description = "Individual fruit type (apple, banana, orange, etc.)"
+
+[[elements]]
+name = "Inventory"
+kernel_type = "item"
+layer = "operational"
+category = "@business"
+description = "Physical inventory stock at the store"
+
+[[elements]]
+name = "Customer"
+kernel_type = "structure"
+layer = "operational"
+category = "@stakeholder"
+description = "End consumer purchasing fruit"
+
+[[elements]]
+name = "ReceiveProduct"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Receive product shipment from supplier"
+
+[[elements]]
+name = "CheckQuality"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Quality inspection of received products"
+
+[[elements]]
+name = "DisplayProduct"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Display product on shelves for sale"
+
+[[elements]]
+name = "SaleTransaction"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Complete sale transaction with customer"
+
+[[elements]]
+name = "ProcessPayment"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Process customer payment"
+
+[[elements]]
+name = "RestockCheck"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Check inventory levels and reorder"
+
+[[elements]]
+name = "DiscardExpired"
+kernel_type = "step"
+layer = "operational"
+category = "@activity"
+description = "Remove expired products from shelves"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L2 Relations: Structural Connections
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "supplies"
+kernel_relation = "association"
+source_element = "Supplier"
+target_element = "Store"
+description = "Supplier provides products to Store"
+
+[[relations]]
+name = "stocks"
+kernel_relation = "association"
+source_element = "Store"
+target_element = "Inventory"
+description = "Store maintains Inventory"
+
+[[relations]]
+name = "contains"
+kernel_relation = "feature_typing"
+source_element = "Inventory"
+target_element = "Product"
+description = "Inventory contains Products"
+
+[[relations]]
+name = "sells_to"
+kernel_relation = "association"
+source_element = "Store"
+target_element = "Customer"
+description = "Store sells to Customer"
+
+[[relations]]
+name = "buys_from"
+kernel_relation = "association"
+source_element = "Customer"
+target_element = "Store"
+description = "Customer purchases from Store"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L3 Relations: Behavioral (Flow, Transition, Succession)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "supply_flow"
+kernel_relation = "flow"
+source_element = "Supplier"
+target_element = "Store"
+description = "Product flows from Supplier to Store"
+
+[[relations]]
+name = "inventory_flow"
+kernel_relation = "flow"
+source_element = "Store"
+target_element = "Inventory"
+description = "Products flow into Inventory"
+
+[[relations]]
+name = "display_flow"
+kernel_relation = "flow"
+source_element = "Inventory"
+target_element = "Store"
+description = "Products flow from Inventory to display"
+
+[[relations]]
+name = "sales_flow"
+kernel_relation = "flow"
+source_element = "Store"
+target_element = "Customer"
+description = "Products flow to Customer at sale"
+
+[[relations]]
+name = "quality_transition"
+kernel_relation = "transition"
+source_element = "Product"
+target_element = "Product"
+description = "Product state changes during quality check"
+
+[[relations]]
+name = "freshness_transition"
+kernel_relation = "transition"
+source_element = "Product"
+target_element = "Product"
+description = "Product freshness state changes over time"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# L4 Relations: Process Sequencing (Succession)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[relations]]
+name = "receive_then_check"
+kernel_relation = "succession"
+source_element = "ReceiveProduct"
+target_element = "CheckQuality"
+description = "Check quality after receiving products"
+
+[[relations]]
+name = "check_then_display"
+kernel_relation = "succession"
+source_element = "CheckQuality"
+target_element = "DisplayProduct"
+description = "Display products after quality approval"
+
+[[relations]]
+name = "check_then_discard"
+kernel_relation = "guarding"
+source_element = "CheckQuality"
+target_element = "DiscardExpired"
+description = "Discard if quality fails"
+
+[[relations]]
+name = "display_then_sale"
+kernel_relation = "succession"
+source_element = "DisplayProduct"
+target_element = "SaleTransaction"
+description = "Customer purchases displayed product"
+
+[[relations]]
+name = "sale_then_payment"
+kernel_relation = "succession"
+source_element = "SaleTransaction"
+target_element = "ProcessPayment"
+description = "Process payment after sale"
+
+[[relations]]
+name = "restock_loop"
+kernel_relation = "succession"
+source_element = "RestockCheck"
+target_element = "ReceiveProduct"
+description = "Reorder when inventory low"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Validity Rules: What relationships are allowed?
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Association Rules (L2) ──
+
+[[validity_rules]]
+id = "fruit-assoc-01"
+source_pattern = "Store"
+target_pattern = "Supplier"
+relationship_type = "association"
+valid = true
+priority = 50
+notes = "Store can associate with Supplier (supply relationship)"
+
+[[validity_rules]]
+id = "fruit-assoc-02"
+source_pattern = "Store"
+target_pattern = "Inventory"
+relationship_type = "association"
+valid = true
+priority = 50
+notes = "Store can maintain Inventory"
+
+[[validity_rules]]
+id = "fruit-assoc-03"
+source_pattern = "Store"
+target_pattern = "Customer"
+relationship_type = "association"
+valid = true
+priority = 50
+notes = "Store can sell to Customer"
+
+[[validity_rules]]
+id = "fruit-assoc-04"
+source_pattern = "Customer"
+target_pattern = "Store"
+relationship_type = "association"
+valid = true
+priority = 50
+notes = "Customer can buy from Store"
+
+# Fallback deny for association
+[[validity_rules]]
+id = "fruit-assoc-deny"
+source_pattern = "*"
+target_pattern = "*"
+relationship_type = "association"
+valid = false
+priority = 1
+notes = "Default deny for associations not explicitly allowed"
+
+# ── Feature Typing Rules (L2) ──
+
+[[validity_rules]]
+id = "fruit-feature-01"
+source_pattern = "Inventory"
+target_pattern = "Product"
+relationship_type = "feature_typing"
+valid = true
+priority = 50
+notes = "Inventory features Products"
+
+[[validity_rules]]
+id = "fruit-feature-deny"
+source_pattern = "*"
+target_pattern = "*"
+relationship_type = "feature_typing"
+valid = false
+priority = 1
+notes = "Default deny for feature_typing"
+
+# ── Flow Rules (L3) ──
+
+[[validity_rules]]
+id = "fruit-flow-01"
+source_pattern = "Supplier"
+target_pattern = "Store"
+relationship_type = "flow"
+valid = true
+priority = 50
+notes = "Supplier products flow to Store"
+
+[[validity_rules]]
+id = "fruit-flow-02"
+source_pattern = "Store"
+target_pattern = "Inventory"
+relationship_type = "flow"
+valid = true
+priority = 50
+notes = "Products flow into Store Inventory"
+
+[[validity_rules]]
+id = "fruit-flow-03"
+source_pattern = "Inventory"
+target_pattern = "Store"
+relationship_type = "flow"
+valid = true
+priority = 50
+notes = "Products flow from Inventory to display"
+
+[[validity_rules]]
+id = "fruit-flow-04"
+source_pattern = "Store"
+target_pattern = "Customer"
+relationship_type = "flow"
+valid = true
+priority = 50
+notes = "Products flow from Store to Customer"
+
+[[validity_rules]]
+id = "fruit-flow-deny"
+source_pattern = "*"
+target_pattern = "*"
+relationship_type = "flow"
+valid = false
+priority = 1
+notes = "Default deny for flows"
+
+# ── Transition Rules (L3) ──
+
+[[validity_rules]]
+id = "fruit-trans-01"
+source_pattern = "Product"
+target_pattern = "Product"
+relationship_type = "transition"
+valid = true
+priority = 50
+notes = "Product can transition states (quality, freshness)"
+
+[[validity_rules]]
+id = "fruit-trans-deny"
+source_pattern = "*"
+target_pattern = "*"
+relationship_type = "transition"
+valid = false
+priority = 1
+notes = "Default deny for transitions"
+
+# ── Succession Rules (L4) ──
+
+[[validity_rules]]
+id = "fruit-succ-01"
+source_pattern = "ReceiveProduct"
+target_pattern = "CheckQuality"
+relationship_type = "succession"
+valid = true
+priority = 50
+notes = "Receive then Check"
+
+[[validity_rules]]
+id = "fruit-succ-02"
+source_pattern = "CheckQuality"
+target_pattern = "DisplayProduct"
+relationship_type = "succession"
+valid = true
+priority = 50
+notes = "Check then Display"
+
+[[validity_rules]]
+id = "fruit-succ-03"
+source_pattern = "DisplayProduct"
+target_pattern = "SaleTransaction"
+relationship_type = "succession"
+valid = true
+priority = 50
+notes = "Display then Sale"
+
+[[validity_rules]]
+id = "fruit-succ-04"
+source_pattern = "SaleTransaction"
+target_pattern = "ProcessPayment"
+relationship_type = "succession"
+valid = true
+priority = 50
+notes = "Sale then Payment"
+
+[[validity_rules]]
+id = "fruit-succ-05"
+source_pattern = "RestockCheck"
+target_pattern = "ReceiveProduct"
+relationship_type = "succession"
+valid = true
+priority = 50
+notes = "Restock check triggers receive"
+
+[[validity_rules]]
+id = "fruit-succ-deny"
+source_pattern = "*"
+target_pattern = "*"
+relationship_type = "succession"
+valid = false
+priority = 1
+notes = "Default deny for successions"
+
+# ── Guarding Rules (L3) ──
+
+[[validity_rules]]
+id = "fruit-guard-01"
+source_pattern = "CheckQuality"
+target_pattern = "DiscardExpired"
+relationship_type = "guarding"
+valid = true
+priority = 60
+notes = "Quality check guards discard decision"
+
+[[validity_rules]]
+id = "fruit-guard-deny"
+source_pattern = "*"
+target_pattern = "*"
+relationship_type = "guarding"
+valid = false
+priority = 1
+notes = "Default deny for guarding"

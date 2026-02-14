@@ -1,0 +1,33 @@
+# i18n Patch for SystemSelfModel (Korean)
+# This patch overrides/augments the base structural definition for the Korean locale.
+
+[elements."ea:kernel:schema"]
+display_name = "커널 스키마"
+description = "구조적 진실과 제약 조건을 정의합니다. (패치 적용됨)"
+
+[elements."ea:flow:metastep"]
+display_name = "플로우 메타스텝"
+description = "재사용 가능한 로직 패턴과 데이터 변환 스키마를 정의합니다. (패치 적용됨)"
+
+[elements."ea:decision:pattern"]
+display_name = "의사결정 패턴"
+description = "아키텍처 의사결정 유형과 추론 패턴을 정의합니다. (패치 적용됨)"
+
+[elements."ea:governance:transaction"]
+display_name = "거버넌스 트랜잭션"
+description = "메타 모델링 작업의 원자적 실행을 보장합니다. (패치 적용됨)"
+
+[relations.targets]
+display_name = "대상지정"
+description = "의사결정 패턴은 컨텍스트 또는 변경을 위해 특정 커널 스키마 영역을 대상으로 합니다."
+
+[relations.grounds]
+display_name = "근거제공"
+description = "커널은 재사용 가능한 Flow 로직 패턴을 위한 구조적 기반을 제공합니다."
+
+[relations.enwraps]
+display_name = "포함관계"
+description = "트랜잭션은 모델링 작업에 대한 원자적 안전성을 제공합니다."
+
+[validity_rules.flow_must_anchor_kernel]
+description = "모든 Flow 단계는 반드시 유효한 커널 앵커(kernel_anchor)를 가져야 합니다."

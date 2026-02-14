@@ -1,0 +1,173 @@
+# Ralph TUI Layer Fragment: Decision
+# Standalone-valid layer profile.
+
+[profile]
+name = "RalphTUIImplementation"
+version = "0.2.0"
+kernel_version = "2.5.0"
+id_prefix = "rt"
+standard = "Ralph TUI Internal Architecture"
+organization = "subsy"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "DecisionLayer"
+layer = "Decision"
+category = "Composite"
+description = "Decision logic boundary."
+
+[[elements]]
+name = "TaskSelectionPolicy"
+layer = "Decision"
+category = "Assessment"
+description = "Priority and dependency selection policy."
+
+[[elements]]
+name = "CompletionDetectionPolicy"
+layer = "Decision"
+category = "Assessment"
+description = "Output completion signal policy."
+
+[[elements]]
+name = "RateLimitPolicy"
+layer = "Decision"
+category = "Assessment"
+description = "Retry and fallback strategy for rate limits."
+
+[[elements]]
+name = "ConflictResolutionPolicy"
+layer = "Decision"
+category = "Assessment"
+description = "Merge conflict resolution policy for parallel mode."
+
+[[elements]]
+name = "RetryStrategy"
+layer = "Decision"
+category = "Assessment"
+description = "Generic retry strategy for failed iterations."
+
+# Context stubs for standalone validation of category/exact-name rules.
+[[elements]]
+name = "ExecutionEngine"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Core autonomous iteration engine."
+
+[[elements]]
+name = "BuildPromptStep"
+layer = "Flow"
+category = "Behavior"
+description = "Build execution prompt with context."
+
+[[elements]]
+name = "ExecuteAgentAction"
+layer = "Flow"
+category = "Executable"
+description = "Run configured coding agent."
+
+[[elements]]
+name = "MergeParallelAction"
+layer = "Flow"
+category = "Executable"
+description = "Merge worker outputs and resolve conflicts."
+
+[[rules]]
+source = "@Assessment"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 60
+notes = "Policies constrain components."
+
+[[rules]]
+source = "@Assessment"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Policies constrain flow steps."
+
+[[rules]]
+source = "@Assessment"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Policies constrain executable actions."
+
+[[rules]]
+source = "RateLimitPolicy"
+target = "ExecuteAgentAction"
+relation = "constrains"
+priority = 70
+notes = "Rate limit policy constrains agent action."
+
+[[rules]]
+source = "ConflictResolutionPolicy"
+target = "MergeParallelAction"
+relation = "constrains"
+priority = 70
+notes = "Conflict policy constrains parallel merge."
+
+[[rules]]
+source = "RetryStrategy"
+target = "ExecutionEngine"
+relation = "constrains"
+priority = 70
+notes = "Retry strategy constrains execution engine."
+

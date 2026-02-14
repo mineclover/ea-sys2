@@ -1,0 +1,134 @@
+
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { memo } from 'react';
+import { DESIGN_SYSTEM } from '@/styles/design-system';
+import type { NodeStyle } from '@/types/diagram';
+
+export interface HandleConfig {
+    id: string;
+    offset: number;
+}
+
+export type DynamicNodeData = {
+    label: string;
+    handles?: {
+        top?: HandleConfig[];
+        right?: HandleConfig[];
+        bottom?: HandleConfig[];
+        left?: HandleConfig[];
+    }
+    layer?: string;
+    style?: NodeStyle;
+    [key: string]: unknown;
+};
+
+export type DynamicNodeType = Node<DynamicNodeData, 'dynamic'>;
+
+const HandleGroup = ({
+    configs,
+    position,
+    accentColor
+}: {
+    configs?: HandleConfig[],
+    position: Position,
+    accentColor?: string
+}) => {
+    if (!configs || configs.length === 0) return null;
+
+    return (
+        <>
+            {configs.map((handle) => (
+                <Handle
+                    key={handle.id}
+                    id={handle.id}
+                    type={handle.id.startsWith('t-') ? 'target' : 'source'}
+                    position={position}
+                    style={{
+                        left: (position === Position.Top || position === Position.Bottom) ? `${handle.offset}%` : undefined,
+                        top: (position === Position.Left || position === Position.Right) ? `${handle.offset}%` : undefined,
+                        background: '#fff',
+                        border: `2px solid ${accentColor}`,
+                        width: 8,
+                        height: 8,
+                        zIndex: 50,
+                    }}
+                />
+            ))}
+        </>
+    );
+};
+
+const defaultLayer = DESIGN_SYSTEM.colors.layers.default;
+
+export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>) => {
+    // Type-safe generic lookup or fallback
+    const layerKey = (data.layer as keyof typeof DESIGN_SYSTEM.colors.layers) || 'default';
+    const config = DESIGN_SYSTEM.colors.layers[layerKey] || defaultLayer;
+
+    // Applying custom styles if present
+    const customStyle = data.style || {};
+    const borderColor = selected ? config.color : (customStyle.borderColor || '#e2e8f0');
+    const borderRadius = customStyle.shape === 'circle' ? '50%' :
+        customStyle.shape === 'rounded' ? 20 :
+            DESIGN_SYSTEM.node.borderRadius;
+
+    return (
+        <div style={{
+            minWidth: customStyle.width || (DESIGN_SYSTEM.node.width - 20),
+            minHeight: customStyle.height,
+            borderRadius: borderRadius,
+            background: customStyle.backgroundColor || '#fff',
+            boxShadow: selected ? `0 0 0 2px ${config.color}, 0 4px 6px -1px rgba(0, 0, 0, 0.1)` : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+            border: `1px solid ${borderColor}`,
+            borderWidth: customStyle.borderWidth || 1,
+            transition: 'all 0.2s ease',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            overflow: 'hidden',
+        }}>
+            {/* Header */}
+            <div style={{
+                padding: '6px 12px',
+                background: config.bg,
+                borderBottom: `1px solid ${config.color}30`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+            }}>
+                <span style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: config.color,
+                }}>
+                    {data.layer || 'ENTITY'}
+                </span>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: config.color }} />
+            </div>
+
+            {/* Body */}
+            <div style={{
+                padding: '12px 16px',
+                minHeight: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}>
+                <span style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    textAlign: 'center',
+                    lineHeight: 1.4,
+                }}>
+                    {data.label}
+                </span>
+            </div>
+
+            <HandleGroup configs={data.handles?.top} position={Position.Top} accentColor={config.color} />
+            <HandleGroup configs={data.handles?.right} position={Position.Right} accentColor={config.color} />
+            <HandleGroup configs={data.handles?.bottom} position={Position.Bottom} accentColor={config.color} />
+            <HandleGroup configs={data.handles?.left} position={Position.Left} accentColor={config.color} />
+        </div>
+    );
+});

@@ -1,0 +1,100 @@
+# Ralph TUI Layer Fragment: Needs
+# Standalone-valid layer profile.
+
+[profile]
+name = "RalphTUIImplementation"
+version = "0.2.0"
+kernel_version = "2.5.0"
+id_prefix = "rt"
+standard = "Ralph TUI Internal Architecture"
+organization = "subsy"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "NeedsLayer"
+layer = "Needs"
+category = "Composite"
+description = "User goals and task input boundary."
+
+[[elements]]
+name = "TaskBacklog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Unified task list from tracker plugins."
+
+[[elements]]
+name = "PrdDocument"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Product requirements source document."
+
+[[elements]]
+name = "IterationContext"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Cross-iteration context and progress summary."
+
+[[elements]]
+name = "TaskSelectionGoal"
+layer = "Needs"
+category = "Goal"
+description = "Goal state for next best task selection."
+

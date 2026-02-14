@@ -1,0 +1,294 @@
+# Ralph TUI Layer Fragment: Kernel
+# Updated kernel model aligned with latest ralph-tui runtime structure.
+
+[profile]
+name = "RalphTUIImplementation"
+version = "0.2.0"
+kernel_version = "2.5.0"
+id_prefix = "rt"
+standard = "Ralph TUI Internal Architecture"
+organization = "subsy"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[elements]]
+name = "KernelLayer"
+layer = "Kernel"
+category = "Composite"
+description = "Kernel architecture boundary."
+
+[[elements]]
+name = "CliEntryPoint"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "CLI command dispatch entrypoint (src/cli.tsx)."
+
+[[elements]]
+name = "ExecutionEngine"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Core autonomous iteration engine."
+
+[[elements]]
+name = "ParallelExecutor"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Parallel execution coordinator with worker/merge orchestration."
+
+[[elements]]
+name = "AgentRegistry"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Agent plugin registry for discovery and lifecycle."
+
+[[elements]]
+name = "TrackerRegistry"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Tracker plugin registry for discovery and lifecycle."
+
+[[elements]]
+name = "ConfigManager"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Configuration loader, merge, validation, and persistence."
+
+[[elements]]
+name = "SessionManager"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Session state lifecycle, lock, and resume control."
+
+[[elements]]
+name = "PromptTemplateEngine"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Prompt rendering pipeline and template resolution."
+
+[[elements]]
+name = "RateLimitDetector"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Agent output rate-limit detection component."
+
+[[elements]]
+name = "StructuredLogger"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Structured logging pipeline for headless/CI visibility."
+
+[[elements]]
+name = "RemoteServer"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Remote listener server for orchestration/control."
+
+[[elements]]
+name = "TuiRuntime"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Interactive terminal UI runtime."
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[rules]]
+source = "@Composite"
+target = "*"
+relation = "contains"
+priority = 40
+notes = "Kernel package can contain all kernel components."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 35
+notes = "Kernel structures may own subordinate kernel structures."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "coordinates"
+priority = 45
+notes = "Kernel structures coordinate runtime behavior."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "depends_on"
+priority = 45
+notes = "Kernel structures may depend on other kernel structures."
+
+[[rules]]
+source = "CliEntryPoint"
+target = "ExecutionEngine"
+relation = "coordinates"
+priority = 70
+notes = "CLI entrypoint dispatches execution."
+
+[[rules]]
+source = "CliEntryPoint"
+target = "ParallelExecutor"
+relation = "coordinates"
+priority = 70
+notes = "CLI entrypoint dispatches parallel mode."
+
+[[rules]]
+source = "CliEntryPoint"
+target = "TuiRuntime"
+relation = "coordinates"
+priority = 70
+notes = "CLI entrypoint starts TUI runtime."
+
+[[rules]]
+source = "CliEntryPoint"
+target = "RemoteServer"
+relation = "coordinates"
+priority = 70
+notes = "CLI entrypoint can start remote listener."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "AgentRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Engine resolves agent plugin through registry."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "TrackerRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Engine resolves tracker plugin through registry."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "ConfigManager"
+relation = "depends_on"
+priority = 70
+notes = "Engine behavior is driven by merged config."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "SessionManager"
+relation = "depends_on"
+priority = 70
+notes = "Engine updates and observes session lifecycle."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "PromptTemplateEngine"
+relation = "depends_on"
+priority = 70
+notes = "Engine builds prompts via template engine."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "RateLimitDetector"
+relation = "depends_on"
+priority = 70
+notes = "Engine relies on rate-limit detection."
+
+[[rules]]
+source = "ExecutionEngine"
+target = "StructuredLogger"
+relation = "depends_on"
+priority = 70
+notes = "Engine emits structured logs."
+
+[[rules]]
+source = "ParallelExecutor"
+target = "TrackerRegistry"
+relation = "depends_on"
+priority = 65
+notes = "Parallel executor depends on tracker access."
+
+[[rules]]
+source = "ParallelExecutor"
+target = "SessionManager"
+relation = "depends_on"
+priority = 65
+notes = "Parallel executor coordinates session state."
+
+[[rules]]
+source = "RemoteServer"
+target = "ExecutionEngine"
+relation = "coordinates"
+priority = 70
+notes = "Remote server controls engine state transitions."
+
+[[rules]]
+source = "RemoteServer"
+target = "ParallelExecutor"
+relation = "coordinates"
+priority = 70
+notes = "Remote server orchestrates parallel execution state."
+
+[[rules]]
+source = "ConfigManager"
+target = "AgentRegistry"
+relation = "constrains"
+priority = 60
+notes = "Configured agent options constrain agent registry selection."
+
+[[rules]]
+source = "ConfigManager"
+target = "TrackerRegistry"
+relation = "constrains"
+priority = 60
+notes = "Configured tracker options constrain tracker registry selection."

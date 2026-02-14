@@ -6,26 +6,31 @@ All other modules use string-based ID references for Kernel entities.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
-def create_rule_provenance(decision_ref: str, report_ref: str) -> Dict[str, Any]:
+def create_rule_provenance(decision_ref: str, report_ref: str) -> dict[str, Any]:
     """Create a RuleProvenance-compatible dict linking back to a Decision.
 
     Uses lazy import to avoid hard dependency at module load time.
     """
     try:
         from ea_kernel.types import RuleProvenance
-        return RuleProvenance(
+
+        provenance = RuleProvenance(
             decision_ref=decision_ref,
             report_ref=report_ref,
         )
+        return {
+            "decision_ref": provenance.decision_ref,
+            "report_ref": provenance.report_ref,
+        }
     except ImportError:
         # Fallback: return a plain dict when ea_kernel is not available
         return {"decision_ref": decision_ref, "report_ref": report_ref}
 
 
-def decision_result_from_rule_asset(rule_asset: Any) -> Dict[str, Any]:
+def decision_result_from_rule_asset(rule_asset: Any) -> dict[str, Any]:
     """Extract decision-relevant metadata from a Kernel RuleAsset.
 
     Uses lazy import to avoid hard dependency at module load time.

@@ -1,12 +1,12 @@
 
 import pytest
 from ea_decision.topic import Topic
+from ea_flow.runtime import StepExecutionResult, StepImplementer
+from ea_flow.spec import ExecutionContext, StepSpec
 from ea_governance.execution_service import ExecutionService
 from ea_governance.transaction import TransactionStatus
 from ea_kernel.governance import GovernanceSystem
 from ea_kernel.types import KernelSchema
-from ea_flow.spec import StepSpec, ExecutionContext
-from ea_flow.runtime import StepImplementer, StepExecutionResult
 
 
 class MockFailStepSpec(StepSpec):
@@ -65,8 +65,8 @@ def test_transaction_lifecycle_rollback(mock_kernel):
                 return MockFailStepSpec()
             return super()._map_action_to_step(action, index_key)
 
-    from ea_flow.runtime import FlowRuntime
     from ea_flow.kernel_implementers import AddRuleImplementer, DeprecateRuleImplementer
+    from ea_flow.runtime import FlowRuntime
 
     implementers = {
         "add_rule": AddRuleImplementer(),

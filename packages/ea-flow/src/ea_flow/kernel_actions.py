@@ -1,11 +1,17 @@
-from typing import Any, Dict, Optional
+from typing import Any
+
 from ea_flow.spec import StepSpec
-from ea_flow.schema import SchemaSpec
+
 
 class AddRuleStepSpec(StepSpec):
     """Declarative spec for adding a new rule."""
-    
-    def __init__(self, action_id: str, rule_asset_data: Dict[str, Any], anchor: str = None):
+
+    def __init__(
+        self,
+        action_id: str,
+        rule_asset_data: dict[str, Any],
+        anchor: str | None = None,
+    ) -> None:
         self._action_id = action_id
         self._data = rule_asset_data
         self._anchor = anchor
@@ -19,13 +25,14 @@ class AddRuleStepSpec(StepSpec):
         return self._anchor or "ea:kernel:rule_creation"
 
     @property
-    def rule_data(self) -> Dict[str, Any]:
+    def rule_data(self) -> dict[str, Any]:
         return self._data
+
 
 class DeprecateRuleStepSpec(StepSpec):
     """Declarative spec for deprecating a rule."""
-    
-    def __init__(self, rule_id: str, anchor: str = None):
+
+    def __init__(self, rule_id: str, anchor: str | None = None) -> None:
         self._rule_id = rule_id
         self._anchor = anchor
 

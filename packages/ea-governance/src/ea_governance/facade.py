@@ -20,7 +20,12 @@ class GovernanceContainer:
     - Flow (Body/Action)
     """
 
-    def __init__(self, data_dir: Path, schema: KernelSchema, flow_runtime: FlowRuntime = None):
+    def __init__(
+        self,
+        data_dir: Path,
+        schema: KernelSchema,
+        flow_runtime: FlowRuntime | None = None,
+    ) -> None:
         self.data_dir = data_dir
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -80,7 +85,7 @@ class GovernanceContainer:
         success = self.execution_service.execute_report(topic.report)
         return {
             "success": success,
-            "transaction_id": topic.report.transaction_id
+            "transaction_id": topic.report.transaction_id,
         }
 
     def execute_use_case(self, use_case: UseCaseSpec, variables: dict[str, Any]) -> dict[str, Any]:
@@ -105,7 +110,7 @@ class GovernanceContainer:
                     "success": True,
                     "transaction_id": tx.id,
                     "logs": result.logs,
-                    "metrics": {"specs_processed": len(result.step_results)}
+                    "metrics": {"specs_processed": len(result.step_results)},
                 }
             else:
                 self.execution_service.tx_manager.fail(tx.id, "Use Case execution failed")
@@ -157,9 +162,9 @@ class GovernanceContainer:
                 "type": "object",
                 "properties": {
                     "id": {"type": "string"},
-                    "description": {"type": "string"}
+                    "description": {"type": "string"},
                 },
-                "required": ["id"]
+                "required": ["id"],
             }
 
             return {
@@ -167,7 +172,7 @@ class GovernanceContainer:
                 "type": "Step",
                 "name": "AddRuleStep",
                 "input_schema": input_schema,
-                "format": "jsonschema-2020-12"
+                "format": "jsonschema-2020-12",
             }
         return None
 
@@ -177,64 +182,46 @@ class GovernanceContainer:
         by projecting it onto a Kernel schema using the SystemSelfModel profile.
         Supports localized descriptions via lang parameter.
         """
+        from importlib.resources import files
+
         from ea_kernel.diagram_exporter import DiagramExporter
         from ea_kernel.graph_view import TopologyGraph
         from ea_kernel.localizer import ProfileLocalizer
         from ea_kernel.profile_loader import load_profile
-        from ea_kernel.types import KernelEntity, KernelRelation, KernelSchema, Layer
+        from ea_kernel.profile_rule_compiler import build_profile_runtime_schema
+        from ea_kernel.rule_corpus import RuleCorpus
 
         # 1. Load the Self-Model Profile
         # Try relative path from governance package to sibling ea-kernel package
-        profile_path = Path(__file__).parent.parent.parent.parent / "ea-kernel" / "src" / "ea_kernel" / "profiles" / "system_self_model.toml"
+        profile_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "ea-kernel"
+            / "src"
+            / "ea_kernel"
+            / "profiles"
+            / "system_self_model.toml"
+        )
         if not profile_path.exists():
-            # Fallback: try importlib.resources to find it within ea_kernel package
-            import importlib.resources
             try:
-                resource_path = importlib.resources.files("ea_kernel") / "profiles" / "system_self_model.toml"
-                profile_path = Path(str(resource_path))
+                resource = files("ea_kernel.profiles").joinpath("system_self_model.toml")
+                profile_path = Path(str(resource))
             except Exception as exc:
                 raise FileNotFoundError("Cannot locate system_self_model.toml profile") from exc
 
-        # Create a base schema
         base_profile = load_profile(profile_path, kernel=self.kernel._base_schema)
 
         # 2. Apply Localizer
         localizer = ProfileLocalizer()
         self_profile = localizer.localize(base_profile, lang=lang, search_path=profile_path.parent)
 
-        # 3. Build a schema from profile elements and rules
-        entities = []
-        for elem in self_profile.elements:
-            entities.append(KernelEntity(
-                name=elem.name,
-                layer=Layer.L4, # Map to concrete layer for visualization
-                description=elem.description,
-                display_name=elem.display_name,
-                is_abstract=False # Ensure they show up in TopologyGraph
-            ))
-
-        relations = []
-        for rel in self_profile.relations:
-            relations.append(KernelRelation(
-                name=rel.name,
-                layer=Layer.L2,
-                description=rel.description,
-                display_name=rel.display_name
-            ))
-
-        meta_schema = KernelSchema(
-            attributes=(),
-            entities=tuple(entities),
-            relations=tuple(relations),
-            validity_rules=self_profile.validity_rules # These are the rules allowing the connections
+        runtime = build_profile_runtime_schema(
+            self.kernel._base_schema,
+            self_profile,
+            include_base_schema=False,
+            include_base_rules=False,
         )
+        corpus = RuleCorpus.from_kernel_spec(runtime.schema)
 
-        # 3. Use TopologyGraph to build the diagram
-        from ea_kernel.rule_corpus import RuleCorpus
-
-        # Build corpus from the meta_schema
-        corpus = RuleCorpus.from_kernel_spec(meta_schema)
-
-        graph = TopologyGraph(meta_schema, corpus)
+        graph = TopologyGraph(runtime.schema, corpus)
         exporter = DiagramExporter(graph)
         return str(exporter.generate_mermaid(show_judgment=False))

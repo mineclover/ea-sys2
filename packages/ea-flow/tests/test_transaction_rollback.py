@@ -1,6 +1,6 @@
-import pytest
-from ea_flow.spec import WorkflowSpec, StepSpec, ExecutionContext
-from ea_flow.runtime import FlowRuntime, StepImplementer, StepExecutionResult
+from ea_flow.runtime import FlowRuntime, StepExecutionResult, StepImplementer
+from ea_flow.spec import ExecutionContext, StepSpec, WorkflowSpec
+
 
 class StatefulMockImplementer(StepImplementer):
     def __init__(self):
@@ -11,7 +11,7 @@ class StatefulMockImplementer(StepImplementer):
     def execute(self, spec: StepSpec, context: ExecutionContext) -> StepExecutionResult:
         if spec.name == self.should_fail_at:
             return StepExecutionResult(False, None, [f"Step {spec.name} failed"])
-        
+
         self.executed.append(spec.name)
         return StepExecutionResult(True, f"output:{spec.name}", [f"Step {spec.name} logic"])
 
@@ -42,20 +42,20 @@ def test_rollback_sequence():
     step1 = SimpleStepSpec("S1")
     step2 = SimpleStepSpec("S2")
     step3 = SimpleStepSpec("S3")
-    
+
     impl = StatefulMockImplementer()
     impl.should_fail_at = "S3"
-    
+
     runtime = FlowRuntime(implementers={
         "S1": impl, "S2": impl, "S3": impl
     })
-    
+
     wf = DummyWorkflowSpec([step1, step2, step3])
     result = runtime.execute(wf, {})
-    
-    assert result.success == False
-    assert result.rollback_occurred == True
-    
+
+    assert not result.success
+    assert result.rollback_occurred
+
     # S1 and S2 should have executed
     assert impl.executed == ["S1", "S2"]
     # S2 and then S1 should have rolled back (reverse order)

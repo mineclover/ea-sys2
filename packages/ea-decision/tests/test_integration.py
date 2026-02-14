@@ -1,14 +1,21 @@
-import pytest
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from ea_decision.types import DecisionResult
-from ea_kernel.governance_types import RuleAsset, RuleLifecycle, RuleProvenance, RuleLifecycleState
-from ea_kernel.types import RuleCorpusEntry, KernelValidityRule, RuleMetadata, RuleCategory, RuleConfidence, RuleGroup
+from ea_kernel.governance_types import RuleAsset, RuleLifecycle, RuleLifecycleState, RuleProvenance
+from ea_kernel.types import (
+    KernelValidityRule,
+    RuleCategory,
+    RuleConfidence,
+    RuleCorpusEntry,
+    RuleGroup,
+    RuleMetadata,
+)
+
 
 def test_decision_with_kernel_rule_asset():
     """Verify that a DecisionResult can hold a RuleAsset from ea-kernel."""
-    
+
     # Create a Kernel RuleAsset
     rule = KernelValidityRule(
         id="rule-test-1",
@@ -37,13 +44,13 @@ def test_decision_with_kernel_rule_asset():
         version=1
     )
     lifecycle = RuleLifecycle(current_state=RuleLifecycleState.DRAFT)
-    
+
     asset = RuleAsset(
         entry=entry,
         provenance=provenance,
         lifecycle=lifecycle
     )
-    
+
     # Create DecisionResult holding this asset
     result = DecisionResult(
         id=str(uuid.uuid4()),
@@ -52,6 +59,6 @@ def test_decision_with_kernel_rule_asset():
         outcome_artifact=asset,
         timestamp=datetime.now(UTC).isoformat()
     )
-    
+
     assert result.outcome_artifact.id == "rule-test-1"
     assert isinstance(result.outcome_artifact, RuleAsset)

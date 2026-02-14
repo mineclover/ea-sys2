@@ -7,16 +7,15 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from enum import Enum
-from typing import Any, Dict, List, Optional, Union
-
+from datetime import UTC, datetime
+from enum import Enum, StrEnum
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Shared primitives
 # ---------------------------------------------------------------------------
 
-I18nString = Union[str, Dict[str, str]]
+I18nString = str | dict[str, str]
 
 
 def _generate_id(prefix: str) -> str:
@@ -33,7 +32,7 @@ def _now() -> str:
 # From design_thinking.py
 # ---------------------------------------------------------------------------
 
-class DecisionStatus(str, Enum):
+class DecisionStatus(StrEnum):
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
     REJECTED = "rejected"
@@ -45,14 +44,14 @@ class Reference:
     """A link to a specific resource in Layer 1 (ea-infra)."""
     uri: str  # file://... or urn:ea:resource:...
     title: str
-    citation: Optional[str] = None  # e.g., "Line 10-20"
+    citation: str | None = None  # e.g., "Line 10-20"
 
 
 # ---------------------------------------------------------------------------
 # From structure.py
 # ---------------------------------------------------------------------------
 
-class DecisionPhase(str, Enum):
+class DecisionPhase(StrEnum):
     """Phases of the Design Thinking based decision process."""
     DIVERGE = "diverge"    # Generating options based on Intent
     CONVERGE = "converge"  # Narrowing down and selecting a Choice
@@ -68,7 +67,7 @@ class Intent:
     id: str
     description: str
     direction: str  # e.g., "maximize_stability", "explore_new_tech", "refactor_legacy"
-    context_refs: List[str]  # References to reports, analysis, external mandates (The Context)
+    context_refs: list[str]  # References to reports, analysis, external mandates (The Context)
 
 
 @dataclass(frozen=True)
@@ -79,7 +78,7 @@ class ChoiceOption:
     description: str
     feasibility_score: float  # 0.0 to 1.0
     alignment_score: float    # 0.0 to 1.0 (Alignment with Intent)
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -156,7 +155,7 @@ class Rationale:
     The reasoning behind a specific score or choice.
     """
     summary: str
-    evidence_links: List[EvidenceReference] = field(default_factory=list) # URI to Layer 1 resources
+    evidence_links: list[EvidenceReference] = field(default_factory=list) # URI to Layer 1 resources
     confidence_score: float = 1.0 # 0.0 to 1.0
 
 
@@ -169,10 +168,10 @@ class TopicOption:
     id: str
     name: str
     description: str
-    pros: List[str] = field(default_factory=list)
-    cons: List[str] = field(default_factory=list)
+    pros: list[str] = field(default_factory=list)
+    cons: list[str] = field(default_factory=list)
     # Map of Criteria Name -> Score/Value
-    scores: Dict[str, Any] = field(default_factory=dict)
+    scores: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -188,20 +187,20 @@ class DecisionTopic:
 
     # Time & Status Tracking
     status: ActivationStatus = ActivationStatus.DRAFT
-    decision_date: Optional[datetime] = None
-    valid_until: Optional[datetime] = None
-    superseded_by_id: Optional[str] = None
+    decision_date: datetime | None = None
+    valid_until: datetime | None = None
+    superseded_by_id: str | None = None
 
     # The Context
-    criteria: List[EvaluationCriteria] = field(default_factory=list)
-    options: List[TopicOption] = field(default_factory=list)
+    criteria: list[EvaluationCriteria] = field(default_factory=list)
+    options: list[TopicOption] = field(default_factory=list)
 
     # The Conclusion
-    selected_option_id: Optional[str] = None
-    final_rationale: Optional[Rationale] = None
+    selected_option_id: str | None = None
+    final_rationale: Rationale | None = None
 
     # L1 Grounding
-    supporting_evidence: List[EvidenceReference] = field(default_factory=list)
+    supporting_evidence: list[EvidenceReference] = field(default_factory=list)
 
 
 class DecisionOntology:
@@ -209,7 +208,7 @@ class DecisionOntology:
     Registry and factory for Decision types.
     """
     @staticmethod
-    def describe() -> Dict[str, str]:
+    def describe() -> dict[str, str]:
         return {
             "DecisionTopic": "Represents a single decision point with context, outcome, time, and status.",
             "ActivationStatus": "Lifecycle state (Active, Deprecated, etc.)",

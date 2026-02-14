@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Union
+from typing import Any
+
 from ea_flow.types import FlowStepCategory
+
 
 @dataclass(frozen=True)
 class SchemaDefinition:
@@ -11,16 +13,16 @@ class SchemaDefinition:
     id: str
     name: str
     schema_format: str = "json-schema-2020-12"
-    definition: Dict[str, Any] = field(default_factory=dict) # The actual schema object
+    definition: dict[str, Any] = field(default_factory=dict) # The actual schema object
 
 @dataclass(frozen=True)
 class StepSchemaUsage:
     """
     Defines how a step uses data schemas.
     """
-    input_schema_id: Optional[str] = None
-    output_schema_id: Optional[str] = None
-    required_fields: List[str] = field(default_factory=list)
+    input_schema_id: str | None = None
+    output_schema_id: str | None = None
+    required_fields: list[str] = field(default_factory=list)
 
 @dataclass(frozen=True)
 class DataFlowEdge:
@@ -31,7 +33,7 @@ class DataFlowEdge:
     target_step_id: str
     source_field: str # e.g., "output.userId"
     target_field: str # e.g., "input.id"
-    transformation_rule: Optional[str] = None # e.g. "toString()"
+    transformation_rule: str | None = None # e.g. "toString()"
 
 @dataclass(frozen=True)
 class LogicCondition:
@@ -40,16 +42,16 @@ class LogicCondition:
     """
     expression: str  # e.g., "amount >= 10000"
     engine: str = "json-logic" # or "python", "sql", etc.
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
 
 @dataclass(frozen=True)
 class DataTransformation:
     """
     Defines how data changes shape between steps.
     """
-    input_schema: Dict[str, Any]  # JSON Schema
-    output_schema: Dict[str, Any] # JSON Schema
-    mapping_rules: Dict[str, str] # Field-to-field mapping
+    input_schema: dict[str, Any]  # JSON Schema
+    output_schema: dict[str, Any] # JSON Schema
+    mapping_rules: dict[str, str] # Field-to-field mapping
 
 @dataclass(frozen=True)
 class StepDefinition:
@@ -62,17 +64,17 @@ class StepDefinition:
     description: str
 
     # Logic (For Decision/Gateway steps)
-    condition: Optional[LogicCondition] = None
+    condition: LogicCondition | None = None
 
     # Data (For Action/Transform steps)
-    transformation: Optional[DataTransformation] = None
-    schema_usage: Optional[StepSchemaUsage] = None
+    transformation: DataTransformation | None = None
+    schema_usage: StepSchemaUsage | None = None
 
     # Routing (Where to go next)
-    next_step_ids: List[str] = field(default_factory=list)
+    next_step_ids: list[str] = field(default_factory=list)
 
     # Error Handling
-    on_failure_step_id: Optional[str] = None
+    on_failure_step_id: str | None = None
 
 @dataclass(frozen=True)
 class ProcessSpec:
@@ -83,19 +85,19 @@ class ProcessSpec:
     id: str
     name: str
     version: str
-    steps: List[StepDefinition] = field(default_factory=list)
+    steps: list[StepDefinition] = field(default_factory=list)
     trigger_event: str = "manual"
 
     # Data Architecture
-    defined_schemas: List[SchemaDefinition] = field(default_factory=list)
-    data_flow_edges: List[DataFlowEdge] = field(default_factory=list)
+    defined_schemas: list[SchemaDefinition] = field(default_factory=list)
+    data_flow_edges: list[DataFlowEdge] = field(default_factory=list)
 
 class FlowOntology:
     """
     Registry for Process Specification types.
     """
     @staticmethod
-    def describe() -> Dict[str, str]:
+    def describe() -> dict[str, str]:
         return {
             "ProcessSpec": "A complete definition of an executable process.",
             "SchemaDefinition": "Data structure definition (JSON Schema).",

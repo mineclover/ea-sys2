@@ -12,7 +12,7 @@ from ea_kernel.governance import GovernanceSystem
 from ea_governance.transaction import TransactionManager
 
 
-class DesignWorkflowSpec(WorkflowSpec):  # type: ignore[misc]
+class DesignWorkflowSpec(WorkflowSpec):
     def __init__(self, name: str, steps: list[StepSpec], anchor: str | None = None):
         self._name = name
         self._steps = steps
@@ -51,7 +51,7 @@ class ExecutionService:
         # Default kernel implementers
         default_implementers = {
             "add_rule": AddRuleImplementer(),
-            "deprecate_rule": DeprecateRuleImplementer()
+            "deprecate_rule": DeprecateRuleImplementer(),
         }
 
         self.runtime = runtime or FlowRuntime(implementers=default_implementers)
@@ -102,12 +102,12 @@ class ExecutionService:
         else:
             report.execution_log.append("Execution failed.")
             if getattr(result, "rollback_occurred", False):
-                 self.tx_manager.rollback(tx.id, reason="Workflow Execution Failed")
-                 report.execution_log.append("Transactional Rollback Completed.")
-                 for action in report.modeling_actions:
-                     action.status = "rolled_back"
+                self.tx_manager.rollback(tx.id, reason="Workflow Execution Failed")
+                report.execution_log.append("Transactional Rollback Completed.")
+                for action in report.modeling_actions:
+                    action.status = "rolled_back"
             else:
-                 self.tx_manager.fail(tx.id, error_msg="Unknown Failure")
+                self.tx_manager.fail(tx.id, error_msg="Unknown Failure")
             return False
 
     def _map_action_to_step(self, action: ModelingAction, index_key: str) -> StepSpec | None:

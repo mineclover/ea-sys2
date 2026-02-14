@@ -1,29 +1,39 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+
 from ea_flow.schema import SchemaSpec
 from ea_flow.types import I18nString
+
+
+def _as_text(value: I18nString) -> str:
+    if isinstance(value, str):
+        return value
+    return value.get("en") or next(iter(value.values()), "")
+
 
 @dataclass(frozen=True)
 class ExecutionContext:
     """Context passed around during workflow execution."""
     execution_id: str
-    variables: Dict[str, Any]
+    variables: dict[str, Any]
 
 @dataclass(frozen=True)
 class StepResultSpec:
     """Specification for the expected structure of a step's result."""
-    output_schema: Optional[SchemaSpec] = None
-    expected_log_patterns: List[str] = field(default_factory=list)
+    output_schema: SchemaSpec | None = None
+    expected_log_patterns: list[str] = field(default_factory=list)
+
 
 @dataclass(frozen=True)
 class FlowMetaStep:
     """Formal definition of a reusable logic pattern (Meta-Data for Flow)."""
     name: I18nString
     description: I18nString
-    input_schema: Optional[SchemaSpec] = None
-    output_schema: Optional[SchemaSpec] = None
-    kernel_type_requirement: Optional[str] = None # e.g., "action" or "step" in kernel
+    input_schema: SchemaSpec | None = None
+    output_schema: SchemaSpec | None = None
+    kernel_type_requirement: str | None = None  # e.g., "action" or "step" in kernel
+
 
 class StepSpec(ABC):
     """Declarative definition of a single actionable step (The 'What', not the 'How')."""
@@ -35,23 +45,23 @@ class StepSpec(ABC):
         pass
 
     @property
-    def meta_type(self) -> Optional[FlowMetaStep]:
+    def meta_type(self) -> FlowMetaStep | None:
         """The formal pattern definition this step conforms to."""
         return None
 
     @property
     @abstractmethod
-    def kernel_anchor(self) -> Optional[str]:
+    def kernel_anchor(self) -> str | None:
         """Reference to the ea-kernel element this step grounds."""
         pass
 
     @property
-    def input_schema(self) -> Optional[SchemaSpec]:
+    def input_schema(self) -> SchemaSpec | None:
         """Declarative input schema for this step."""
         return self.meta_type.input_schema if self.meta_type else None
 
     @property
-    def output_schema(self) -> Optional[SchemaSpec]:
+    def output_schema(self) -> SchemaSpec | None:
         """Declarative output schema for this step."""
         return self.meta_type.output_schema if self.meta_type else None
 
@@ -74,6 +84,7 @@ class KernelGroundedStepSpec(StepSpec):
     def meta_type(self) -> FlowMetaStep:
         return self._meta_type
 
+
 class WorkflowSpec(ABC):
     """Declarative definition of a sequence or graph of steps."""
 
@@ -85,24 +96,24 @@ class WorkflowSpec(ABC):
 
     @property
     @abstractmethod
-    def kernel_anchor(self) -> Optional[str]:
+    def kernel_anchor(self) -> str | None:
         """Kernel anchoring point for this behavior."""
         pass
 
     @property
     @abstractmethod
-    def input_schema(self) -> Optional[SchemaSpec]:
+    def input_schema(self) -> SchemaSpec | None:
         """Global input schema for the workflow."""
         pass
 
     @property
     @abstractmethod
-    def output_schema(self) -> Optional[SchemaSpec]:
+    def output_schema(self) -> SchemaSpec | None:
         """Global output schema for the workflow."""
         pass
 
     @abstractmethod
-    def get_steps(self) -> List[StepSpec]:
+    def get_steps(self) -> list[StepSpec]:
         """Return the declarative sequence of steps."""
         pass
 
@@ -117,12 +128,12 @@ class UseCaseSpec(WorkflowSpec):
         name: I18nString,
         description: I18nString,
         primary_actor: str,
-        success_criteria: List[I18nString],
-        steps: List[StepSpec],
-        input_schema: Optional[SchemaSpec] = None,
-        output_schema: Optional[SchemaSpec] = None,
-        kernel_anchor: Optional[str] = None
-    ):
+        success_criteria: list[I18nString],
+        steps: list[StepSpec],
+        input_schema: SchemaSpec | None = None,
+        output_schema: SchemaSpec | None = None,
+        kernel_anchor: str | None = None,
+    ) -> None:
         self._name = name
         self._description = description
         self._primary_actor = primary_actor
@@ -134,33 +145,33 @@ class UseCaseSpec(WorkflowSpec):
 
     @property
     def name(self) -> str:
-        return self._name
+        return _as_text(self._name)
 
     @property
     def description(self) -> str:
-        return self._description
+        return _as_text(self._description)
 
     @property
     def primary_actor(self) -> str:
         return self._primary_actor
 
     @property
-    def success_criteria(self) -> List[I18nString]:
+    def success_criteria(self) -> list[I18nString]:
         return self._success_criteria
 
     @property
-    def kernel_anchor(self) -> Optional[str]:
+    def kernel_anchor(self) -> str | None:
         return self._kernel_anchor
 
     @property
-    def input_schema(self) -> Optional[SchemaSpec]:
+    def input_schema(self) -> SchemaSpec | None:
         return self._input_schema
 
     @property
-    def output_schema(self) -> Optional[SchemaSpec]:
+    def output_schema(self) -> SchemaSpec | None:
         return self._output_schema
 
-    def get_steps(self) -> List[StepSpec]:
+    def get_steps(self) -> list[StepSpec]:
         return self._steps
 
 @dataclass(frozen=True)
@@ -169,13 +180,14 @@ class FlowGenerationRule:
     A specific rule for generating a Flow specification from a Kernel entity.
     Encapsulates specific logic conditions, keeping the Kernel entity pure.
     """
-    source_kernel_type: str # e.g., "Entity", "Relation"
-    target_flow_type: str   # e.g., "ReviewFlow", "ApprovalFlow"
-    naming_pattern: str     # e.g., "{target_flow_type} for {source_name}"
-    required_steps: List[str] = field(default_factory=list) # List of FlowMetaStep names
+    source_kernel_type: str  # e.g., "Entity", "Relation"
+    target_flow_type: str  # e.g., "ReviewFlow", "ApprovalFlow"
+    naming_pattern: str  # e.g., "{target_flow_type} for {source_name}"
+    required_steps: list[str] = field(default_factory=list)  # List of FlowMetaStep names
 
     # Logic Encapsulation: "When does this flow apply?"
-    logic_conditions: Dict[str, Any] = field(default_factory=dict) # e.g., {"amount": {">=": 100000}}
+    logic_conditions: dict[str, Any] = field(default_factory=dict)  # e.g., {"amount": {">=": 100000}}
+
 
 @dataclass(frozen=True)
 class FlowTopology:
@@ -184,10 +196,10 @@ class FlowTopology:
     Can act as a concrete instance or a generative template.
     """
     name: str
-    steps: List[StepSpec] = field(default_factory=list)
-    entry_point: Optional[str] = None
-    exit_points: List[str] = field(default_factory=list)
-    transition_rules: Dict[str, str] = field(default_factory=dict) # step_name -> next_step_name
+    steps: list[StepSpec] = field(default_factory=list)
+    entry_point: str | None = None
+    exit_points: list[str] = field(default_factory=list)
+    transition_rules: dict[str, str] = field(default_factory=dict)  # step_name -> next_step_name
 
     # Meta-Modeling Support
-    generation_rules: List[FlowGenerationRule] = field(default_factory=list)
+    generation_rules: list[FlowGenerationRule] = field(default_factory=list)

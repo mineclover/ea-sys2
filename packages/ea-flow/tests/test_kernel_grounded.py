@@ -1,6 +1,12 @@
-import pytest
-from ea_flow.spec import FlowMetaStep, KernelGroundedStepSpec, ExecutionContext, WorkflowSpec, StepSpec
-from ea_flow.runtime import FlowRuntime, StepImplementer, StepExecutionResult
+from ea_flow.runtime import FlowRuntime, StepExecutionResult, StepImplementer
+from ea_flow.spec import (
+    ExecutionContext,
+    FlowMetaStep,
+    KernelGroundedStepSpec,
+    StepSpec,
+    WorkflowSpec,
+)
+
 
 class MockImplementer(StepImplementer):
     def execute(self, spec: StepSpec, context: ExecutionContext) -> StepExecutionResult:
@@ -11,7 +17,7 @@ class MockImplementer(StepImplementer):
 def test_kernel_grounded_step_spec_properties():
     meta = FlowMetaStep(name="TestStep", description="A test step")
     step = KernelGroundedStepSpec(anchor="ea:kernel:entity:1", meta_type=meta)
-    
+
     assert step.name == "TestStep on ea:kernel:entity:1"
     assert step.kernel_anchor == "ea:kernel:entity:1"
     assert step.meta_type == meta
@@ -19,7 +25,7 @@ def test_kernel_grounded_step_spec_properties():
 def test_kernel_grounded_step_execution_via_runtime():
     meta = FlowMetaStep(name="TestStep", description="A test step")
     step = KernelGroundedStepSpec(anchor="ea:kernel:entity:1", meta_type=meta)
-    
+
     class SimpleWF(WorkflowSpec):
         @property
         def name(self) -> str: return "test_wf"
@@ -33,7 +39,7 @@ def test_kernel_grounded_step_execution_via_runtime():
 
     runtime = FlowRuntime(implementers={step.name: MockImplementer()})
     result = runtime.execute(SimpleWF(), {})
-    
-    assert result.success == True
+
+    assert result.success
     assert step.name in result.step_results
     assert result.step_results[step.name].output == "executed:TestStep on ea:kernel:entity:1"

@@ -1,8 +1,9 @@
 import os
-from pathlib import Path
+from collections.abc import Generator
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import List, Generator, Optional
+from datetime import UTC, datetime
+from pathlib import Path
+
 
 @dataclass
 class Resource:
@@ -11,7 +12,8 @@ class Resource:
     name: str
     content_type: str
     last_modified: str
-    content: Optional[str] = None
+    content: str | None = None
+
 
 class ResourceIndexer:
     """
@@ -21,7 +23,11 @@ class ResourceIndexer:
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir
 
-    def scan(self, sub_paths: List[str] = None, extensions: List[str] = None) -> Generator[Resource, None, None]:
+    def scan(
+        self,
+        sub_paths: list[str] | None = None,
+        extensions: list[str] | None = None,
+    ) -> Generator[Resource, None, None]:
         """
         Yields Resource objects found in the root_dir.
         Optionally filters by sub_paths and file extensions.
@@ -32,12 +38,12 @@ class ResourceIndexer:
         for search_dir in search_dirs:
             if not search_dir.exists():
                 continue
-                
+
             for root, _, files in os.walk(search_dir):
                 for file_name in files:
                     if valid_exts and not any(file_name.endswith(ext) for ext in valid_exts):
                         continue
-                    
+
                     file_path = Path(root) / file_name
                     yield self._create_resource(file_path)
 
@@ -47,12 +53,12 @@ class ResourceIndexer:
         try:
             rel_path = file_path.relative_to(self.root_dir)
         except ValueError:
-            rel_path = file_path # Fallback if outside root
-            
+            rel_path = file_path  # Fallback if outside root
+
         uri = f"file://{rel_path}"
         stat = file_path.stat()
-        last_modified = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
-        
+        last_modified = datetime.fromtimestamp(stat.st_mtime, UTC).isoformat()
+
         # Determine content type (simple heuristic)
         ext = file_path.suffix.lower()
         content_type = "text/plain"
@@ -62,11 +68,11 @@ class ResourceIndexer:
             content_type = "text/x-python"
         elif ext in [".json"]:
             content_type = "application/json"
-            
+
         return Resource(
             uri=uri,
             path=str(file_path),
             name=file_path.name,
             content_type=content_type,
-            last_modified=last_modified
+            last_modified=last_modified,
         )

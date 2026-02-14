@@ -1,6 +1,6 @@
 
-import pytest
-from ea_flow.schema import JsonSchema2020Spec, DbSchemaSpec
+from ea_flow.schema import DbSchemaSpec, JsonSchema2020Spec
+
 
 def test_json_schema_2020_validation():
     # A simple 2020-12 schema
@@ -13,13 +13,13 @@ def test_json_schema_2020_validation():
         },
         "required": ["name"]
     }
-    
+
     spec = JsonSchema2020Spec(raw_schema)
-    
+
     # Valid data
     assert spec.validate({"name": "Alice", "age": 30}) is True
     assert spec.validate({"name": "Bob"}) is True # age is optional
-    
+
     # Invalid data
     assert spec.validate({"age": 30}) is False # name missing
     assert spec.validate({"name": "Alice", "age": -1}) is False # age minimum fail
@@ -30,7 +30,7 @@ def test_db_schema_validation():
         table_name="users",
         columns={"id": "INT", "name": "TEXT"}
     )
-    
+
     assert spec.validate({"id": 1, "name": "Alice"}) is True
     assert spec.validate({"id": 1}) is False # name missing
     assert spec.validate("invalid") is False

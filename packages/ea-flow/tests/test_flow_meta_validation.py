@@ -1,6 +1,6 @@
-import pytest
-from ea_flow.spec import FlowMetaStep, KernelGroundedStepSpec
 from ea_flow.schema import JsonSchema2020Spec
+from ea_flow.spec import FlowMetaStep, KernelGroundedStepSpec
+
 
 def test_step_meta_conformance():
     # 1. Define a MetaStep (The Model)
@@ -22,4 +22,4 @@ def test_step_meta_conformance():
 
     # 4. Input validation (Simple test)
     valid_data = {"raw": "test"}
-    assert step.input_schema.validate(valid_data) == True
+    assert step.input_schema.validate(valid_data)

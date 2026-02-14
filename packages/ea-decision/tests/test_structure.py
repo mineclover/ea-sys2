@@ -1,4 +1,5 @@
-from ea_decision.types import Intent, ChoiceOption, Choice, DecisionResult, DecisionPhase
+from ea_decision.types import ChoiceOption, DecisionPhase, Intent
+
 
 def test_intent_creation():
     intent = Intent(

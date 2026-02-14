@@ -1,6 +1,6 @@
-import pytest
-from ea_decision.topic import Topic, DesignDecision, DesignReport, ModelingAction
+from ea_decision.topic import DesignDecision, Topic
 from ea_decision.types import DecisionStatus
+
 
 def test_decision_approval():
     decision = DesignDecision(
@@ -10,7 +10,7 @@ def test_decision_approval():
     )
     assert decision.status == DecisionStatus.PROPOSED
     assert decision.approver is None
-    
+
     decision.approve(approver="Boss")
     assert decision.status == DecisionStatus.ACCEPTED
     assert decision.approver == "Boss"
@@ -38,7 +38,7 @@ def test_topic_from_dict_with_history():
             }
         ]
     }
-    
+
     import json
     topic = Topic.from_json(json.dumps(data))
     assert len(topic.report_history) == 1

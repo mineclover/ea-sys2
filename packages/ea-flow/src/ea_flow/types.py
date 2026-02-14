@@ -1,8 +1,8 @@
-from typing import Dict, Union
 from enum import Enum
 
 # Multi-language string: either a simple string or a mapping of language codes to strings
-I18nString = Union[str, Dict[str, str]]
+I18nString = str | dict[str, str]
+
 
 class FlowStepCategory(Enum):
     """

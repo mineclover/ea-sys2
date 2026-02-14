@@ -6,13 +6,12 @@ Follows the Kernel RuleLifecycle pattern: frozen, transition() returns a new ins
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import Dict, FrozenSet
+from enum import StrEnum
 
 from ea_decision.types import _now
 
 
-class DecisionLifecycleState(str, Enum):
+class DecisionLifecycleState(StrEnum):
     DRAFT = "draft"
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
@@ -21,7 +20,7 @@ class DecisionLifecycleState(str, Enum):
     SUPERSEDED = "superseded"
 
 
-VALID_DECISION_TRANSITIONS: Dict[DecisionLifecycleState, FrozenSet[DecisionLifecycleState]] = {
+VALID_DECISION_TRANSITIONS: dict[DecisionLifecycleState, frozenset[DecisionLifecycleState]] = {
     DecisionLifecycleState.DRAFT: frozenset({DecisionLifecycleState.PROPOSED}),
     DecisionLifecycleState.PROPOSED: frozenset({
         DecisionLifecycleState.ACCEPTED,

@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import List
+from enum import StrEnum
 
 from ea_decision.types import _generate_id, _now
 
 
-class EvidenceType(str, Enum):
+class EvidenceType(StrEnum):
     DOCUMENT = "document"
     DATA = "data"
     EXPERT_OPINION = "expert_opinion"

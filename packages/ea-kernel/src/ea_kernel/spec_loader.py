@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+import tomllib
 from pathlib import Path
+from typing import Any
 
 from ea_kernel.types import (
     KernelConditionType,
@@ -39,7 +37,7 @@ class RuleLoadError(Exception):
     """Raised when a TOML rule file cannot be parsed or validated."""
 
 
-def _parse_condition(raw: str | dict) -> KernelRuleCondition:
+def _parse_condition(raw: str | dict[str, Any]) -> KernelRuleCondition:
     """Parse a condition entry (string or dict with type+params)."""
     if isinstance(raw, str):
         ct = _CONDITION_MAP.get(raw)
@@ -54,7 +52,7 @@ def _parse_condition(raw: str | dict) -> KernelRuleCondition:
     return KernelRuleCondition(ct, parameters=params)
 
 
-def _parse_rule(rule_id: str, data: dict) -> KernelValidityRule:
+def _parse_rule(rule_id: str, data: dict[str, Any]) -> KernelValidityRule:
     """Parse a single rule entry from TOML."""
     for field in ("source", "target", "relation"):
         if field not in data:
@@ -72,7 +70,7 @@ def _parse_rule(rule_id: str, data: dict) -> KernelValidityRule:
     )
 
 
-def _parse_layer_constraint(data: dict, index: int) -> LayerConstraint:
+def _parse_layer_constraint(data: dict[str, Any], index: int) -> LayerConstraint:
     """Parse a layer constraint entry from TOML."""
     src = data.get("source_layer")
     tgt = data.get("target_layer")
@@ -167,8 +165,8 @@ def load_kernel_rules(
     path = path or (SPECS_DIR / "kernel_rules.toml")
     try:
         raw = path.read_bytes()
-    except FileNotFoundError:
-        raise RuleLoadError(f"Rule file not found: {path}")
+    except FileNotFoundError as err:
+        raise RuleLoadError(f"Rule file not found: {path}") from err
     return load_from_content(raw.decode())
 
 
@@ -190,7 +188,7 @@ _CONFIDENCE_MAP: dict[str, RuleConfidence] = {
     "empirical": RuleConfidence.EMPIRICAL,
 }
 
-def _parse_metadata(rule_id: str, data: dict) -> RuleMetadata | None:
+def _parse_metadata(rule_id: str, data: dict[str, Any]) -> RuleMetadata | None:
     """Parse metadata sub-table from a rule entry, if present."""
     meta = data.get("metadata")
     if meta is None:
@@ -232,8 +230,8 @@ def load_kernel_rules_with_metadata(
     path = path or (SPECS_DIR / "kernel_rules.toml")
     try:
         raw = path.read_bytes()
-    except FileNotFoundError:
-        raise RuleLoadError(f"Rule file not found: {path}")
+    except FileNotFoundError as err:
+        raise RuleLoadError(f"Rule file not found: {path}") from err
 
     content = raw.decode()
     rules, constraints = load_from_content(content)

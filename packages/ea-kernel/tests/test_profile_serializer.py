@@ -5,9 +5,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
-from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileMetadata, ProfileRelation
-from ea_kernel.types import KernelConditionType, KernelRuleCondition, KernelValidityRule
 from ea_kernel.profile_serializer import (
     compute_content_hash,
     dict_to_profile,
@@ -15,7 +12,8 @@ from ea_kernel.profile_serializer import (
     profile_to_dict,
     profile_to_json,
 )
-
+from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileMetadata, ProfileRelation
+from ea_kernel.types import KernelConditionType, KernelRuleCondition, KernelValidityRule
 
 # ── Helpers ──────────────────────────────────────────────────────
 

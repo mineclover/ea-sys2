@@ -73,7 +73,7 @@ class TopologyGraph:
         if relation is not None:
             edges = [e for e in edges if e.relation == relation]
         return tuple(edges)
-    
+
     def incoming(
         self, entity: str, relation: str | None = None,
     ) -> tuple[GraphEdge, ...]:
@@ -224,23 +224,23 @@ class TopologyGraph:
     @property
     def metadata(self) -> dict[str, str]:
         """Graph metadata including version and rule stats."""
-        from datetime import datetime, UTC
-        
+        from datetime import UTC, datetime
+
         # Collect relevant rules to determine version
         versions = set()
         rule_count = 0
-        
+
         # 1. From Corpus (if available) - rich metadata
         if self._corpus:
             entries = self._corpus.entries
             if self._domain:
                 entries = tuple(e for e in entries if e.metadata.domain == self._domain)
-            
+
             rule_count += len(entries)
             for e in entries:
                 if e.metadata.established_version:
                     versions.add(e.metadata.established_version)
-        
+
         # 2. From Schema (if no corpus or domain includes kernel)
         # Note: KernelSchema rules don't carry rich metadata directly in the object model usually,
         # but if we are in "kernel" mode and have no corpus, we might want to show a hardcoded version?
@@ -251,8 +251,8 @@ class TopologyGraph:
              versions.add("1.0.0")
 
         # Determine latest version
-        latest_version = sorted(list(versions))[-1] if versions else "0.0.0"
-        
+        latest_version = sorted(versions)[-1] if versions else "0.0.0"
+
         return {
             "generated_at": datetime.now(UTC).isoformat() + "Z",
             "domain": self._domain or "System",
@@ -277,52 +277,79 @@ class TopologyGraph:
             if not entity.is_abstract:
                 self._entities.add(entity.name)
 
-        # For each pair of concrete entities and each relation, check validity
-        entity_list = sorted(self._entities)
-        relation_names = [r.name for r in schema.relations]
+        entity_list = tuple(sorted(self._entities))
+        if not entity_list:
+            return
 
-        for source in entity_list:
-            for target in entity_list:
+        if corpus is None:
+            relation_names = tuple(r.name for r in schema.relations)
+            for source in entity_list:
+                for target in entity_list:
+                    for rel_name in relation_names:
+                        k_result = schema.validate_relationship(source, target, rel_name)
+                        if not k_result.valid:
+                            continue
+                        edge = GraphEdge(
+                            source=source,
+                            target=target,
+                            relation=rel_name,
+                            judgment=None,
+                        )
+                        self._outgoing.setdefault(source, []).append(edge)
+                        self._incoming.setdefault(target, []).append(edge)
+            return
+
+        # Corpus-backed mode: use single evidence judgment path to avoid
+        # duplicated schema+corpus validation for each triple.
+        relation_names = tuple(r.name for r in schema.relations)
+        active_entities = entity_list
+
+        if target_domain is not None:
+            domain_entries = tuple(
+                entry for entry in corpus.entries if entry.metadata.domain == target_domain
+            )
+            if not domain_entries:
+                return
+
+            schema_relations = set(relation_names)
+            domain_relations = {
+                entry.rule.relationship_name
+                for entry in domain_entries
+                if entry.rule.relationship_name in schema_relations
+            }
+            if not domain_relations:
+                return
+            relation_names = tuple(sorted(domain_relations))
+
+            domain_entities: set[str] = set()
+            for entry in domain_entries:
+                for pattern in (entry.rule.source_pattern, entry.rule.target_pattern):
+                    matched = schema._pattern_matches.get(pattern)
+                    if matched is not None:
+                        domain_entities.update(matched)
+                    else:
+                        for entity_name in entity_list:
+                            if schema.entity_matches(entity_name, pattern):
+                                domain_entities.add(entity_name)
+
+            if not domain_entities:
+                return
+            active_entities = tuple(sorted(domain_entities))
+
+        for source in active_entities:
+            for target in active_entities:
                 for rel_name in relation_names:
-                    # 1. Kernel Schema Validation
-                    k_result = schema.validate_relationship(source, target, rel_name)
-                    
-                    # 2. Corpus Judgment (overrides or augments)
-                    judgment = None
-                    if corpus is not None:
-                        judgment = corpus.judge(source, target, rel_name)
-                    
-                    # Determine validity and origin domain
-                    is_valid = k_result.valid
-                    origin_domain = "kernel"
-                    
-                    if judgment is not None:
-                        # Corpus judgment takes precedence on validity
-                        is_valid = judgment.verdict
-                        # Determine domain from evidence
-                        # Find the "winner" rule in evidence
+                    judgment = corpus.judge(source, target, rel_name)
+                    if not judgment.verdict:
+                        continue
+
+                    if target_domain is not None:
+                        winner_domain = "kernel"
                         for ev in judgment.evidence:
                             if ev.is_winner:
-                                origin_domain = ev.entry.metadata.domain
+                                winner_domain = ev.entry.metadata.domain
                                 break
-                    
-                    # 3. Filtering
-                    if not is_valid:
-                        # We generally don't include invalid edges in topology
-                        # unless for specific debugging.
-                        continue
-                        
-                    if target_domain is not None:
-                        # strict filtering: only edges defined/modified by the domain
-                        # OR edges from kernel if domain requires them?
-                        # User request: "Profile unit diagram output"
-                        # Let's show:
-                        # 1. Edges explicitly defined by this domain (origin_domain == target_domain)
-                        # 2. What about kernel edges? 
-                        #    If I request "marketing", I probably want to see the "marketing layer".
-                        #    So strict match seems appropriate for "unit" output.
-                        #    However, if "marketing" is empty, graph is empty.
-                        if origin_domain != target_domain:
+                        if winner_domain != target_domain:
                             continue
 
                     edge = GraphEdge(
@@ -333,4 +360,3 @@ class TopologyGraph:
                     )
                     self._outgoing.setdefault(source, []).append(edge)
                     self._incoming.setdefault(target, []).append(edge)
-

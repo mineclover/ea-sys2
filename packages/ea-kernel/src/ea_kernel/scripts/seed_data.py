@@ -1,27 +1,26 @@
-
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ea_kernel.governance import GovernanceSystem
 from ea_kernel.governance_types import (
     RuleAsset,
-    RuleProvenance,
     RuleLifecycle,
     RuleLifecycleState,
+    RuleProvenance,
 )
+from ea_kernel.schema_loader import load_kernel_schema_from_package
 from ea_kernel.types import (
+    KernelConditionType,
+    KernelRuleCondition,
     KernelValidityRule,
-    RuleMetadata,
-    RuleGroup,
     RuleCategory,
     RuleConfidence,
     RuleCorpusEntry,
-    KernelConditionType,
-    KernelRuleCondition,
+    RuleGroup,
+    RuleMetadata,
 )
-from ea_kernel.schema_loader import load_kernel_schema_from_package
 
 # Configure logging
 logging.basicConfig(
@@ -38,8 +37,8 @@ def get_data_dir() -> Path:
     return path
 
 def load_json(path: Path) -> dict[str, Any]:
-    with open(path, "r") as f:
-        return json.load(f)
+    with path.open(encoding="utf-8") as f:
+        return cast(dict[str, Any], json.load(f))
 
 def create_rule_entry(rule_data: dict[str, Any], domain: str) -> RuleCorpusEntry:
     # 1. Rule Object
@@ -84,15 +83,15 @@ def create_rule_entry(rule_data: dict[str, Any], domain: str) -> RuleCorpusEntry
 
     return RuleCorpusEntry(rule=rule, metadata=meta)
 
-def seed_system():
+def seed_system() -> None:
     logger.info("Starting demo data seeding...")
-    
+
     # 1. Setup System
     data_dir = get_data_dir()
     schema = load_kernel_schema_from_package()
     # Assuming 'default' tenant path as used in server.py
     system = GovernanceSystem(data_dir / "default", schema)
-    
+
     # 2. Load Data
     seed_file = Path(__file__).parent.parent / "seeds/demo_data.json"
     if not seed_file.exists():
@@ -101,28 +100,27 @@ def seed_system():
 
     data = load_json(seed_file)
     profiles = data.get("profiles", [])
-    
+
     total_added = 0
-    
+
     for profile in profiles:
         domain = profile["name"]
-        description = profile.get("description", "")
         rules = profile.get("rules", [])
-        
+
         logger.info(f"Processing profile: {domain} ({len(rules)} rules)")
-        
+
         for rule_data in rules:
             rule_id = rule_data["id"]
-            
+
             # Check if exists
             existing = system.rule_store.get(rule_id)
             if existing:
                 logger.info(f"  Skipping existing rule: {rule_id}")
                 continue
-                
+
             # Create Entry
             entry = create_rule_entry(rule_data, domain)
-            
+
             # Create Asset (Draft)
             provenance = RuleProvenance(
                 author="system:seeder",
@@ -130,28 +128,28 @@ def seed_system():
                 source_reference="demo_data.json",
                 version=1,
             )
-            
+
             asset = RuleAsset(
                 entry=entry,
                 provenance=provenance,
                 lifecycle=RuleLifecycle(current_state=RuleLifecycleState.DRAFT),
             )
-            
+
             # Submit
             try:
                 system.submit_rule(asset)
                 logger.info(f"  Submitted: {rule_id}")
-                
+
                 # Auto-approve for demo
                 system.approve_rule(rule_id, actor="system:seeder")
                 logger.info(f"  Approved: {rule_id}")
-                
+
                 total_added += 1
             except ValueError as e:
                 logger.error(f"  Failed to submit {rule_id}: {e}")
 
     logger.info(f"Seeding complete. Added {total_added} rules.")
-    
+
     if total_added > 0:
         # Create Snapshot
         version_info = system.create_snapshot(

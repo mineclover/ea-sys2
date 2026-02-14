@@ -1,11 +1,10 @@
-import pytest
-from pathlib import Path
 from dataclasses import replace
-from ea_kernel.types import KernelSchema, KernelEntity, KernelRelation, Layer, KernelValidityRule
-from ea_kernel.graph_view import TopologyGraph
+
 from ea_kernel.diagram_exporter import DiagramExporter
+from ea_kernel.graph_view import TopologyGraph
 from ea_kernel.localizer import ProfileLocalizer
-from ea_kernel.profile_loader import load_profile
+from ea_kernel.types import KernelEntity, KernelRelation, KernelSchema, KernelValidityRule, Layer
+
 
 def test_diagram_exporter_localized_labels():
     # 1. Setup entities with localized display names and descriptions
@@ -21,24 +20,24 @@ def test_diagram_exporter_localized_labels():
         display_name="Test Two", # Simple string
         description="Simple Desc"
     )
-    
+
     # 2. Setup schema with a rule that results in an edge
     rule1 = KernelValidityRule(id="rule1", source_pattern="ea:test:1", target_pattern="ea:test:2", relationship_name="links")
-    
+
     schema = KernelSchema(
         attributes=(),
         entities=(e1, e2),
         relations=(KernelRelation(name="links", layer=Layer.L2),),
         validity_rules=(rule1,)
     )
-    
+
     # 3. Build Graph
     graph = TopologyGraph(schema)
     exporter = DiagramExporter(graph)
-    
+
     # 4. Generate Mermaid
     mermaid = exporter.generate_mermaid()
-    
+
     # 5. Assertions
     assert "테스트 하나" in mermaid
     assert "설명 한" in mermaid
@@ -52,11 +51,11 @@ def test_diagram_exporter_localized_labels():
 def test_localizer_extended_patching():
     # 1. Setup base profile with correct arguments
     from ea_kernel.profile_builder import ProfileBuilder
-    
+
     builder = ProfileBuilder("TestProfile", version="1.0", kernel_version="2.5.0")
     builder.element("ea:test:1", layer="L1", category="Cat", kernel_type="structure", display_name="Base Name")
     profile = builder.build()
-    
+
     # 2. Mock patch data
     patch_data = {
         "elements": {
@@ -71,20 +70,20 @@ def test_localizer_extended_patching():
             }
         }
     }
-    
+
     # Add a rule to the profile manually
     rule = KernelValidityRule(id="rule_1", source_pattern="*", target_pattern="*", relationship_name="*", description="Base Rule")
     profile = replace(profile, validity_rules=(rule,))
-    
+
     # 3. Apply Patch
     localizer = ProfileLocalizer()
     local_profile = localizer.apply_patch(profile, patch_data, lang="ko")
-    
+
     # 4. Verify
     elem = local_profile.get_element("ea:test:1")
     assert elem.display_name["ko"] == "Localized Name"
     assert elem.description["ko"] == "Localized Desc"
-    
+
     rule_ko = local_profile.validity_rules[0]
     assert rule_ko.description["ko"] == "Rule Desc Ko"
 
@@ -93,7 +92,7 @@ def test_localizer_missing_file_safety(tmp_path):
     localizer = ProfileLocalizer(patch_dir=tmp_path)
     from ea_kernel.profile_builder import ProfileBuilder
     profile = ProfileBuilder("Missing", version="1.0", kernel_version="2.5.0").build()
-    
+
     # Should just return original
     result = localizer.localize(profile, lang="ko")
     assert result == profile

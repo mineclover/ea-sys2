@@ -11,12 +11,17 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from ea_kernel.migrations.kernel_governance import apply_kernel_governance_migrations
 from ea_kernel.model_registration import KernelModelRegistrationService
 from ea_kernel.profile_loader import load_profile
+from ea_kernel.profile_rule_compiler import (
+    ProfileRuntimeSchemaResult,
+    build_profile_runtime_schema,
+)
 from ea_kernel.profile_serializer import compute_content_hash
 from ea_kernel.profile_types import KernelProfile
 from ea_kernel.spec import KERNEL_SPEC
@@ -100,15 +105,66 @@ def _model_name(profile_name: str, layer: str) -> str:
     return f"{profile_name}.{layer}"
 
 
-def _seed_profile_manifest() -> list[dict[str, Any]]:
-    manifest: list[dict[str, Any]] = []
+@dataclass(frozen=True)
+class LayerProjection:
+    layer: str
+    profile_path: Path
+    profile: KernelProfile
+    runtime: ProfileRuntimeSchemaResult
+
+
+def _build_runtime_projection(profile: KernelProfile) -> ProfileRuntimeSchemaResult:
+    return build_profile_runtime_schema(
+        KERNEL_SPEC,
+        profile,
+        include_base_schema=True,
+        include_base_rules=True,
+    )
+
+
+def _prepare_layer_projections() -> tuple[LayerProjection, ...]:
+    projections: list[LayerProjection] = []
     for layer in LAYERS_IN_ORDER:
         profile_path = LAYER_DIR / LAYER_FILE_MAP[layer]
         profile = load_profile(profile_path, KERNEL_SPEC)
         adjusted = _profile_with_name(profile, _model_name(profile.name, layer))
+        projections.append(
+            LayerProjection(
+                layer=layer,
+                profile_path=profile_path,
+                profile=adjusted,
+                runtime=_build_runtime_projection(adjusted),
+            )
+        )
+    return tuple(projections)
+
+
+def _runtime_projection_payload(runtime: ProfileRuntimeSchemaResult) -> dict[str, int]:
+    stats = runtime.compilation.stats
+    return {
+        "runtime_entities": len(runtime.schema.entities),
+        "runtime_relations": len(runtime.schema.relations),
+        "runtime_rules": len(runtime.schema.validity_rules),
+        "runtime_added_entities": runtime.overlay.added_entity_count,
+        "runtime_added_relations": runtime.overlay.added_relation_count,
+        "compiled_rules": stats.compiled_rule_count,
+        "compiled_transformed_rules": stats.transformed_rule_count,
+        "compiled_skipped_rules": stats.skipped_rule_count,
+    }
+
+
+def _seed_profile_manifest(
+    projections: tuple[LayerProjection, ...] | None = None,
+) -> list[dict[str, Any]]:
+    layer_projections = projections or _prepare_layer_projections()
+    manifest: list[dict[str, Any]] = []
+    for projection in layer_projections:
+        profile_path = projection.profile_path
+        adjusted = projection.profile
+        runtime = projection.runtime
         manifest.append(
             {
-                "layer": layer,
+                "layer": projection.layer,
                 "file": profile_path.name,
                 "model_name": adjusted.name,
                 "version": adjusted.version,
@@ -116,6 +172,7 @@ def _seed_profile_manifest() -> list[dict[str, Any]]:
                 "relations": len(adjusted.relations),
                 "rules": len(adjusted.validity_rules),
                 "content_hash": compute_content_hash(adjusted),
+                **_runtime_projection_payload(runtime),
             }
         )
     return manifest
@@ -152,57 +209,52 @@ def _ensure_empty_data_dir(data_dir: Path) -> None:
         )
 
 
-def _read_schema_version(db_path: Path) -> int:
-    with sqlite3.connect(str(db_path)) as conn:
-        tables = {
-            str(row[0])
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-        }
-        if "schema_version" in tables:
-            row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
-            if row is None or row[0] is None:
-                return 0
-            return int(row[0])
-        if "schema_info" in tables:
-            row = conn.execute(
-                "SELECT value FROM schema_info WHERE key='schema_version'"
-            ).fetchone()
-            if row is None or row[0] is None:
-                return 0
-            try:
-                return int(row[0])
-            except ValueError:
-                return 0
-    return 0
-
-
-def _table_names(db_path: Path) -> list[str]:
-    with sqlite3.connect(str(db_path)) as conn:
-        rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+def _table_names(conn: sqlite3.Connection) -> list[str]:
+    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     names = sorted(str(row[0]) for row in rows if not str(row[0]).startswith("sqlite_"))
     return names
 
 
-def _row_count(db_path: Path, table: str) -> int:
-    with sqlite3.connect(str(db_path)) as conn:
-        row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+def _row_count(conn: sqlite3.Connection, table: str) -> int:
+    row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
     if row is None:
         return 0
     return int(row[0])
+
+
+def _read_schema_version(conn: sqlite3.Connection, table_names: list[str]) -> int:
+    tables = set(table_names)
+    if "schema_version" in tables:
+        row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
+        if row is None or row[0] is None:
+            return 0
+        return int(row[0])
+    if "schema_info" in tables:
+        row = conn.execute(
+            "SELECT value FROM schema_info WHERE key='schema_version'"
+        ).fetchone()
+        if row is None or row[0] is None:
+            return 0
+        try:
+            return int(row[0])
+        except ValueError:
+            return 0
+    return 0
 
 
 def _collect_db_contract(data_dir: Path) -> dict[str, dict[str, Any]]:
     contract: dict[str, dict[str, Any]] = {}
     for db_name, required_tables in DB_TABLES.items():
         db_path = data_dir / db_name
-        table_names = _table_names(db_path)
-        row_counts = {table: _row_count(db_path, table) for table in required_tables}
-        contract[db_name] = {
-            "schema_version": _read_schema_version(db_path),
-            "tables": table_names,
-            "required_tables": list(required_tables),
-            "row_counts": row_counts,
-        }
+        with sqlite3.connect(str(db_path)) as conn:
+            table_names = _table_names(conn)
+            row_counts = {table: _row_count(conn, table) for table in required_tables}
+            contract[db_name] = {
+                "schema_version": _read_schema_version(conn, table_names),
+                "tables": table_names,
+                "required_tables": list(required_tables),
+                "row_counts": row_counts,
+            }
     return contract
 
 
@@ -257,29 +309,38 @@ def _seed_reference_dataset(
     *,
     owner: str,
     actor: str,
+    projections: tuple[LayerProjection, ...] | None = None,
 ) -> None:
     apply_kernel_governance_migrations(data_dir)
     service = KernelModelRegistrationService(data_dir / "profiles.db", KERNEL_SPEC)
+    layer_projections = projections or _prepare_layer_projections()
 
     kernel_model_name = ""
     kernel_version = ""
 
-    for layer in LAYERS_IN_ORDER:
-        profile_path = LAYER_DIR / LAYER_FILE_MAP[layer]
-        profile = load_profile(profile_path, KERNEL_SPEC)
-        model_name = _model_name(profile.name, layer)
-        adjusted = _profile_with_name(profile, model_name)
+    for projection in layer_projections:
+        profile_path = projection.profile_path
+        adjusted = projection.profile
+        runtime = projection.runtime
+        stats = runtime.compilation.stats
+        if stats.skipped_rule_count > 0:
+            raise RuntimeError(
+                f"runtime projection skipped rules for {adjusted.name}: {stats.skipped_rule_count}"
+            )
         service.register(
             adjusted,
             owner=owner,
             created_by=actor,
             context={
                 "source": "kernel-governance-reference-snapshot",
-                "layer": layer,
+                "layer": projection.layer,
                 "profile_file": profile_path.name,
+                "compiled_rules": stats.compiled_rule_count,
+                "compiled_transformed_rules": stats.transformed_rule_count,
+                "compiled_skipped_rules": stats.skipped_rule_count,
             },
         )
-        if layer == "kernel":
+        if projection.layer == "kernel":
             kernel_model_name = adjusted.name
             kernel_version = adjusted.version
             service.activate(adjusted.name, adjusted.version, actor=actor)
@@ -295,12 +356,16 @@ def _seed_reference_dataset(
     )
 
 
-def _build_payload(data_dir: Path) -> dict[str, Any]:
+def _build_payload(
+    data_dir: Path,
+    *,
+    projections: tuple[LayerProjection, ...] | None = None,
+) -> dict[str, Any]:
     return {
         "reference_version": REFERENCE_VERSION,
         "snapshot_kind": "kernel_governance_db_reference",
         "generated_by": SCRIPT_NAME,
-        "seed_profiles": _seed_profile_manifest(),
+        "seed_profiles": _seed_profile_manifest(projections),
         "db_contract": _collect_db_contract(data_dir),
         "model_registry": _collect_model_registry_summary(data_dir),
         "active_models": _collect_active_models(data_dir),
@@ -365,8 +430,14 @@ def build_reference_snapshot(
         _reset_data_dir(data_dir)
     _ensure_empty_data_dir(data_dir)
 
-    _seed_reference_dataset(data_dir, owner=owner, actor=actor)
-    payload = _build_payload(data_dir)
+    projections = _prepare_layer_projections()
+    _seed_reference_dataset(
+        data_dir,
+        owner=owner,
+        actor=actor,
+        projections=projections,
+    )
+    payload = _build_payload(data_dir, projections=projections)
     _write_json(snapshot_path, payload)
     return payload
 

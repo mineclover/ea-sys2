@@ -9,10 +9,10 @@ Only depends on ea_kernel.types — usable by all profile modules.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
+from typing import Any
 
-from ea_kernel.types import KernelValidityRule, I18nString
-
+from ea_kernel.types import I18nString, KernelValidityRule
 
 # ── Core Profile Types ──────────────────────────────────────────
 
@@ -98,7 +98,7 @@ class KernelProfile:
 
 # ── Framework Interface Types ───────────────────────────────────
 
-class PatternType(str, Enum):
+class PatternType(StrEnum):
     """Pattern classification for validity rule source/target patterns."""
     WILDCARD = "wildcard"       # "*"
     CATEGORY = "category"       # "@CategoryName"
@@ -106,7 +106,7 @@ class PatternType(str, Enum):
     EXACT = "exact"             # "ElementName"
 
 
-class ValidationCategory(str, Enum):
+class ValidationCategory(StrEnum):
     """Outcome categories for build-time validation."""
     ENTITY_NOT_FOUND = "entity_not_found"
     NO_MATCHING_RULE = "no_matching_rule"
@@ -145,7 +145,7 @@ class ProfileVersion:
     profile_name: str
     version: str
     content_hash: str                # sha256
-    data: dict                       # serialized profile dict
+    data: dict[str, Any]             # serialized profile dict
     created_at: str                  # ISO 8601 UTC
     parent_id: str | None = None
     author: str = ""
@@ -153,7 +153,7 @@ class ProfileVersion:
     origin: str = ""                 # ProfileOrigin value, empty = unknown
 
 
-class ProfileOrigin(str, Enum):
+class ProfileOrigin(StrEnum):
     """How a profile was loaded."""
     BUILTIN = "builtin"
     BUILDER = "builder"
@@ -164,7 +164,7 @@ class ProfileOrigin(str, Enum):
 
 # ── Diff ─────────────────────────────────────────────────────────
 
-class DiffChangeType(str, Enum):
+class DiffChangeType(StrEnum):
     ADDED = "added"
     REMOVED = "removed"
     MODIFIED = "modified"
@@ -262,7 +262,7 @@ class BackupError(Exception):
 
 # ── Audit ──────────────────────────────────────────────────────
 
-class AuditSeverity(str, Enum):
+class AuditSeverity(StrEnum):
     """Severity level for audit findings."""
     ERROR = "error"       # Must fix: invalid refs, conflicting rules
     WARNING = "warning"   # Should fix: dead rules, low coverage

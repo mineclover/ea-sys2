@@ -5,8 +5,15 @@ In-memory cache backed by optional StoragePort for persistence.
 
 from __future__ import annotations
 
-from ea_kernel.profile_types import KernelProfile, ProfileOrigin, ProfileRegistryError, ProfileStoreError
+from contextlib import suppress
+
 from ea_kernel.profile_store import StoragePort
+from ea_kernel.profile_types import (
+    KernelProfile,
+    ProfileOrigin,
+    ProfileRegistryError,
+    ProfileStoreError,
+)
 
 
 class ProfileRegistry:
@@ -34,10 +41,8 @@ class ProfileRegistry:
         self._origins[profile.name] = origin
 
         if self._store is not None:
-            try:
+            with suppress(ProfileStoreError):
                 self._store.store(profile, origin=origin)
-            except ProfileStoreError:
-                pass  # already persisted (e.g., rollback to existing version)
 
     def get(self, name: str) -> KernelProfile | None:
         return self._profiles.get(name)
@@ -116,7 +121,5 @@ class ProfileRegistry:
                 self._profiles[profile.name] = profile
                 self._origins[profile.name] = ProfileOrigin.BUILTIN
                 if self._store is not None:
-                    try:
+                    with suppress(ProfileStoreError):
                         self._store.store(profile, origin=ProfileOrigin.BUILTIN)
-                    except ProfileStoreError:
-                        pass  # already persisted from a previous session

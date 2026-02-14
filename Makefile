@@ -1,4 +1,4 @@
-.PHONY: install dev test test-kernel test-needs test-decision test-flow test-governance test-infra test-kernel-governance-db test-kernel-governance-reference review-kernel-alignment review-kernel-self-alignment check-kernel-governance-drift rehearse-kernel-governance-recovery build-kernel-governance-reference verify-kernel-governance-reference gate-kernel-governance-db gate-kernel-governance-reference lint format typecheck web-dev web-build
+.PHONY: install dev test test-kernel test-kernel-contract test-kernel-self test-needs test-decision test-flow test-governance test-infra test-kernel-governance-db test-kernel-governance-reference test-kernel-contract-snapshot review-kernel-alignment review-kernel-self-alignment run-kernel-self-check run-kernel-self-check-strict gate-kernel-self check-kernel-governance-drift rehearse-kernel-governance-recovery build-kernel-governance-reference verify-kernel-governance-reference build-kernel-contract-snapshots verify-kernel-contract-snapshots gate-kernel-governance-db gate-kernel-governance-reference lint-kernel-governance typecheck-kernel-governance gate-kernel-stability lint format typecheck web-dev web-build
 
 # Installation
 install:
@@ -9,11 +9,17 @@ dev:
 
 # Testing (all packages)
 test:
-	uv run pytest packages/ea-kernel/tests packages/ea-needs/tests packages/ea-decision/tests packages/ea-flow/tests packages/ea-governance/tests packages/ea-infra/tests -v
+	uv run pytest packages/ea-kernel/tests packages/ea-kernel-contract/tests packages/ea-needs/tests packages/ea-decision/tests packages/ea-flow/tests packages/ea-governance/tests packages/ea-infra/tests -v
 
 # Testing (individual packages)
 test-kernel:
 	uv run pytest packages/ea-kernel/tests -v
+
+test-kernel-contract:
+	uv run pytest packages/ea-kernel-contract/tests -v
+
+test-kernel-self:
+	uv run pytest packages/ea-kernel-self/tests -v
 
 test-needs:
 	uv run pytest packages/ea-needs/tests -v
@@ -44,6 +50,11 @@ test-kernel-governance-reference:
 		packages/ea-kernel/tests/test_kernel_governance_reference_snapshot.py \
 		-q
 
+test-kernel-contract-snapshot:
+	uv run pytest \
+		packages/ea-kernel/tests/test_kernel_contract_snapshot.py \
+		-q
+
 review-kernel-alignment:
 	uv run python packages/ea-kernel/src/ea_kernel/scripts/review_ralph_tui_kernel_alignment.py \
 		--strict \
@@ -53,6 +64,17 @@ review-kernel-self-alignment:
 	uv run python packages/ea-kernel/src/ea_kernel/scripts/review_kernel_self_alignment.py \
 		--strict \
 		--output-json packages/ea-kernel/docs/reference/kernel_self_alignment.latest.json
+
+run-kernel-self-check:
+	uv run ea-kernel-self \
+		--output-json packages/ea-kernel/docs/reference/ea_kernel_self.latest.json
+
+run-kernel-self-check-strict:
+	uv run ea-kernel-self \
+		--strict \
+		--output-json packages/ea-kernel/docs/reference/ea_kernel_self.latest.json
+
+gate-kernel-self: test-kernel-self run-kernel-self-check-strict
 
 check-kernel-governance-drift:
 	@tmp_dir=$$(mktemp -d 2>/dev/null || mktemp -d -t ea-kernel-drift); \
@@ -72,9 +94,45 @@ build-kernel-governance-reference:
 verify-kernel-governance-reference:
 	uv run python packages/ea-kernel/src/ea_kernel/scripts/kernel_governance_reference_snapshot.py verify
 
+build-kernel-contract-snapshots:
+	uv run python packages/ea-kernel/src/ea_kernel/scripts/kernel_contract_snapshot.py build
+
+verify-kernel-contract-snapshots:
+	uv run python packages/ea-kernel/src/ea_kernel/scripts/kernel_contract_snapshot.py verify
+
 gate-kernel-governance-db: check-kernel-governance-drift rehearse-kernel-governance-recovery test-kernel-governance-db
 
 gate-kernel-governance-reference: build-kernel-governance-reference verify-kernel-governance-reference test-kernel-governance-reference
+
+lint-kernel-governance:
+	uv run ruff check \
+		packages/ea-kernel/src/ea_kernel/governance.py \
+		packages/ea-kernel/src/ea_kernel/migrations/kernel_governance.py \
+		packages/ea-kernel/src/ea_kernel/model_registration.py \
+		packages/ea-kernel/src/ea_kernel/scripts/check_kernel_governance_drift.py \
+		packages/ea-kernel/src/ea_kernel/scripts/rehearse_kernel_governance_recovery.py \
+		packages/ea-kernel/src/ea_kernel/scripts/kernel_governance_reference_snapshot.py \
+		packages/ea-kernel/examples/validate_ralph_tui_layers.py \
+		packages/ea-governance/src/ea_governance/transaction.py \
+		packages/ea-governance/src/ea_governance/execution_service.py \
+		packages/ea-governance/src/ea_governance/facade.py \
+		packages/ea-governance/tests/test_transaction_persistence.py \
+		packages/ea-kernel/tests/test_validate_ralph_tui_layers.py
+
+typecheck-kernel-governance:
+	uv run mypy --follow-imports=skip \
+		packages/ea-kernel/src/ea_kernel/governance.py \
+		packages/ea-kernel/src/ea_kernel/migrations/kernel_governance.py \
+		packages/ea-kernel/src/ea_kernel/model_registration.py \
+		packages/ea-kernel/src/ea_kernel/scripts/check_kernel_governance_drift.py \
+		packages/ea-kernel/src/ea_kernel/scripts/rehearse_kernel_governance_recovery.py \
+		packages/ea-kernel/src/ea_kernel/scripts/kernel_governance_reference_snapshot.py \
+		packages/ea-kernel/examples/validate_ralph_tui_layers.py \
+		packages/ea-governance/src/ea_governance/transaction.py \
+		packages/ea-governance/src/ea_governance/execution_service.py \
+		packages/ea-governance/src/ea_governance/facade.py
+
+gate-kernel-stability: review-kernel-alignment review-kernel-self-alignment gate-kernel-self gate-kernel-governance-db gate-kernel-governance-reference lint-kernel-governance typecheck-kernel-governance test-kernel
 
 # Linting
 lint:

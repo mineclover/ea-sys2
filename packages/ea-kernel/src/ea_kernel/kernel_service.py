@@ -5,16 +5,17 @@ Pure functions returning structured dicts — suitable for CLI, MCP, or API cons
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from ea_kernel.types import (
-    KernelEntity,
-    KernelRelation,
-    KernelRole,
     KernelSchema,
     Layer,
-    RuleConfidence,
     RuleGroup,
     RuleMetadata,
 )
+
+if TYPE_CHECKING:
+    from ea_kernel.rule_corpus import RuleCorpus
 
 # Layer display names
 _LAYER_LABELS: dict[Layer, str] = {
@@ -30,7 +31,7 @@ def _get_spec() -> KernelSchema:
     return KERNEL_SPEC
 
 
-def _get_corpus():  # -> RuleCorpus
+def _get_corpus() -> RuleCorpus:
     from ea_kernel.rule_corpus import RuleCorpus
     from ea_kernel.spec import KERNEL_SPEC
     from ea_kernel.spec_loader import load_kernel_rules_with_metadata
@@ -47,13 +48,13 @@ def _get_metadata_map() -> dict[str, RuleMetadata]:
 # ── UC1: Entity/Relation exploration ──────────────────────────
 
 
-def list_entities() -> dict:
+def list_entities() -> dict[str, Any]:
     """UC1: List all kernel entities grouped by layer with hierarchy tree."""
     spec = _get_spec()
-    layers: list[dict] = []
+    layers: list[dict[str, Any]] = []
     for layer in Layer:
         entities_in = spec.entities_in_layer(layer)
-        layer_data: dict = {
+        layer_data: dict[str, Any] = {
             "name": _LAYER_LABELS[layer],
             "count": len(entities_in),
             "entities": [
@@ -73,13 +74,13 @@ def list_entities() -> dict:
     }
 
 
-def list_relations() -> dict:
+def list_relations() -> dict[str, Any]:
     """UC1: List all kernel relations grouped by layer with roles."""
     spec = _get_spec()
-    layers: list[dict] = []
+    layers: list[dict[str, Any]] = []
     for layer in (Layer.L2, Layer.L3):
         relations_in = spec.relations_in_layer(layer)
-        layer_data: dict = {
+        layer_data: dict[str, Any] = {
             "name": _LAYER_LABELS[layer],
             "count": len(relations_in),
             "relations": [
@@ -105,7 +106,7 @@ def list_relations() -> dict:
 # ── UC2: Profile detail ──────────────────────────────────────
 
 
-def describe_profile(name: str) -> dict | None:
+def describe_profile(name: str) -> dict[str, Any] | None:
     """UC2: Describe a profile — elements by layer, relations, rule summary."""
     from ea_kernel.profile_registry import ProfileRegistry
     registry = ProfileRegistry()
@@ -115,7 +116,7 @@ def describe_profile(name: str) -> dict | None:
         return None
 
     # Elements grouped by domain layer
-    elements_by_layer: list[dict] = []
+    elements_by_layer: list[dict[str, Any]] = []
     for layer in profile.domain_layers():
         elems = profile.elements_in_layer(layer)
         elements_by_layer.append({
@@ -154,7 +155,7 @@ def describe_profile(name: str) -> dict | None:
 # ── UC3: Rule exploration/filtering ──────────────────────────
 
 
-def list_rules(group: str | None = None, relation: str | None = None) -> dict:
+def list_rules(group: str | None = None, relation: str | None = None) -> dict[str, Any]:
     """UC3: List rules with optional filtering by group or relation.
 
     If neither filter is given, returns group-level summary.
@@ -182,7 +183,9 @@ def list_rules(group: str | None = None, relation: str | None = None) -> dict:
         return {"total": len(rules), "group": group, "rules": rules}
 
     if relation is not None:
-        entries = [e for e in corpus.entries if e.rule.relationship_name == relation]
+        relation_entries = [
+            e for e in corpus.entries if e.rule.relationship_name == relation
+        ]
         rules = [
             {
                 "id": e.rule.id,
@@ -193,7 +196,7 @@ def list_rules(group: str | None = None, relation: str | None = None) -> dict:
                 "priority": e.rule.priority,
                 "notes": e.rule.notes,
             }
-            for e in sorted(entries, key=lambda e: e.rule.id)
+            for e in sorted(relation_entries, key=lambda e: e.rule.id)
         ]
         return {"total": len(rules), "relation": relation, "rules": rules}
 
@@ -209,7 +212,7 @@ def list_rules(group: str | None = None, relation: str | None = None) -> dict:
 # ── UC4: Single rule detail ─────────────────────────────────
 
 
-def describe_rule(rule_id: str) -> dict | None:
+def describe_rule(rule_id: str) -> dict[str, Any] | None:
     """UC4: Describe a single rule with full metadata."""
     corpus = _get_corpus()
     entry = corpus._by_id.get(rule_id)
@@ -244,7 +247,7 @@ def describe_rule(rule_id: str) -> dict | None:
 # ── UC5: Evidence-based judgment ─────────────────────────────
 
 
-def judge(source: str, target: str, relation: str) -> dict:
+def judge(source: str, target: str, relation: str) -> dict[str, Any]:
     """UC5: Evidence-based judgment for a relationship triple."""
     spec = _get_spec()
 
@@ -262,7 +265,7 @@ def judge(source: str, target: str, relation: str) -> dict:
     corpus = _get_corpus()
     report = corpus.judge(source, target, relation)
 
-    evidence: list[dict] = []
+    evidence: list[dict[str, Any]] = []
     for ev in report.evidence:
         if not ev.matched:
             continue

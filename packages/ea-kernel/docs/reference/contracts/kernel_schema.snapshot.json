@@ -1,0 +1,531 @@
+{
+  "attributes": [
+    {
+      "name": "uid",
+      "value_type": "string"
+    },
+    {
+      "name": "name",
+      "value_type": "string"
+    },
+    {
+      "name": "description",
+      "value_type": "string"
+    },
+    {
+      "name": "qualified_name",
+      "value_type": "string"
+    },
+    {
+      "name": "is_abstract",
+      "value_type": "boolean"
+    },
+    {
+      "name": "is_composite",
+      "value_type": "boolean"
+    },
+    {
+      "name": "is_derived",
+      "value_type": "boolean"
+    },
+    {
+      "name": "is_readonly",
+      "value_type": "boolean"
+    },
+    {
+      "name": "is_ordered",
+      "value_type": "boolean"
+    },
+    {
+      "name": "is_unique",
+      "value_type": "boolean"
+    },
+    {
+      "name": "multiplicity_lower",
+      "value_type": "integer"
+    },
+    {
+      "name": "multiplicity_upper",
+      "value_type": "integer"
+    },
+    {
+      "name": "visibility",
+      "value_type": "string"
+    },
+    {
+      "name": "direction",
+      "value_type": "string"
+    },
+    {
+      "name": "guard_expr",
+      "value_type": "string"
+    },
+    {
+      "name": "ordering",
+      "value_type": "string"
+    },
+    {
+      "name": "layer",
+      "value_type": "string"
+    },
+    {
+      "name": "kind",
+      "value_type": "string"
+    },
+    {
+      "name": "execution_mode",
+      "value_type": "string"
+    },
+    {
+      "name": "join_mode",
+      "value_type": "string"
+    }
+  ],
+  "contract_version": "1.0.0",
+  "entities": [
+    {
+      "description": "Root of all kernel elements",
+      "is_abstract": true,
+      "layer": "L1",
+      "name": "element",
+      "owns": [
+        "name",
+        "description",
+        "qualified_name",
+        "layer"
+      ],
+      "owns_key": "uid",
+      "plays": [
+        "membership:member",
+        "ownership:owned"
+      ]
+    },
+    {
+      "description": "Element that can contain other named elements",
+      "is_abstract": true,
+      "layer": "L1",
+      "name": "namespace",
+      "owns": [
+        "visibility"
+      ],
+      "parent": "element",
+      "plays": [
+        "membership:container",
+        "ownership:owner"
+      ]
+    },
+    {
+      "description": "Classifies instances \u2014 KerML Type equivalent",
+      "is_abstract": true,
+      "layer": "L1",
+      "name": "metatype",
+      "owns": [
+        "is_abstract"
+      ],
+      "parent": "namespace",
+      "plays": [
+        "specialization:supertype",
+        "specialization:subtype",
+        "feature_typing:typing",
+        "association:source_end",
+        "association:target_end"
+      ]
+    },
+    {
+      "description": "Typed characteristic of a metatype \u2014 KerML Feature (is also a Type)",
+      "is_abstract": false,
+      "layer": "L1",
+      "name": "feature",
+      "owns": [
+        "multiplicity_lower",
+        "multiplicity_upper",
+        "is_ordered",
+        "is_unique",
+        "is_derived",
+        "is_composite",
+        "is_readonly"
+      ],
+      "parent": "metatype",
+      "plays": [
+        "feature_typing:typed_feature",
+        "connector:source",
+        "connector:target",
+        "redefinition:original",
+        "redefinition:redefining",
+        "subsetting:subsetted",
+        "subsetting:subsetting_feature"
+      ]
+    },
+    {
+      "description": "Access or interaction point exposed by a structure",
+      "is_abstract": false,
+      "layer": "L1",
+      "name": "port",
+      "owns": [],
+      "parent": "feature",
+      "plays": [
+        "connector:source",
+        "connector:target"
+      ]
+    },
+    {
+      "description": "Metatype that can be instantiated",
+      "is_abstract": true,
+      "layer": "L1",
+      "name": "classifier",
+      "owns": [],
+      "parent": "metatype",
+      "plays": []
+    },
+    {
+      "description": "Active structured classifier \u2014 equivalent to UML Class",
+      "is_abstract": false,
+      "layer": "L1",
+      "name": "structure",
+      "owns": [],
+      "parent": "classifier",
+      "plays": []
+    },
+    {
+      "description": "Passive classifier with identity \u2014 data-bearing object",
+      "is_abstract": false,
+      "layer": "L1",
+      "name": "item",
+      "owns": [],
+      "parent": "classifier",
+      "plays": []
+    },
+    {
+      "description": "Value type without identity",
+      "is_abstract": false,
+      "layer": "L1",
+      "name": "datatype",
+      "owns": [],
+      "parent": "classifier",
+      "plays": []
+    },
+    {
+      "description": "Concrete namespace container \u2014 groups elements",
+      "is_abstract": false,
+      "layer": "L1",
+      "name": "package",
+      "owns": [],
+      "parent": "namespace",
+      "plays": [
+        "association:source_end",
+        "association:target_end"
+      ]
+    },
+    {
+      "description": "Unit of behavior \u2014 a feature that participates in successions",
+      "is_abstract": false,
+      "layer": "L4",
+      "name": "step",
+      "owns": [],
+      "parent": "feature",
+      "plays": [
+        "succession:predecessor",
+        "succession:successor",
+        "triggering:responding"
+      ]
+    },
+    {
+      "description": "Executable step \u2014 concrete unit of computation",
+      "is_abstract": false,
+      "layer": "L4",
+      "name": "action",
+      "owns": [],
+      "parent": "step",
+      "plays": []
+    },
+    {
+      "description": "State change occurrence that triggers behavior",
+      "is_abstract": false,
+      "layer": "L4",
+      "name": "event",
+      "owns": [],
+      "parent": "feature",
+      "plays": [
+        "triggering:trigger_source",
+        "succession:predecessor",
+        "succession:successor"
+      ]
+    },
+    {
+      "description": "Evaluatable value computation \u2014 composable via ownership",
+      "is_abstract": false,
+      "layer": "L4",
+      "name": "expression",
+      "owns": [
+        "kind"
+      ],
+      "parent": "feature",
+      "plays": [
+        "guarding:condition"
+      ]
+    },
+    {
+      "description": "Behavioral state \u2014 classifies situations within a lifecycle",
+      "is_abstract": false,
+      "layer": "L4",
+      "name": "state",
+      "owns": [],
+      "parent": "metatype",
+      "plays": [
+        "guarding:guarded_element",
+        "transition:source_state",
+        "transition:target_state"
+      ]
+    }
+  ],
+  "generated_by": "kernel_contract_snapshot.py",
+  "kernel_version": "2.5.0",
+  "relations": [
+    {
+      "description": "Element belongs to a namespace",
+      "layer": "L2",
+      "name": "membership",
+      "owns": [],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "container",
+          "player": "namespace"
+        },
+        {
+          "name": "member",
+          "player": "element"
+        }
+      ]
+    },
+    {
+      "description": "Compositional ownership of elements",
+      "layer": "L2",
+      "name": "ownership",
+      "owns": [
+        "is_composite"
+      ],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "owner",
+          "player": "namespace"
+        },
+        {
+          "name": "owned",
+          "player": "element"
+        }
+      ]
+    },
+    {
+      "description": "Subtype relationship \u2014 inheritance of features",
+      "layer": "L2",
+      "name": "specialization",
+      "owns": [],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "supertype",
+          "player": "metatype"
+        },
+        {
+          "name": "subtype",
+          "player": "metatype"
+        }
+      ]
+    },
+    {
+      "description": "Feature is typed by a metatype",
+      "layer": "L2",
+      "name": "feature_typing",
+      "owns": [],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "typed_feature",
+          "player": "feature"
+        },
+        {
+          "name": "typing",
+          "player": "metatype"
+        }
+      ]
+    },
+    {
+      "description": "Structural connection between metatypes",
+      "layer": "L2",
+      "name": "association",
+      "owns": [
+        "name",
+        "is_derived"
+      ],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "source_end",
+          "player": "metatype"
+        },
+        {
+          "name": "target_end",
+          "player": "metatype"
+        }
+      ]
+    },
+    {
+      "description": "Link between features \u2014 base for behavioral qualification",
+      "layer": "L2",
+      "name": "connector",
+      "owns": [
+        "name"
+      ],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "source",
+          "player": "feature"
+        },
+        {
+          "name": "target",
+          "player": "feature"
+        }
+      ]
+    },
+    {
+      "description": "Feature redefines another feature in a specialization context",
+      "layer": "L2",
+      "name": "redefinition",
+      "owns": [],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "original",
+          "player": "feature"
+        },
+        {
+          "name": "redefining",
+          "player": "feature"
+        }
+      ]
+    },
+    {
+      "description": "Feature values are a subset of another feature's values",
+      "layer": "L2",
+      "name": "subsetting",
+      "owns": [],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "subsetted",
+          "player": "feature"
+        },
+        {
+          "name": "subsetting_feature",
+          "player": "feature"
+        }
+      ]
+    },
+    {
+      "description": "Data/object flow along a connector \u2014 behavioral Connector",
+      "layer": "L3",
+      "name": "flow",
+      "owns": [
+        "direction",
+        "ordering"
+      ],
+      "parent": "connector",
+      "roles": []
+    },
+    {
+      "description": "Temporal ordering with execution semantics",
+      "layer": "L3",
+      "name": "succession",
+      "owns": [
+        "guard_expr",
+        "execution_mode",
+        "join_mode"
+      ],
+      "parent": "connector",
+      "roles": [
+        {
+          "name": "predecessor",
+          "player": "feature"
+        },
+        {
+          "name": "successor",
+          "player": "feature"
+        }
+      ]
+    },
+    {
+      "description": "Message exchange between features",
+      "layer": "L3",
+      "name": "interaction",
+      "owns": [
+        "kind"
+      ],
+      "parent": "connector",
+      "roles": []
+    },
+    {
+      "description": "Event triggers a behavioral response",
+      "layer": "L3",
+      "name": "triggering",
+      "owns": [],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "trigger_source",
+          "player": "feature"
+        },
+        {
+          "name": "responding",
+          "player": "step"
+        }
+      ]
+    },
+    {
+      "description": "Condition guards a behavioral element",
+      "layer": "L3",
+      "name": "guarding",
+      "owns": [
+        "guard_expr"
+      ],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "guarded_element",
+          "player": "state"
+        },
+        {
+          "name": "condition",
+          "player": "expression"
+        }
+      ]
+    },
+    {
+      "description": "State transition \u2014 guard condition \ucda9\uc871 \uc2dc source\uc5d0\uc11c target \uc0c1\ud0dc\ub85c \uc804\uc774",
+      "layer": "L3",
+      "name": "transition",
+      "owns": [
+        "guard_expr"
+      ],
+      "owns_key": "uid",
+      "roles": [
+        {
+          "name": "source_state",
+          "player": "state"
+        },
+        {
+          "name": "target_state",
+          "player": "state"
+        }
+      ]
+    }
+  ],
+  "snapshot_kind": "ea_kernel_schema_contract",
+  "stats": {
+    "attributes": 20,
+    "entities": 15,
+    "relations": 14
+  }
+}

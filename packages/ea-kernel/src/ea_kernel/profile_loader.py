@@ -34,15 +34,12 @@ TOML format:
 
 from __future__ import annotations
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+import tomllib
 from pathlib import Path
 
+from ea_kernel.profile_builder import ProfileBuilder
 from ea_kernel.profile_types import KernelProfile
 from ea_kernel.types import KernelConditionType, KernelRuleCondition, KernelSchema
-from ea_kernel.profile_builder import ProfileBuilder
 
 _CONDITION_MAP: dict[str, KernelConditionType] = {
     "LAYER_ORDER": KernelConditionType.LAYER_ORDER,
@@ -64,8 +61,8 @@ def load_profile(
     """Load a profile from a TOML file."""
     try:
         content = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise ProfileLoadError(f"Profile file not found: {path}")
+    except FileNotFoundError as err:
+        raise ProfileLoadError(f"Profile file not found: {path}") from err
     return load_profile_from_content(content, kernel)
 
 
@@ -76,8 +73,8 @@ def load_profile_from_content(
     """Load a profile from a TOML string."""
     try:
         doc = tomllib.loads(content)
-    except tomllib.TOMLDecodeError as e:
-        raise ProfileLoadError(f"Invalid TOML: {e}")
+    except tomllib.TOMLDecodeError as err:
+        raise ProfileLoadError(f"Invalid TOML: {err}") from err
 
     profile_section = doc.get("profile", {})
     name = profile_section.get("name")

@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import pytest
-
-from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileMetadata, ProfileOrigin, ProfileRelation, ProfileStoreError
-from ea_kernel.types import KernelValidityRule
 from ea_kernel.profile_serializer import compute_content_hash, profile_to_dict
 from ea_kernel.profile_store import SQLiteProfileStore
+from ea_kernel.profile_types import (
+    KernelProfile,
+    ProfileElement,
+    ProfileMetadata,
+    ProfileOrigin,
+    ProfileRelation,
+    ProfileStoreError,
+)
+from ea_kernel.types import KernelValidityRule
 
 
 def _make_profile(name: str = "Test", version: str = "1.0") -> KernelProfile:
@@ -209,10 +215,10 @@ class TestListTags:
         assert tags[0].name == "old"
 
     def test_list_by_profile_name(self, store):
-        pvA = store.store(_make_profile("A"))
-        pvB = store.store(_make_profile("B"))
-        store.tag(pvA.id, "stable")
-        store.tag(pvB.id, "stable")
+        pv_a = store.store(_make_profile("A"))
+        pv_b = store.store(_make_profile("B"))
+        store.tag(pv_a.id, "stable")
+        store.tag(pv_b.id, "stable")
         tags = store.list_tags(profile_name="A")
         assert len(tags) == 1
         assert tags[0].profile_name == "A"

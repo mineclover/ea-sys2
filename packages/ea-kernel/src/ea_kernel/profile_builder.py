@@ -10,7 +10,8 @@ Reduces profile boilerplate from ~500 lines to ~80 lines by providing:
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
+from typing import cast
 
 from ea_kernel.profile_types import (
     KernelProfile,
@@ -21,10 +22,10 @@ from ea_kernel.profile_types import (
     ProfileRelation,
 )
 from ea_kernel.types import (
+    I18nString,
     KernelConditionType,
     KernelRuleCondition,
     KernelSchema,
-    I18nString,
     KernelValidityRule,
     RuleCorpusEntry,
     RuleMetadata,
@@ -140,7 +141,7 @@ class ProfileBuilder:
         ))
         return self
 
-    def elements_bulk(self, elements: list[dict]) -> ProfileBuilder:
+    def elements_bulk(self, elements: list[dict[str, object]]) -> ProfileBuilder:
         """Add multiple elements from dicts.
 
         Each dict: {"name": ..., "layer": ..., "category": ...,
@@ -148,11 +149,11 @@ class ProfileBuilder:
         """
         for elem in elements:
             self.element(
-                elem["name"],
-                layer=elem["layer"],
-                category=elem["category"],
-                kernel_type=elem.get("kernel_type"),
-                description=elem.get("description", ""),
+                cast(str, elem["name"]),
+                layer=cast(str, elem["layer"]),
+                category=cast(str, elem["category"]),
+                kernel_type=cast(str | None, elem.get("kernel_type")),
+                description=cast(I18nString, elem.get("description", "")),
             )
         return self
 

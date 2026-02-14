@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import pytest
-
+from ea_kernel.profile_schema import ProfileSchema
 from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileRelation
 from ea_kernel.types import KernelValidityRule
-from ea_kernel.profile_schema import ProfileSchema
 
 
 def _make_profile() -> KernelProfile:

@@ -11,14 +11,13 @@ Usage:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-from ea_kernel.profile_loader import load_profile
-from ea_kernel.spec import KERNEL_SPEC
-from ea_kernel.rule_corpus import RuleCorpus
-from ea_kernel.spec_loader import load_kernel_rules_with_metadata
 from ea_kernel.profile_auditor import ProfileAuditor
+from ea_kernel.profile_loader import load_profile
+from ea_kernel.rule_corpus import RuleCorpus
+from ea_kernel.spec import KERNEL_SPEC
+from ea_kernel.spec_loader import load_kernel_rules_with_metadata
 
 
 def main() -> None:
@@ -55,7 +54,7 @@ def main() -> None:
     _, _, metadata_map = load_kernel_rules_with_metadata()
     corpus = RuleCorpus.from_kernel_spec(KERNEL_SPEC, metadata_map)
     print(f"   ✓ Loaded {len(corpus.entries)} kernel rules")
-    print(f"   Note: Profile validation uses profile's own rules (17), not kernel rules")
+    print("   Note: Profile validation uses profile's own rules (17), not kernel rules")
     print()
 
     # ── Validate Defined Relations ──

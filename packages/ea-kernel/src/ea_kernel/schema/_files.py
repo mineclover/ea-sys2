@@ -4,7 +4,6 @@ from pathlib import Path
 
 from ea_kernel.types import SchemaFile, SchemaType
 
-
 SCHEMA_DIR = Path(__file__).parent.parent / "schemas"
 
 SCHEMA_FILES: tuple[SchemaFile, ...] = (

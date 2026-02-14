@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from ea_kernel.profile_types import (
-    KernelProfile,
     DiffChangeType,
     ElementChange,
+    KernelProfile,
     ProfileDiff,
     RelationChange,
     RuleChange,

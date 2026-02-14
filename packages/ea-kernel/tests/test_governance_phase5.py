@@ -13,23 +13,22 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-
 from ea_kernel.governance_types import (
-    RuleLifecycle,
-    RuleLifecycleState, 
-    RuleProvenance, 
-    TriggerEventType,
     RuleAsset,
+    RuleLifecycle,
+    RuleLifecycleState,
+    RuleProvenance,
 )
+from ea_kernel.lifecycle_controller import LifecycleController
 from ea_kernel.lifecycle_events import InMemoryEventBus, LifecycleEvent
 from ea_kernel.notification_service import MockNotificationService
 from ea_kernel.rule_asset_store import RuleAssetStore, SQLiteRuleAssetStore
 from ea_kernel.types import (
-    KernelValidityRule, 
-    RuleCategory, 
-    RuleConfidence, 
-    RuleCorpusEntry, 
-    RuleGroup, 
+    KernelValidityRule,
+    RuleCategory,
+    RuleConfidence,
+    RuleCorpusEntry,
+    RuleGroup,
     RuleMetadata,
 )
 
@@ -58,11 +57,10 @@ def notifier() -> MockNotificationService:
 
 @pytest.fixture
 def controller(
-    event_bus, 
-    rule_store, 
+    event_bus,
+    rule_store,
     notifier,
 ) -> LifecycleController:
-    from ea_kernel.lifecycle_controller import LifecycleController
     return LifecycleController(
         event_bus=event_bus,
         rule_store=rule_store,
@@ -94,12 +92,12 @@ def make_rule_asset(store: RuleAssetStore, rule_id: str, state: RuleLifecycleSta
         source_type="manual",
         source_reference="test-ref",
     )
-    
+
     # Must create as DRAFT first
     lifecycle_draft = RuleLifecycle(current_state=RuleLifecycleState.DRAFT)
     asset = RuleAsset(entry=entry, provenance=provenance, lifecycle=lifecycle_draft)
     store.create(asset)
-    
+
     # Transition to target state
     if state == RuleLifecycleState.REVIEW:
         store.transition(rule_id, RuleLifecycleState.REVIEW, "human:author", "Submit")
@@ -116,40 +114,40 @@ def make_rule_asset(store: RuleAssetStore, rule_id: str, state: RuleLifecycleSta
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestLifecycleControllerEvents:
-    
+
     def test_rule_submitted_notification(
-        self, 
-        controller, 
-        rule_store, 
-        event_bus, 
+        self,
+        controller,
+        rule_store,
+        event_bus,
         notifier,
     ) -> None:
         """RULE_SUBMITTED triggers notification to reviewer."""
         # Setup: Create rule in Draft/Review
         make_rule_asset(rule_store, "rule-sub", RuleLifecycleState.DRAFT)
-        
+
         # Trigger event
         event_bus.publish(LifecycleEvent.rule_submitted("rule-sub", "human:author"))
-        
+
         # Check notification
         assert len(notifier.sent) == 1
         assert notifier.sent[0].recipient == "role:reviewer"
         assert "rule-sub" in notifier.sent[0].subject
 
     def test_rule_approved_notification(
-        self, 
-        controller, 
-        rule_store, 
-        event_bus, 
+        self,
+        controller,
+        rule_store,
+        event_bus,
         notifier,
     ) -> None:
         """RULE_APPROVED triggers notification to author and subscribers."""
         # Setup
         make_rule_asset(rule_store, "rule-app", RuleLifecycleState.APPROVED)
-        
+
         # Trigger event
         event_bus.publish(LifecycleEvent.rule_approved("rule-app", "human:admin"))
-        
+
         # Check notifications
         assert len(notifier.sent) >= 2
         # To author
@@ -158,20 +156,20 @@ class TestLifecycleControllerEvents:
         assert any(n.recipient == "role:subscriber" for n in notifier.sent)
 
     def test_corpus_updated_notification(
-        self, 
-        controller, 
-        event_bus, 
+        self,
+        controller,
+        event_bus,
         notifier,
     ) -> None:
         """CORPUS_UPDATED triggers general notification."""
         event_bus.publish(LifecycleEvent.corpus_updated("v2.5.0", "v2.4.0"))
-        
+
         assert len(notifier.sent) >= 1
         assert "v2.5.0" in notifier.sent[0].subject
 
 
 class TestAutoPromotion:
-    
+
     def test_auto_promotion_flow(
         self,
         tmp_path,
@@ -182,21 +180,20 @@ class TestAutoPromotion:
         """Test AnalysisReport -> Promotion Proposal -> Notification."""
         from ea_kernel.decision_store import SQLiteDecisionStore
         from ea_kernel.evidence_analyzer import (
-            AnalysisReport, 
+            AnalysisReport,
             RuleEffectiveness,
-            EffectivenessGrade
         )
         from ea_kernel.lifecycle_controller import LifecycleController
         from ea_kernel.promotion_engine import PromotionEngine
-        from ea_kernel.what_if_simulator import WhatIfSimulator, SimulationResult, ImpactLevel
-        
+        from ea_kernel.what_if_simulator import ImpactLevel, SimulationResult, WhatIfSimulator
+
         # Setup Mocks / Engines
         decision_store = SQLiteDecisionStore(tmp_path / "decisions_p5.db")
         # decision_store.initialize() # Not needed for SQLiteDecisionStore
-        
+
         promotion_engine = PromotionEngine(rule_store)
         what_if_simulator = WhatIfSimulator(decision_store)
-        
+
         # Mock WhatIfSimulator by subclassing since it uses assertions (slots)
         class MockSimulator(WhatIfSimulator):
             def simulate(self, changes, limit=1000):
@@ -207,9 +204,9 @@ class TestAutoPromotion:
                     safe_to_apply=True,
                     impact_level=ImpactLevel.LOW,
                 )
-        
+
         what_if_simulator = MockSimulator(decision_store)
-        
+
         controller = LifecycleController(
             event_bus=event_bus,
             rule_store=rule_store,
@@ -218,10 +215,10 @@ class TestAutoPromotion:
             promotion_engine=promotion_engine,
             what_if_simulator=what_if_simulator,
         )
-        
+
         # Setup: Rule in REVIEW state
         make_rule_asset(rule_store, "rule-promo", RuleLifecycleState.REVIEW)
-        
+
         # Create fake AnalysisReport with good effectiveness for rule-promo
         eff = RuleEffectiveness(
             rule_id="rule-promo",
@@ -232,7 +229,7 @@ class TestAutoPromotion:
             override_count=0,
             shadow_count=0,
         )
-        
+
         report = AnalysisReport(
             report_id="report-001",
             corpus_version_id="v1",
@@ -244,18 +241,17 @@ class TestAutoPromotion:
             conflict_hotspots=(),
             usage_profiles=(),
         )
-        
+
         # Execute Auto-Promotion
         controller.run_auto_promotion(report)
-        
+
         # Check: Proposal created
         proposals = promotion_engine.list_proposals()
         assert len(proposals) == 1
         assert proposals[0].rule_id == "rule-promo"
         assert "Auto-promotion" in proposals[0].rationale
-        
+
         # Check: Notification sent
         assert len(notifier.sent) == 1
         assert "Auto-Promotion Proposal" in notifier.sent[0].subject
         assert "rule-promo" in notifier.sent[0].subject
-

@@ -18,7 +18,6 @@ from ea_kernel.types import (
     RuleMetadata,
 )
 
-
 # Relations by layer — used for metadata inference
 _L2_RELATIONS = frozenset({
     "membership", "ownership", "specialization", "feature_typing",
@@ -100,9 +99,7 @@ class RuleCorpus:
             category = RuleCategory.DOMAIN
 
         # Confidence: deny rules with high priority or fallbacks → UNIVERSAL
-        if not rule.valid and rule.priority >= 80:
-            confidence = RuleConfidence.UNIVERSAL
-        elif not rule.valid and rule.priority == 1:
+        if not rule.valid and rule.priority >= 80 or not rule.valid and rule.priority == 1:
             confidence = RuleConfidence.UNIVERSAL
         else:
             confidence = RuleConfidence.COMMON

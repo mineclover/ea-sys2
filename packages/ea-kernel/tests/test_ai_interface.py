@@ -6,7 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
 from ea_kernel.ai_interface import AIDecisionInterface
 from ea_kernel.decision_ledger import DecisionLedger
 from ea_kernel.graph_view import TopologyGraph
@@ -20,7 +19,6 @@ from ea_kernel.types import (
     Recommendation,
     RuleConfidence,
 )
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Factory
@@ -261,7 +259,7 @@ class TestValidateModelWithContext:
         )
         results = ai.validate_model_with_context(elements, relations)
         assert len(results) > 0
-        for cr, ctx in results:
+        for _cr, ctx in results:
             assert isinstance(ctx, DecisionContext)
 
     def test_empty_model(self, ai):

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.profile_auditor import ProfileAuditor
 from ea_kernel.profile_registry import ProfileRegistry
@@ -20,8 +19,7 @@ from ea_kernel.profile_types import (
     ProfileStoreError,
     RegistryAuditReport,
 )
-from ea_kernel.types import KernelEntity, KernelRelation, KernelSchema, KernelValidityRule, Layer
-
+from ea_kernel.types import KernelSchema, KernelValidityRule
 
 # ── Fixtures ───────────────────────────────────────────────────
 

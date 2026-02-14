@@ -6,16 +6,23 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
 from ea_kernel.graph_view import TopologyGraph
 from ea_kernel.rule_corpus import RuleCorpus
 from ea_kernel.spec import KERNEL_SPEC
 from ea_kernel.types import (
     GraphEdge,
     GraphPath,
+    KernelEntity,
+    KernelRelation,
+    KernelSchema,
+    KernelValidityRule,
+    Layer,
+    RuleCategory,
     RuleConfidence,
+    RuleCorpusEntry,
+    RuleGroup,
+    RuleMetadata,
 )
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Graph construction
@@ -222,6 +229,7 @@ class TestReachable:
 
     def test_source_not_in_reachable(self, graph):
         reachable = graph.reachable("structure")
+        assert isinstance(reachable, tuple)
         # source is excluded from reachable set
         # (only if there's no self-loop edge; structure→structure association exists
         # but reachable excludes source by design)
@@ -251,7 +259,7 @@ class TestImpactAnalysis:
 
     def test_impact_values_are_paths(self, graph):
         impact = graph.impact_analysis("structure", direction="outgoing", max_depth=1)
-        for entity, paths in impact.items():
+        for _entity, paths in impact.items():
             assert all(isinstance(p, GraphPath) for p in paths)
 
     def test_impact_max_depth(self, graph):
@@ -280,7 +288,7 @@ class TestRelationDistribution:
 
     def test_all_values_positive(self, graph):
         dist = graph.relation_distribution()
-        for rel, count in dist.items():
+        for _rel, count in dist.items():
             assert count > 0
 
 
@@ -306,6 +314,75 @@ class TestWithCorpus:
         corpus = RuleCorpus.from_kernel_spec(KERNEL_SPEC)
         graph = TopologyGraph.from_spec(corpus)
         assert graph.edge_count > 0
+
+
+class TestDomainFiltering:
+    def _make_schema_and_corpus(self) -> tuple[KernelSchema, RuleCorpus]:
+        allow_alpha = KernelValidityRule(
+            id="alpha-allow",
+            source_pattern="structure",
+            target_pattern="item",
+            relationship_name="association",
+            valid=True,
+            priority=50,
+        )
+        deny_beta = KernelValidityRule(
+            id="beta-deny",
+            source_pattern="structure",
+            target_pattern="item",
+            relationship_name="association",
+            valid=False,
+            priority=40,
+        )
+        schema = KernelSchema(
+            attributes=(),
+            entities=(
+                KernelEntity(name="structure", layer=Layer.L1),
+                KernelEntity(name="item", layer=Layer.L1),
+            ),
+            relations=(KernelRelation(name="association", layer=Layer.L2),),
+            validity_rules=(allow_alpha, deny_beta),
+            layer_constraints=(),
+        )
+        entries = (
+            RuleCorpusEntry(
+                rule=allow_alpha,
+                metadata=RuleMetadata(
+                    domain="alpha",
+                    tags=("association",),
+                    category=RuleCategory.STRUCTURAL,
+                    confidence=RuleConfidence.COMMON,
+                    source="test",
+                    established_version="test",
+                    rationale="alpha allow",
+                    group=RuleGroup.ASSOCIATION,
+                ),
+            ),
+            RuleCorpusEntry(
+                rule=deny_beta,
+                metadata=RuleMetadata(
+                    domain="beta",
+                    tags=("association",),
+                    category=RuleCategory.STRUCTURAL,
+                    confidence=RuleConfidence.COMMON,
+                    source="test",
+                    established_version="test",
+                    rationale="beta deny",
+                    group=RuleGroup.ASSOCIATION,
+                ),
+            ),
+        )
+        return schema, RuleCorpus(entries, schema)
+
+    def test_domain_filter_keeps_only_winner_domain_edges(self) -> None:
+        schema, corpus = self._make_schema_and_corpus()
+
+        graph_alpha = TopologyGraph(schema, corpus, domain="alpha")
+        alpha_targets = {edge.target for edge in graph_alpha.outgoing("structure", "association")}
+        assert "item" in alpha_targets
+
+        graph_beta = TopologyGraph(schema, corpus, domain="beta")
+        assert graph_beta.edge_count == 0
 
 
 # ═════════════════════════════════════════════════════════════════════════════

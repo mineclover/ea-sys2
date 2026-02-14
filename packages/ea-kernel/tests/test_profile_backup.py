@@ -6,7 +6,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-
 from ea_kernel.profile_backup import MANAGED_FILES, BackupStore
 from ea_kernel.profile_types import BackupError, BackupFileEntry, BackupSnapshot
 
@@ -153,7 +152,6 @@ class TestRestore:
         snap = store.backup(version="v1", base_dir=toml_dir)
         # Mutate
         schema_path = toml_dir / "specs" / "kernel_schema.toml"
-        original = schema_path.read_text()
         schema_path.write_text("# destroyed\n")
         # Dry run: files not restored
         changed = store.restore(snap.id, base_dir=toml_dir, dry_run=True)

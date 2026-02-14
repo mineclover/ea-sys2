@@ -14,16 +14,15 @@ from typing import TYPE_CHECKING
 
 from ea_kernel.types import (
     DecisionRecord,
+    KernelValidityRule,
     RuleCategory,
     RuleConfidence,
     RuleCorpusEntry,
     RuleMetadata,
-    KernelValidityRule,
 )
 
 if TYPE_CHECKING:
     from ea_kernel.decision_store import DecisionStore
-    from ea_kernel.governance_types import StoredDecisionRecord
     from ea_kernel.rule_corpus import RuleCorpus
 
 
@@ -31,7 +30,7 @@ class DecisionLedger:
     """Append-only ledger of modeling decisions with corpus feedback.
 
     v2.5.0 breaking: record() mutates self and returns self (was immutable).
-    
+
     v2.6.0 (Governance Lifecycle Phase 1):
     - Optional DecisionStore for persistent storage
     - Corpus version tracking for judgment reproducibility
@@ -49,7 +48,7 @@ class DecisionLedger:
         corpus_version_id: str = "",
     ) -> None:
         """Initialize DecisionLedger.
-        
+
         Args:
             corpus: Optional RuleCorpus for judgment context
             store: Optional DecisionStore for persistent storage (Phase 1)
@@ -73,25 +72,25 @@ class DecisionLedger:
 
         Breaking change (v2.5.0): previously returned a new ledger.
         The ``ledger = ledger.record(d)`` pattern still works.
-        
+
         Phase 1 Enhancement:
         - If store is provided and persist=True, decision is also persisted
         - persist=False skips persistence (useful for replaying from store)
-        
+
         Args:
             decision: DecisionRecord to record
             persist: If True and store exists, persist to store. Default True.
-            
+
         Returns:
             self for method chaining
         """
         self._records.append(decision)
         self._triple_index.setdefault(decision.subject_triple, []).append(decision)
-        
+
         # Persist to store if available
         if self._store is not None and persist:
             self._store.store(decision, corpus_version_id=self._corpus_version_id)
-        
+
         return self
 
     # ── Query ──────────────────────────────────────────────────────
@@ -202,10 +201,10 @@ class DecisionLedger:
 
     def with_store(self, store: DecisionStore) -> DecisionLedger:
         """Return a new DecisionLedger with the given store attached.
-        
+
         Args:
             store: DecisionStore to attach
-            
+
         Returns:
             New DecisionLedger with store attached, sharing the same in-memory state
         """
@@ -223,36 +222,36 @@ class DecisionLedger:
         corpus_version_id: str | None = None,
     ) -> DecisionLedger:
         """Replay decisions from the attached store into in-memory state.
-        
+
         Useful for:
         - Reconstructing ledger state from persistent storage
         - Loading decisions from a specific corpus version
-        
+
         Args:
             corpus_version_id: If provided, only replay decisions for this version
-            
+
         Returns:
             self for method chaining
-            
+
         Raises:
             ValueError: If no store is attached
         """
         if self._store is None:
             msg = "Cannot replay without a store"
             raise ValueError(msg)
-        
+
         from ea_kernel.governance_types import DecisionQueryOptions
-        
+
         options = None
         if corpus_version_id:
             options = DecisionQueryOptions(corpus_version_id=corpus_version_id)
-        
+
         stored_records = self._store.query(options)
-        
+
         for stored in stored_records:
             # Replay without persisting again
             self.record(stored.record, persist=False)
-        
+
         return self
 
     def statistics_for(
@@ -262,19 +261,19 @@ class DecisionLedger:
         relation: str,
     ) -> object:
         """Get judgment statistics for a triple.
-        
+
         Delegates to store if available, otherwise returns basic in-memory stats.
-        
+
         Returns:
             JudgmentStatistics if store is attached, else dict with basic counts
         """
         if self._store is not None:
             return self._store.statistics_for(source, target, relation)
-        
+
         # Fallback: basic in-memory statistics
         triple = (source, target, relation)
         decisions = self._triple_index.get(triple, [])
-        
+
         allow_count = sum(
             1 for d in decisions
             if d.judgment and d.judgment.verdict
@@ -287,7 +286,7 @@ class DecisionLedger:
             1 for d in decisions
             if d.decision_type == "override"
         )
-        
+
         return {
             "source": source,
             "target": target,

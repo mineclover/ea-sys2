@@ -5,8 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ea_kernel.schema import get_schema_content, parse_typeql, SCHEMA_FILES, ParsedSchema
 from ea_kernel.definition import KERNEL_SCHEMA
+from ea_kernel.schema import SCHEMA_FILES, get_schema_content, parse_typeql
 
 
 class TestSchemaFiles:
@@ -29,9 +29,10 @@ class TestSchemaFiles:
     def test_nonexistent_file_raises(self):
         try:
             get_schema_content("nonexistent.tql")
-            assert False, "Should have raised FileNotFoundError"
         except FileNotFoundError:
             pass
+        else:
+            raise AssertionError("Should have raised FileNotFoundError")
 
 
 class TestSchemaParser:

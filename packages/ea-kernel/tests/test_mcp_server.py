@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 
 import pytest
@@ -134,11 +135,7 @@ class TestKernelGetEntityNames:
 
 # ── Tier 2: MCP server structure (requires mcp SDK) ─────────────────
 
-try:
-    from mcp.server.fastmcp import FastMCP
-    HAS_MCP = True
-except ImportError:
-    HAS_MCP = False
+HAS_MCP = importlib.util.find_spec("mcp.server.fastmcp") is not None
 
 
 @pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")

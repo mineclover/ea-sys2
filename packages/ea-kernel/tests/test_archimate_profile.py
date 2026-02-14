@@ -1,13 +1,12 @@
 """Tests for ArchiMate 3.2 kernel profile mapping correctness."""
 
+from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.profiles.archimate import (
-    ARCHIMATE_PROFILE,
     ALL_ELEMENTS,
     ALL_RELATIONS,
     ALL_RULES,
+    ARCHIMATE_PROFILE,
 )
-from ea_kernel.definition import KERNEL_SCHEMA
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Structural counts

@@ -1,10 +1,12 @@
 
 import pytest
+
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient
+
 from ea_kernel.api.server import create_app
 from ea_kernel.schema_loader import load_kernel_schema_from_package
-from pathlib import Path
+from fastapi.testclient import TestClient
+
 
 @pytest.fixture
 def client(tmp_path):
@@ -16,7 +18,7 @@ def test_get_flow_logic_api(client):
     # Test valid anchor
     anchor = "ea:kernel:rule_creation"
     response = client.get(f"/governance/flow/{anchor}")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["anchor"] == anchor

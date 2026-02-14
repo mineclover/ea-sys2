@@ -6,10 +6,7 @@ Only depends on ea_kernel.types — no circular imports.
 
 from __future__ import annotations
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+import tomllib
 from pathlib import Path
 
 from ea_kernel.types import (
@@ -45,8 +42,8 @@ def load_kernel_schema(
     path = path or (SPECS_DIR / "kernel_schema.toml")
     try:
         raw = path.read_bytes()
-    except FileNotFoundError:
-        raise SchemaLoadError(f"Schema file not found: {path}")
+    except FileNotFoundError as err:
+        raise SchemaLoadError(f"Schema file not found: {path}") from err
 
     doc = tomllib.loads(raw.decode())
 

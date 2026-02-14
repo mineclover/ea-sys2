@@ -6,10 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
 from ea_kernel.definition import KERNEL_SCHEMA
-from ea_kernel.profile_loader import load_profile_from_content, ProfileLoadError
-
+from ea_kernel.profile_loader import ProfileLoadError, load_profile_from_content
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Valid TOML profiles

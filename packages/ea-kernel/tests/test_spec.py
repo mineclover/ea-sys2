@@ -1,6 +1,5 @@
 """Tests for kernel validation engine and specification."""
 
-import pytest
 
 from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.spec import (
@@ -12,11 +11,7 @@ from ea_kernel.spec import (
 from ea_kernel.types import (
     KernelConditionType,
     KernelRuleCondition,
-    KernelValidationResult,
-    KernelValidityRule,
-    LayerConstraint,
 )
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Rule Structure

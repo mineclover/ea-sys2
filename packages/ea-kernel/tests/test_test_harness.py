@@ -5,13 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import pytest
 
 from ea_kernel.definition import KERNEL_SCHEMA
+from ea_kernel.profile_builder import ProfileBuilder
 from ea_kernel.spec import KERNEL_SPEC
 from ea_kernel.test_harness import create_standard_tests
-from ea_kernel.profile_builder import ProfileBuilder
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Harness generates a class

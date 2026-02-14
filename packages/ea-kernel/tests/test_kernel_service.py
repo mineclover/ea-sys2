@@ -24,7 +24,7 @@ class TestListEntities:
 
     def test_layers_cover_l1_and_l4(self):
         result = list_entities()
-        layer_names = [l["name"] for l in result["layers"]]
+        layer_names = [layer["name"] for layer in result["layers"]]
         assert "L1 Structure" in layer_names
         assert "L4 Concrete" in layer_names
 
@@ -38,7 +38,7 @@ class TestListEntities:
 
     def test_total_matches_sum_of_layers(self):
         result = list_entities()
-        total_from_layers = sum(l["count"] for l in result["layers"])
+        total_from_layers = sum(layer["count"] for layer in result["layers"])
         assert result["total"] == total_from_layers
 
 
@@ -53,7 +53,7 @@ class TestListRelations:
 
     def test_layers_are_l2_and_l3(self):
         result = list_relations()
-        layer_names = [l["name"] for l in result["layers"]]
+        layer_names = [layer["name"] for layer in result["layers"]]
         assert "L2 Relationship" in layer_names
         assert "L3 Behavioral" in layer_names
 

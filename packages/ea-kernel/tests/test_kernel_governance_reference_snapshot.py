@@ -41,6 +41,19 @@ def test_build_and_verify_reference_snapshot(tmp_path: Path):
     assert payload["active_models"] == ["RalphTUIImplementation.kernel"]
     assert payload["db_contract"]["profiles.db"]["row_counts"]["model_registry"] == 6
     assert payload["db_contract"]["profiles.db"]["row_counts"]["validation_runs"] == 7
+    seed_profiles = payload["seed_profiles"]
+    assert len(seed_profiles) == 6
+
+    base_rule_count = len(module.KERNEL_SPEC.validity_rules)
+    by_layer = {row["layer"]: row for row in seed_profiles}
+    assert by_layer["flow"]["compiled_transformed_rules"] > 0
+    assert by_layer["governance"]["compiled_transformed_rules"] > 0
+
+    for row in seed_profiles:
+        assert row["compiled_skipped_rules"] == 0
+        assert row["runtime_rules"] == base_rule_count + row["compiled_rules"]
+        assert row["runtime_entities"] >= row["runtime_added_entities"]
+        assert row["runtime_relations"] >= row["runtime_added_relations"]
 
     issues = module.verify_reference_snapshot(data_dir, snapshot_path)
     assert issues == []

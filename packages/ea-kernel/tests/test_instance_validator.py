@@ -6,7 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
 from ea_kernel.instance_validator import InstanceValidator
 from ea_kernel.spec import KERNEL_SPEC
 from ea_kernel.types import (
@@ -14,7 +13,6 @@ from ea_kernel.types import (
     InstanceElement,
     InstanceRelation,
 )
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Element validation

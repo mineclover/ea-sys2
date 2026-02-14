@@ -11,7 +11,7 @@
           "exists": true,
           "file": "governance.py",
           "lines": [
-            41
+            35
           ],
           "pattern": "class GovernanceSystem"
         }
@@ -43,7 +43,7 @@
           "exists": true,
           "file": "judgment_service.py",
           "lines": [
-            121
+            119
           ],
           "pattern": "class JudgmentService"
         }
@@ -91,7 +91,7 @@
           "exists": true,
           "file": "profile_loader.py",
           "lines": [
-            60
+            57
           ],
           "pattern": "def load_profile\\("
         }
@@ -107,7 +107,7 @@
           "exists": true,
           "file": "profile_registry.py",
           "lines": [
-            12
+            19
           ],
           "pattern": "class ProfileRegistry"
         }
@@ -123,7 +123,7 @@
           "exists": true,
           "file": "rule_corpus.py",
           "lines": [
-            33
+            32
           ],
           "pattern": "class RuleCorpus"
         }
@@ -139,7 +139,7 @@
           "exists": true,
           "file": "spec_loader.py",
           "lines": [
-            160
+            158
           ],
           "pattern": "def load_kernel_rules\\("
         }

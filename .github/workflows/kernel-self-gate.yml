@@ -1,0 +1,41 @@
+name: kernel-self-gate
+
+on:
+  pull_request:
+    paths:
+      - "Makefile"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "packages/ea-kernel/**"
+      - "packages/ea-kernel-self/**"
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "Makefile"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "packages/ea-kernel/**"
+      - "packages/ea-kernel-self/**"
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Kernel self gate
+        run: make gate-kernel-self

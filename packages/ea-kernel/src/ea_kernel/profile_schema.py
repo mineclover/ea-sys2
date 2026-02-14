@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import fnmatch
-
 from ea_kernel.profile_types import KernelProfile, ProfileElement
 from ea_kernel.types import KernelSchema, KernelValidityRule
 

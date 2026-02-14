@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from ea_kernel.profile_composer import extend, subset
 from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileRelation
 from ea_kernel.types import KernelValidityRule
-from ea_kernel.profile_composer import extend, subset
 
 
 def _base_profile() -> KernelProfile:

@@ -6,7 +6,7 @@ validation result when tested against representative triples.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from ea_kernel.types import (
@@ -189,5 +189,5 @@ class RuleVerifier:
             total_passed=total_passed,
             overall_pass_rate=total_passed / total_rules if total_rules > 0 else 1.0,
             group_results=group_results,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )

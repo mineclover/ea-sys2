@@ -4,17 +4,15 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-
 from ea_kernel.spec_loader import (
     RuleLoadError,
-    SPECS_DIR,
     load_kernel_rules,
 )
 from ea_kernel.types import (
     KernelConditionType,
     KernelValidityRule,
-    LayerConstraint,
     Layer,
+    LayerConstraint,
 )
 
 SCRATCHPAD = Path(__file__).parent / "_scratch"

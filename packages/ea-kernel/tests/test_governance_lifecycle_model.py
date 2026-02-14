@@ -14,11 +14,10 @@ ea-kernel의 Governance Lifecycle 시스템을 ea-kernel 자체로 모델링한 
 from pathlib import Path
 
 import pytest
-
+from ea_kernel.profile_auditor import ProfileAuditor
 from ea_kernel.profile_builder import ProfileBuilder
 from ea_kernel.profile_loader import load_profile
 from ea_kernel.profile_quality_gate import check_profile_quality
-from ea_kernel.profile_auditor import ProfileAuditor
 from ea_kernel.spec import KERNEL_SPEC
 
 _TOML_PATH = Path(__file__).parent.parent / "src" / "ea_kernel" / "profiles" / "governance_lifecycle.toml"

@@ -6,13 +6,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
 from ea_kernel.definition import KERNEL_SCHEMA
-from ea_kernel.profile_types import KernelProfile, ProfileBuildError, ProfileElement, ProfileRelation
-from ea_kernel.spec import KERNEL_SPEC
-from ea_kernel.types import KernelConditionType, KernelRuleCondition, KernelValidityRule
 from ea_kernel.profile_builder import ProfileBuilder
-
+from ea_kernel.profile_types import (
+    KernelProfile,
+    ProfileBuildError,
+)
+from ea_kernel.types import KernelConditionType
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Basic construction
@@ -96,7 +96,9 @@ class TestElements:
         assert p.get_element("Y").kernel_type == "step"
 
     def test_elements_from_matrix(self):
-        naming = lambda layer, cat: f"{layer}{cat}"
+        def naming(layer: str, cat: str) -> str:
+            return f"{layer}{cat}"
+
         p = (
             ProfileBuilder("Test", version="1.0", kernel_version="2.5.0")
             .elements_from_matrix(
@@ -114,8 +116,12 @@ class TestElements:
         assert p.get_element("L3B").kernel_type == "step"
 
     def test_elements_from_matrix_with_descriptions(self):
-        naming = lambda l, c: f"{l}{c}"
-        descs = lambda l, c: f"{c} at {l}"
+        def naming(layer: str, category: str) -> str:
+            return f"{layer}{category}"
+
+        def descs(layer: str, category: str) -> str:
+            return f"{category} at {layer}"
+
         p = (
             ProfileBuilder("Test", version="1.0", kernel_version="2.5.0")
             .elements_from_matrix(

@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Union, Dict
+from enum import StrEnum
 
 # Multi-language string: either a simple string or a mapping of language codes to strings
-I18nString = Union[str, Dict[str, str]]
+I18nString = str | dict[str, str]
 
 
-class Layer(str, Enum):
+class Layer(StrEnum):
     """The 4-layer progressive abstraction."""
     L1 = "L1"  # Structure
     L2 = "L2"  # Relationship
@@ -23,12 +22,12 @@ LAYER_ORDER: dict[Layer, int] = {
 }
 
 
-class SchemaType(str, Enum):
+class SchemaType(StrEnum):
     DEFINE = "define"
     INSERT = "insert"
 
 
-class KernelConditionType(str, Enum):
+class KernelConditionType(StrEnum):
     SAME_LAYER = "same_layer"
     LAYER_ORDER = "layer_order"
     ANCESTOR_OF = "ancestor_of"
@@ -260,7 +259,7 @@ class KernelSchema:
             return ()
         # Collect roles from parent chain (parent first, then child overrides)
         role_chain: list[tuple[KernelRole, ...]] = []
-        current = relation
+        current: KernelRelation | None = relation
         while current is not None:
             role_chain.append(current.roles)
             current = self.get_relation(current.parent) if current.parent else None
@@ -331,11 +330,11 @@ class KernelSchema:
         Then returns the result from the highest-priority matching rule.
         If no rules match, the relationship is denied by default.
         """
-        base = dict(
-            source_entity=source,
-            target_entity=target,
-            relationship_name=relationship_name,
-        )
+        base = {
+            "source_entity": source,
+            "target_entity": target,
+            "relationship_name": relationship_name,
+        }
 
         src_e = self.get_entity(source)
         if src_e is None:
@@ -473,7 +472,7 @@ class KernelSchema:
 # Rule Corpus types — Phase 0.5
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class RuleGroup(str, Enum):
+class RuleGroup(StrEnum):
     """규칙 검증 단위 그룹. relationship_name 기반."""
     MEMBERSHIP = "membership"
     OWNERSHIP = "ownership"
@@ -499,7 +498,7 @@ class RuleGroup(str, Enum):
             return cls.MEMBERSHIP
 
 
-class RuleCategory(str, Enum):
+class RuleCategory(StrEnum):
     """Classification of what aspect a rule governs."""
     STRUCTURAL = "structural"
     BEHAVIORAL = "behavioral"
@@ -507,7 +506,7 @@ class RuleCategory(str, Enum):
     EMPIRICAL = "empirical"
 
 
-class RuleConfidence(str, Enum):
+class RuleConfidence(StrEnum):
     """How universally applicable a rule is."""
     UNIVERSAL = "universal"
     COMMON = "common"

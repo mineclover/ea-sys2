@@ -1,13 +1,12 @@
 """Tests for TOGAF 10 kernel profile mapping correctness."""
 
+from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.profiles.togaf import (
-    TOGAF_PROFILE,
     ALL_ELEMENTS,
     ALL_RELATIONS,
     ALL_RULES,
+    TOGAF_PROFILE,
 )
-from ea_kernel.definition import KERNEL_SCHEMA
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Structural counts

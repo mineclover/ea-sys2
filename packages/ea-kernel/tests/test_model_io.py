@@ -1,18 +1,21 @@
 """Integration tests for Model I/O (Export/Import)."""
 
-import pytest
 import json
-from pathlib import Path
 from datetime import UTC, datetime
 
 from ea_kernel.governance import GovernanceSystem
+from ea_kernel.governance_types import RuleAsset, RuleLifecycle, RuleLifecycleState, RuleProvenance
 from ea_kernel.model_io import ModelIOManager
 from ea_kernel.types import (
-    KernelSchema, KernelEntity, Layer, KernelValidityRule,
-    RuleMetadata, RuleCategory, RuleConfidence, RuleGroup, RuleCorpusEntry
-)
-from ea_kernel.governance_types import (
-    RuleAsset, RuleProvenance, RuleLifecycle, RuleLifecycleState
+    KernelEntity,
+    KernelSchema,
+    KernelValidityRule,
+    Layer,
+    RuleCategory,
+    RuleConfidence,
+    RuleCorpusEntry,
+    RuleGroup,
+    RuleMetadata,
 )
 
 # --- Mocking Utilities ---
@@ -57,52 +60,52 @@ def make_rule_asset(rule_id: str) -> RuleAsset:
 
 def test_export_import_flow(tmp_path):
     """Test full export -> import cycle."""
-    
+
     # 1. Setup Source System
     src_dir = tmp_path / "source"
     schema = make_simple_schema()
     src_system = GovernanceSystem(src_dir, schema)
-    
+
     # Create & Approve a rule
     rule_id = "rule-export-01"
     asset = make_rule_asset(rule_id)
     # Note: submit_rule usually sets DRAFT. We'll manually insert APPROVED for this test
     # or use approve_rule workflow.
-    draft = src_system.submit_rule(asset)
+    src_system.submit_rule(asset)
     src_system.approve_rule(rule_id, "admin")
-    
+
     # Check it's active
     assert len(src_system.rule_store.active_rules()) == 1
-    
+
     # 2. Export
     io_manager = ModelIOManager(src_system)
     data = io_manager.export_model()
-    
+
     # Verify export data structure
     assert data["meta"]["rules_count"] == 1
     exported_rule = data["rules"][0]
     assert exported_rule["entry"]["rule"]["id"] == rule_id
     assert exported_rule["lifecycle"]["current_state"] == "approved"
-    
+
     # Save to file (simulate file transfer)
     export_file = tmp_path / "export.json"
     with open(export_file, "w") as f:
         json.dump(data, f, default=str) # handling datetime
-        
+
     # 3. Setup Target System (Empty)
     tgt_dir = tmp_path / "target"
     tgt_system = GovernanceSystem(tgt_dir, schema)
     assert len(tgt_system.rule_store.active_rules()) == 0
-    
+
     # 4. Import
     tgt_io = ModelIOManager(tgt_system)
-    
+
     # Load form file
-    with open(export_file, "r") as f:
+    with open(export_file) as f:
         import_data = json.load(f)
-        
+
     report = tgt_io.import_model(import_data)
-    
+
     # 5. Verify Import
     assert report["imported"] == 1
     assert len(tgt_system.rule_store.active_rules()) == 1

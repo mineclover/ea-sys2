@@ -1,0 +1,1752 @@
+{
+  "contract_version": "1.0.0",
+  "explicit_rules": [
+    {
+      "conditions": [],
+      "id": "assoc-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "association",
+        "rationale": "Association is the primary structural connection mechanism between metatypes",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "structural",
+          "connection"
+        ]
+      },
+      "notes": "Structural association between metatypes",
+      "priority": 40,
+      "relation": "association",
+      "source_pattern": "metatype*",
+      "target_pattern": "metatype*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "assoc-02",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "association",
+        "rationale": "Classifier-level association refines metatype association at classifier granularity",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "structural",
+          "classifier"
+        ]
+      },
+      "notes": "Classifier-level association",
+      "priority": 50,
+      "relation": "association",
+      "source_pattern": "classifier*",
+      "target_pattern": "classifier*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "assoc-03",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "association",
+        "rationale": "Item (passive data) cannot directly associate with step/action (behavior); use flow instead",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "prohibition",
+          "passive-active"
+        ]
+      },
+      "notes": "Item(passive) cannot directly associate with step/action(behavior)",
+      "priority": 80,
+      "relation": "association",
+      "source_pattern": "item",
+      "target_pattern": "step*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "assoc-04",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.1.0",
+        "group": "association",
+        "rationale": "Item (passive) cannot associate with structure (active); incompatible semantic roles",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "prohibition",
+          "passive-active"
+        ]
+      },
+      "notes": "Item(passive) cannot directly associate with structure(active)",
+      "priority": 80,
+      "relation": "association",
+      "source_pattern": "item",
+      "target_pattern": "structure",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "assoc-05",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "association",
+        "rationale": "Package can form associations with metatypes for cross-cutting concerns",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "structural",
+          "package"
+        ]
+      },
+      "notes": "Package associates with metatypes",
+      "priority": 45,
+      "relation": "association",
+      "source_pattern": "package",
+      "target_pattern": "metatype*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "assoc-06",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "association",
+        "rationale": "Metatype can form associations with packages for cross-cutting concerns",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "structural",
+          "package"
+        ]
+      },
+      "notes": "Metatype associates with packages",
+      "priority": 45,
+      "relation": "association",
+      "source_pattern": "metatype*",
+      "target_pattern": "package",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "assoc-07",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "association",
+        "rationale": "Package-to-package association enables inter-package dependency modeling",
+        "source": "UML 2.5.1 \u00a711.5 Associations",
+        "tags": [
+          "structural",
+          "package"
+        ]
+      },
+      "notes": "Package-level association",
+      "priority": 45,
+      "relation": "association",
+      "source_pattern": "package",
+      "target_pattern": "package",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "conn-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "connector",
+        "rationale": "Connector establishes a binding link between features for data/signal exchange",
+        "source": "KerML \u00a78.2 Connectors",
+        "tags": [
+          "structural",
+          "connector"
+        ]
+      },
+      "notes": "Connector links features",
+      "priority": 40,
+      "relation": "connector",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "flow-01",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "flow",
+        "rationale": "Flow qualifies a connector with data/object transfer semantics between features",
+        "source": "KerML \u00a78.4 Transfers",
+        "tags": [
+          "dataflow",
+          "behavioral"
+        ]
+      },
+      "notes": "Data/object flow between features",
+      "priority": 40,
+      "relation": "flow",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "flow-02",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "flow",
+        "rationale": "Item as data source can flow data to features as input",
+        "source": "KerML \u00a78.4 Transfers",
+        "tags": [
+          "dataflow",
+          "input"
+        ]
+      },
+      "notes": "Item provides data to feature (data input)",
+      "priority": 50,
+      "relation": "flow",
+      "source_pattern": "item",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "flow-03",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "flow",
+        "rationale": "Feature can flow data to item as output destination",
+        "source": "KerML \u00a78.4 Transfers",
+        "tags": [
+          "dataflow",
+          "output"
+        ]
+      },
+      "notes": "Feature outputs data to item (data output)",
+      "priority": 50,
+      "relation": "flow",
+      "source_pattern": "feature*",
+      "target_pattern": "item",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "feature_typing",
+        "rationale": "Feature typing establishes the type of values a feature can hold",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "typing",
+          "feature"
+        ]
+      },
+      "notes": "Feature typed by metatype",
+      "priority": 40,
+      "relation": "feature_typing",
+      "source_pattern": "feature*",
+      "target_pattern": "metatype*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-02",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "feature_typing",
+        "rationale": "Classifier-level feature typing provides concrete type constraints",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "typing",
+          "classifier"
+        ]
+      },
+      "notes": "Feature typed by classifier",
+      "priority": 50,
+      "relation": "feature_typing",
+      "source_pattern": "feature*",
+      "target_pattern": "classifier*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-03",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "feature_typing",
+        "rationale": "Datatype typing constrains features to value types",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "typing",
+          "datatype"
+        ]
+      },
+      "notes": "Feature typed by datatype",
+      "priority": 60,
+      "relation": "feature_typing",
+      "source_pattern": "feature*",
+      "target_pattern": "datatype",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-04",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "feature_typing",
+        "rationale": "Step (as a feature subtype) can be typed to constrain its behavioral contract",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "typing",
+          "step"
+        ]
+      },
+      "notes": "Step can be typed by metatype",
+      "priority": 60,
+      "relation": "feature_typing",
+      "source_pattern": "step",
+      "target_pattern": "metatype*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-05",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "feature_typing",
+        "rationale": "Events are triggers, not structural attributes; typing is semantically invalid",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "prohibition",
+          "typing"
+        ]
+      },
+      "notes": "Event cannot be typed (not a structural attribute)",
+      "priority": 80,
+      "relation": "feature_typing",
+      "source_pattern": "event",
+      "target_pattern": "metatype*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-06",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "feature_typing",
+        "rationale": "Expressions are evaluatable constructs; direct typing is semantically inappropriate",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "prohibition",
+          "typing"
+        ]
+      },
+      "notes": "Expression cannot be typed (evaluatable, not a structural attribute)",
+      "priority": 80,
+      "relation": "feature_typing",
+      "source_pattern": "expression",
+      "target_pattern": "metatype*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "ftyp-07",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "feature_typing",
+        "rationale": "Port requires classifier typing for interaction semantics; value type typing is insufficient",
+        "source": "KerML \u00a77.3 Feature Typing",
+        "tags": [
+          "prohibition",
+          "typing",
+          "port"
+        ]
+      },
+      "notes": "Port cannot be typed by value type (use classifier instead)",
+      "priority": 80,
+      "relation": "feature_typing",
+      "source_pattern": "port",
+      "target_pattern": "datatype",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "guard-01",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "guarding",
+        "rationale": "Guard expressions control state transition eligibility",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "guard",
+          "state-machine"
+        ]
+      },
+      "notes": "State guarded by expression condition",
+      "priority": 60,
+      "relation": "guarding",
+      "source_pattern": "state",
+      "target_pattern": "expression",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "guard-02",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "guarding",
+        "rationale": "Guard requires evaluatable expression, not a structural feature",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "prohibition",
+          "guard"
+        ]
+      },
+      "notes": "State cannot be guarded by a plain feature",
+      "priority": 80,
+      "relation": "guarding",
+      "source_pattern": "state",
+      "target_pattern": "feature",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "guard-03",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "guarding",
+        "rationale": "Guarding is a state-machine concept; only states have guard semantics",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "prohibition",
+          "guard"
+        ]
+      },
+      "notes": "Only state can be guarded, not arbitrary features",
+      "priority": 80,
+      "relation": "guarding",
+      "source_pattern": "feature*",
+      "target_pattern": "expression",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "guard-04",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "guarding",
+        "rationale": "Guard must be an evaluatable expression, not a behavioral step",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "prohibition",
+          "guard"
+        ]
+      },
+      "notes": "State cannot be guarded by step/action (use expression)",
+      "priority": 80,
+      "relation": "guarding",
+      "source_pattern": "state",
+      "target_pattern": "step*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "guard-05",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "guarding",
+        "rationale": "Guard must be an evaluatable expression, not an event trigger",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "prohibition",
+          "guard"
+        ]
+      },
+      "notes": "State cannot be guarded by event (use expression)",
+      "priority": 80,
+      "relation": "guarding",
+      "source_pattern": "state",
+      "target_pattern": "event",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "guard-06",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "guarding",
+        "rationale": "Guard must be an evaluatable expression, not a communication port",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "prohibition",
+          "guard"
+        ]
+      },
+      "notes": "State cannot be guarded by port (use expression)",
+      "priority": 80,
+      "relation": "guarding",
+      "source_pattern": "state",
+      "target_pattern": "port",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "inter-01",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "interaction",
+        "rationale": "Interaction qualifies message exchange semantics between features",
+        "source": "KerML \u00a78.2 Interactions",
+        "tags": [
+          "message",
+          "behavioral"
+        ]
+      },
+      "notes": "Message exchange between features",
+      "priority": 40,
+      "relation": "interaction",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "inter-02",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "interaction",
+        "rationale": "Port-to-port communication uses connector, not interaction; interaction is message-level",
+        "source": "KerML \u00a78.2 Interactions",
+        "tags": [
+          "prohibition",
+          "port"
+        ]
+      },
+      "notes": "Port\u2194port interaction denied (use connector instead)",
+      "priority": 80,
+      "relation": "interaction",
+      "source_pattern": "port",
+      "target_pattern": "port",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "inter-03",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "interaction",
+        "rationale": "Steps interact via succession, not interaction; interaction is for feature-level message exchange",
+        "source": "KerML \u00a78.2 Interactions",
+        "tags": [
+          "prohibition",
+          "behavioral"
+        ]
+      },
+      "notes": "Step/action\u2194step/action interaction denied",
+      "priority": 80,
+      "relation": "interaction",
+      "source_pattern": "step*",
+      "target_pattern": "step*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "inter-04",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "interaction",
+        "rationale": "Plain features need specialized subtypes (port, event) for interaction semantics",
+        "source": "KerML \u00a78.2 Interactions",
+        "tags": [
+          "prohibition",
+          "feature"
+        ]
+      },
+      "notes": "Plain feature\u2194feature interaction denied (use port or event)",
+      "priority": 80,
+      "relation": "interaction",
+      "source_pattern": "feature",
+      "target_pattern": "feature",
+      "valid": false
+    },
+    {
+      "conditions": [
+        {
+          "parameters": {},
+          "type": "layer_order"
+        }
+      ],
+      "id": "mem-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "membership",
+        "rationale": "Namespaces are the fundamental containment mechanism; layer ordering ensures abstraction coherence",
+        "source": "UML 2.5.1 \u00a77.4 Namespaces",
+        "tags": [
+          "containment",
+          "namespace"
+        ]
+      },
+      "notes": "Namespace contains elements (container layer <= member layer)",
+      "priority": 40,
+      "relation": "membership",
+      "source_pattern": "namespace*",
+      "target_pattern": "element*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "mem-02",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "membership",
+        "rationale": "Package nesting is a fundamental namespace containment pattern",
+        "source": "UML 2.5.1 \u00a77.4 Namespaces",
+        "tags": [
+          "containment",
+          "package"
+        ]
+      },
+      "notes": "Package nesting",
+      "priority": 60,
+      "relation": "membership",
+      "source_pattern": "package",
+      "target_pattern": "package",
+      "valid": true
+    },
+    {
+      "conditions": [
+        {
+          "parameters": {},
+          "type": "layer_order"
+        }
+      ],
+      "id": "own-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "ownership",
+        "rationale": "Ownership establishes lifecycle dependency between namespace and its owned elements",
+        "source": "UML 2.5.1 \u00a77.4 Namespaces",
+        "tags": [
+          "containment",
+          "ownership"
+        ]
+      },
+      "notes": "Namespace owns elements (owner layer <= owned layer)",
+      "priority": 40,
+      "relation": "ownership",
+      "source_pattern": "namespace*",
+      "target_pattern": "element*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "own-02",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "ownership",
+        "rationale": "Metatypes own their features as structural constituents",
+        "source": "UML 2.5.1 \u00a79.9 Classifier",
+        "tags": [
+          "containment",
+          "feature-ownership"
+        ]
+      },
+      "notes": "Metatype owns its features (classifier\u2192feature, state\u2192feature)",
+      "priority": 60,
+      "relation": "ownership",
+      "source_pattern": "metatype*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [
+        {
+          "parameters": {},
+          "type": "same_branch"
+        }
+      ],
+      "id": "own-03",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "ownership",
+        "rationale": "Nested feature ownership requires same entity branch to maintain structural coherence",
+        "source": "UML 2.5.1 \u00a79.9 Classifier",
+        "tags": [
+          "containment",
+          "nested-feature"
+        ]
+      },
+      "notes": "Feature owns nested features \u2014 must be same entity branch",
+      "priority": 70,
+      "relation": "ownership",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "own-04",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "ownership",
+        "rationale": "Passive element (item) cannot own an active element (structure) \u2014 violates abstraction direction",
+        "source": "UML 2.5.1 \u00a77.4 Namespaces",
+        "tags": [
+          "prohibition",
+          "passive-active"
+        ]
+      },
+      "notes": "Item(passive) cannot own Structure(active)",
+      "priority": 80,
+      "relation": "ownership",
+      "source_pattern": "item",
+      "target_pattern": "structure",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "redef-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "redefinition",
+        "rationale": "Redefinition allows a feature in a subtype to replace an inherited feature",
+        "source": "KerML \u00a77.3 Redefinition",
+        "tags": [
+          "refinement",
+          "feature"
+        ]
+      },
+      "notes": "Feature redefines another feature",
+      "priority": 40,
+      "relation": "redefinition",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "redef-02",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "redefinition",
+        "rationale": "Behavioral step cannot redefine a structural attribute \u2014 category mismatch",
+        "source": "KerML \u00a77.3 Redefinition",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Behavioral step/action cannot redefine structural attribute",
+      "priority": 80,
+      "relation": "redefinition",
+      "source_pattern": "step*",
+      "target_pattern": "feature",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "redef-03",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "redefinition",
+        "rationale": "Event (trigger) cannot redefine a structural attribute \u2014 semantic mismatch",
+        "source": "KerML \u00a77.3 Redefinition",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Event cannot redefine structural attribute",
+      "priority": 80,
+      "relation": "redefinition",
+      "source_pattern": "event",
+      "target_pattern": "feature",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Type specialization is a fundamental type-theoretic operation; metatypes form a strict hierarchy",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "inheritance",
+          "type-theory"
+        ]
+      },
+      "notes": "Metatype specialization (supertype \u2192 subtype)",
+      "priority": 40,
+      "relation": "specialization",
+      "source_pattern": "metatype*",
+      "target_pattern": "metatype*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "spec-02",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Classifier-level specialization refines the metatype hierarchy at classifier granularity",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "inheritance",
+          "classifier"
+        ]
+      },
+      "notes": "Classifier specialization",
+      "priority": 50,
+      "relation": "specialization",
+      "source_pattern": "classifier*",
+      "target_pattern": "classifier*",
+      "valid": true
+    },
+    {
+      "conditions": [
+        {
+          "parameters": {},
+          "type": "same_branch"
+        }
+      ],
+      "id": "spec-03",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Feature specialization constrained to same entity branch to prevent cross-hierarchy inheritance",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "inheritance",
+          "feature"
+        ]
+      },
+      "notes": "Feature specialization (same entity branch)",
+      "priority": 50,
+      "relation": "specialization",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "spec-04",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Classifier and feature are distinct metacategories; cross-category specialization is invalid",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Classifier cannot specialize a feature",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "classifier*",
+      "target_pattern": "feature*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-05",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Feature cannot specialize classifier \u2014 distinct metacategories",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Feature cannot specialize a classifier",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "feature*",
+      "target_pattern": "classifier*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-06",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "State specialization enables hierarchical state machine composition",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "inheritance",
+          "state"
+        ]
+      },
+      "notes": "State can specialize state",
+      "priority": 60,
+      "relation": "specialization",
+      "source_pattern": "state",
+      "target_pattern": "state",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "spec-07",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "State is L4 behavioral; cannot specialize a plain structural feature",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "State cannot specialize a plain feature",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "state",
+      "target_pattern": "feature",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-08",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Plain feature cannot specialize state \u2014 structural cannot inherit from behavioral",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Plain feature cannot specialize state",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "feature",
+      "target_pattern": "state",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-09",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "Item (passive) and structure (active) have incompatible semantics",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "passive-active"
+        ]
+      },
+      "notes": "Item(passive) cannot specialize Structure(active)",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "item",
+      "target_pattern": "structure",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-10",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "specialization",
+        "rationale": "State (condition) and step/action (behavior) are distinct behavioral categories",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "State cannot specialize step/action",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "state",
+      "target_pattern": "step*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-11",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "specialization",
+        "rationale": "State (L4 behavioral) cannot specialize item (L1 structural)",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-layer"
+        ]
+      },
+      "notes": "State cannot specialize item",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "state",
+      "target_pattern": "item",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-12",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "specialization",
+        "rationale": "Event (trigger) and state (condition) have distinct behavioral semantics",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Event cannot specialize state",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "event",
+      "target_pattern": "state",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-13",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "specialization",
+        "rationale": "Expression (evaluatable) cannot specialize step/action (executable)",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "Expression cannot specialize step/action",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "expression",
+      "target_pattern": "step*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-14",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "specialization",
+        "rationale": "State (L4 behavioral) cannot specialize structure (L1 structural)",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-layer"
+        ]
+      },
+      "notes": "State cannot specialize structure",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "state",
+      "target_pattern": "structure",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "spec-15",
+      "metadata": {
+        "category": "structural",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "specialization",
+        "rationale": "State (behavioral) cannot specialize datatype (value type)",
+        "source": "UML 2.5.1 \u00a79.9 Generalization",
+        "tags": [
+          "prohibition",
+          "cross-category"
+        ]
+      },
+      "notes": "State cannot specialize datatype",
+      "priority": 80,
+      "relation": "specialization",
+      "source_pattern": "state",
+      "target_pattern": "datatype",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "sub-01",
+      "metadata": {
+        "category": "structural",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "subsetting",
+        "rationale": "Subsetting constrains a feature's values to be a subset of another feature's values",
+        "source": "KerML \u00a77.3 Subsetting",
+        "tags": [
+          "refinement",
+          "feature"
+        ]
+      },
+      "notes": "Feature subsets another feature",
+      "priority": 40,
+      "relation": "subsetting",
+      "source_pattern": "feature*",
+      "target_pattern": "feature*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-01",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "succession",
+        "rationale": "Succession establishes temporal ordering between behavioral steps",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "behavioral",
+          "ordering"
+        ]
+      },
+      "notes": "Step/Action temporal ordering",
+      "priority": 70,
+      "relation": "succession",
+      "source_pattern": "step*",
+      "target_pattern": "step*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-02",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "succession",
+        "rationale": "Event can precede step in temporal ordering for event-driven behavior",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "event-trigger"
+        ]
+      },
+      "notes": "Event triggers step/action succession",
+      "priority": 60,
+      "relation": "succession",
+      "source_pattern": "event",
+      "target_pattern": "step*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-03",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "succession",
+        "rationale": "Step can emit an event as its temporal successor",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "event-emission"
+        ]
+      },
+      "notes": "Step/Action followed by event",
+      "priority": 60,
+      "relation": "succession",
+      "source_pattern": "step*",
+      "target_pattern": "event",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-04",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "succession",
+        "rationale": "Event chaining enables cascading event propagation",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "event-chain"
+        ]
+      },
+      "notes": "Event chain succession",
+      "priority": 60,
+      "relation": "succession",
+      "source_pattern": "event",
+      "target_pattern": "event",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-05",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "succession",
+        "rationale": "Expression as decision point can route to different steps (gateway split)",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "gateway"
+        ]
+      },
+      "notes": "Expression routes to step/action (gateway split)",
+      "priority": 50,
+      "relation": "succession",
+      "source_pattern": "expression",
+      "target_pattern": "step*",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-06",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "succession",
+        "rationale": "Step can route to expression for gateway merge/decision",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "gateway"
+        ]
+      },
+      "notes": "Step/action routes to expression (gateway merge)",
+      "priority": 50,
+      "relation": "succession",
+      "source_pattern": "step*",
+      "target_pattern": "expression",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-07",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "succession",
+        "rationale": "Expression can route to event for conditional event emission",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "gateway"
+        ]
+      },
+      "notes": "Expression routes to event",
+      "priority": 50,
+      "relation": "succession",
+      "source_pattern": "expression",
+      "target_pattern": "event",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-08",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "succession",
+        "rationale": "Event can route to expression for event-driven decision",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "gateway"
+        ]
+      },
+      "notes": "Event routes to expression",
+      "priority": 50,
+      "relation": "succession",
+      "source_pattern": "event",
+      "target_pattern": "expression",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "succ-09",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.2.0",
+        "group": "succession",
+        "rationale": "Expression chaining enables cascading gateway decisions",
+        "source": "KerML \u00a78.3 Successions",
+        "tags": [
+          "temporal",
+          "gateway"
+        ]
+      },
+      "notes": "Expression chain (gateway routing)",
+      "priority": 50,
+      "relation": "succession",
+      "source_pattern": "expression",
+      "target_pattern": "expression",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "trans-01",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "2.0.0",
+        "group": "transition",
+        "rationale": "State transition\uc740 \uc0c1\ud0dc \uba38\uc2e0\uc758 \uae30\ubcf8 \uba54\ucee4\ub2c8\uc998. guard_expr \ucda9\uc871 \uc2dc source_state\uc5d0\uc11c target_state\ub85c \uc804\uc774\ud55c\ub2e4.",
+        "source": "UML 2.5.1 \u00a714.2 StateMachine",
+        "tags": [
+          "state-machine",
+          "behavioral",
+          "lifecycle"
+        ]
+      },
+      "notes": "State transitions to another state when guard condition is met",
+      "priority": 60,
+      "relation": "transition",
+      "source_pattern": "state",
+      "target_pattern": "state",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "trig-01",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "triggering",
+        "rationale": "Event triggering a step is the fundamental event-driven behavioral pattern",
+        "source": "KerML+UML \u00a713.3 Triggers",
+        "tags": [
+          "trigger",
+          "event-driven"
+        ]
+      },
+      "notes": "Event triggers a step",
+      "priority": 60,
+      "relation": "triggering",
+      "source_pattern": "event",
+      "target_pattern": "step",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "trig-02",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "common",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "triggering",
+        "rationale": "Event triggering an action provides concrete behavioral activation",
+        "source": "KerML+UML \u00a713.3 Triggers",
+        "tags": [
+          "trigger",
+          "event-driven"
+        ]
+      },
+      "notes": "Event triggers an action",
+      "priority": 70,
+      "relation": "triggering",
+      "source_pattern": "event",
+      "target_pattern": "action",
+      "valid": true
+    },
+    {
+      "conditions": [],
+      "id": "trig-03",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.0.0",
+        "group": "triggering",
+        "rationale": "Classifiers are structural; only events can trigger behavioral steps",
+        "source": "KerML+UML \u00a713.3 Triggers",
+        "tags": [
+          "prohibition",
+          "trigger"
+        ]
+      },
+      "notes": "Classifier cannot directly trigger a step",
+      "priority": 90,
+      "relation": "triggering",
+      "source_pattern": "classifier*",
+      "target_pattern": "step*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "trig-04",
+      "metadata": {
+        "category": "behavioral",
+        "confidence": "universal",
+        "domain": "kernel",
+        "established_version": "1.5.0",
+        "group": "triggering",
+        "rationale": "Packages are namespace containers; they have no behavioral triggering capability",
+        "source": "KerML+UML \u00a713.3 Triggers",
+        "tags": [
+          "prohibition",
+          "trigger"
+        ]
+      },
+      "notes": "Package cannot trigger a step",
+      "priority": 90,
+      "relation": "triggering",
+      "source_pattern": "package",
+      "target_pattern": "step*",
+      "valid": false
+    }
+  ],
+  "fallback_rules": [
+    {
+      "conditions": [],
+      "id": "fallback-association",
+      "notes": "Deny-by-default for association",
+      "priority": 1,
+      "relation": "association",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-connector",
+      "notes": "Deny-by-default for connector",
+      "priority": 1,
+      "relation": "connector",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-feature_typing",
+      "notes": "Deny-by-default for feature_typing",
+      "priority": 1,
+      "relation": "feature_typing",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-flow",
+      "notes": "Deny-by-default for flow",
+      "priority": 1,
+      "relation": "flow",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-guarding",
+      "notes": "Deny-by-default for guarding",
+      "priority": 1,
+      "relation": "guarding",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-interaction",
+      "notes": "Deny-by-default for interaction",
+      "priority": 1,
+      "relation": "interaction",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-membership",
+      "notes": "Deny-by-default for membership",
+      "priority": 1,
+      "relation": "membership",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-ownership",
+      "notes": "Deny-by-default for ownership",
+      "priority": 1,
+      "relation": "ownership",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-redefinition",
+      "notes": "Deny-by-default for redefinition",
+      "priority": 1,
+      "relation": "redefinition",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-specialization",
+      "notes": "Deny-by-default for specialization",
+      "priority": 1,
+      "relation": "specialization",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-subsetting",
+      "notes": "Deny-by-default for subsetting",
+      "priority": 1,
+      "relation": "subsetting",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-succession",
+      "notes": "Deny-by-default for succession",
+      "priority": 1,
+      "relation": "succession",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-transition",
+      "notes": "Deny-by-default for transition",
+      "priority": 1,
+      "relation": "transition",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    },
+    {
+      "conditions": [],
+      "id": "fallback-triggering",
+      "notes": "Deny-by-default for triggering",
+      "priority": 1,
+      "relation": "triggering",
+      "source_pattern": "*",
+      "target_pattern": "*",
+      "valid": false
+    }
+  ],
+  "generated_by": "kernel_contract_snapshot.py",
+  "kernel_version": "2.5.0",
+  "layer_constraints": [
+    {
+      "allowed_pairs": [
+        [
+          "step*",
+          "state"
+        ],
+        [
+          "state",
+          "step*"
+        ]
+      ],
+      "forbidden_relations": [
+        "association"
+      ],
+      "notes": "L4 entities cannot form L2 association (except step*\u2194state for realization/motivation)",
+      "priority": 90,
+      "source_layer": "L4",
+      "target_layer": "L4"
+    },
+    {
+      "allowed_pairs": [],
+      "forbidden_relations": [
+        "connector"
+      ],
+      "notes": "L4 behavioral entities cannot use connector (use succession instead)",
+      "priority": 90,
+      "source_layer": "L4",
+      "target_layer": "L4"
+    }
+  ],
+  "snapshot_kind": "ea_kernel_rules_contract",
+  "stats": {
+    "explicit_rules": 67,
+    "fallback_rules": 14,
+    "layer_constraints": 2,
+    "metadata_entries": 67,
+    "total_rules": 81
+  }
+}

@@ -6,10 +6,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from ea_kernel.definition import (
+    ATTRIBUTES,
+    KERNEL_METADATA,
     KERNEL_SCHEMA,
     KERNEL_VERSION,
-    KERNEL_METADATA,
-    ATTRIBUTES,
     L1_ENTITIES,
     L2_RELATIONS,
     L3_RELATIONS,
@@ -299,7 +299,6 @@ class TestL2L3Transition:
         """Flow, Succession, Interaction inherit source/target from Connector."""
         connector = KERNEL_SCHEMA.get_relation("connector")
         assert connector is not None
-        connector_role_names = {r.name for r in connector.roles}
 
         for sub_name in ("flow", "succession", "interaction"):
             sub = KERNEL_SCHEMA.get_relation(sub_name)

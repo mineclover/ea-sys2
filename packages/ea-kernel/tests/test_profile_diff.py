@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+from ea_kernel.profile_diff import diff_profiles, diff_summary
 from ea_kernel.profile_types import DiffChangeType, KernelProfile, ProfileElement, ProfileRelation
 from ea_kernel.types import KernelValidityRule
-from ea_kernel.profile_diff import diff_profiles, diff_summary
-
 
 _DEFAULT_ELEMENTS = (
     ProfileElement("E1", "structure", "L1", "Cat1"),

@@ -6,10 +6,11 @@ auto-commit for schema/write.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any
 
-from typedb.driver import TypeDB, Credentials, DriverOptions, TransactionType
+from typedb.driver import Credentials, DriverOptions, TransactionType, TypeDB
 
 
 class KernelDBClient:
@@ -25,7 +26,7 @@ class KernelDBClient:
         username: str = "admin",
         password: str = "password",
         use_tls: bool = False,
-    ):
+    ) -> None:
         self._address = address
         self._database = database
         self._username = username
@@ -34,7 +35,7 @@ class KernelDBClient:
         self._driver = None
 
     @property
-    def driver(self):
+    def driver(self) -> Any:
         if self._driver is None:
             credentials = Credentials(self._username, self._password)
             options = DriverOptions(is_tls_enabled=self._use_tls)
@@ -75,7 +76,7 @@ class KernelDBClient:
     # ─── Transactions ──────────────────────────────────────────────────
 
     @contextmanager
-    def schema_transaction(self) -> Iterator:
+    def schema_transaction(self) -> Iterator[Any]:
         tx = self.driver.transaction(self._database, TransactionType.SCHEMA)
         try:
             yield tx
@@ -84,7 +85,7 @@ class KernelDBClient:
             tx.close()
 
     @contextmanager
-    def write_transaction(self) -> Iterator:
+    def write_transaction(self) -> Iterator[Any]:
         tx = self.driver.transaction(self._database, TransactionType.WRITE)
         try:
             yield tx
@@ -93,7 +94,7 @@ class KernelDBClient:
             tx.close()
 
     @contextmanager
-    def read_transaction(self) -> Iterator:
+    def read_transaction(self) -> Iterator[Any]:
         tx = self.driver.transaction(self._database, TransactionType.READ)
         try:
             yield tx

@@ -11,11 +11,18 @@ import sqlite3
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from ea_kernel.profile_types import AuditResult, KernelProfile, ProfileOrigin, ProfileStoreError, ProfileTag, ProfileVersion
 from ea_kernel.profile_serializer import compute_content_hash, dict_to_profile, profile_to_dict
+from ea_kernel.profile_types import (
+    AuditResult,
+    KernelProfile,
+    ProfileOrigin,
+    ProfileStoreError,
+    ProfileTag,
+    ProfileVersion,
+)
 
 # Type alias for the optional pre-store audit hook.
 # Receives a profile, returns an AuditResult. If not passed, the store skips audit.
@@ -23,7 +30,7 @@ StoreAuditHook = Callable[[KernelProfile], AuditResult]
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class StoragePort(ABC):

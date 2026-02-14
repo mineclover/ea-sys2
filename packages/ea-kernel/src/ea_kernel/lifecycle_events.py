@@ -14,12 +14,11 @@ References:
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from ea_kernel.governance_types import TriggerEventType
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Lifecycle Event — 이벤트 데이터
@@ -28,26 +27,26 @@ from ea_kernel.governance_types import TriggerEventType
 @dataclass(frozen=True)
 class LifecycleEvent:
     """생명주기 이벤트.
-    
+
     governance_lifecycle.toml의 TriggerEvent 3종 런타임 표현.
     """
     event_type: TriggerEventType
     timestamp: str
-    
+
     # Event source
     source_actor: str = ""
     source_module: str = ""
-    
+
     # Payload
     rule_id: str = ""
     corpus_version_id: str = ""
     previous_version_id: str = ""
     from_state: str = ""
     to_state: str = ""
-    
+
     # Additional context
     metadata: tuple[tuple[str, str], ...] = ()
-    
+
     @staticmethod
     def rule_submitted(
         rule_id: str,
@@ -63,7 +62,7 @@ class LifecycleEvent:
             from_state="draft",
             to_state="review",
         )
-    
+
     @staticmethod
     def rule_approved(
         rule_id: str,
@@ -79,7 +78,7 @@ class LifecycleEvent:
             from_state="review",
             to_state="approved",
         )
-    
+
     @staticmethod
     def corpus_updated(
         corpus_version_id: str,
@@ -107,20 +106,20 @@ EventHandler = Callable[[LifecycleEvent], None]
 
 class LifecycleEventPort(abc.ABC):
     """생명주기 이벤트 포트 ABC.
-    
+
     governance_lifecycle.toml의 TriggerEvent 3종 실행 포트.
     이벤트 발행(publish)과 구독(subscribe)을 분리.
     """
-    
+
     @abc.abstractmethod
     def publish(self, event: LifecycleEvent) -> None:
         """이벤트 발행.
-        
+
         Args:
             event: 발행할 이벤트
         """
         ...
-    
+
     @abc.abstractmethod
     def subscribe(
         self,
@@ -128,13 +127,13 @@ class LifecycleEventPort(abc.ABC):
         handler: EventHandler,
     ) -> None:
         """이벤트 구독.
-        
+
         Args:
             event_type: 구독할 이벤트 유형
             handler: 이벤트 핸들러 콜백
         """
         ...
-    
+
     @abc.abstractmethod
     def unsubscribe(
         self,
@@ -151,25 +150,25 @@ class LifecycleEventPort(abc.ABC):
 
 class InMemoryEventBus(LifecycleEventPort):
     """인메모리 이벤트 버스.
-    
+
     테스트 및 단일 프로세스용 구현.
     동기적으로 핸들러 호출.
     """
-    
+
     __slots__ = ("_handlers", "_history")
-    
+
     def __init__(self) -> None:
         self._handlers: dict[TriggerEventType, list[EventHandler]] = {}
         self._history: list[LifecycleEvent] = []
-    
+
     def publish(self, event: LifecycleEvent) -> None:
         """이벤트 발행 — 등록된 핸들러를 동기적으로 호출."""
         self._history.append(event)
-        
+
         handlers = self._handlers.get(event.event_type, [])
         for handler in handlers:
             handler(event)
-    
+
     def subscribe(
         self,
         event_type: TriggerEventType,
@@ -179,7 +178,7 @@ class InMemoryEventBus(LifecycleEventPort):
         if event_type not in self._handlers:
             self._handlers[event_type] = []
         self._handlers[event_type].append(handler)
-    
+
     def unsubscribe(
         self,
         event_type: TriggerEventType,
@@ -189,16 +188,16 @@ class InMemoryEventBus(LifecycleEventPort):
         handlers = self._handlers.get(event_type, [])
         if handler in handlers:
             handlers.remove(handler)
-    
+
     @property
     def history(self) -> tuple[LifecycleEvent, ...]:
         """발행된 이벤트 이력."""
         return tuple(self._history)
-    
+
     def clear_history(self) -> None:
         """이벤트 이력 초기화."""
         self._history.clear()
-    
+
     def handler_count(self, event_type: TriggerEventType) -> int:
         """특정 이벤트 유형의 핸들러 수."""
         return len(self._handlers.get(event_type, []))

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from ea_kernel.schema._files import SCHEMA_FILES, get_schema_content
-from ea_kernel.types import SchemaType
+from ea_kernel.types import SchemaFile, SchemaType
 
 if TYPE_CHECKING:
     from ea_kernel.client.connection import KernelDBClient
@@ -55,7 +55,7 @@ class SchemaLoader:
                 break
         return report
 
-    def _load_file(self, sf) -> FileLoadResult:
+    def _load_file(self, sf: SchemaFile) -> FileLoadResult:
         try:
             content = get_schema_content(sf.filename)
             if sf.schema_type == SchemaType.DEFINE:

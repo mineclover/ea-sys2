@@ -62,8 +62,9 @@ class ProfileAuditor:
 
     def audit_registry(self, registry: ProfileRegistry) -> RegistryAuditReport:
         """Audit all profiles in a registry."""
-        from ea_kernel.profile_registry import ProfileRegistry as _PR
-        if not isinstance(registry, _PR):
+        from ea_kernel.profile_registry import ProfileRegistry as RuntimeProfileRegistry
+
+        if not isinstance(registry, RuntimeProfileRegistry):
             raise TypeError(f"Expected ProfileRegistry, got {type(registry).__name__}")
 
         results: list[AuditResult] = []

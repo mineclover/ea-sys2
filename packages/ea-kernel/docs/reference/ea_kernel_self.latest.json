@@ -1,0 +1,181 @@
+{
+  "alignment": {
+    "coverage_percent": 100.0,
+    "matched_element_count": 12,
+    "missing_elements": [],
+    "model_element_count": 12,
+    "unmapped_elements": []
+  },
+  "compilation": {
+    "compiled_rule_count": 24,
+    "skipped_rule_count": 0,
+    "source_rule_count": 24,
+    "transformed_rule_count": 4
+  },
+  "issues": [
+    {
+      "code": "profile_pattern_compiled",
+      "message": "Category/layer patterns were compiled to executable rules for runtime checks. Raw runtime may differ from intended profile semantics.",
+      "severity": "info"
+    },
+    {
+      "code": "raw_runtime_pattern_mismatch",
+      "message": "Raw runtime failed 'category_contains_should_allow' but compiled runtime passed. Pattern-based profile rules are expected to require compilation for executable runtime semantics.",
+      "severity": "info"
+    }
+  ],
+  "paths": {
+    "kernel_src": "/Users/junwoobang/workflow/ea-sys2/packages/ea-kernel/src/ea_kernel",
+    "run_dir": "/var/folders/ss/p9hh1w09423bbbt07xcftfr40000gn/T/ea-kernel-self-wtky0524/run-20260214T054520859316Z"
+  },
+  "profile": {
+    "element_count": 12,
+    "name": "KernelSelfProfile",
+    "path": "/Users/junwoobang/workflow/ea-sys2/packages/ea-kernel/examples/kernel_self_profile.toml",
+    "relation_count": 9,
+    "rule_count": 24,
+    "version": "1.0.0"
+  },
+  "registration": {
+    "active_version_id": "e5bea9e786cc454aafb1a7c7769e8fcc",
+    "created": true,
+    "model_name": "KernelSelfProfile",
+    "post_validation_error_count": 0,
+    "post_validation_passed": true,
+    "post_validation_run_id": "912d3d4b94af49ee973b98a58e277d70",
+    "register_validation_run_id": "c56b2c221851469fa13ab4e20b5b843b",
+    "status": "active",
+    "version_id": "e5bea9e786cc454aafb1a7c7769e8fcc"
+  },
+  "runtime": {
+    "checks": [
+      {
+        "compiled": {
+          "confidence": "common",
+          "domains": [
+            "KernelSelfProfile"
+          ],
+          "expected": true,
+          "name": "category_contains_should_allow",
+          "passed": true,
+          "triple": [
+            "KernelLayer",
+            "KernelSpecBuilder",
+            "contains"
+          ],
+          "verdict": true,
+          "winner_rule": "ks-allow-01__c0001"
+        },
+        "expected": true,
+        "name": "category_contains_should_allow",
+        "raw": {
+          "confidence": "universal",
+          "domains": [
+            "KernelSelfProfile"
+          ],
+          "expected": true,
+          "name": "category_contains_should_allow",
+          "passed": false,
+          "triple": [
+            "KernelLayer",
+            "KernelSpecBuilder",
+            "contains"
+          ],
+          "verdict": false,
+          "winner_rule": "ks-fallback-contains"
+        },
+        "triple": [
+          "KernelLayer",
+          "KernelSpecBuilder",
+          "contains"
+        ]
+      },
+      {
+        "compiled": {
+          "confidence": "common",
+          "domains": [
+            "KernelSelfProfile"
+          ],
+          "expected": true,
+          "name": "exact_depends_on_should_allow",
+          "passed": true,
+          "triple": [
+            "KernelSpecBuilder",
+            "KernelSchemaLoader",
+            "depends_on"
+          ],
+          "verdict": true,
+          "winner_rule": "ks-allow-05"
+        },
+        "expected": true,
+        "name": "exact_depends_on_should_allow",
+        "raw": {
+          "confidence": "common",
+          "domains": [
+            "KernelSelfProfile"
+          ],
+          "expected": true,
+          "name": "exact_depends_on_should_allow",
+          "passed": true,
+          "triple": [
+            "KernelSpecBuilder",
+            "KernelSchemaLoader",
+            "depends_on"
+          ],
+          "verdict": true,
+          "winner_rule": "ks-allow-05"
+        },
+        "triple": [
+          "KernelSpecBuilder",
+          "KernelSchemaLoader",
+          "depends_on"
+        ]
+      },
+      {
+        "compiled": {
+          "confidence": "universal",
+          "domains": [
+            "KernelSelfProfile"
+          ],
+          "expected": false,
+          "name": "unspecified_consumes_should_deny",
+          "passed": true,
+          "triple": [
+            "KernelSchemaLoader",
+            "KernelSpecBuilder",
+            "consumes"
+          ],
+          "verdict": false,
+          "winner_rule": "ks-fallback-consumes"
+        },
+        "expected": false,
+        "name": "unspecified_consumes_should_deny",
+        "raw": {
+          "confidence": "universal",
+          "domains": [
+            "KernelSelfProfile"
+          ],
+          "expected": false,
+          "name": "unspecified_consumes_should_deny",
+          "passed": true,
+          "triple": [
+            "KernelSchemaLoader",
+            "KernelSpecBuilder",
+            "consumes"
+          ],
+          "verdict": false,
+          "winner_rule": "ks-fallback-consumes"
+        },
+        "triple": [
+          "KernelSchemaLoader",
+          "KernelSpecBuilder",
+          "consumes"
+        ]
+      }
+    ],
+    "compiled_active_rule_count": 24,
+    "raw_active_rule_count": 24
+  },
+  "status": "ok",
+  "timestamp": "2026-02-14T05:45:21.054905+00:00"
+}

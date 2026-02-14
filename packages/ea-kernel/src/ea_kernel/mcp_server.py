@@ -7,8 +7,12 @@ Usage: python -m ea_kernel mcp
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 from mcp.server.fastmcp import FastMCP
+
+mcp_tool_fn = TypeVar("mcp_tool_fn", bound=Callable[..., Any])
 
 mcp = FastMCP(
     "ea-kernel",
@@ -54,7 +58,12 @@ Profiles add constraints on top of kernel rules but cannot relax them (2-stage v
 )
 
 
-@mcp.tool()
+def _typed_tool(*args: Any, **kwargs: Any) -> Callable[[mcp_tool_fn], mcp_tool_fn]:
+    """Typed wrapper around FastMCP's untyped decorator API."""
+    return cast(Callable[[mcp_tool_fn], mcp_tool_fn], mcp.tool(*args, **kwargs))
+
+
+@_typed_tool()
 def kernel_list_entities() -> str:
     """List all kernel entities grouped by layer (L1-L4).
 
@@ -66,7 +75,7 @@ def kernel_list_entities() -> str:
     return json.dumps(list_entities(), indent=2)
 
 
-@mcp.tool()
+@_typed_tool()
 def kernel_list_relations() -> str:
     """List all kernel relations grouped by layer with roles.
 
@@ -78,7 +87,7 @@ def kernel_list_relations() -> str:
     return json.dumps(list_relations(), indent=2)
 
 
-@mcp.tool()
+@_typed_tool()
 def kernel_list_rules(group: str | None = None, relation: str | None = None) -> str:
     """List kernel validity rules with optional filtering.
 
@@ -91,7 +100,7 @@ def kernel_list_rules(group: str | None = None, relation: str | None = None) -> 
     return json.dumps(list_rules(group=group, relation=relation), indent=2)
 
 
-@mcp.tool()
+@_typed_tool()
 def kernel_describe_profile(name: str) -> str:
     """Describe a kernel profile — elements by layer, relations, rule summary.
 
@@ -107,7 +116,7 @@ def kernel_describe_profile(name: str) -> str:
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@_typed_tool()
 def kernel_describe_rule(rule_id: str) -> str:
     """Describe a single kernel validity rule with full metadata.
 
@@ -122,7 +131,7 @@ def kernel_describe_rule(rule_id: str) -> str:
     return json.dumps(result, indent=2)
 
 
-@mcp.tool()
+@_typed_tool()
 def kernel_judge(source: str, target: str, relation: str) -> str:
     """Evidence-based judgment for a relationship triple.
 
@@ -135,7 +144,7 @@ def kernel_judge(source: str, target: str, relation: str) -> str:
     return json.dumps(judge(source, target, relation), indent=2)
 
 
-@mcp.tool()
+@_typed_tool()
 def kernel_get_entity_names() -> str:
     """Get all valid kernel entity names (sorted).
 

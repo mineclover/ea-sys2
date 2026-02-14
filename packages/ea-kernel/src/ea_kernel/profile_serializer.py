@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import Any
 
 from ea_kernel.profile_types import (
     KernelProfile,
@@ -21,7 +22,7 @@ from ea_kernel.types import (
 )
 
 
-def profile_to_dict(profile: KernelProfile) -> dict:
+def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
     """KernelProfile → plain dict (JSON-safe)."""
     elements = [
         {
@@ -64,7 +65,7 @@ def profile_to_dict(profile: KernelProfile) -> dict:
     }
 
 
-def dict_to_profile(data: dict) -> KernelProfile:
+def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
     """plain dict → KernelProfile (deserialization)."""
     elements = tuple(
         ProfileElement(
@@ -126,7 +127,7 @@ def compute_content_hash(profile: KernelProfile) -> str:
 
 # ── Internal helpers ─────────────────────────────────────────────
 
-def _rule_to_dict(rule: KernelValidityRule) -> dict:
+def _rule_to_dict(rule: KernelValidityRule) -> dict[str, Any]:
     conditions = [
         {
             "condition_type": c.condition_type.value,
@@ -146,7 +147,7 @@ def _rule_to_dict(rule: KernelValidityRule) -> dict:
     }
 
 
-def _dict_to_rule(d: dict) -> KernelValidityRule:
+def _dict_to_rule(d: dict[str, Any]) -> KernelValidityRule:
     conditions = tuple(
         KernelRuleCondition(
             condition_type=KernelConditionType(c["condition_type"]),

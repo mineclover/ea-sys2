@@ -6,8 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
-from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.profile_builder import ProfileBuilder
 from ea_kernel.rule_corpus import RuleCorpus
 from ea_kernel.spec import KERNEL_SPEC
@@ -22,7 +20,6 @@ from ea_kernel.types import (
     RuleGroup,
     RuleMetadata,
 )
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Type tests
@@ -53,11 +50,15 @@ class TestTypes:
             entry.rule = rule  # type: ignore[misc]
 
     def test_rule_metadata_equality(self):
-        kwargs = dict(
-            domain="kernel", tags=("x",), category=RuleCategory.STRUCTURAL,
-            confidence=RuleConfidence.COMMON, source="s",
-            established_version="1.0", rationale="r",
-        )
+        kwargs = {
+            "domain": "kernel",
+            "tags": ("x",),
+            "category": RuleCategory.STRUCTURAL,
+            "confidence": RuleConfidence.COMMON,
+            "source": "s",
+            "established_version": "1.0",
+            "rationale": "r",
+        }
         assert RuleMetadata(**kwargs) == RuleMetadata(**kwargs)
 
     def test_rule_category_enum(self):

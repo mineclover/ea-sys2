@@ -5,14 +5,13 @@ with emphasis on L2/L3 behavioral relations (feature_typing, connector,
 redefinition, subsetting, interaction, triggering, guarding).
 """
 
+from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.profiles.sysml2 import (
-    SYSML2_PROFILE,
     ALL_ELEMENTS,
     ALL_RELATIONS,
     ALL_RULES,
+    SYSML2_PROFILE,
 )
-from ea_kernel.definition import KERNEL_SCHEMA
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Profile structure

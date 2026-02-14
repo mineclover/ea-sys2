@@ -4,8 +4,7 @@ Validates profile structure, kernel type mapping, validity rule coverage,
 and 2-stage validation pipeline for process/execution modeling.
 """
 
-from ea_kernel.profiles.bpmn import BPMN_PROFILE, ALL_ELEMENTS, ALL_RELATIONS, ALL_RULES
-
+from ea_kernel.profiles.bpmn import ALL_ELEMENTS, ALL_RELATIONS, ALL_RULES, BPMN_PROFILE
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Profile Structure

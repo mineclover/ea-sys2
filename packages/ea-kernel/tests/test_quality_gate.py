@@ -5,10 +5,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ea_kernel.spec import KERNEL_SPEC
 from ea_kernel.profile_builder import ProfileBuilder
 from ea_kernel.profile_quality_gate import check_profile_quality
-
+from ea_kernel.spec import KERNEL_SPEC
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Clean profile passes

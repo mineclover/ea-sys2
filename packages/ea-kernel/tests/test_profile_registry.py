@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import pytest
-
-from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileOrigin, ProfileRegistryError, ProfileRelation
 from ea_kernel.profile_registry import ProfileRegistry
 from ea_kernel.profile_store import SQLiteProfileStore
+from ea_kernel.profile_types import (
+    KernelProfile,
+    ProfileElement,
+    ProfileOrigin,
+    ProfileRegistryError,
+    ProfileRelation,
+)
 
 
 def _make_profile(name: str = "Test") -> KernelProfile:

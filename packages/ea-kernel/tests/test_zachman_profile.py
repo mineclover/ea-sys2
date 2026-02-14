@@ -1,13 +1,12 @@
 """Tests for Zachman Framework kernel profile mapping correctness."""
 
+from ea_kernel.definition import KERNEL_SCHEMA
 from ea_kernel.profiles.zachman import (
-    ZACHMAN_PROFILE,
     ALL_ELEMENTS,
     ALL_RELATIONS,
     ALL_RULES,
+    ZACHMAN_PROFILE,
 )
-from ea_kernel.definition import KERNEL_SCHEMA
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Structural counts

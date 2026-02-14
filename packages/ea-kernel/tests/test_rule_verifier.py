@@ -6,7 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
-
 from ea_kernel.rule_corpus import RuleCorpus
 from ea_kernel.rule_verifier import RuleVerifier
 from ea_kernel.spec import KERNEL_SPEC
@@ -15,7 +14,6 @@ from ea_kernel.types import (
     GroupVerificationResult,
     RuleCategory,
     RuleGroup,
-    RuleVerificationEntry,
     VerificationReport,
 )
 

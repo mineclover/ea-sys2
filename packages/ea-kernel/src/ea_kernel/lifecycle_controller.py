@@ -9,17 +9,16 @@ Coordinates the governance loop:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from ea_kernel.governance_types import RuleLifecycle, TriggerEventType
+from ea_kernel.governance_types import TriggerEventType
 from ea_kernel.notification_service import Notification, NotificationService
 
 if TYPE_CHECKING:
     from ea_kernel.corpus_version_store import CorpusVersionStore
-    from ea_kernel.governance_types import AnalysisReport, LifecycleEvent
-    from ea_kernel.impact_evaluator import ImpactEvaluator, RuleChangeSet
-    from ea_kernel.lifecycle_events import EventBus
+    from ea_kernel.evidence_analyzer import AnalysisReport
+    from ea_kernel.impact_evaluator import ImpactEvaluator
+    from ea_kernel.lifecycle_events import LifecycleEvent, LifecycleEventPort
     from ea_kernel.promotion_engine import PromotionEngine
     from ea_kernel.rule_asset_store import RuleAssetStore
     from ea_kernel.rule_corpus import RuleCorpus
@@ -35,7 +34,7 @@ class LifecycleController:
 
     def __init__(
         self,
-        event_bus: EventBus,
+        event_bus: LifecycleEventPort,
         rule_store: RuleAssetStore,
         corpus_store: CorpusVersionStore,
         notification_service: NotificationService,
@@ -66,11 +65,11 @@ class LifecycleController:
 
     def on_rule_submitted(self, event: LifecycleEvent) -> None:
         """Handle RULE_SUBMITTED: notify reviewers, check auto-approve."""
-        
+
         # Check rule asset
         asset = self.rule_store.get(event.rule_id)
         rule_name = asset.entry.rule.id if asset else event.rule_id
-        
+
         # Notify
         self.notifier.send(Notification(
             recipient="role:reviewer",
@@ -102,7 +101,7 @@ class LifecycleController:
             return
 
         rule_name = asset.entry.rule.id
-        
+
         # 1. Update active corpus (if managed here)
         # Note: Corpus update usually happens via deployment pipeline or dynamic reload.
         # Here we simulate creating a new corpus version snapshot.
@@ -116,8 +115,9 @@ class LifecycleController:
                 parent_version_id=self._get_latest_version_id(),
             )
             # Publish corpus updated event
-            from ea_kernel.lifecycle_events import LifecycleEvent as LE
-            self.bus.publish(LE.corpus_updated(
+            from ea_kernel.lifecycle_events import LifecycleEvent
+
+            self.bus.publish(LifecycleEvent.corpus_updated(
                 corpus_version_id=version_info.version_id,
                 previous_version_id=version_info.parent_version_id,
                 actor=event.source_actor,
@@ -138,7 +138,7 @@ class LifecycleController:
             message=f"Rule {rule_name} is now active (v{asset.provenance.version}).",
             level="info",
         ))
-        
+
         # Trigger corpus update event handled separately if corpus version changes
 
     def on_corpus_updated(self, event: LifecycleEvent) -> None:
@@ -198,7 +198,7 @@ class LifecycleController:
 
     def run_auto_promotion(self, analysis_report: AnalysisReport) -> None:
         """Use S4 AnalysisReport to drive S5 Rule Evolution.
-        
+
         1. Identify candidates (empirical -> common -> universal)
         2. Create proposals
         3. Simulate what-if
@@ -208,20 +208,20 @@ class LifecycleController:
             return
 
         from ea_kernel.promotion_engine import ProposalType
-        from ea_kernel.what_if_simulator import SimulatedChange, ChangeType
+        from ea_kernel.what_if_simulator import ChangeType, SimulatedChange
 
         candidates = self.promotion_engine.identify_promotion_candidates(analysis_report)
-        
+
         for candidate in candidates:
             # Create proposal
-            proposal = self.promotion_engine.create_proposal(
+            self.promotion_engine.create_proposal(
                 proposal_type=ProposalType.PROMOTE,
                 rule_id=candidate.rule_id,
                 proposed_by="system:auto-promoter",
                 rationale=f"Auto-promotion based on analysis. Score: {candidate.score:.1f}",
                 evidence_report_id=analysis_report.report_id,
             )
-            
+
             # Simulate (S5 WhatIf)
             if self.what_if_simulator:
                 # Promotion = activating a REVIEW rule -> ADD_RULE to corpus
@@ -229,7 +229,7 @@ class LifecycleController:
                     change_type=ChangeType.ADD_RULE,
                     rule_id=candidate.rule_id,
                 )
-                
+
                 result = self.what_if_simulator.simulate([sim_change])
                 if not result.safe_to_apply:
                     # Skip unsafe automation
@@ -245,7 +245,6 @@ class LifecycleController:
             self.notifier.send(Notification(
                 recipient="role:reviewer",
                 subject=f"Auto-Promotion Proposal: {candidate.rule_id}",
-                message=f"Proposed promotion to APPROVED based on analysis.",
+                message="Proposed promotion to APPROVED based on analysis.",
                 level="info",
             ))
-

@@ -16,15 +16,14 @@ References:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from ea_kernel.types import (
     DecisionRecord,
     JudgmentReport,
     KernelValidityRule,
-    RuleCategory,
     RuleConfidence,
     RuleCorpusEntry,
     RuleMetadata,
@@ -39,9 +38,9 @@ def _utc_now_iso() -> str:
 # Rule Lifecycle States — TOML의 LifecycleState 4종 매핑
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class RuleLifecycleState(str, Enum):
+class RuleLifecycleState(StrEnum):
     """규칙 생명주기 상태.
-    
+
     governance_lifecycle.toml의 RuleDraft/RuleReview/RuleApproved/RuleDeprecated 매핑.
     """
     DRAFT = "draft"           # 초안 — 판단에 사용되지 않음
@@ -70,9 +69,9 @@ def is_valid_transition(
 # Trigger Events — TOML의 TriggerEvent 3종 매핑
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class TriggerEventType(str, Enum):
+class TriggerEventType(StrEnum):
     """규칙 생명주기 트리거 이벤트.
-    
+
     governance_lifecycle.toml의 RuleSubmitted/RuleApprovedEvent/CorpusUpdated 매핑.
     """
     RULE_SUBMITTED = "rule_submitted"      # 규칙 초안 제출 → DRAFT → REVIEW
@@ -87,7 +86,7 @@ class TriggerEventType(str, Enum):
 @dataclass(frozen=True)
 class RuleProvenance:
     """규칙 출처 정보.
-    
+
     규칙이 어디서 왔는지 추적:
     - author: 작성자 식별자
     - source_type: 출처 유형 (kernel, profile, empirical, manual)
@@ -103,7 +102,7 @@ class RuleProvenance:
     created_at: str = ""  # ISO 8601
     updated_at: str = ""  # ISO 8601
     version: int = 1
-    
+
     def __post_init__(self) -> None:
         if not self.created_at:
             now = _utc_now_iso()
@@ -119,14 +118,14 @@ class RuleProvenance:
 @dataclass(frozen=True)
 class RuleLifecycle:
     """규칙 생명주기 정보.
-    
+
     상태 전이 이력 포함:
     - current_state: 현재 상태
     - state_history: (timestamp, from_state, to_state, actor, reason) 튜플 리스트
     """
     current_state: RuleLifecycleState = RuleLifecycleState.DRAFT
     state_history: tuple[tuple[str, str, str, str, str], ...] = ()
-    
+
     def transition(
         self,
         to_state: RuleLifecycleState,
@@ -134,22 +133,22 @@ class RuleLifecycle:
         reason: str = "",
     ) -> RuleLifecycle:
         """새 상태로 전이하고 새 RuleLifecycle 반환.
-        
+
         Raises:
             ValueError: 무효한 상태 전이
         """
         if not is_valid_transition(self.current_state, to_state):
             msg = f"Invalid transition: {self.current_state.value} → {to_state.value}"
             raise ValueError(msg)
-        
+
         timestamp = _utc_now_iso()
         entry = (timestamp, self.current_state.value, to_state.value, actor, reason)
-        
+
         return RuleLifecycle(
             current_state=to_state,
             state_history=(*self.state_history, entry),
         )
-    
+
     @property
     def is_active(self) -> bool:
         """판단에 사용 가능한 상태인지."""
@@ -163,30 +162,30 @@ class RuleLifecycle:
 @dataclass(frozen=True)
 class RuleAsset:
     """규칙 자산 — 규칙 + 메타데이터 + 출처 + 생명주기를 묶은 자산 단위.
-    
+
     governance_lifecycle.toml의 RuleAsset(item) 매핑.
     RuleCorpusEntry를 확장하여 출처 및 생명주기 정보 추가.
     """
     entry: RuleCorpusEntry  # 기존 규칙 + 메타데이터
     provenance: RuleProvenance
     lifecycle: RuleLifecycle = field(default_factory=RuleLifecycle)
-    
+
     @property
     def rule(self) -> KernelValidityRule:
         return self.entry.rule
-    
+
     @property
     def metadata(self) -> RuleMetadata:
         return self.entry.metadata
-    
+
     @property
     def id(self) -> str:
         return self.entry.rule.id
-    
+
     @property
     def is_active(self) -> bool:
         return self.lifecycle.is_active
-    
+
     def with_lifecycle(self, lifecycle: RuleLifecycle) -> RuleAsset:
         """새 생명주기로 RuleAsset 반환."""
         return RuleAsset(
@@ -194,7 +193,7 @@ class RuleAsset:
             provenance=self.provenance,
             lifecycle=lifecycle,
         )
-    
+
     def with_provenance(self, provenance: RuleProvenance) -> RuleAsset:
         """새 출처로 RuleAsset 반환."""
         return RuleAsset(
@@ -211,7 +210,7 @@ class RuleAsset:
 @dataclass(frozen=True)
 class EvidenceSummaryItem:
     """요약된 증거 항목.
-    
+
     Full RuleCorpusEntry 없이도 분석이 가능한 최소 정보.
     """
     rule_id: str
@@ -227,7 +226,7 @@ class EvidenceSummaryItem:
 @dataclass(frozen=True)
 class StoredDecisionRecord:
     """영속화된 판단 기록.
-    
+
     DecisionRecord에 저장소 메타데이터 추가:
     - storage_id: 저장소 내부 ID (auto-increment 또는 UUID)
     - corpus_version_id: 판단 시점의 Corpus 버전
@@ -239,12 +238,12 @@ class StoredDecisionRecord:
     corpus_version_id: str = ""
     stored_at: str = ""  # ISO 8601
     evidence_summary: tuple[EvidenceSummaryItem, ...] = ()
-    
+
     def __post_init__(self) -> None:
         if not self.stored_at:
             now = _utc_now_iso()
             object.__setattr__(self, "stored_at", now)
-    
+
     @property
     def triple(self) -> tuple[str, str, str]:
         return self.record.subject_triple
@@ -257,7 +256,7 @@ class StoredDecisionRecord:
 @dataclass(frozen=True)
 class CorpusVersionInfo:
     """Corpus 버전 정보.
-    
+
     governance_lifecycle.toml의 CorpusVersion(item) 매핑.
     특정 시점의 RuleCorpus 스냅샷 식별자.
     """
@@ -268,7 +267,7 @@ class CorpusVersionInfo:
     parent_version_id: str = ""  # 이전 버전 (변경 추적용)
     description: str = ""
     rule_ids: tuple[str, ...] = ()  # 포함된 규칙 ID 목록
-    
+
     def __post_init__(self) -> None:
         if not self.created_at:
             now = _utc_now_iso()
@@ -282,7 +281,7 @@ class CorpusVersionInfo:
 @dataclass(frozen=True)
 class JudgmentStatistics:
     """Triple별 판단 통계.
-    
+
     governance_lifecycle.toml의 JudgmentStat(item) 매핑.
     특정 triple에 대한 판단 이력 집계.
     """
@@ -296,23 +295,23 @@ class JudgmentStatistics:
     avg_confidence: float = 0.0  # RuleConfidence 매핑된 수치 평균
     last_judgment_at: str = ""
     dominant_domains: tuple[str, ...] = ()  # 가장 빈번한 도메인
-    
+
     @property
     def triple(self) -> tuple[str, str, str]:
         return (self.source, self.target, self.relation)
-    
+
     @property
     def allow_rate(self) -> float:
         if self.total_judgments == 0:
             return 0.0
         return self.allow_count / self.total_judgments
-    
+
     @property
     def override_rate(self) -> float:
         if self.total_judgments == 0:
             return 0.0
         return self.override_count / self.total_judgments
-    
+
     def with_judgment(
         self,
         verdict: bool,
@@ -327,16 +326,16 @@ class JudgmentStatistics:
             RuleConfidence.CONTEXTUAL: 0.5,
             RuleConfidence.EMPIRICAL: 0.25,
         }.get(confidence, 0.5)
-        
+
         new_total = self.total_judgments + 1
         new_avg = (
-            (self.avg_confidence * self.total_judgments + confidence_value) 
+            (self.avg_confidence * self.total_judgments + confidence_value)
             / new_total
         )
-        
+
         # 도메인 빈도 업데이트 (간단한 구현: 최신 도메인 유지)
         domain_set = set(self.dominant_domains) | set(domains)
-        
+
         return JudgmentStatistics(
             source=self.source,
             target=self.target,
@@ -387,7 +386,7 @@ class EnhancedJudgment:
     """S2: Enhanced Judgment result."""
     judgment: JudgmentReport
     metadata: dict[str, Any] = field(default_factory=dict)
-    
+
 @dataclass(frozen=True)
 class AnalysisReport:
     """S4: Analysis Report."""

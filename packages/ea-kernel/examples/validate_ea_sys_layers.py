@@ -1,4 +1,4 @@
-"""Validate Ralph TUI layer profiles independently (no merge/composition)."""
+"""Validate EA system layer profiles independently (no merge/composition)."""
 
 from __future__ import annotations
 
@@ -19,12 +19,12 @@ LAYER_FILE_MAP = {
 
 VALIDATION_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow")
 MODEL_DEFINITION_ORDER = ("infra", "decision", "needs", "kernel", "flow")
-LAYER_DIR = Path(__file__).parent / "ralph_tui_layers"
+LAYER_DIR = Path(__file__).parent / "ea-sys"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate Ralph TUI layer TOML files independently."
+        description="Validate EA system layer TOML files independently."
     )
     parser.add_argument(
         "--layer",
@@ -214,11 +214,17 @@ def _collect_exact_relation_edges(
     return edges
 
 
+def _pattern_has_layer_match(profile: Any, pattern: str, layer: str) -> bool:
+    for elem in profile.elements:
+        if _matches_pattern(elem, pattern) and str(getattr(elem, "layer", "")) == layer:
+            return True
+    return False
+
+
 def simulate_data_flow() -> dict[str, Any]:
     """Simulate cross-layer data flow using static model relations only."""
     profiles = _load_all_layer_profiles()
     infra_profile = profiles["infra"]
-    decision_profile = profiles["decision"]
     needs_profile = profiles["needs"]
     flow_profile = profiles["flow"]
 
@@ -246,15 +252,9 @@ def simulate_data_flow() -> dict[str, Any]:
     }
     available_data = set(initial_data)
 
-    decision_rules = [
-        rule
-        for rule in decision_profile.validity_rules
-        if rule.relationship_name == "constrains" and rule.valid
-    ]
-
     step_reports: list[dict[str, Any]] = []
     missing_inputs: list[tuple[str, str]] = []
-    policy_gaps: list[str] = []
+    flow_local_policy_gaps: list[str] = []
 
     for step_name in sequence:
         flow_element = flow_profile.get_element(step_name)
@@ -266,14 +266,18 @@ def simulate_data_flow() -> dict[str, Any]:
         missing = sorted(x for x in required if x not in available_data)
         produced = sorted(produces_by_step.get(step_name, set()))
 
-        decision_constrained = any(
-            _matches_pattern(flow_element, rule.target_pattern) for rule in decision_rules
+        flow_local_constrained = any(
+            rule.relationship_name == "constrains"
+            and rule.valid
+            and _matches_pattern(flow_element, rule.target_pattern)
+            and _pattern_has_layer_match(flow_profile, rule.source_pattern, "Flow")
+            for rule in flow_profile.validity_rules
         )
 
         if missing:
             missing_inputs.extend((step_name, data_name) for data_name in missing)
-        if not decision_constrained:
-            policy_gaps.append(step_name)
+        if not flow_local_constrained:
+            flow_local_policy_gaps.append(step_name)
 
         available_data.update(produced)
         step_reports.append(
@@ -282,14 +286,14 @@ def simulate_data_flow() -> dict[str, Any]:
                 "required": required,
                 "missing": missing,
                 "produced": produced,
-                "decision_constrained": decision_constrained,
+                "flow_local_constrained": flow_local_constrained,
             }
         )
 
     passed = (
         not relation_integrity_violations
         and not missing_inputs
-        and not policy_gaps
+        and not flow_local_policy_gaps
         and bool(sequence)
     )
 
@@ -306,7 +310,7 @@ def simulate_data_flow() -> dict[str, Any]:
         "final_data": sorted(available_data),
         "step_reports": step_reports,
         "missing_inputs": missing_inputs,
-        "policy_gaps": policy_gaps,
+        "flow_local_policy_gaps": flow_local_policy_gaps,
     }
 
 
@@ -333,7 +337,7 @@ def register_layer(
     service = registration_service_type(db_path, kernel_spec)
 
     context = {
-        "source": "validate_ralph_tui_layers",
+        "source": "validate_ea_sys_layers",
         "layer": layer,
         "file": str(layer_file),
         "name_mode": name_mode,
@@ -407,8 +411,11 @@ def main() -> int:
         if report["missing_inputs"]:
             for step_name, data_name in report["missing_inputs"]:
                 print(f"[sim][fail] missing-input step={step_name} data={data_name}")
-        if report["policy_gaps"]:
-            print(f"[sim][fail] policy-gaps: {','.join(sorted(set(report['policy_gaps'])))}")
+        if report["flow_local_policy_gaps"]:
+            print(
+                "[sim][fail] flow-local-policy-gaps: "
+                f"{','.join(sorted(set(report['flow_local_policy_gaps'])))}"
+            )
 
         if report["passed"]:
             print("[sim] passed")

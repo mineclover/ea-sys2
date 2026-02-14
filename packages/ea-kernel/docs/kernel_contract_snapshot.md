@@ -13,6 +13,12 @@
 2. `kernel_rules.snapshot.json`
 3. `kernel_judgment_vectors.snapshot.json`
 
+`kernel_rules.snapshot.json`의 `layer_constraints`는 피드백 추적을 위해
+deterministic `id`를 포함한다.
+
+- 예: `lc-00-l4-l4-association`
+- 의미: `{index}-{source_layer}-{target_layer}-{forbidden_relations}`
+
 ## 명령어
 
 직접 실행:
@@ -27,8 +33,20 @@ Make 타깃:
 ```bash
 make build-kernel-contract-snapshots
 make verify-kernel-contract-snapshots
+make sync-kernel-contract-ts-sdk
+make verify-kernel-contract-ts-sdk
 make test-kernel-contract-snapshot
 ```
+
+## SDK 공급
+
+Snapshot 소비 SDK는 두 형태로 제공한다.
+
+1. Python: `packages/ea-kernel-contract`
+2. TypeScript: `packages/ea-kernel-contract-ts` (`@ea-sys2/kernel-contract-sdk`)
+
+`build-kernel-contract-snapshots`는 snapshot 생성 후
+TypeScript SDK의 `contracts/`도 자동 동기화한다.
 
 ## 벡터 정책
 

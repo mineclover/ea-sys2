@@ -1,0 +1,221 @@
+# EA System Layer: Infra
+# Role: data management contracts and persistence capabilities.
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.3.0"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "InfraLayer"
+layer = "Infra"
+category = "Composite"
+description = "Infrastructure data-management boundary."
+
+[[elements]]
+name = "DataPlatformService"
+layer = "Infra"
+category = "ActiveStructure"
+description = "Primary service that controls persistence contracts and data access."
+
+[[elements]]
+name = "StorageLifecycleService"
+layer = "Infra"
+category = "ActiveStructure"
+description = "Handles schema lifecycle, migration, and retention routines."
+
+[[elements]]
+name = "ProfileStoragePort"
+layer = "Infra"
+category = "Interface"
+description = "Persistence port used by governance for profile/model storage."
+
+[[elements]]
+name = "EventStoragePort"
+layer = "Infra"
+category = "Interface"
+description = "Persistence port for immutable event/audit writes."
+
+[[elements]]
+name = "LayerVersionStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Version-indexed storage for layer model payloads."
+
+[[elements]]
+name = "ValidationRunStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Validation run snapshots and diagnostics."
+
+[[elements]]
+name = "EvidenceStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Execution evidence and feedback archives."
+
+[[elements]]
+name = "StoragePolicy"
+layer = "Infra"
+category = "Governance"
+description = "Storage and retention policy constraints."
+
+[[rules]]
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 60
+notes = "Infra boundary contains infrastructure services."
+
+[[rules]]
+source = "@Composite"
+target = "@Interface"
+relation = "contains"
+priority = 60
+notes = "Infra boundary contains infra-facing ports."
+
+[[rules]]
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 60
+notes = "Infra boundary contains persistent stores."
+
+[[rules]]
+source = "@Governance"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 60
+notes = "Storage policy constrains infra services."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "registers"
+priority = 60
+notes = "Infra services register storage adapter ports."
+
+[[rules]]
+source = "DataPlatformService"
+target = "StorageLifecycleService"
+relation = "coordinates"
+priority = 70
+notes = "Primary data platform coordinates storage lifecycle operations."
+
+[[rules]]
+source = "DataPlatformService"
+target = "LayerVersionStore"
+relation = "depends_on"
+priority = 70
+notes = "Platform service depends on model version storage."
+
+[[rules]]
+source = "DataPlatformService"
+target = "ValidationRunStore"
+relation = "depends_on"
+priority = 70
+notes = "Platform service depends on validation run storage."
+
+[[rules]]
+source = "DataPlatformService"
+target = "EvidenceStore"
+relation = "depends_on"
+priority = 70
+notes = "Platform service depends on evidence storage."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "LayerVersionStore"
+relation = "produces"
+priority = 70
+notes = "Lifecycle operations produce updated version state."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "ValidationRunStore"
+relation = "produces"
+priority = 70
+notes = "Lifecycle operations persist validation snapshots."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "EvidenceStore"
+relation = "produces"
+priority = 70
+notes = "Lifecycle operations produce retention/audit evidence."
+
+[[rules]]
+source = "StoragePolicy"
+target = "DataPlatformService"
+relation = "constrains"
+priority = 70
+notes = "Policy constrains persistence behavior and access boundaries."
+
+[[rules]]
+source = "StoragePolicy"
+target = "StorageLifecycleService"
+relation = "constrains"
+priority = 70
+notes = "Policy constrains migration and retention lifecycle routines."

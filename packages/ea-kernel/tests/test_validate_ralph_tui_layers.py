@@ -23,7 +23,7 @@ def _load_validate_module():
     ("layer", "filename", "expected"),
     [
         ("infra", "00-infra.toml", (7, 9, 9)),
-        ("governance", "10-governance.toml", (12, 9, 18)),
+        ("governance", "10-governance.toml", (35, 9, 79)),
         ("decision", "20-decision.toml", (10, 9, 15)),
         ("needs", "30-needs.toml", (5, 9, 9)),
         ("kernel", "40-kernel.toml", (13, 9, 30)),
@@ -144,3 +144,45 @@ def test_main_registers_all_layers_independently(monkeypatch, capsys, tmp_path):
         names = [r[0] for r in rows]
         assert "RalphTUIImplementation.infra" in names
         assert "RalphTUIImplementation.flow" in names
+
+
+def test_simulate_data_flow_success():
+    mod = _load_validate_module()
+
+    report = mod.simulate_data_flow()
+
+    assert report["passed"] is True
+    assert report["flow_sequence"] == [
+        "SyncTrackerStep",
+        "SelectTaskStep",
+        "BuildPromptStep",
+        "ExecuteAgentAction",
+        "DetectCompletionStep",
+        "UpdateTrackerStep",
+        "PersistIterationStep",
+    ]
+    assert report["missing_inputs"] == []
+    assert report["policy_gaps"] == []
+    assert report["independent_relation_integrity_ok"] is True
+    assert report["model_definition_order"] == [
+        "infra",
+        "decision",
+        "needs",
+        "kernel",
+        "flow",
+    ]
+    assert report["governance_role"] == "layer-management-system"
+
+
+def test_main_simulate_success(monkeypatch, capsys):
+    mod = _load_validate_module()
+    monkeypatch.setattr(mod.sys, "argv", ["validate_ralph_tui_layers.py", "--simulate"])
+
+    rc = mod.main()
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "[sim] flow-sequence:" in out
+    assert "[sim] model-order: infra > decision > needs > kernel > flow" in out
+    assert "[sim] governance-role: layer-management-system" in out
+    assert "[sim] passed" in out

@@ -1,4 +1,4 @@
-.PHONY: install dev test test-kernel test-kernel-contract test-kernel-self test-needs test-decision test-flow test-governance test-infra test-kernel-governance-db test-kernel-governance-reference test-kernel-contract-snapshot review-kernel-alignment review-kernel-self-alignment run-kernel-self-check run-kernel-self-check-strict gate-kernel-self check-kernel-governance-drift rehearse-kernel-governance-recovery build-kernel-governance-reference verify-kernel-governance-reference build-kernel-contract-snapshots verify-kernel-contract-snapshots gate-kernel-governance-db gate-kernel-governance-reference lint-kernel-governance typecheck-kernel-governance gate-kernel-stability lint format typecheck web-dev web-build
+.PHONY: install dev test test-kernel test-kernel-contract test-kernel-self test-needs test-decision test-flow test-governance test-infra test-kernel-governance-db test-kernel-governance-reference test-kernel-contract-snapshot review-kernel-alignment review-kernel-self-alignment run-kernel-self-check run-kernel-self-check-strict gate-kernel-self check-kernel-governance-drift rehearse-kernel-governance-recovery build-kernel-governance-reference verify-kernel-governance-reference build-kernel-contract-snapshots verify-kernel-contract-snapshots sync-kernel-contract-ts-sdk verify-kernel-contract-ts-sdk build-kernel-contract-ts-sdk gate-kernel-governance-db gate-kernel-governance-reference lint-kernel-governance typecheck-kernel-governance gate-kernel-stability lint format typecheck web-dev web-build
 
 # Installation
 install:
@@ -96,9 +96,20 @@ verify-kernel-governance-reference:
 
 build-kernel-contract-snapshots:
 	uv run python packages/ea-kernel/src/ea_kernel/scripts/kernel_contract_snapshot.py build
+	node packages/ea-kernel-contract-ts/scripts/sync-contracts.mjs
 
 verify-kernel-contract-snapshots:
 	uv run python packages/ea-kernel/src/ea_kernel/scripts/kernel_contract_snapshot.py verify
+	node packages/ea-kernel-contract-ts/scripts/sync-contracts.mjs --check
+
+sync-kernel-contract-ts-sdk:
+	node packages/ea-kernel-contract-ts/scripts/sync-contracts.mjs
+
+verify-kernel-contract-ts-sdk:
+	node packages/ea-kernel-contract-ts/scripts/sync-contracts.mjs --check
+
+build-kernel-contract-ts-sdk: sync-kernel-contract-ts-sdk
+	cd packages/ea-kernel-contract-ts && pnpm run build
 
 gate-kernel-governance-db: check-kernel-governance-drift rehearse-kernel-governance-recovery test-kernel-governance-db
 

@@ -1,0 +1,782 @@
+# EA System Layer: Governance
+# Role: registration/version/validation/change control for independent layer models.
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.3.0"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "GovernanceLayer"
+layer = "Governance"
+category = "Composite"
+description = "Governance control-plane boundary for all layer models."
+
+[[elements]]
+name = "LayerModelRegistry"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Registers and indexes layer model definitions."
+
+[[elements]]
+name = "VersionLifecycleManager"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Controls model version lifecycle and active pointers."
+
+[[elements]]
+name = "ValidationCoordinator"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Executes compatibility and integrity validation workflows."
+
+[[elements]]
+name = "AgreementCoordinator"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Coordinates owner agreement and change consent process."
+
+[[elements]]
+name = "ActivationCoordinator"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Coordinates release gate and version activation process."
+
+[[elements]]
+name = "RegistrationPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for model registration."
+
+[[elements]]
+name = "VersionPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for version transitions."
+
+[[elements]]
+name = "CompatibilityPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for cross-layer compatibility checks."
+
+[[elements]]
+name = "ApprovalPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for ownership approval and release decisions."
+
+[[elements]]
+name = "BoundaryPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for data/ownership boundary enforcement."
+
+[[elements]]
+name = "InfraModelPort"
+layer = "Infra"
+category = "Interface"
+description = "Governance port for infra model registration."
+
+[[elements]]
+name = "DecisionModelPort"
+layer = "Decision"
+category = "Interface"
+description = "Governance port for decision model registration."
+
+[[elements]]
+name = "NeedsModelPort"
+layer = "Needs"
+category = "Interface"
+description = "Governance port for needs model registration."
+
+[[elements]]
+name = "KernelModelPort"
+layer = "Kernel"
+category = "Interface"
+description = "Governance port for kernel model registration."
+
+[[elements]]
+name = "FlowModelPort"
+layer = "Flow"
+category = "Interface"
+description = "Governance port for flow model registration."
+
+[[elements]]
+name = "GovernanceDbPort"
+layer = "Infra"
+category = "Interface"
+description = "Infra-defined DB contract consumed by governance control services."
+
+[[elements]]
+name = "ModelDefinitionRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Canonical model definition document."
+
+[[elements]]
+name = "ModelVersionRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Version metadata and lineage state."
+
+[[elements]]
+name = "ValidationReportRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Validation diagnostics and quality report."
+
+[[elements]]
+name = "AgreementRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Owner agreement and objection decision history."
+
+[[elements]]
+name = "ActivationRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Activation status and release audit record."
+
+[[elements]]
+name = "FeedbackRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Post-activation feedback and incident observations."
+
+[[elements]]
+name = "RegistrationReviewStep"
+layer = "Governance"
+category = "Behavior"
+description = "Initial review of registration payload and ownership metadata."
+
+[[elements]]
+name = "CompatibilityCheckStep"
+layer = "Governance"
+category = "Behavior"
+description = "Cross-layer schema/rule compatibility check."
+
+[[elements]]
+name = "OwnerApprovalStep"
+layer = "Governance"
+category = "Behavior"
+description = "Owner approval decision step for definition changes."
+
+[[elements]]
+name = "ActivationReviewStep"
+layer = "Governance"
+category = "Behavior"
+description = "Release gate review before activation."
+
+[[elements]]
+name = "PersistModelAction"
+layer = "Governance"
+category = "Executable"
+description = "Persists approved model definition and version metadata."
+
+[[elements]]
+name = "RejectChangeAction"
+layer = "Governance"
+category = "Executable"
+description = "Records rejection outcome and routes review follow-up."
+
+[[elements]]
+name = "ActivateVersionAction"
+layer = "Governance"
+category = "Executable"
+description = "Activates validated model version."
+
+[[elements]]
+name = "RouteFeedbackAction"
+layer = "Governance"
+category = "Executable"
+description = "Routes feedback and incident evidence to proper owners."
+
+[[elements]]
+name = "ModelRegistrationRequestedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a model registration request arrives."
+
+[[elements]]
+name = "ValidationPassedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when validation passes."
+
+[[elements]]
+name = "ValidationFailedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when validation fails."
+
+[[elements]]
+name = "ActivationApprovedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when activation is approved."
+
+[[elements]]
+name = "ChangeRejectedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when the proposed change is rejected."
+
+[[rules]]
+source = "@Governance"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 60
+notes = "Governance policies constrain governance services."
+
+[[rules]]
+source = "@Governance"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Governance policies constrain workflow steps."
+
+[[rules]]
+source = "@Governance"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Governance policies constrain executable actions."
+
+[[rules]]
+source = "@Governance"
+target = "@Interface"
+relation = "constrains"
+priority = 60
+notes = "Governance policies constrain layer-facing ports."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "registers"
+priority = 60
+notes = "Governance services register model ports."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "coordinates"
+priority = 60
+notes = "Services coordinate governance process steps."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Executable"
+relation = "coordinates"
+priority = 60
+notes = "Services coordinate governance actions."
+
+[[rules]]
+source = "@Behavior"
+target = "@Behavior"
+relation = "next"
+priority = 60
+notes = "Governance process step sequencing."
+
+[[rules]]
+source = "@Behavior"
+target = "@Executable"
+relation = "next"
+priority = 60
+notes = "Governance process transitions from step to action."
+
+[[rules]]
+source = "@Event"
+target = "@Behavior"
+relation = "triggers"
+priority = 60
+notes = "Events trigger governance processing steps."
+
+[[rules]]
+source = "@Event"
+target = "@Executable"
+relation = "triggers"
+priority = 60
+notes = "Events may trigger governance actions directly."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "InfraModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers infra layer models."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "DecisionModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers decision layer models."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "NeedsModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers needs layer models."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "KernelModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers kernel layer models."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "FlowModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers flow layer models."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "ModelDefinitionRecord"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on definition records."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "ModelVersionRecord"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on version records."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "Registry uses infra-defined DB contract."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "ValidationCoordinator"
+relation = "coordinates"
+priority = 70
+notes = "Lifecycle manager coordinates validation before state transitions."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "ActivationCoordinator"
+relation = "coordinates"
+priority = 70
+notes = "Lifecycle manager coordinates release activation."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "ModelVersionRecord"
+relation = "depends_on"
+priority = 70
+notes = "Lifecycle manager depends on version metadata state."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "Lifecycle manager persists transitions through DB port."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "CompatibilityCheckStep"
+relation = "coordinates"
+priority = 70
+notes = "Validation coordinator runs compatibility checks."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "ValidationReportRecord"
+relation = "depends_on"
+priority = 70
+notes = "Validation coordinator reads/writes validation reports."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "Validation coordinator persists reports through DB contract."
+
+[[rules]]
+source = "AgreementCoordinator"
+target = "RegistrationReviewStep"
+relation = "coordinates"
+priority = 70
+notes = "Agreement coordinator starts registration review."
+
+[[rules]]
+source = "AgreementCoordinator"
+target = "OwnerApprovalStep"
+relation = "coordinates"
+priority = 70
+notes = "Agreement coordinator drives owner approval."
+
+[[rules]]
+source = "AgreementCoordinator"
+target = "AgreementRecord"
+relation = "depends_on"
+priority = 70
+notes = "Agreement coordinator depends on agreement record history."
+
+[[rules]]
+source = "AgreementCoordinator"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "Agreement coordinator persists through infra DB contract."
+
+[[rules]]
+source = "ActivationCoordinator"
+target = "ActivationReviewStep"
+relation = "coordinates"
+priority = 70
+notes = "Activation coordinator drives release gate review."
+
+[[rules]]
+source = "ActivationCoordinator"
+target = "ActivationRecord"
+relation = "depends_on"
+priority = 70
+notes = "Activation coordinator depends on activation record state."
+
+[[rules]]
+source = "ActivationCoordinator"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "Activation coordinator persists through infra DB contract."
+
+[[rules]]
+source = "RegistrationPolicy"
+target = "RegistrationReviewStep"
+relation = "constrains"
+priority = 70
+notes = "Registration policy constrains initial review requirements."
+
+[[rules]]
+source = "CompatibilityPolicy"
+target = "CompatibilityCheckStep"
+relation = "constrains"
+priority = 70
+notes = "Compatibility policy constrains cross-layer checks."
+
+[[rules]]
+source = "ApprovalPolicy"
+target = "OwnerApprovalStep"
+relation = "constrains"
+priority = 70
+notes = "Approval policy constrains owner decision criteria."
+
+[[rules]]
+source = "VersionPolicy"
+target = "ActivateVersionAction"
+relation = "constrains"
+priority = 70
+notes = "Version policy constrains activation of model versions."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "PersistModelAction"
+relation = "constrains"
+priority = 70
+notes = "Boundary policy constrains persistence scope and ownership."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "RouteFeedbackAction"
+relation = "constrains"
+priority = 70
+notes = "Boundary policy constrains feedback routing scope."
+
+[[rules]]
+source = "ModelRegistrationRequestedEvent"
+target = "RegistrationReviewStep"
+relation = "triggers"
+priority = 75
+notes = "Registration request event starts governance processing."
+
+[[rules]]
+source = "RegistrationReviewStep"
+target = "CompatibilityCheckStep"
+relation = "next"
+priority = 75
+notes = "Review proceeds to compatibility validation."
+
+[[rules]]
+source = "CompatibilityCheckStep"
+target = "OwnerApprovalStep"
+relation = "next"
+priority = 75
+notes = "Compatibility success proceeds to owner approval."
+
+[[rules]]
+source = "OwnerApprovalStep"
+target = "PersistModelAction"
+relation = "next"
+priority = 75
+notes = "Approved change proceeds to persistence."
+
+[[rules]]
+source = "OwnerApprovalStep"
+target = "RejectChangeAction"
+relation = "next"
+priority = 75
+notes = "Rejected change proceeds to rejection handling."
+
+[[rules]]
+source = "PersistModelAction"
+target = "ActivationReviewStep"
+relation = "next"
+priority = 75
+notes = "Persisted change proceeds to activation review."
+
+[[rules]]
+source = "ActivationReviewStep"
+target = "ActivateVersionAction"
+relation = "next"
+priority = 75
+notes = "Activation review proceeds to activation action."
+
+[[rules]]
+source = "ValidationPassedEvent"
+target = "ActivationReviewStep"
+relation = "triggers"
+priority = 75
+notes = "Validation pass can trigger activation review."
+
+[[rules]]
+source = "ValidationFailedEvent"
+target = "RejectChangeAction"
+relation = "triggers"
+priority = 75
+notes = "Validation failure triggers rejection handling."
+
+[[rules]]
+source = "ActivationApprovedEvent"
+target = "ActivateVersionAction"
+relation = "triggers"
+priority = 75
+notes = "Activation approval event triggers activation action."
+
+[[rules]]
+source = "ChangeRejectedEvent"
+target = "RouteFeedbackAction"
+relation = "triggers"
+priority = 75
+notes = "Rejected change event routes feedback to owners."
+
+[[rules]]
+source = "RegistrationReviewStep"
+target = "ModelDefinitionRecord"
+relation = "consumes"
+priority = 75
+notes = "Registration review consumes submitted model definition."
+
+[[rules]]
+source = "CompatibilityCheckStep"
+target = "ModelVersionRecord"
+relation = "consumes"
+priority = 75
+notes = "Compatibility check consumes candidate version metadata."
+
+[[rules]]
+source = "CompatibilityCheckStep"
+target = "ValidationReportRecord"
+relation = "consumes"
+priority = 75
+notes = "Compatibility check consumes prior validation diagnostics."
+
+[[rules]]
+source = "OwnerApprovalStep"
+target = "AgreementRecord"
+relation = "consumes"
+priority = 75
+notes = "Owner approval consumes agreement history and ownership metadata."
+
+[[rules]]
+source = "ActivationReviewStep"
+target = "ValidationReportRecord"
+relation = "consumes"
+priority = 75
+notes = "Activation review consumes final validation report."
+
+[[rules]]
+source = "ActivateVersionAction"
+target = "ModelVersionRecord"
+relation = "consumes"
+priority = 75
+notes = "Activation action consumes selected version metadata."
+
+[[rules]]
+source = "PersistModelAction"
+target = "ModelDefinitionRecord"
+relation = "produces"
+priority = 75
+notes = "Persistence action writes canonical model definition."
+
+[[rules]]
+source = "PersistModelAction"
+target = "ModelVersionRecord"
+relation = "produces"
+priority = 75
+notes = "Persistence action writes version state."
+
+[[rules]]
+source = "RejectChangeAction"
+target = "AgreementRecord"
+relation = "produces"
+priority = 75
+notes = "Rejection action produces agreement outcome record."
+
+[[rules]]
+source = "ActivateVersionAction"
+target = "ActivationRecord"
+relation = "produces"
+priority = 75
+notes = "Activation action produces activation audit record."
+
+[[rules]]
+source = "RouteFeedbackAction"
+target = "FeedbackRecord"
+relation = "produces"
+priority = 75
+notes = "Feedback routing action produces feedback trace record."
+
+[[rules]]
+source = "RouteFeedbackAction"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 75
+notes = "Feedback routing uses infra DB contract for persistence."
+
+[[rules]]
+source = "PersistModelAction"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 75
+notes = "Model persistence action writes via infra DB contract."
+
+[[rules]]
+source = "ApprovalPolicy"
+target = "KernelModelPort"
+relation = "constrains"
+priority = 72
+notes = "Approval policy constrains kernel model activation gate."
+
+[[rules]]
+source = "ApprovalPolicy"
+target = "FlowModelPort"
+relation = "constrains"
+priority = 72
+notes = "Approval policy constrains flow model activation gate."
+
+[[rules]]
+source = "InfraModelPort"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected model-definition flow: infra > decision."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "NeedsModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected model-definition flow: decision > needs."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected model-definition flow: decision > kernel."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected feedback flow: needs > decision."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected model-definition flow: needs > flow."
+
+[[rules]]
+source = "KernelModelPort"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected model-definition flow: kernel > flow."

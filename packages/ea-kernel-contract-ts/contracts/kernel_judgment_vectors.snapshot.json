@@ -1,0 +1,79 @@
+{
+  "contract_version": "1.0.0",
+  "generated_by": "kernel_contract_snapshot.py",
+  "kernel_version": "2.5.0",
+  "snapshot_kind": "ea_kernel_judgment_vectors_contract",
+  "stats": {
+    "allow_vectors": 3,
+    "deny_vectors": 3,
+    "vectors": 6
+  },
+  "vectors": [
+    {
+      "expected_confidence": "common",
+      "expected_verdict": true,
+      "expected_winner_rule_id": "assoc-02",
+      "id": "allow-structure-association",
+      "triple": [
+        "structure",
+        "structure",
+        "association"
+      ]
+    },
+    {
+      "expected_confidence": "common",
+      "expected_verdict": true,
+      "expected_winner_rule_id": "trig-01",
+      "id": "allow-event-trigger-step",
+      "triple": [
+        "event",
+        "step",
+        "triggering"
+      ]
+    },
+    {
+      "expected_confidence": "universal",
+      "expected_verdict": true,
+      "expected_winner_rule_id": "trans-01",
+      "id": "allow-state-transition",
+      "triple": [
+        "state",
+        "state",
+        "transition"
+      ]
+    },
+    {
+      "expected_confidence": "universal",
+      "expected_verdict": false,
+      "expected_winner_rule_id": "spec-09",
+      "id": "deny-item-specialize-structure",
+      "triple": [
+        "item",
+        "structure",
+        "specialization"
+      ]
+    },
+    {
+      "expected_confidence": "universal",
+      "expected_verdict": false,
+      "expected_winner_rule_id": "fallback-connector",
+      "id": "deny-package-connector-item",
+      "triple": [
+        "package",
+        "item",
+        "connector"
+      ]
+    },
+    {
+      "expected_confidence": "universal",
+      "expected_verdict": false,
+      "expected_winner_rule_id": "fallback-triggering",
+      "id": "deny-event-trigger-structure",
+      "triple": [
+        "event",
+        "structure",
+        "triggering"
+      ]
+    }
+  ]
+}

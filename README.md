@@ -7,6 +7,8 @@ EA System - Kernel, Decision, Flow, Governance & Infrastructure packages.
 | Package | Description |
 |---------|-------------|
 | `ea-kernel` | Lightweight kernel metamodel (KerML-inspired), zero dependency |
+| `ea-kernel-contract` | Python contract snapshot consumer SDK |
+| `ea-kernel-contract-ts` | TypeScript contract snapshot consumer SDK (`@ea-sys2/kernel-contract-sdk`) |
 | `ea-decision` | Decision layer - Design Thinking & Intent Management |
 | `ea-flow` | Execution Flows & Automation |
 | `ea-governance` | Governance integration - Unifies Kernel, Decision, Flow |

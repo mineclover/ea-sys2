@@ -1,0 +1,484 @@
+# EA System Layer: Flow
+# Role: concrete step/action data-flow model for execution without runtime assumptions.
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.3.0"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "FlowLayer"
+layer = "Flow"
+category = "Composite"
+description = "Flow modeling boundary."
+
+[[elements]]
+name = "ContextIngestStep"
+layer = "Flow"
+category = "Behavior"
+description = "Collects initial needs and actor context."
+
+[[elements]]
+name = "NormalizeNeedStep"
+layer = "Flow"
+category = "Behavior"
+description = "Normalizes needs and constraint information."
+
+[[elements]]
+name = "BuildKernelInputStep"
+layer = "Flow"
+category = "Behavior"
+description = "Builds kernel-ready input payload."
+
+[[elements]]
+name = "MapKernelSpecStep"
+layer = "Flow"
+category = "Behavior"
+description = "Maps payload to active kernel contract/version."
+
+[[elements]]
+name = "ExecuteKernelAction"
+layer = "Flow"
+category = "Executable"
+description = "Executes contracted work/action."
+
+[[elements]]
+name = "VerifyOutcomeStep"
+layer = "Flow"
+category = "Behavior"
+description = "Verifies execution output against expected constraints."
+
+[[elements]]
+name = "PersistFlowStateStep"
+layer = "Flow"
+category = "Behavior"
+description = "Persists flow state and validation traces."
+
+[[elements]]
+name = "PublishFlowOutcomeAction"
+layer = "Flow"
+category = "Executable"
+description = "Publishes final flow outcome snapshots."
+
+[[elements]]
+name = "LayerVersionStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Infra version store consumed by flow mapping."
+
+[[elements]]
+name = "ValidationRunStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Infra validation store consumed/updated by flow."
+
+[[elements]]
+name = "UseCaseCatalog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Needs use-case catalog consumed by flow ingestion."
+
+[[elements]]
+name = "ActorContextCatalog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Needs actor context consumed by flow ingestion."
+
+[[elements]]
+name = "ConstraintCatalog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Needs constraints consumed by normalization."
+
+[[elements]]
+name = "PrioritizedNeedSet"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Prioritized needs consumed by planning steps."
+
+[[elements]]
+name = "FlowPlanningPolicy"
+layer = "Flow"
+category = "Assessment"
+description = "Flow-local policy for planning and kernel input composition."
+
+[[elements]]
+name = "FlowExecutionPolicy"
+layer = "Flow"
+category = "Assessment"
+description = "Flow-local policy for execution and verification safety."
+
+[[elements]]
+name = "KernelInputDraft"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Intermediate kernel input draft produced by flow."
+
+[[elements]]
+name = "ContractedPlanDraft"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Kernel-contracted plan draft used for execution."
+
+[[rules]]
+source = "@Composite"
+target = "@Behavior"
+relation = "contains"
+priority = 50
+notes = "Flow boundary contains behavior steps."
+
+[[rules]]
+source = "@Composite"
+target = "@Executable"
+relation = "contains"
+priority = 50
+notes = "Flow boundary contains executable actions."
+
+[[rules]]
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 50
+notes = "Flow boundary contains flow artifacts and imported datasets."
+
+[[rules]]
+source = "@Behavior"
+target = "@Behavior"
+relation = "next"
+priority = 50
+notes = "Behavior step to step transition."
+
+[[rules]]
+source = "@Behavior"
+target = "@Executable"
+relation = "next"
+priority = 50
+notes = "Behavior to executable transition."
+
+[[rules]]
+source = "@Executable"
+target = "@Behavior"
+relation = "next"
+priority = 50
+notes = "Executable to behavior transition."
+
+[[rules]]
+source = "@Executable"
+target = "@Executable"
+relation = "next"
+priority = 50
+notes = "Executable to executable chaining."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "Behavior steps produce artifacts."
+
+[[rules]]
+source = "@Executable"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "Actions produce artifacts."
+
+[[rules]]
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "consumes"
+priority = 50
+notes = "Behavior steps consume datasets."
+
+[[rules]]
+source = "@PassiveStructure"
+target = "@Executable"
+relation = "consumes"
+priority = 50
+notes = "Actions consume datasets."
+
+[[rules]]
+source = "@Behavior"
+target = "@Assessment"
+relation = "depends_on"
+priority = 50
+notes = "Behavior steps depend on flow-local policy schemas."
+
+[[rules]]
+source = "@Executable"
+target = "@Assessment"
+relation = "depends_on"
+priority = 50
+notes = "Actions depend on flow-local policy schemas."
+
+[[rules]]
+source = "@Assessment"
+target = "@Behavior"
+relation = "constrains"
+priority = 50
+notes = "Flow-local assessment models constrain behavior steps."
+
+[[rules]]
+source = "@Assessment"
+target = "@Executable"
+relation = "constrains"
+priority = 50
+notes = "Flow-local assessment models constrain executable actions."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "depends_on"
+priority = 50
+notes = "Behavior steps depend on passive data state."
+
+[[rules]]
+source = "@Executable"
+target = "@PassiveStructure"
+relation = "depends_on"
+priority = 50
+notes = "Actions depend on passive data state."
+
+[[rules]]
+source = "ContextIngestStep"
+target = "NormalizeNeedStep"
+relation = "next"
+priority = 70
+notes = "Flow sequence: ingest context before normalization."
+
+[[rules]]
+source = "NormalizeNeedStep"
+target = "BuildKernelInputStep"
+relation = "next"
+priority = 70
+notes = "Flow sequence: normalize before building kernel input."
+
+[[rules]]
+source = "BuildKernelInputStep"
+target = "MapKernelSpecStep"
+relation = "next"
+priority = 70
+notes = "Flow sequence: build input before kernel mapping."
+
+[[rules]]
+source = "MapKernelSpecStep"
+target = "ExecuteKernelAction"
+relation = "next"
+priority = 70
+notes = "Flow sequence: map spec before execution."
+
+[[rules]]
+source = "ExecuteKernelAction"
+target = "VerifyOutcomeStep"
+relation = "next"
+priority = 70
+notes = "Flow sequence: execute before verification."
+
+[[rules]]
+source = "VerifyOutcomeStep"
+target = "PersistFlowStateStep"
+relation = "next"
+priority = 70
+notes = "Flow sequence: verify before persistence."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "PublishFlowOutcomeAction"
+relation = "next"
+priority = 70
+notes = "Flow sequence: persist before final publication."
+
+[[rules]]
+source = "FlowPlanningPolicy"
+target = "BuildKernelInputStep"
+relation = "constrains"
+priority = 70
+notes = "Flow planning policy constrains plan composition."
+
+[[rules]]
+source = "FlowExecutionPolicy"
+target = "ExecuteKernelAction"
+relation = "constrains"
+priority = 70
+notes = "Flow execution policy constrains executable behavior."
+
+[[rules]]
+source = "UseCaseCatalog"
+target = "ContextIngestStep"
+relation = "consumes"
+priority = 70
+notes = "Ingestion consumes use-case catalog."
+
+[[rules]]
+source = "ActorContextCatalog"
+target = "ContextIngestStep"
+relation = "consumes"
+priority = 70
+notes = "Ingestion consumes actor context."
+
+[[rules]]
+source = "ConstraintCatalog"
+target = "NormalizeNeedStep"
+relation = "consumes"
+priority = 70
+notes = "Normalization consumes requirement constraints."
+
+[[rules]]
+source = "PrioritizedNeedSet"
+target = "BuildKernelInputStep"
+relation = "consumes"
+priority = 70
+notes = "Kernel input builder consumes prioritized needs."
+
+[[rules]]
+source = "LayerVersionStore"
+target = "MapKernelSpecStep"
+relation = "consumes"
+priority = 70
+notes = "Kernel mapping consumes active layer version metadata."
+
+[[rules]]
+source = "ValidationRunStore"
+target = "MapKernelSpecStep"
+relation = "consumes"
+priority = 70
+notes = "Kernel mapping consumes latest validation baseline."
+
+[[rules]]
+source = "KernelInputDraft"
+target = "MapKernelSpecStep"
+relation = "consumes"
+priority = 70
+notes = "Kernel mapping consumes intermediate kernel input draft."
+
+[[rules]]
+source = "ContractedPlanDraft"
+target = "ExecuteKernelAction"
+relation = "consumes"
+priority = 70
+notes = "Execution consumes contracted plan draft."
+
+[[rules]]
+source = "ContextIngestStep"
+target = "KernelInputDraft"
+relation = "produces"
+priority = 70
+notes = "Ingestion produces initial kernel input draft."
+
+[[rules]]
+source = "NormalizeNeedStep"
+target = "PrioritizedNeedSet"
+relation = "produces"
+priority = 70
+notes = "Normalization produces updated prioritized needs."
+
+[[rules]]
+source = "BuildKernelInputStep"
+target = "KernelInputDraft"
+relation = "produces"
+priority = 70
+notes = "Input step produces consolidated kernel input draft."
+
+[[rules]]
+source = "MapKernelSpecStep"
+target = "ContractedPlanDraft"
+relation = "produces"
+priority = 70
+notes = "Mapping step produces kernel-contracted plan draft."
+
+[[rules]]
+source = "ExecuteKernelAction"
+target = "ValidationRunStore"
+relation = "produces"
+priority = 70
+notes = "Execution action produces validation run traces."
+
+[[rules]]
+source = "VerifyOutcomeStep"
+target = "ContractedPlanDraft"
+relation = "produces"
+priority = 70
+notes = "Verification step updates contracted plan verification state."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "LayerVersionStore"
+relation = "produces"
+priority = 70
+notes = "Persistence step writes updated layer version state."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "ValidationRunStore"
+relation = "produces"
+priority = 70
+notes = "Persistence step writes validation run state."
+
+[[rules]]
+source = "PublishFlowOutcomeAction"
+target = "LayerVersionStore"
+relation = "produces"
+priority = 70
+notes = "Publish action writes final published outcome version."

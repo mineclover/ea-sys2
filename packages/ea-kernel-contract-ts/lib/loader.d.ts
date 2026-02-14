@@ -1,0 +1,10 @@
+import type { IContractLoadOptions, IContractPaths, IKernelContractBundle, IKernelContractSummary } from "./types";
+export declare const EA_KERNEL_CONTRACT_DIR = "EA_KERNEL_CONTRACT_DIR";
+export declare const SCHEMA_FILE = "kernel_schema.snapshot.json";
+export declare const RULES_FILE = "kernel_rules.snapshot.json";
+export declare const VECTORS_FILE = "kernel_judgment_vectors.snapshot.json";
+export declare function resolveKernelContractDir(options?: IContractLoadOptions): string;
+export declare function resolveKernelContractPaths(options?: IContractLoadOptions): IContractPaths;
+export declare function validateKernelContractBundle(bundle: IKernelContractBundle): string[];
+export declare function loadKernelContractBundle(options?: IContractLoadOptions): IKernelContractBundle;
+export declare function summarizeKernelContract(options?: IContractLoadOptions): IKernelContractSummary;

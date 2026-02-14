@@ -1,0 +1,565 @@
+# EA System Layer: Decision
+# Role: meta-meta model for decision-flow structure, vocabulary, and traceability.
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.3.0"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "DecisionLayer"
+layer = "Decision"
+category = "Composite"
+description = "Decision meta-meta modeling boundary."
+
+[[elements]]
+name = "DecisionMetaModelRegistry"
+layer = "Decision"
+category = "ActiveStructure"
+description = "Registers decision-flow meta entities and relation vocabularies."
+
+[[elements]]
+name = "DecisionFlowSchemaService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "Maintains structural schemas for decision activities and transitions."
+
+[[elements]]
+name = "DecisionAgreementService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "Maintains agreement semantics for decision outcome closure."
+
+[[elements]]
+name = "DecisionCriteriaModel"
+layer = "Decision"
+category = "Assessment"
+description = "Meta definition for criteria schema used in option evaluation."
+
+[[elements]]
+name = "DecisionHeuristicModel"
+layer = "Decision"
+category = "Assessment"
+description = "Meta definition for heuristic schema used in deliberation."
+
+[[elements]]
+name = "DecisionRationaleModel"
+layer = "Decision"
+category = "Assessment"
+description = "Meta definition for rationale schema and explainability constraints."
+
+[[elements]]
+name = "DecisionNodeTypeCatalog"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Catalog of decision node types (context, option, evaluation, outcome)."
+
+[[elements]]
+name = "DecisionRelationTypeCatalog"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Catalog of relation types among decision nodes."
+
+[[elements]]
+name = "DecisionStateCatalog"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Catalog of states used in decision lifecycle modeling."
+
+[[elements]]
+name = "DecisionContextRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Structured decision context instance record."
+
+[[elements]]
+name = "DecisionOptionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Structured option graph instance record."
+
+[[elements]]
+name = "DecisionEvaluationRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Structured evaluation instance record."
+
+[[elements]]
+name = "DecisionOutcomeRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Structured final decision outcome record."
+
+[[elements]]
+name = "DecisionTraceGoal"
+layer = "Decision"
+category = "Goal"
+description = "Goal for traceable and reproducible decision-flow instances."
+
+[[elements]]
+name = "CaptureDecisionContextStep"
+layer = "Decision"
+category = "Behavior"
+description = "Step that materializes decision context nodes."
+
+[[elements]]
+name = "BuildOptionGraphStep"
+layer = "Decision"
+category = "Behavior"
+description = "Step that materializes option node graph."
+
+[[elements]]
+name = "EvaluateOptionGraphStep"
+layer = "Decision"
+category = "Behavior"
+description = "Step that evaluates option graph into comparable records."
+
+[[elements]]
+name = "FinalizeDecisionStep"
+layer = "Decision"
+category = "Behavior"
+description = "Step that closes evaluation into an outcome record."
+
+[[elements]]
+name = "PublishDecisionModelAction"
+layer = "Decision"
+category = "Executable"
+description = "Action that publishes decision-flow model instances for downstream use."
+
+[[elements]]
+name = "DecisionRequestedEvent"
+layer = "Decision"
+category = "Event"
+description = "Raised when a new decision-flow instance is requested."
+
+[[elements]]
+name = "DecisionUpdatedEvent"
+layer = "Decision"
+category = "Event"
+description = "Raised when upstream context changes require reevaluation."
+
+[[rules]]
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains decision services."
+
+[[rules]]
+source = "@Composite"
+target = "@Assessment"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains meta assessment schemas."
+
+[[rules]]
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains decision schema/instance records."
+
+[[rules]]
+source = "@Composite"
+target = "@Behavior"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains decision-flow steps."
+
+[[rules]]
+source = "@Composite"
+target = "@Executable"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains publishing actions."
+
+[[rules]]
+source = "@Assessment"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Meta assessment schemas constrain decision-flow behaviors."
+
+[[rules]]
+source = "@Assessment"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Meta assessment schemas constrain executable publication behavior."
+
+[[rules]]
+source = "@Goal"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Traceability goal constrains decision-flow behavior."
+
+[[rules]]
+source = "@Goal"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Traceability goal constrains publish action behavior."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "coordinates"
+priority = 60
+notes = "Decision services coordinate decision-flow steps."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Executable"
+relation = "coordinates"
+priority = 60
+notes = "Decision services coordinate publishing actions."
+
+[[rules]]
+source = "@Behavior"
+target = "@Behavior"
+relation = "next"
+priority = 60
+notes = "Decision-flow step sequencing."
+
+[[rules]]
+source = "@Behavior"
+target = "@Executable"
+relation = "next"
+priority = 60
+notes = "Decision-flow transitions into publish action."
+
+[[rules]]
+source = "@Event"
+target = "@Behavior"
+relation = "triggers"
+priority = 60
+notes = "Decision events trigger decision-flow steps."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "DecisionFlowSchemaService"
+relation = "coordinates"
+priority = 70
+notes = "Registry coordinates schema service updates."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "DecisionNodeTypeCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on node type catalog."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "DecisionRelationTypeCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on relation type catalog."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "DecisionStateCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on decision state catalog."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "CaptureDecisionContextStep"
+relation = "coordinates"
+priority = 70
+notes = "Schema service coordinates context capture."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "BuildOptionGraphStep"
+relation = "coordinates"
+priority = 70
+notes = "Schema service coordinates option graph construction."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "EvaluateOptionGraphStep"
+relation = "coordinates"
+priority = 70
+notes = "Schema service coordinates option evaluation."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "FinalizeDecisionStep"
+relation = "coordinates"
+priority = 70
+notes = "Schema service coordinates decision finalization."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionStateCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on state catalog definitions."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionOptionRecord"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on option records for schema consistency."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionEvaluationRecord"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on evaluation record schema state."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionOutcomeRecord"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on outcome record schema state."
+
+[[rules]]
+source = "DecisionAgreementService"
+target = "FinalizeDecisionStep"
+relation = "coordinates"
+priority = 70
+notes = "Agreement service coordinates closure semantics in finalization."
+
+[[rules]]
+source = "DecisionAgreementService"
+target = "PublishDecisionModelAction"
+relation = "coordinates"
+priority = 70
+notes = "Agreement service coordinates publish action."
+
+[[rules]]
+source = "DecisionAgreementService"
+target = "DecisionEvaluationRecord"
+relation = "depends_on"
+priority = 70
+notes = "Agreement service depends on evaluation record state."
+
+[[rules]]
+source = "DecisionAgreementService"
+target = "DecisionOutcomeRecord"
+relation = "depends_on"
+priority = 70
+notes = "Agreement service depends on outcome record state."
+
+[[rules]]
+source = "CaptureDecisionContextStep"
+target = "BuildOptionGraphStep"
+relation = "next"
+priority = 75
+notes = "Decision flow: context before options."
+
+[[rules]]
+source = "BuildOptionGraphStep"
+target = "EvaluateOptionGraphStep"
+relation = "next"
+priority = 75
+notes = "Decision flow: options before evaluation."
+
+[[rules]]
+source = "EvaluateOptionGraphStep"
+target = "FinalizeDecisionStep"
+relation = "next"
+priority = 75
+notes = "Decision flow: evaluation before finalization."
+
+[[rules]]
+source = "FinalizeDecisionStep"
+target = "PublishDecisionModelAction"
+relation = "next"
+priority = 75
+notes = "Decision flow: finalization before publication."
+
+[[rules]]
+source = "DecisionRequestedEvent"
+target = "CaptureDecisionContextStep"
+relation = "triggers"
+priority = 75
+notes = "Decision request event starts decision flow."
+
+[[rules]]
+source = "DecisionUpdatedEvent"
+target = "EvaluateOptionGraphStep"
+relation = "triggers"
+priority = 75
+notes = "Context update triggers reevaluation."
+
+[[rules]]
+source = "DecisionContextRecord"
+target = "CaptureDecisionContextStep"
+relation = "consumes"
+priority = 75
+notes = "Context capture consumes structured context input."
+
+[[rules]]
+source = "DecisionNodeTypeCatalog"
+target = "BuildOptionGraphStep"
+relation = "consumes"
+priority = 75
+notes = "Option graph build consumes node type vocabulary."
+
+[[rules]]
+source = "DecisionRelationTypeCatalog"
+target = "BuildOptionGraphStep"
+relation = "consumes"
+priority = 75
+notes = "Option graph build consumes relation type vocabulary."
+
+[[rules]]
+source = "DecisionOptionRecord"
+target = "EvaluateOptionGraphStep"
+relation = "consumes"
+priority = 75
+notes = "Evaluation consumes option graph records."
+
+[[rules]]
+source = "DecisionEvaluationRecord"
+target = "FinalizeDecisionStep"
+relation = "consumes"
+priority = 75
+notes = "Finalization consumes evaluation records."
+
+[[rules]]
+source = "DecisionRationaleModel"
+target = "FinalizeDecisionStep"
+relation = "consumes"
+priority = 75
+notes = "Finalization consumes rationale schema requirements."
+
+[[rules]]
+source = "DecisionOutcomeRecord"
+target = "PublishDecisionModelAction"
+relation = "consumes"
+priority = 75
+notes = "Publish action consumes finalized decision outcome."
+
+[[rules]]
+source = "CaptureDecisionContextStep"
+target = "DecisionContextRecord"
+relation = "produces"
+priority = 75
+notes = "Context capture produces normalized context record."
+
+[[rules]]
+source = "BuildOptionGraphStep"
+target = "DecisionOptionRecord"
+relation = "produces"
+priority = 75
+notes = "Option graph build produces option record."
+
+[[rules]]
+source = "EvaluateOptionGraphStep"
+target = "DecisionEvaluationRecord"
+relation = "produces"
+priority = 75
+notes = "Evaluation produces structured evaluation record."
+
+[[rules]]
+source = "FinalizeDecisionStep"
+target = "DecisionOutcomeRecord"
+relation = "produces"
+priority = 75
+notes = "Finalization produces decision outcome record."
+
+[[rules]]
+source = "PublishDecisionModelAction"
+target = "DecisionOutcomeRecord"
+relation = "produces"
+priority = 75
+notes = "Publish action produces published decision outcome version."
+
+[[rules]]
+source = "DecisionCriteriaModel"
+target = "EvaluateOptionGraphStep"
+relation = "constrains"
+priority = 75
+notes = "Criteria model constrains option evaluation structure."
+
+[[rules]]
+source = "DecisionHeuristicModel"
+target = "FinalizeDecisionStep"
+relation = "constrains"
+priority = 75
+notes = "Heuristic model constrains finalization structure."
+
+[[rules]]
+source = "DecisionRationaleModel"
+target = "PublishDecisionModelAction"
+relation = "constrains"
+priority = 75
+notes = "Rationale model constrains publication explainability fields."
+
+[[rules]]
+source = "DecisionTraceGoal"
+target = "PublishDecisionModelAction"
+relation = "constrains"
+priority = 75
+notes = "Traceability goal constrains publication completeness."

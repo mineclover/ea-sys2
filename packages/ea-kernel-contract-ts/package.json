@@ -1,0 +1,22 @@
+{
+  "name": "@ea-sys2/kernel-contract-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript SDK for ea-kernel contract snapshots",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "contracts",
+    "README.md"
+  ],
+  "scripts": {
+    "sync:contracts": "node scripts/sync-contracts.mjs",
+    "check:contracts": "node scripts/sync-contracts.mjs --check",
+    "build": "pnpm run sync:contracts && rm -rf lib && tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "~5.9.3"
+  }
+}

@@ -145,8 +145,19 @@ def _rule_payload(
     return payload
 
 
-def _layer_constraint_payload(constraint: LayerConstraint) -> dict[str, Any]:
+def _layer_constraint_id(index: int, constraint: LayerConstraint) -> str:
+    forbidden = "-".join(constraint.forbidden_relations) if constraint.forbidden_relations else "none"
+    return (
+        f"lc-{index:02d}-"
+        f"{constraint.source_layer.value.lower()}-"
+        f"{constraint.target_layer.value.lower()}-"
+        f"{forbidden}"
+    )
+
+
+def _layer_constraint_payload(index: int, constraint: LayerConstraint) -> dict[str, Any]:
     return {
+        "id": _layer_constraint_id(index, constraint),
         "source_layer": constraint.source_layer.value,
         "target_layer": constraint.target_layer.value,
         "forbidden_relations": list(constraint.forbidden_relations),
@@ -212,8 +223,8 @@ def _build_rules_snapshot() -> dict[str, Any]:
         "explicit_rules": explicit_rules,
         "fallback_rules": fallback_rules,
         "layer_constraints": [
-            _layer_constraint_payload(constraint)
-            for constraint in constraints
+            _layer_constraint_payload(index, constraint)
+            for index, constraint in enumerate(constraints)
         ],
     }
 

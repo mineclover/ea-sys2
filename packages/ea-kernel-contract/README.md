@@ -25,3 +25,16 @@ Optional environment override:
 ```bash
 export EA_KERNEL_CONTRACT_DIR=/path/to/contracts
 ```
+
+## TypeScript SDK Supply
+
+This repo also ships a TypeScript SDK package:
+
+- `packages/ea-kernel-contract-ts` (`@ea-sys2/kernel-contract-sdk`)
+
+Sync and verify packaged snapshot contracts:
+
+```bash
+make sync-kernel-contract-ts-sdk
+make verify-kernel-contract-ts-sdk
+```

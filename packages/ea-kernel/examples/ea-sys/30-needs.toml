@@ -1,0 +1,241 @@
+# EA System Layer: Needs
+# Role: define and collect use-cases, constraints, and prioritized needs.
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.3.0"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "NeedsLayer"
+layer = "Needs"
+category = "Composite"
+description = "Needs modeling boundary."
+
+[[elements]]
+name = "NeedsCatalogService"
+layer = "Needs"
+category = "ActiveStructure"
+description = "Maintains normalized needs and prioritization payloads."
+
+[[elements]]
+name = "UseCaseCatalog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Collected use-case definitions."
+
+[[elements]]
+name = "ActorContextCatalog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Actor profile and environment context records."
+
+[[elements]]
+name = "ConstraintCatalog"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Functional and non-functional requirement constraints."
+
+[[elements]]
+name = "PrioritizedNeedSet"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Prioritized need set consumed by downstream flow."
+
+[[elements]]
+name = "NeedVersionGoal"
+layer = "Needs"
+category = "Goal"
+description = "Goal for versioned and traceable needs publication."
+
+[[elements]]
+name = "NeedRefinementStep"
+layer = "Needs"
+category = "Behavior"
+description = "Refines raw needs into consistent normalized records."
+
+[[elements]]
+name = "PublishNeedSetAction"
+layer = "Needs"
+category = "Executable"
+description = "Publishes prioritized needs for kernel/flow consumption."
+
+[[elements]]
+name = "NeedsFeedbackEvent"
+layer = "Needs"
+category = "Event"
+description = "Feedback event for refining needs definitions."
+
+[[rules]]
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains needs services."
+
+[[rules]]
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains requirement datasets."
+
+[[rules]]
+source = "@Composite"
+target = "@Behavior"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains refinement steps."
+
+[[rules]]
+source = "@Composite"
+target = "@Executable"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains publication actions."
+
+[[rules]]
+source = "@Goal"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Needs goals constrain refinement behavior."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedRefinementStep"
+relation = "coordinates"
+priority = 70
+notes = "Catalog service coordinates refinement step execution."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "PublishNeedSetAction"
+relation = "next"
+priority = 70
+notes = "Refinement proceeds to needs publication."
+
+[[rules]]
+source = "NeedsFeedbackEvent"
+target = "NeedRefinementStep"
+relation = "triggers"
+priority = 70
+notes = "Feedback event triggers refinement rerun."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "UseCaseCatalog"
+relation = "consumes"
+priority = 70
+notes = "Refinement consumes use-case definitions."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "ActorContextCatalog"
+relation = "consumes"
+priority = 70
+notes = "Refinement consumes actor context information."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "ConstraintCatalog"
+relation = "consumes"
+priority = 70
+notes = "Refinement consumes constraint definitions."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "PrioritizedNeedSet"
+relation = "produces"
+priority = 70
+notes = "Refinement produces prioritized needs."
+
+[[rules]]
+source = "PublishNeedSetAction"
+target = "PrioritizedNeedSet"
+relation = "consumes"
+priority = 70
+notes = "Publication action consumes prioritized needs."
+
+[[rules]]
+source = "PublishNeedSetAction"
+target = "PrioritizedNeedSet"
+relation = "produces"
+priority = 70
+notes = "Publication action produces versioned prioritized needs."
+
+[[rules]]
+source = "NeedVersionGoal"
+target = "PublishNeedSetAction"
+relation = "constrains"
+priority = 70
+notes = "Needs version goal constrains publication behavior."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "PrioritizedNeedSet"
+relation = "depends_on"
+priority = 70
+notes = "Catalog service depends on prioritized needs state."

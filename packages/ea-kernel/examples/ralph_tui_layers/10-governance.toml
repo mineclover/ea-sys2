@@ -72,135 +72,698 @@ description = "Policy or guard constrains execution."
 name = "GovernanceLayer"
 layer = "Governance"
 category = "Composite"
-description = "Runtime governance boundary."
+description = "Layer model governance system boundary (control implementation owner)."
 
 [[elements]]
-name = "SessionLockGuard"
+name = "LayerModelRegistry"
 layer = "Governance"
-category = "Governance"
-description = "Ensures single active session ownership."
-
-[[elements]]
-name = "SandboxGuard"
-layer = "Governance"
-category = "Governance"
-description = "Controls sandbox isolation rules."
-
-[[elements]]
-name = "AutoCommitGuard"
-layer = "Governance"
-category = "Governance"
-description = "Controls auto-commit gate for completed work."
-
-[[elements]]
-name = "AuditLog"
-layer = "Governance"
-category = "PassiveStructure"
-description = "Audit trail for execution and remote control."
-
-[[elements]]
-name = "ExecutionStatusEvent"
-layer = "Governance"
-category = "Event"
-description = "Execution state change event."
-
-[[elements]]
-name = "ConflictDetectedEvent"
-layer = "Governance"
-category = "Event"
-description = "Parallel merge conflict detected event."
-
-# Context stubs for standalone validation of exact-name rules.
-[[elements]]
-name = "ExecutionEngine"
-layer = "Kernel"
 category = "ActiveStructure"
-description = "Core autonomous iteration engine."
+description = "Registers and indexes layer model definitions."
 
 [[elements]]
-name = "PersistIterationStep"
-layer = "Flow"
-category = "Behavior"
-description = "Persist session and iteration artifacts."
+name = "VersionLifecycleManager"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Controls model version lifecycle and active pointers."
 
 [[elements]]
-name = "MergeParallelAction"
-layer = "Flow"
-category = "Executable"
-description = "Merge worker outputs and resolve conflicts."
+name = "ValidationCoordinator"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Executes and records model validation runs."
 
 [[elements]]
-name = "UpdateTrackerStep"
-layer = "Flow"
-category = "Behavior"
-description = "Update tracker task status."
+name = "DataGovernanceCoordinator"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Orchestrates governance-side data processing and scoped routing across layer models."
 
 [[elements]]
-name = "AgentPluginPort"
+name = "RegistrationPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for model registration."
+
+[[elements]]
+name = "VersioningPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for model version transitions."
+
+[[elements]]
+name = "ActivationPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for model activation."
+
+[[elements]]
+name = "DataBoundaryPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for data ownership boundary and scope isolation."
+
+[[elements]]
+name = "DataProcessingPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for validation, transformation, and scoped routing of governance data."
+
+[[elements]]
+name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "Adapter boundary to agent CLIs."
+description = "Governance entry port for infra model registration."
+
+[[elements]]
+name = "DecisionModelPort"
+layer = "Decision"
+category = "Interface"
+description = "Governance entry port for decision model registration."
+
+[[elements]]
+name = "NeedsModelPort"
+layer = "Needs"
+category = "Interface"
+description = "Governance entry port for needs model registration."
+
+[[elements]]
+name = "KernelModelPort"
+layer = "Kernel"
+category = "Interface"
+description = "Governance entry port for kernel model registration."
+
+[[elements]]
+name = "FlowModelPort"
+layer = "Flow"
+category = "Interface"
+description = "Governance entry port for flow model registration."
+
+[[elements]]
+name = "ChangeProposalRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Cross-layer definition change proposal record."
+
+[[elements]]
+name = "OwnershipBoundaryRegistry"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Registry describing owner boundaries of layer instances."
+
+[[elements]]
+name = "ApprovalLedger"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Immutable approval and rejection decision history."
+
+[[elements]]
+name = "DataScopeRegistry"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Authoritative registry for bid/layer scope partition and namespace ownership."
+
+[[elements]]
+name = "DataClassificationCatalog"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Classification catalog for governance payload handling levels."
+
+[[elements]]
+name = "ChangeProposalReviewStep"
+layer = "Governance"
+category = "Behavior"
+description = "Review step for cross-layer change proposal validity."
+
+[[elements]]
+name = "OwnerApprovalStep"
+layer = "Governance"
+category = "Behavior"
+description = "Owner-side approval step for target layer instance changes."
+
+[[elements]]
+name = "DataValidationStep"
+layer = "Governance"
+category = "Behavior"
+description = "Validates governance payload schema, ownership, and layer scope before mutation."
+
+[[elements]]
+name = "DataSegregationStep"
+layer = "Governance"
+category = "Behavior"
+description = "Separates validated payloads into bid/layer-scoped partitions."
+
+[[elements]]
+name = "ApplyChangeAction"
+layer = "Governance"
+category = "Executable"
+description = "Apply approved changes to managed model instances."
+
+[[elements]]
+name = "RollbackChangeAction"
+layer = "Governance"
+category = "Executable"
+description = "Rollback applied change set on policy or validation failure."
+
+[[elements]]
+name = "RouteScopedDataAction"
+layer = "Governance"
+category = "Executable"
+description = "Routes scoped data to the correct governance persistence stream."
+
+[[elements]]
+name = "QuarantineDataAction"
+layer = "Governance"
+category = "Executable"
+description = "Isolates non-compliant payloads for manual governance review."
+
+[[elements]]
+name = "ChangeRequestedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when cross-layer change is requested."
+
+[[elements]]
+name = "ChangeApprovedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when cross-layer change is approved."
+
+[[elements]]
+name = "ChangeRejectedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when cross-layer change is rejected."
+
+[[elements]]
+name = "DataReceivedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when governance receives payload for registration or change execution."
+
+[[elements]]
+name = "DataPartitionedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when payload partitioning by bid/layer scope is completed."
+
+[[elements]]
+name = "DataQuarantinedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when payload is quarantined due to policy violation."
+
+[[elements]]
+name = "GovernanceDbPort"
+layer = "Infra"
+category = "Interface"
+description = "Infra-defined persistence adapter contract used by governance control implementation."
 
 [[rules]]
 source = "@Governance"
 target = "@ActiveStructure"
 relation = "constrains"
 priority = 60
-notes = "Runtime guards constrain components."
-
-[[rules]]
-source = "@Governance"
-target = "@Behavior"
-relation = "constrains"
-priority = 60
-notes = "Runtime guards constrain steps."
-
-[[rules]]
-source = "@Governance"
-target = "@Executable"
-relation = "constrains"
-priority = 60
-notes = "Runtime guards constrain actions."
+notes = "Governance policies constrain management services."
 
 [[rules]]
 source = "@Governance"
 target = "@Interface"
 relation = "constrains"
 priority = 60
-notes = "Runtime guards constrain integration ports."
+notes = "Governance policies constrain layer model ports."
 
 [[rules]]
-source = "ExecutionStatusEvent"
-target = "PersistIterationStep"
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "registers"
+priority = 60
+notes = "Management services register layer model ports."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "coordinates"
+priority = 60
+notes = "Governance services coordinate management lifecycle."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "InfraModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers infra layer model."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "DecisionModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers decision layer model."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "NeedsModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers needs layer model."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "KernelModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers kernel layer model."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "FlowModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers flow layer model."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Version manager coordinates registry operations."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Validation coordinator reuses registry information."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "ValidationCoordinator"
+relation = "coordinates"
+priority = 70
+notes = "Version transitions are coordinated with validation execution."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "VersionLifecycleManager"
+relation = "coordinates"
+priority = 70
+notes = "Validation results feed back into version lifecycle manager."
+
+[[rules]]
+source = "DataGovernanceCoordinator"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Data coordinator aligns scoped data handling with registry lifecycle."
+
+[[rules]]
+source = "DataGovernanceCoordinator"
+target = "ValidationCoordinator"
+relation = "coordinates"
+priority = 70
+notes = "Data coordinator coordinates validation pipeline with policy checks."
+
+[[rules]]
+source = "DataGovernanceCoordinator"
+target = "VersionLifecycleManager"
+relation = "coordinates"
+priority = 70
+notes = "Data coordinator coordinates scope-aware version transitions."
+
+[[rules]]
+source = "RegistrationPolicy"
+target = "LayerModelRegistry"
+relation = "constrains"
+priority = 70
+notes = "Registration policy constrains registry behavior."
+
+[[rules]]
+source = "VersioningPolicy"
+target = "VersionLifecycleManager"
+relation = "constrains"
+priority = 70
+notes = "Versioning policy constrains lifecycle manager."
+
+[[rules]]
+source = "ActivationPolicy"
+target = "ValidationCoordinator"
+relation = "constrains"
+priority = 70
+notes = "Activation policy requires successful validation."
+
+[[rules]]
+source = "ActivationPolicy"
+target = "LayerModelRegistry"
+relation = "constrains"
+priority = 70
+notes = "Activation policy constrains which model version can be active."
+
+[[rules]]
+source = "DataBoundaryPolicy"
+target = "DataSegregationStep"
+relation = "constrains"
+priority = 70
+notes = "Boundary policy constrains bid/layer partition decisions."
+
+[[rules]]
+source = "DataBoundaryPolicy"
+target = "RouteScopedDataAction"
+relation = "constrains"
+priority = 70
+notes = "Boundary policy constrains destination routing by ownership scope."
+
+[[rules]]
+source = "DataProcessingPolicy"
+target = "DataValidationStep"
+relation = "constrains"
+priority = 70
+notes = "Processing policy constrains schema and ownership validation."
+
+[[rules]]
+source = "DataProcessingPolicy"
+target = "RouteScopedDataAction"
+relation = "constrains"
+priority = 70
+notes = "Processing policy constrains approved scoped routing behavior."
+
+[[rules]]
+source = "DataProcessingPolicy"
+target = "QuarantineDataAction"
+relation = "constrains"
+priority = 70
+notes = "Processing policy constrains quarantine trigger and retention handling."
+
+[[rules]]
+source = "ChangeRequestedEvent"
+target = "ChangeProposalReviewStep"
 relation = "triggers"
-priority = 70
-notes = "Status changes trigger persistence."
+priority = 75
+notes = "Requested event triggers proposal review."
 
 [[rules]]
-source = "ConflictDetectedEvent"
-target = "MergeParallelAction"
+source = "DataReceivedEvent"
+target = "DataValidationStep"
 relation = "triggers"
-priority = 70
-notes = "Conflict event triggers merge action."
+priority = 75
+notes = "Inbound payload event triggers governance data validation."
 
 [[rules]]
-source = "SessionLockGuard"
-target = "ExecutionEngine"
-relation = "constrains"
-priority = 70
-notes = "Session lock guard constrains execution."
+source = "DataValidationStep"
+target = "DataSegregationStep"
+relation = "next"
+priority = 75
+notes = "Validated payload proceeds to scope partitioning."
 
 [[rules]]
-source = "SandboxGuard"
-target = "AgentPluginPort"
-relation = "constrains"
-priority = 70
-notes = "Sandbox guard constrains agent integration."
+source = "DataSegregationStep"
+target = "DataPartitionedEvent"
+relation = "triggers"
+priority = 75
+notes = "Partition completion emits partitioned event."
 
 [[rules]]
-source = "AutoCommitGuard"
-target = "UpdateTrackerStep"
-relation = "constrains"
-priority = 70
-notes = "Auto commit guard constrains tracker updates."
+source = "DataPartitionedEvent"
+target = "RouteScopedDataAction"
+relation = "triggers"
+priority = 75
+notes = "Partitioned event triggers scoped routing action."
 
+[[rules]]
+source = "ChangeProposalReviewStep"
+target = "OwnerApprovalStep"
+relation = "next"
+priority = 75
+notes = "Valid proposal progresses to owner approval."
+
+[[rules]]
+source = "OwnerApprovalStep"
+target = "ApplyChangeAction"
+relation = "next"
+priority = 75
+notes = "Approved proposal advances to apply action."
+
+[[rules]]
+source = "OwnerApprovalStep"
+target = "ChangeRejectedEvent"
+relation = "triggers"
+priority = 75
+notes = "Rejected proposal emits rejection event."
+
+[[rules]]
+source = "ChangeRejectedEvent"
+target = "QuarantineDataAction"
+relation = "triggers"
+priority = 75
+notes = "Rejected proposal triggers quarantine action for payload isolation."
+
+[[rules]]
+source = "ChangeApprovedEvent"
+target = "ApplyChangeAction"
+relation = "triggers"
+priority = 75
+notes = "Approved event can trigger apply action."
+
+[[rules]]
+source = "QuarantineDataAction"
+target = "DataQuarantinedEvent"
+relation = "triggers"
+priority = 75
+notes = "Quarantine action emits quarantined event."
+
+[[rules]]
+source = "ApplyChangeAction"
+target = "ChangeProposalRecord"
+relation = "produces"
+priority = 75
+notes = "Apply action updates proposal record state."
+
+[[rules]]
+source = "ApplyChangeAction"
+target = "ApprovalLedger"
+relation = "produces"
+priority = 75
+notes = "Apply action writes decision traces to approval ledger."
+
+[[rules]]
+source = "RollbackChangeAction"
+target = "ChangeProposalRecord"
+relation = "produces"
+priority = 75
+notes = "Rollback action updates proposal record with compensating state."
+
+[[rules]]
+source = "RouteScopedDataAction"
+target = "ApprovalLedger"
+relation = "produces"
+priority = 75
+notes = "Scoped routing writes partition/audit traces to approval ledger."
+
+[[rules]]
+source = "RouteScopedDataAction"
+target = "ChangeProposalRecord"
+relation = "produces"
+priority = 75
+notes = "Scoped routing updates proposal state with resolved destination scope."
+
+[[rules]]
+source = "QuarantineDataAction"
+target = "ApprovalLedger"
+relation = "produces"
+priority = 75
+notes = "Quarantine action writes rejection and isolation traces to ledger."
+
+[[rules]]
+source = "ChangeProposalReviewStep"
+target = "ChangeProposalRecord"
+relation = "consumes"
+priority = 75
+notes = "Review step consumes proposal record."
+
+[[rules]]
+source = "DataValidationStep"
+target = "ChangeProposalRecord"
+relation = "consumes"
+priority = 75
+notes = "Data validation consumes proposal payload before policy check."
+
+[[rules]]
+source = "DataValidationStep"
+target = "OwnershipBoundaryRegistry"
+relation = "consumes"
+priority = 75
+notes = "Data validation checks ownership boundaries for payload scope."
+
+[[rules]]
+source = "DataSegregationStep"
+target = "DataScopeRegistry"
+relation = "consumes"
+priority = 75
+notes = "Segregation step consumes scope registry to partition payload."
+
+[[rules]]
+source = "DataSegregationStep"
+target = "DataClassificationCatalog"
+relation = "consumes"
+priority = 75
+notes = "Segregation step consumes classification metadata for routing classes."
+
+[[rules]]
+source = "RouteScopedDataAction"
+target = "DataScopeRegistry"
+relation = "consumes"
+priority = 75
+notes = "Routing action consumes scope registry to resolve persistence destination."
+
+[[rules]]
+source = "QuarantineDataAction"
+target = "ChangeProposalRecord"
+relation = "consumes"
+priority = 75
+notes = "Quarantine action consumes proposal record for isolation context."
+
+[[rules]]
+source = "OwnerApprovalStep"
+target = "OwnershipBoundaryRegistry"
+relation = "consumes"
+priority = 75
+notes = "Owner approval checks ownership boundaries."
+
+[[rules]]
+source = "ApplyChangeAction"
+target = "ApprovalLedger"
+relation = "consumes"
+priority = 75
+notes = "Apply action checks prior approval status before mutating instances."
+
+[[rules]]
+source = "RegistrationPolicy"
+target = "ChangeProposalReviewStep"
+relation = "constrains"
+priority = 75
+notes = "Registration policy constrains proposal review."
+
+[[rules]]
+source = "ActivationPolicy"
+target = "OwnerApprovalStep"
+relation = "constrains"
+priority = 75
+notes = "Activation policy constrains owner approval criteria."
+
+[[rules]]
+source = "VersioningPolicy"
+target = "ApplyChangeAction"
+relation = "constrains"
+priority = 75
+notes = "Versioning policy constrains apply behavior."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "OwnershipBoundaryRegistry"
+relation = "depends_on"
+priority = 75
+notes = "Registry depends on ownership boundaries."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "ApprovalLedger"
+relation = "depends_on"
+priority = 75
+notes = "Validation coordinator depends on approval history."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "ChangeProposalRecord"
+relation = "depends_on"
+priority = 75
+notes = "Version manager depends on proposal state."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "DataScopeRegistry"
+relation = "depends_on"
+priority = 75
+notes = "Registry depends on scope registry for bid-aware model registration."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "DataClassificationCatalog"
+relation = "depends_on"
+priority = 75
+notes = "Validation coordinator depends on classification catalog for handling levels."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "DataScopeRegistry"
+relation = "depends_on"
+priority = 75
+notes = "Version manager depends on scoped partition map for activation boundaries."
+
+[[rules]]
+source = "DataGovernanceCoordinator"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 75
+notes = "Data coordinator depends on infra DB contract for scoped persistence orchestration."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 75
+notes = "Infra defines DB contract; governance registry implements persistence through that port."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 75
+notes = "Infra defines DB contract; governance lifecycle manager implements state transitions on it."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 75
+notes = "Infra defines DB contract; governance validator persists validation runs through it."
+
+[[rules]]
+source = "InfraModelPort"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected cross-layer flow: infra > decision."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "NeedsModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected cross-layer flow: decision > needs."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected cross-layer flow: decision > kernel."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected cross-layer flow: needs > decision."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected cross-layer flow: needs > flow."
+
+[[rules]]
+source = "KernelModelPort"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Expected cross-layer flow: kernel > flow."

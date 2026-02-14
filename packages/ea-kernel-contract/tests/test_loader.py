@@ -84,3 +84,21 @@ def test_load_schema_snapshot_from_real_path(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv(ENV_CONTRACT_DIR, raising=False)
     payload = load_schema_snapshot()
     assert payload["kernel_version"] == "2.5.0"
+
+
+def test_typescript_sdk_contracts_are_synced_with_source():
+    repo_root = _repo_root()
+    source_dir = repo_root / "packages" / "ea-kernel" / "docs" / "reference" / "contracts"
+    sdk_dir = repo_root / "packages" / "ea-kernel-contract-ts" / "contracts"
+    files = (
+        "kernel_schema.snapshot.json",
+        "kernel_rules.snapshot.json",
+        "kernel_judgment_vectors.snapshot.json",
+    )
+
+    for filename in files:
+        source = source_dir / filename
+        target = sdk_dir / filename
+        assert source.exists()
+        assert target.exists()
+        assert source.read_text(encoding="utf-8") == target.read_text(encoding="utf-8")

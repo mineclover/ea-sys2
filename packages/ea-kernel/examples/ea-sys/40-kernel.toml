@@ -1,0 +1,329 @@
+# EA System Layer: Kernel
+# Role: canonical domain model and rule contract for all layers.
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.3.0"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[elements]]
+name = "KernelLayer"
+layer = "Kernel"
+category = "Composite"
+description = "Kernel specification boundary."
+
+[[elements]]
+name = "KernelContractService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Publishes canonical kernel contracts for downstream layers."
+
+[[elements]]
+name = "KernelRuleCompiler"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Compiles kernel-level validity rule sets."
+
+[[elements]]
+name = "KernelValidationService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Validates model payloads against kernel contracts."
+
+[[elements]]
+name = "KernelProfileRegistry"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Indexes kernel profile artifacts and active references."
+
+[[elements]]
+name = "KernelContractPort"
+layer = "Kernel"
+category = "Interface"
+description = "Port for reading kernel contract snapshots."
+
+[[elements]]
+name = "KernelCapabilityModel"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Canonical capability model derived from kernel rules."
+
+[[elements]]
+name = "KernelRuleSet"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Compiled kernel rule set artifacts."
+
+[[elements]]
+name = "KernelSpecSnapshot"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Versioned kernel specification snapshot."
+
+[[elements]]
+name = "KernelConsistencyGoal"
+layer = "Kernel"
+category = "Goal"
+description = "Goal for consistency of kernel contracts and validation outcomes."
+
+[[elements]]
+name = "ContractReviewStep"
+layer = "Kernel"
+category = "Behavior"
+description = "Reviews compiled contracts before publication."
+
+[[elements]]
+name = "PublishKernelContractAction"
+layer = "Kernel"
+category = "Executable"
+description = "Publishes reviewed kernel contract artifacts."
+
+[[elements]]
+name = "KernelSpecPublishedEvent"
+layer = "Kernel"
+category = "Event"
+description = "Raised when a new kernel spec snapshot is published."
+
+[[rules]]
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains kernel services."
+
+[[rules]]
+source = "@Composite"
+target = "@Interface"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains kernel ports."
+
+[[rules]]
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains kernel artifacts."
+
+[[rules]]
+source = "@Composite"
+target = "@Behavior"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains review steps."
+
+[[rules]]
+source = "@Composite"
+target = "@Executable"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains publication actions."
+
+[[rules]]
+source = "@Goal"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Kernel goals constrain review behavior."
+
+[[rules]]
+source = "@Goal"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Kernel goals constrain publication actions."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "registers"
+priority = 60
+notes = "Kernel services register kernel interfaces."
+
+[[rules]]
+source = "KernelContractService"
+target = "KernelRuleCompiler"
+relation = "coordinates"
+priority = 70
+notes = "Contract service coordinates rule compilation."
+
+[[rules]]
+source = "KernelContractService"
+target = "KernelValidationService"
+relation = "coordinates"
+priority = 70
+notes = "Contract service coordinates validation."
+
+[[rules]]
+source = "KernelContractService"
+target = "ContractReviewStep"
+relation = "coordinates"
+priority = 70
+notes = "Contract service coordinates review step execution."
+
+[[rules]]
+source = "KernelRuleCompiler"
+target = "KernelRuleSet"
+relation = "produces"
+priority = 70
+notes = "Rule compiler produces kernel rule set artifacts."
+
+[[rules]]
+source = "KernelValidationService"
+target = "KernelRuleSet"
+relation = "consumes"
+priority = 70
+notes = "Validation consumes compiled kernel rule sets."
+
+[[rules]]
+source = "KernelValidationService"
+target = "KernelCapabilityModel"
+relation = "consumes"
+priority = 70
+notes = "Validation consumes canonical capability model."
+
+[[rules]]
+source = "KernelValidationService"
+target = "KernelSpecSnapshot"
+relation = "produces"
+priority = 70
+notes = "Validation produces reviewed kernel spec snapshots."
+
+[[rules]]
+source = "ContractReviewStep"
+target = "KernelSpecSnapshot"
+relation = "consumes"
+priority = 70
+notes = "Review step consumes spec snapshot candidate."
+
+[[rules]]
+source = "ContractReviewStep"
+target = "PublishKernelContractAction"
+relation = "next"
+priority = 70
+notes = "Review proceeds to publication action."
+
+[[rules]]
+source = "PublishKernelContractAction"
+target = "KernelCapabilityModel"
+relation = "produces"
+priority = 70
+notes = "Publication updates kernel capability model."
+
+[[rules]]
+source = "PublishKernelContractAction"
+target = "KernelSpecSnapshot"
+relation = "produces"
+priority = 70
+notes = "Publication writes versioned spec snapshot."
+
+[[rules]]
+source = "KernelSpecPublishedEvent"
+target = "ContractReviewStep"
+relation = "triggers"
+priority = 70
+notes = "Published event can trigger follow-up review."
+
+[[rules]]
+source = "KernelProfileRegistry"
+target = "KernelSpecSnapshot"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on spec snapshots."
+
+[[rules]]
+source = "KernelProfileRegistry"
+target = "KernelRuleSet"
+relation = "depends_on"
+priority = 70
+notes = "Registry depends on compiled rule sets."
+
+[[rules]]
+source = "KernelContractService"
+target = "KernelProfileRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Contract service depends on profile registry state."
+
+[[rules]]
+source = "KernelValidationService"
+target = "KernelProfileRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Validation service depends on registry metadata."
+
+[[rules]]
+source = "KernelConsistencyGoal"
+target = "KernelValidationService"
+relation = "constrains"
+priority = 70
+notes = "Consistency goal constrains validation rules."
+
+[[rules]]
+source = "KernelConsistencyGoal"
+target = "PublishKernelContractAction"
+relation = "constrains"
+priority = 70
+notes = "Consistency goal constrains publication behavior."

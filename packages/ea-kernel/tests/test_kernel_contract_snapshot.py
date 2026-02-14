@@ -46,6 +46,12 @@ def test_build_and_verify_contract_snapshots(tmp_path: Path):
     assert rules["stats"]["explicit_rules"] + rules["stats"]["fallback_rules"] == len(
         module.KERNEL_SPEC.validity_rules
     )
+    layer_constraints = rules["layer_constraints"]
+    assert isinstance(layer_constraints, list)
+    assert len(layer_constraints) == rules["stats"]["layer_constraints"]
+    ids = [row["id"] for row in layer_constraints]
+    assert len(ids) == len(set(ids))
+    assert all(isinstance(cid, str) and cid.startswith("lc-") for cid in ids)
     assert vectors["stats"]["vectors"] == len(module.DEFAULT_VECTOR_CASES)
 
     issues = module.verify_contract_snapshots(output_dir)

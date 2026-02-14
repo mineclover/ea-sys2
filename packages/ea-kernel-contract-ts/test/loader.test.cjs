@@ -136,6 +136,15 @@ test('buildLayerContractConvention returns package convention', () => {
   assert.equal(convention.schemaFile, 'kernel_schema.snapshot.json');
 });
 
+test('buildManagedLayerContractConventions returns default managed set', () => {
+  const conventions = sdk.buildManagedLayerContractConventions();
+  assert.equal(conventions.length, 5);
+  assert.deepEqual(
+    conventions.map((row) => row.layerId),
+    ['infra', 'decision', 'needs', 'kernel', 'flow'],
+  );
+});
+
 test('composeKernelContractModel applies namespaced layer overlay rules', () => {
   const base = sdk.buildKernelContractModel();
   const composed = sdk.composeKernelContractModel(base, [

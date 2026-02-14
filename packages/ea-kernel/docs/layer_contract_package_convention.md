@@ -60,6 +60,11 @@ A composed bundle must pass all of:
   - `buildLayerContractModel(overlays, options)`
 
 - Python (`ea-kernel-contract`):
+  - `build_layer_contract_convention(layer_id)`
+  - `build_managed_layer_contract_conventions(...)`
+  - `compose_contract_bundle(base_bundle, overlays, options)`
+  - `compose_contract_model(base_model, overlays, options)`
+  - `build_layer_contract_model(overlays, ...)`
   - `build_governance_layer_catalog(...)`
   - `validate_governance_layer_catalog(...)`
 

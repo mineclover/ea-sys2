@@ -8,11 +8,16 @@ from ea_kernel_contract import (
     DEFAULT_MANAGED_GOVERNANCE_LAYERS,
     ENV_CONTRACT_DIR,
     ENV_GOVERNANCE_REFERENCE_PATH,
+    LayerContractOverlay,
     RULES_FILE,
     SCHEMA_FILE,
     VECTORS_FILE,
+    build_layer_contract_convention,
+    build_layer_contract_model,
+    build_managed_layer_contract_conventions,
     build_contract_model,
     build_governance_layer_catalog,
+    compose_contract_bundle,
     contract_fingerprint,
     default_contract_dir,
     default_governance_reference_path,
@@ -250,3 +255,81 @@ def test_typescript_sdk_contracts_are_synced_with_source():
         assert source.exists()
         assert target.exists()
         assert source.read_text(encoding="utf-8") == target.read_text(encoding="utf-8")
+
+
+def test_build_layer_contract_convention():
+    convention = build_layer_contract_convention("Decision Layer")
+    assert convention.layer_slug == "decision_layer"
+    assert convention.ts_package_name == "@ea-sys2/decision_layer-contract-sdk"
+    assert convention.py_package_name == "ea-decision_layer-contract"
+    assert convention.schema_file == SCHEMA_FILE
+
+
+def test_build_managed_layer_contract_conventions_defaults():
+    conventions = build_managed_layer_contract_conventions()
+    assert len(conventions) == 5
+    assert tuple(row.layer_id for row in conventions) == DEFAULT_MANAGED_GOVERNANCE_LAYERS
+
+
+def test_compose_contract_bundle_replaces_fallback_rule():
+    base = load_contract_bundle()
+    composed = compose_contract_bundle(
+        base,
+        [
+            LayerContractOverlay(
+                layer_id="infra",
+                fallback_rules=(
+                    {
+                        "id": "fallback-membership-infra",
+                        "source_pattern": "*",
+                        "target_pattern": "*",
+                        "relation": "membership",
+                        "valid": False,
+                        "priority": 1,
+                        "conditions": [],
+                        "notes": "infra fallback",
+                    },
+                ),
+            ),
+        ],
+    )
+
+    fallback = [
+        row
+        for row in composed.rules["fallback_rules"]
+        if isinstance(row, dict) and row.get("relation") == "membership"
+    ]
+    assert len(fallback) == 1
+    assert fallback[0]["id"] == "infra:fallback-membership-infra"
+
+
+def test_build_layer_contract_model_applies_namespaced_overlay_rule():
+    composed = build_layer_contract_model(
+        [
+            LayerContractOverlay(
+                layer_id="decision",
+                explicit_rules=(
+                    {
+                        "id": "allow-event-trigger-structure",
+                        "source_pattern": "event",
+                        "target_pattern": "structure",
+                        "relation": "triggering",
+                        "valid": True,
+                        "priority": 95,
+                        "conditions": [],
+                        "notes": "decision layer override",
+                    },
+                ),
+            )
+        ]
+    )
+
+    evaluation = evaluate_relationship(
+        composed,
+        source_entity="event",
+        target_entity="structure",
+        relation="triggering",
+    )
+    assert evaluation.allowed is True
+    assert evaluation.winner_rule_id == "decision:allow-event-trigger-structure"
+    assert "decision:allow-event-trigger-structure" in composed.index.rule_by_id

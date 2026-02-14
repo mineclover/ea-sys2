@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,9 @@ from ea_kernel_contract.types import (
     FeedbackTargetType,
     GovernanceLayerCatalog,
     JsonObject,
+    LayerContractComposeOptions,
+    LayerContractConvention,
+    LayerContractOverlay,
     RelationshipEvaluation,
 )
 
@@ -579,6 +583,305 @@ def contract_fingerprint(bundle: ContractBundle) -> str:
         digest.update(file_path.read_bytes())
         digest.update(b"\x00")
     return digest.hexdigest()
+
+
+def _to_layer_slug(layer_id: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", layer_id.strip().lower()).strip("_")
+    if len(slug) == 0:
+        raise ValueError(f"invalid layer_id: {layer_id!r}")
+    return slug
+
+
+def _namespace_id(
+    layer_slug: str,
+    raw_id: str,
+    separator: str,
+    should_namespace: bool,
+) -> str:
+    rid = raw_id.strip()
+    if len(rid) == 0:
+        raise ValueError("id cannot be empty")
+    if not should_namespace:
+        return rid
+    prefix = f"{layer_slug}{separator}"
+    if rid.startswith(prefix):
+        return rid
+    return f"{prefix}{rid}"
+
+
+def _compose_bundle_fingerprint(bundle: ContractBundle) -> str:
+    payload = {
+        "schema": bundle.schema,
+        "rules": bundle.rules,
+        "vectors": bundle.vectors,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def build_layer_contract_convention(layer_id: str) -> LayerContractConvention:
+    """Build package/file naming convention for a layer contract SDK."""
+    layer_slug = _to_layer_slug(layer_id)
+    return LayerContractConvention(
+        layer_id=layer_id,
+        layer_slug=layer_slug,
+        ts_package_name=f"@ea-sys2/{layer_slug}-contract-sdk",
+        py_package_name=f"ea-{layer_slug}-contract",
+        contracts_dir="contracts",
+        schema_file=SCHEMA_FILE,
+        rules_file=RULES_FILE,
+        vectors_file=VECTORS_FILE,
+        feedback_id_prefix=f"{layer_slug}:",
+    )
+
+
+def build_managed_layer_contract_conventions(
+    managed_layers: tuple[str, ...] = DEFAULT_MANAGED_GOVERNANCE_LAYERS,
+) -> tuple[LayerContractConvention, ...]:
+    """Build layer conventions for all managed governance layers."""
+    return tuple(build_layer_contract_convention(layer) for layer in managed_layers)
+
+
+def compose_contract_bundle(
+    base_bundle: ContractBundle,
+    overlays: list[LayerContractOverlay] | tuple[LayerContractOverlay, ...],
+    options: LayerContractComposeOptions | None = None,
+    *,
+    validate_shape: bool = True,
+) -> ContractBundle:
+    """Compose layer overlays on top of a base kernel contract bundle."""
+    compose = options or LayerContractComposeOptions()
+    if len(compose.namespace_separator) == 0:
+        raise ValueError("namespace_separator cannot be empty")
+
+    base_explicit = base_bundle.rules.get("explicit_rules", [])
+    base_fallback = base_bundle.rules.get("fallback_rules", [])
+    base_constraints = base_bundle.rules.get("layer_constraints", [])
+    base_vectors = base_bundle.vectors.get("vectors", [])
+
+    explicit_rules: list[JsonObject] = []
+    fallback_rules_by_relation: dict[str, JsonObject] = {}
+    layer_constraints_by_id: dict[str, JsonObject] = {}
+    vectors: list[JsonObject] = []
+
+    rule_ids: set[str] = set()
+    vector_ids: set[str] = set()
+
+    if isinstance(base_explicit, list):
+        for row in base_explicit:
+            if isinstance(row, dict):
+                copied = dict(row)
+                explicit_rules.append(copied)
+                rid = copied.get("id")
+                if isinstance(rid, str):
+                    rule_ids.add(rid)
+    if isinstance(base_fallback, list):
+        for row in base_fallback:
+            if isinstance(row, dict):
+                copied = dict(row)
+                relation = copied.get("relation")
+                rid = copied.get("id")
+                if isinstance(relation, str):
+                    fallback_rules_by_relation[relation] = copied
+                if isinstance(rid, str):
+                    rule_ids.add(rid)
+    if isinstance(base_constraints, list):
+        for row in base_constraints:
+            if isinstance(row, dict):
+                copied = dict(row)
+                cid = copied.get("id")
+                if isinstance(cid, str):
+                    layer_constraints_by_id[cid] = copied
+    if isinstance(base_vectors, list):
+        for row in base_vectors:
+            if isinstance(row, dict):
+                copied = dict(row)
+                vectors.append(copied)
+                vid = copied.get("id")
+                if isinstance(vid, str):
+                    vector_ids.add(vid)
+
+    for overlay in overlays:
+        layer_slug = _to_layer_slug(overlay.layer_id)
+
+        for row in overlay.explicit_rules:
+            if not isinstance(row, dict):
+                raise ValueError("overlay explicit_rules row must be an object")
+            rid_raw = row.get("id")
+            if not isinstance(rid_raw, str):
+                raise ValueError("overlay explicit_rules.id must be a string")
+            rid = _namespace_id(
+                layer_slug,
+                rid_raw,
+                compose.namespace_separator,
+                compose.namespace_ids,
+            )
+            if not compose.allow_rule_id_collision and rid in rule_ids:
+                raise ValueError(f"duplicate rule id after composition: {rid}")
+            rule_ids.add(rid)
+            explicit_rules.append({**row, "id": rid})
+
+        for row in overlay.fallback_rules:
+            if not isinstance(row, dict):
+                raise ValueError("overlay fallback_rules row must be an object")
+            rid_raw = row.get("id")
+            relation = row.get("relation")
+            if not isinstance(rid_raw, str):
+                raise ValueError("overlay fallback_rules.id must be a string")
+            if not isinstance(relation, str):
+                raise ValueError("overlay fallback_rules.relation must be a string")
+
+            rid = _namespace_id(
+                layer_slug,
+                rid_raw,
+                compose.namespace_separator,
+                compose.namespace_ids,
+            )
+
+            previous = fallback_rules_by_relation.get(relation)
+            previous_id = previous.get("id") if isinstance(previous, dict) else None
+            if (
+                not compose.allow_rule_id_collision
+                and rid in rule_ids
+                and (not isinstance(previous_id, str) or previous_id != rid)
+            ):
+                raise ValueError(f"duplicate rule id after composition: {rid}")
+
+            if isinstance(previous_id, str):
+                rule_ids.discard(previous_id)
+            rule_ids.add(rid)
+            fallback_rules_by_relation[relation] = {**row, "id": rid}
+
+        for row in overlay.layer_constraints:
+            if not isinstance(row, dict):
+                raise ValueError("overlay layer_constraints row must be an object")
+            cid_raw = row.get("id")
+            if not isinstance(cid_raw, str):
+                raise ValueError("overlay layer_constraints.id must be a string")
+            cid = _namespace_id(
+                layer_slug,
+                cid_raw,
+                compose.namespace_separator,
+                compose.namespace_ids,
+            )
+            if not compose.allow_constraint_id_collision and cid in layer_constraints_by_id:
+                raise ValueError(f"duplicate layer constraint id after composition: {cid}")
+            layer_constraints_by_id[cid] = {**row, "id": cid}
+
+        if compose.merge_vectors:
+            for row in overlay.vectors:
+                if not isinstance(row, dict):
+                    raise ValueError("overlay vectors row must be an object")
+                vid_raw = row.get("id")
+                if not isinstance(vid_raw, str):
+                    raise ValueError("overlay vectors.id must be a string")
+                vid = _namespace_id(
+                    layer_slug,
+                    vid_raw,
+                    compose.namespace_separator,
+                    compose.namespace_ids,
+                )
+                if vid in vector_ids:
+                    raise ValueError(f"duplicate vector id after composition: {vid}")
+                vector_ids.add(vid)
+                vectors.append({**row, "id": vid})
+
+    fallback_rules = list(fallback_rules_by_relation.values())
+    layer_constraints = list(layer_constraints_by_id.values())
+    metadata_entries = sum(
+        1
+        for row in explicit_rules
+        if isinstance(row.get("metadata"), dict)
+    )
+    allow_vectors = sum(
+        1
+        for row in vectors
+        if row.get("expected_verdict") is True
+    )
+
+    rules_payload = dict(base_bundle.rules)
+    rules_stats = (
+        dict(base_bundle.rules.get("stats"))
+        if isinstance(base_bundle.rules.get("stats"), dict)
+        else {}
+    )
+    rules_payload["stats"] = {
+        **rules_stats,
+        "total_rules": len(explicit_rules) + len(fallback_rules),
+        "explicit_rules": len(explicit_rules),
+        "fallback_rules": len(fallback_rules),
+        "layer_constraints": len(layer_constraints),
+        "metadata_entries": metadata_entries,
+    }
+    rules_payload["explicit_rules"] = explicit_rules
+    rules_payload["fallback_rules"] = fallback_rules
+    rules_payload["layer_constraints"] = layer_constraints
+
+    vectors_payload = dict(base_bundle.vectors)
+    vectors_stats = (
+        dict(base_bundle.vectors.get("stats"))
+        if isinstance(base_bundle.vectors.get("stats"), dict)
+        else {}
+    )
+    vectors_payload["stats"] = {
+        **vectors_stats,
+        "vectors": len(vectors),
+        "allow_vectors": allow_vectors,
+        "deny_vectors": len(vectors) - allow_vectors,
+    }
+    vectors_payload["vectors"] = vectors
+
+    composed = ContractBundle(
+        paths=base_bundle.paths,
+        schema=dict(base_bundle.schema),
+        rules=rules_payload,
+        vectors=vectors_payload,
+    )
+
+    if validate_shape:
+        issues = validate_bundle_shape(composed)
+        if issues:
+            joined = "; ".join(issues)
+            raise ValueError(f"invalid composed contract bundle: {joined}")
+    return composed
+
+
+def compose_contract_model(
+    base_model: ContractModel,
+    overlays: list[LayerContractOverlay] | tuple[LayerContractOverlay, ...],
+    options: LayerContractComposeOptions | None = None,
+    *,
+    validate_shape: bool = True,
+) -> ContractModel:
+    """Compose overlays on an existing model and rebuild index/fingerprint."""
+    bundle = compose_contract_bundle(
+        base_model.bundle,
+        overlays,
+        options,
+        validate_shape=validate_shape,
+    )
+    return ContractModel(
+        bundle=bundle,
+        index=build_contract_index(bundle),
+        fingerprint=_compose_bundle_fingerprint(bundle),
+    )
+
+
+def build_layer_contract_model(
+    overlays: list[LayerContractOverlay] | tuple[LayerContractOverlay, ...],
+    *,
+    contract_dir: Path | None = None,
+    validate_shape: bool = True,
+    compose_options: LayerContractComposeOptions | None = None,
+) -> ContractModel:
+    """Build base model from snapshots then apply layer overlays."""
+    base_model = build_contract_model(contract_dir=contract_dir, validate_shape=validate_shape)
+    return compose_contract_model(
+        base_model,
+        overlays,
+        options=compose_options,
+        validate_shape=validate_shape,
+    )
 
 
 def _require_row_dict(row: Any, *, context: str) -> JsonObject:

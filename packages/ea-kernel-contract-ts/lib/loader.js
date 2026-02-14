@@ -8,6 +8,7 @@ exports.validateKernelContractBundle = validateKernelContractBundle;
 exports.buildKernelContractIndex = buildKernelContractIndex;
 exports.getKernelContractFingerprint = getKernelContractFingerprint;
 exports.buildLayerContractConvention = buildLayerContractConvention;
+exports.buildManagedLayerContractConventions = buildManagedLayerContractConventions;
 exports.composeKernelContractBundle = composeKernelContractBundle;
 exports.composeKernelContractModel = composeKernelContractModel;
 exports.listKernelFeedbackTargets = listKernelFeedbackTargets;
@@ -511,6 +512,9 @@ function buildLayerContractConvention(layerId) {
         vectorsFile: exports.VECTORS_FILE,
         feedbackIdPrefix: `${layerSlug}:`,
     };
+}
+function buildManagedLayerContractConventions(managedLayers = exports.DEFAULT_MANAGED_GOVERNANCE_LAYERS) {
+    return managedLayers.map((layerId) => buildLayerContractConvention(layerId));
 }
 function composeKernelContractBundle(baseBundle, overlays, options) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j;

@@ -775,6 +775,12 @@ export function buildLayerContractConvention(
   };
 }
 
+export function buildManagedLayerContractConventions(
+  managedLayers: readonly string[] = DEFAULT_MANAGED_GOVERNANCE_LAYERS,
+): ILayerContractConvention[] {
+  return managedLayers.map((layerId) => buildLayerContractConvention(layerId));
+}
+
 export function composeKernelContractBundle(
   baseBundle: IKernelContractBundle,
   overlays: ILayerContractOverlay[],

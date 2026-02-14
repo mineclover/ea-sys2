@@ -7,8 +7,13 @@ from ea_kernel_contract.loader import (
     VECTORS_FILE,
     RULES_FILE,
     build_contract_index,
+    build_layer_contract_convention,
+    build_layer_contract_model,
+    build_managed_layer_contract_conventions,
     build_contract_model,
     build_governance_layer_catalog,
+    compose_contract_bundle,
+    compose_contract_model,
     contract_fingerprint,
     default_contract_dir,
     default_governance_reference_path,
@@ -42,11 +47,14 @@ from ea_kernel_contract.types import (
     FeedbackTargetType,
     GovernanceLayerCatalog,
     JsonObject,
+    LayerContractComposeOptions,
+    LayerContractConvention,
+    LayerContractOverlay,
     RelationshipEvaluation,
     RelationshipEvaluationReason,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "__version__",
@@ -67,6 +75,9 @@ __all__ = [
     "ConditionEvaluation",
     "RelationshipEvaluation",
     "GovernanceLayerCatalog",
+    "LayerContractOverlay",
+    "LayerContractComposeOptions",
+    "LayerContractConvention",
     "default_contract_dir",
     "resolve_contract_paths",
     "load_schema_snapshot",
@@ -77,6 +88,11 @@ __all__ = [
     "contract_fingerprint",
     "build_contract_index",
     "build_contract_model",
+    "build_layer_contract_convention",
+    "build_managed_layer_contract_conventions",
+    "compose_contract_bundle",
+    "compose_contract_model",
+    "build_layer_contract_model",
     "make_feedback_target",
     "parse_feedback_target",
     "resolve_feedback_target",

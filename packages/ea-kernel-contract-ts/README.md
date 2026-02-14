@@ -41,6 +41,7 @@ This build automatically syncs latest snapshots from:
 ```ts
 import {
   buildLayerContractConvention,
+  buildManagedLayerContractConventions,
   buildLayerContractModel,
   buildKernelContractModel,
   evaluateKernelRelationship,
@@ -69,6 +70,9 @@ console.log(verdict.allowed, verdict.winnerRuleId);
 
 const layerConvention = buildLayerContractConvention("decision");
 console.log(layerConvention.tsPackageName);
+
+const managedConventions = buildManagedLayerContractConventions();
+console.log(managedConventions.map((row) => row.layerId));
 
 const decisionModel = buildLayerContractModel([
   {

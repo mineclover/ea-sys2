@@ -25,6 +25,10 @@ Snapshot files:
 - Governance layer catalog utilities based on
   `kernel_governance_reference_v1.snapshot.json`
   - expected managed layers: `infra`, `decision`, `needs`, `kernel`, `flow`
+- Layer overlay composition convention (same as TS SDK)
+  - rule/constraint/vector id namespacing by layer slug
+  - fallback-rule replacement per relation
+  - composed bundle/model validation + deterministic fingerprint
 
 ## Quick usage
 
@@ -58,6 +62,40 @@ catalog = build_governance_layer_catalog()
 issues = validate_governance_layer_catalog(catalog)
 print(catalog.managed_layers)
 print(issues)
+```
+
+## Layer overlay composition
+
+```python
+from ea_kernel_contract import (
+    LayerContractOverlay,
+    build_layer_contract_convention,
+    build_layer_contract_model,
+)
+
+convention = build_layer_contract_convention("decision")
+print(convention.ts_package_name)  # @ea-sys2/decision-contract-sdk
+
+model = build_layer_contract_model(
+    [
+        LayerContractOverlay(
+            layer_id="decision",
+            explicit_rules=(
+                {
+                    "id": "allow-event-trigger-structure",
+                    "source_pattern": "event",
+                    "target_pattern": "structure",
+                    "relation": "triggering",
+                    "valid": True,
+                    "priority": 95,
+                    "conditions": [],
+                    "notes": "decision layer override",
+                },
+            ),
+        ),
+    ]
+)
+print(model.fingerprint)
 ```
 
 Optional environment overrides:

@@ -8,6 +8,7 @@ export declare function validateKernelContractBundle(bundle: IKernelContractBund
 export declare function buildKernelContractIndex(bundle: IKernelContractBundle): IKernelContractIndex;
 export declare function getKernelContractFingerprint(bundle: IKernelContractBundle): string;
 export declare function buildLayerContractConvention(layerId: string): ILayerContractConvention;
+export declare function buildManagedLayerContractConventions(managedLayers?: readonly string[]): ILayerContractConvention[];
 export declare function composeKernelContractBundle(baseBundle: IKernelContractBundle, overlays: ILayerContractOverlay[], options?: ILayerContractComposeOptions): IKernelContractBundle;
 export declare function composeKernelContractModel(baseModel: IKernelContractModel, overlays: ILayerContractOverlay[], options?: ILayerContractComposeOptions): IKernelContractModel;
 export declare function listKernelFeedbackTargets(model: IKernelContractModel, targetType?: KernelFeedbackTargetType): IKernelFeedbackTarget[];

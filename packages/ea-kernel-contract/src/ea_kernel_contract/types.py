@@ -130,3 +130,41 @@ class GovernanceLayerCatalog:
     @property
     def is_valid(self) -> bool:
         return len(self.missing_managed_layers) == 0
+
+
+@dataclass(frozen=True)
+class LayerContractOverlay:
+    """Layer-scoped overlay patch for rules/constraints/vectors."""
+
+    layer_id: str
+    source: str | None = None
+    explicit_rules: tuple[JsonObject, ...] = ()
+    fallback_rules: tuple[JsonObject, ...] = ()
+    layer_constraints: tuple[JsonObject, ...] = ()
+    vectors: tuple[JsonObject, ...] = ()
+
+
+@dataclass(frozen=True)
+class LayerContractComposeOptions:
+    """Composition controls for overlay merge behavior."""
+
+    namespace_ids: bool = True
+    namespace_separator: str = ":"
+    merge_vectors: bool = False
+    allow_rule_id_collision: bool = False
+    allow_constraint_id_collision: bool = False
+
+
+@dataclass(frozen=True)
+class LayerContractConvention:
+    """Package/filesystem naming convention for layer contract SDKs."""
+
+    layer_id: str
+    layer_slug: str
+    ts_package_name: str
+    py_package_name: str
+    contracts_dir: str
+    schema_file: str
+    rules_file: str
+    vectors_file: str
+    feedback_id_prefix: str

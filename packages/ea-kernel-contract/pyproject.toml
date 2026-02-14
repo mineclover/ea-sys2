@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ea-kernel-contract"
-version = "0.1.0"
+version = "0.2.0"
 description = "Contract snapshot consumer for ea-kernel"
 readme = "README.md"
 license = "MIT"

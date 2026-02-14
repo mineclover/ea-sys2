@@ -3,7 +3,7 @@
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.3.0"
+version = "0.4.0"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -91,6 +91,42 @@ name = "DecisionAgreementService"
 layer = "Decision"
 category = "ActiveStructure"
 description = "Maintains agreement semantics for decision outcome closure."
+
+[[elements]]
+name = "InfraModelPort"
+layer = "Infra"
+category = "Interface"
+description = "6x6 contract port for infra-layer model interface."
+
+[[elements]]
+name = "GovernanceModelPort"
+layer = "Governance"
+category = "Interface"
+description = "6x6 contract port for governance-layer model interface."
+
+[[elements]]
+name = "DecisionModelPort"
+layer = "Decision"
+category = "Interface"
+description = "6x6 contract port for decision-layer model interface."
+
+[[elements]]
+name = "NeedsModelPort"
+layer = "Needs"
+category = "Interface"
+description = "6x6 contract port for needs-layer model interface."
+
+[[elements]]
+name = "KernelModelPort"
+layer = "Kernel"
+category = "Interface"
+description = "6x6 contract port for kernel-layer model interface."
+
+[[elements]]
+name = "FlowModelPort"
+layer = "Flow"
+category = "Interface"
+description = "6x6 contract port for flow-layer model interface."
 
 [[elements]]
 name = "DecisionCriteriaModel"

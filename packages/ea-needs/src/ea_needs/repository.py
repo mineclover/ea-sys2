@@ -1,4 +1,8 @@
-"""File-based repository for persisting NeedCatalogs (N3)."""
+"""Persistence repository for NeedCatalog (N3).
+
+Needs core keeps persistence lightweight (JSON/file).
+DB-backed persistence is managed by the governance layer.
+"""
 
 from __future__ import annotations
 
@@ -18,8 +22,7 @@ class NeedRepository:
     def save_catalog(self, catalog: NeedCatalog) -> str:
         """Persist a NeedCatalog to a JSON file."""
         file_path = self.catalog_dir / f"{catalog.id}.json"
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(catalog.to_json())
+        file_path.write_text(catalog.to_json(), encoding="utf-8")
         return catalog.id
 
     def get_catalog(self, catalog_id: str) -> NeedCatalog | None:
@@ -27,13 +30,11 @@ class NeedRepository:
         file_path = self.catalog_dir / f"{catalog_id}.json"
         if not file_path.exists():
             return None
-        with open(file_path, encoding="utf-8") as f:
-            return NeedCatalog.from_json(f.read())
+        return NeedCatalog.from_json(file_path.read_text(encoding="utf-8"))
 
     def list_catalogs(self) -> list[NeedCatalog]:
         """List all persisted catalogs."""
-        catalogs = []
+        catalogs: list[NeedCatalog] = []
         for file_path in sorted(self.catalog_dir.glob("*.json")):
-            with open(file_path, encoding="utf-8") as f:
-                catalogs.append(NeedCatalog.from_json(f.read()))
+            catalogs.append(NeedCatalog.from_json(file_path.read_text(encoding="utf-8")))
         return catalogs

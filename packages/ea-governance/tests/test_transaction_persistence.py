@@ -66,3 +66,28 @@ def test_execution_service_default_transaction_db_path(tmp_path: Path):
 
     assert tx_db_path == tmp_path / "transactions.db"
     assert tx_db_path.exists()
+
+
+def test_transaction_manager_custom_event_and_list_filter(tmp_path: Path):
+    manager = TransactionManager(tmp_path / "transactions.db")
+    tx = manager.begin_transaction(
+        "needs-write",
+        tx_type="needs_catalog_write",
+        payload={"catalog_id": "catalog-1"},
+    )
+
+    assert manager.add_event(
+        tx.id,
+        "needs_catalog_saved",
+        "Needs catalog persisted.",
+        payload={"catalog_id": "catalog-1"},
+    )
+    assert manager.commit(tx.id)
+
+    writes = manager.list_transactions(tx_type="needs_catalog_write")
+    assert len(writes) == 1
+    assert writes[0].id == tx.id
+
+    events = manager.get_events(tx.id)
+    event_types = [event.event_type for event in events]
+    assert event_types == ["begin", "needs_catalog_saved", "commit"]

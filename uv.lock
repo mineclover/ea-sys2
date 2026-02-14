@@ -378,6 +378,7 @@ dependencies = [
     { name = "ea-decision" },
     { name = "ea-flow" },
     { name = "ea-kernel" },
+    { name = "ea-needs" },
 ]
 
 [package.optional-dependencies]
@@ -391,6 +392,7 @@ requires-dist = [
     { name = "ea-decision", editable = "packages/ea-decision" },
     { name = "ea-flow", editable = "packages/ea-flow" },
     { name = "ea-kernel", editable = "packages/ea-kernel" },
+    { name = "ea-needs", editable = "packages/ea-needs" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]
@@ -452,7 +454,7 @@ provides-extras = ["typedb", "mcp", "api", "dev"]
 
 [[package]]
 name = "ea-kernel-contract"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "packages/ea-kernel-contract" }
 
 [package.optional-dependencies]

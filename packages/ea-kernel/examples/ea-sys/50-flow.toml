@@ -3,7 +3,7 @@
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.3.0"
+version = "0.4.0"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -73,6 +73,42 @@ name = "FlowLayer"
 layer = "Flow"
 category = "Composite"
 description = "Flow modeling boundary."
+
+[[elements]]
+name = "InfraModelPort"
+layer = "Infra"
+category = "Interface"
+description = "6x6 contract port for infra-layer model interface."
+
+[[elements]]
+name = "GovernanceModelPort"
+layer = "Governance"
+category = "Interface"
+description = "6x6 contract port for governance-layer model interface."
+
+[[elements]]
+name = "DecisionModelPort"
+layer = "Decision"
+category = "Interface"
+description = "6x6 contract port for decision-layer model interface."
+
+[[elements]]
+name = "NeedsModelPort"
+layer = "Needs"
+category = "Interface"
+description = "6x6 contract port for needs-layer model interface."
+
+[[elements]]
+name = "KernelModelPort"
+layer = "Kernel"
+category = "Interface"
+description = "6x6 contract port for kernel-layer model interface."
+
+[[elements]]
+name = "FlowModelPort"
+layer = "Flow"
+category = "Interface"
+description = "6x6 contract port for flow-layer model interface."
 
 [[elements]]
 name = "ContextIngestStep"
@@ -181,6 +217,12 @@ name = "ContractedPlanDraft"
 layer = "Flow"
 category = "PassiveStructure"
 description = "Kernel-contracted plan draft used for execution."
+
+[[elements]]
+name = "FlowLayerContractMatrix"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Flow-owned 6x6 cross-layer contract matrix definition."
 
 [[rules]]
 source = "@Composite"
@@ -482,3 +524,52 @@ target = "LayerVersionStore"
 relation = "produces"
 priority = 70
 notes = "Publish action writes final published outcome version."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "FlowLayerContractMatrix"
+relation = "produces"
+priority = 80
+notes = "Flow persistence step publishes 6x6 layer contract matrix."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "InfraModelPort"
+relation = "coordinates"
+priority = 80
+notes = "6x6 contract: flow -> infra interface contract."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "GovernanceModelPort"
+relation = "coordinates"
+priority = 80
+notes = "6x6 contract: flow -> governance interface contract."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 80
+notes = "6x6 contract: flow -> decision interface contract."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "NeedsModelPort"
+relation = "coordinates"
+priority = 80
+notes = "6x6 contract: flow -> needs interface contract."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 80
+notes = "6x6 contract: flow -> kernel interface contract."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 80
+notes = "6x6 contract: flow -> flow interface contract."

@@ -21,12 +21,12 @@ def _load_validate_module():
 @pytest.mark.parametrize(
     ("layer", "filename", "expected"),
     [
-        ("infra", "00-infra.toml", (9, 9, 23)),
-        ("governance", "10-governance.toml", (36, 9, 80)),
-        ("decision", "20-decision.toml", (22, 9, 61)),
-        ("needs", "30-needs.toml", (10, 9, 25)),
-        ("kernel", "40-kernel.toml", (13, 9, 35)),
-        ("flow", "50-flow.toml", (19, 9, 52)),
+        ("infra", "00-infra.toml", (15, 9, 23)),
+        ("governance", "10-governance.toml", (52, 9, 131)),
+        ("decision", "20-decision.toml", (28, 9, 61)),
+        ("needs", "30-needs.toml", (16, 9, 25)),
+        ("kernel", "40-kernel.toml", (19, 9, 35)),
+        ("flow", "50-flow.toml", (26, 9, 59)),
     ],
 )
 def test_validate_layer_success(layer, filename, expected):
@@ -49,4 +49,9 @@ def test_main_simulate_success(monkeypatch, capsys):
     assert "[sim] flow-sequence:" in out
     assert "[sim] model-order: infra > decision > needs > kernel > flow" in out
     assert "[sim] governance-role: layer-management-system" in out
+    assert "[sim] governance-entrypoint-order: infra > governance > decision > needs > kernel > flow" in out
+    assert "[sim] governance-entrypoint: passed" in out
+    assert "[sim] governance-model-api-contract: passed" in out
+    assert "[sim] layer-6x6-contract: passed" in out
+    assert "[sim] layer-6x6-owner: flow" in out
     assert "[sim] passed" in out

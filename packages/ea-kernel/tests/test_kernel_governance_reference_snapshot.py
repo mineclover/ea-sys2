@@ -38,7 +38,7 @@ def test_build_and_verify_reference_snapshot(tmp_path: Path):
     assert snapshot_path.exists()
     assert payload["reference_version"] == "1.0.0"
     assert len(payload["model_registry"]) == 6
-    assert payload["active_models"] == ["RalphTUIImplementation.kernel"]
+    assert payload["active_models"] == ["EASystemLayerModel.kernel"]
     assert payload["db_contract"]["profiles.db"]["row_counts"]["model_registry"] == 6
     assert payload["db_contract"]["profiles.db"]["row_counts"]["validation_runs"] == 7
     seed_profiles = payload["seed_profiles"]
@@ -68,7 +68,7 @@ def test_verify_detects_registry_drift(tmp_path: Path):
     profiles_db = data_dir / "profiles.db"
     with sqlite3.connect(str(profiles_db)) as conn:
         conn.execute(
-            "UPDATE model_registry SET status='disabled' WHERE model_name='RalphTUIImplementation.kernel'"
+            "UPDATE model_registry SET status='disabled' WHERE model_name='EASystemLayerModel.kernel'"
         )
         conn.commit()
 
@@ -90,4 +90,4 @@ def test_build_requires_empty_data_dir_without_force_reset(tmp_path: Path):
         snapshot_path,
         force_reset=True,
     )
-    assert payload["active_models"] == ["RalphTUIImplementation.kernel"]
+    assert payload["active_models"] == ["EASystemLayerModel.kernel"]

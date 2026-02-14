@@ -19,6 +19,83 @@ LAYER_FILE_MAP = {
 
 VALIDATION_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow")
 MODEL_DEFINITION_ORDER = ("infra", "decision", "needs", "kernel", "flow")
+GOVERNANCE_ENTRYPOINT_ORDER = ("infra", "governance", "decision", "needs", "kernel", "flow")
+LAYER_PORTS = {
+    "infra": "InfraModelPort",
+    "governance": "GovernanceModelPort",
+    "decision": "DecisionModelPort",
+    "needs": "NeedsModelPort",
+    "kernel": "KernelModelPort",
+    "flow": "FlowModelPort",
+}
+FLOW_6X6_MATRIX_ELEMENT = "FlowLayerContractMatrix"
+FLOW_6X6_OWNER = "PersistFlowStateStep"
+EXPECTED_MODEL_DEFINITION_COORDINATES = (
+    ("InfraModelPort", "DecisionModelPort"),
+    ("DecisionModelPort", "NeedsModelPort"),
+    ("DecisionModelPort", "KernelModelPort"),
+    ("NeedsModelPort", "DecisionModelPort"),
+    ("NeedsModelPort", "FlowModelPort"),
+    ("KernelModelPort", "FlowModelPort"),
+)
+MODEL_API_ENDPOINTS = (
+    "ModelRegisterEndpoint",
+    "ModelValidateEndpoint",
+    "ModelActivateEndpoint",
+    "ModelStateEndpoint",
+)
+MODEL_API_RECORDS = (
+    "ModelRegisterRequestRecord",
+    "ModelRegisterResponseRecord",
+    "ModelValidateRequestRecord",
+    "ModelValidateResponseRecord",
+    "ModelActivateRequestRecord",
+    "ModelActivateResponseRecord",
+    "ModelStateQueryRecord",
+    "ModelStateResponseRecord",
+    "ModelApiErrorRecord",
+    "ModelTransactionRecord",
+)
+EXPECTED_MODEL_API_ENTRYPOINT_COORDINATES = tuple(
+    ("GovernanceEntryPort", endpoint) for endpoint in MODEL_API_ENDPOINTS
+)
+EXPECTED_MODEL_API_PORT_COORDINATES = tuple(
+    (endpoint, "KernelModelPort") for endpoint in MODEL_API_ENDPOINTS
+)
+EXPECTED_MODEL_API_SERVICE_COORDINATES = (
+    ("ModelRegisterEndpoint", "LayerModelRegistry"),
+    ("ModelRegisterEndpoint", "ValidationCoordinator"),
+    ("ModelRegisterEndpoint", "AgreementCoordinator"),
+    ("ModelValidateEndpoint", "ValidationCoordinator"),
+    ("ModelActivateEndpoint", "ActivationCoordinator"),
+    ("ModelActivateEndpoint", "VersionLifecycleManager"),
+    ("ModelStateEndpoint", "LayerModelRegistry"),
+    ("ModelStateEndpoint", "VersionLifecycleManager"),
+)
+EXPECTED_MODEL_API_CONSUMES = (
+    ("ModelRegisterEndpoint", "ModelRegisterRequestRecord"),
+    ("ModelValidateEndpoint", "ModelValidateRequestRecord"),
+    ("ModelActivateEndpoint", "ModelActivateRequestRecord"),
+    ("ModelStateEndpoint", "ModelStateQueryRecord"),
+)
+EXPECTED_MODEL_API_PRODUCES = (
+    ("ModelRegisterEndpoint", "ModelRegisterResponseRecord"),
+    ("ModelRegisterEndpoint", "ModelRegistrationRequestedEvent"),
+    ("ModelRegisterEndpoint", "ModelApiErrorRecord"),
+    ("ModelRegisterEndpoint", "ModelTransactionRecord"),
+    ("ModelValidateEndpoint", "ModelValidateResponseRecord"),
+    ("ModelValidateEndpoint", "ValidationPassedEvent"),
+    ("ModelValidateEndpoint", "ValidationFailedEvent"),
+    ("ModelValidateEndpoint", "ModelApiErrorRecord"),
+    ("ModelValidateEndpoint", "ModelTransactionRecord"),
+    ("ModelActivateEndpoint", "ModelActivateResponseRecord"),
+    ("ModelActivateEndpoint", "ActivationApprovedEvent"),
+    ("ModelActivateEndpoint", "ModelApiErrorRecord"),
+    ("ModelActivateEndpoint", "ModelTransactionRecord"),
+    ("ModelStateEndpoint", "ModelStateResponseRecord"),
+    ("ModelStateEndpoint", "ModelApiErrorRecord"),
+    ("ModelStateEndpoint", "ModelTransactionRecord"),
+)
 LAYER_DIR = Path(__file__).parent / "ea-sys"
 
 
@@ -214,6 +291,180 @@ def _collect_exact_relation_edges(
     return edges
 
 
+def _validate_governance_entrypoint(governance_profile: Any) -> dict[str, Any]:
+    element_names = {elem.name for elem in governance_profile.elements}
+    expected_ports = set(LAYER_PORTS.values())
+    expected_registry_targets = {"GovernanceEntryPort", *expected_ports}
+
+    missing_ports = sorted(expected_ports - element_names)
+    missing_entry_port = "GovernanceEntryPort" not in element_names
+
+    registers = _collect_exact_relation_edges(governance_profile, "registers")
+    registry_targets = registers.get("LayerModelRegistry", set())
+    missing_registry_targets = sorted(expected_registry_targets - registry_targets)
+
+    coordinates = _collect_exact_relation_edges(governance_profile, "coordinates")
+    entrypoint_targets = coordinates.get("GovernanceEntryPort", set())
+    missing_entrypoint_routing = sorted(expected_ports - entrypoint_targets)
+
+    coordinate_pairs = {
+        (src, dst)
+        for src, targets in coordinates.items()
+        for dst in targets
+    }
+    missing_model_definition_coordinates = sorted(
+        f"{src}->{dst}"
+        for (src, dst) in EXPECTED_MODEL_DEFINITION_COORDINATES
+        if (src, dst) not in coordinate_pairs
+    )
+
+    passed = (
+        not missing_ports
+        and not missing_entry_port
+        and not missing_registry_targets
+        and not missing_entrypoint_routing
+        and not missing_model_definition_coordinates
+    )
+
+    return {
+        "passed": passed,
+        "missing_ports": missing_ports,
+        "missing_entry_port": missing_entry_port,
+        "missing_registry_targets": missing_registry_targets,
+        "missing_entrypoint_routing": missing_entrypoint_routing,
+        "missing_model_definition_coordinates": missing_model_definition_coordinates,
+        "registered_targets": sorted(registry_targets),
+        "entrypoint_targets": sorted(entrypoint_targets),
+    }
+
+
+def _missing_exact_pairs(
+    expected_pairs: tuple[tuple[str, str], ...],
+    actual_pairs: set[tuple[str, str]],
+) -> list[str]:
+    return sorted(
+        f"{source}->{target}"
+        for (source, target) in expected_pairs
+        if (source, target) not in actual_pairs
+    )
+
+
+def _validate_governance_model_api_contract(governance_profile: Any) -> dict[str, Any]:
+    element_names = {elem.name for elem in governance_profile.elements}
+    missing_endpoints = sorted(set(MODEL_API_ENDPOINTS) - element_names)
+    missing_records = sorted(set(MODEL_API_RECORDS) - element_names)
+
+    coordinates = _collect_exact_relation_edges(governance_profile, "coordinates")
+    coordinate_pairs = {
+        (source, target)
+        for source, targets in coordinates.items()
+        for target in targets
+    }
+    missing_entrypoint_coordinates = _missing_exact_pairs(
+        EXPECTED_MODEL_API_ENTRYPOINT_COORDINATES,
+        coordinate_pairs,
+    )
+    missing_port_coordinates = _missing_exact_pairs(
+        EXPECTED_MODEL_API_PORT_COORDINATES,
+        coordinate_pairs,
+    )
+    missing_service_coordinates = _missing_exact_pairs(
+        EXPECTED_MODEL_API_SERVICE_COORDINATES,
+        coordinate_pairs,
+    )
+
+    consumes = _collect_exact_relation_edges(governance_profile, "consumes")
+    consume_pairs = {
+        (source, target)
+        for source, targets in consumes.items()
+        for target in targets
+    }
+    missing_consumes = _missing_exact_pairs(EXPECTED_MODEL_API_CONSUMES, consume_pairs)
+
+    produces = _collect_exact_relation_edges(governance_profile, "produces")
+    produce_pairs = {
+        (source, target)
+        for source, targets in produces.items()
+        for target in targets
+    }
+    missing_produces = _missing_exact_pairs(EXPECTED_MODEL_API_PRODUCES, produce_pairs)
+
+    passed = (
+        not missing_endpoints
+        and not missing_records
+        and not missing_entrypoint_coordinates
+        and not missing_port_coordinates
+        and not missing_service_coordinates
+        and not missing_consumes
+        and not missing_produces
+    )
+
+    return {
+        "passed": passed,
+        "missing_endpoints": missing_endpoints,
+        "missing_records": missing_records,
+        "missing_entrypoint_coordinates": missing_entrypoint_coordinates,
+        "missing_port_coordinates": missing_port_coordinates,
+        "missing_service_coordinates": missing_service_coordinates,
+        "missing_consumes": missing_consumes,
+        "missing_produces": missing_produces,
+    }
+
+
+def _validate_layer_6x6_contract(layer: str, profile: Any) -> dict[str, Any]:
+    expected_ports = set(LAYER_PORTS.values())
+    element_names = {element.name for element in profile.elements}
+    missing_ports = sorted(expected_ports - element_names)
+    if layer != "flow":
+        return {
+            "passed": not missing_ports,
+            "mode": "declaration",
+            "missing_ports": missing_ports,
+        }
+
+    owner = FLOW_6X6_OWNER
+    matrix_element = FLOW_6X6_MATRIX_ELEMENT
+    missing_owner = owner not in element_names
+    missing_matrix_element = matrix_element not in element_names
+
+    coordinates = _collect_exact_relation_edges(profile, "coordinates")
+    coordinate_pairs = {
+        (source, target)
+        for source, targets in coordinates.items()
+        for target in targets
+    }
+    expected_owner_coordinates = tuple((owner, port) for port in sorted(expected_ports))
+    missing_owner_coordinates = _missing_exact_pairs(expected_owner_coordinates, coordinate_pairs)
+
+    produces = _collect_exact_relation_edges(profile, "produces")
+    produce_pairs = {
+        (source, target)
+        for source, targets in produces.items()
+        for target in targets
+    }
+    missing_matrix_produce = _missing_exact_pairs(((owner, matrix_element),), produce_pairs)
+
+    passed = (
+        not missing_owner
+        and not missing_matrix_element
+        and not missing_ports
+        and not missing_owner_coordinates
+        and not missing_matrix_produce
+    )
+
+    return {
+        "passed": passed,
+        "mode": "owner",
+        "owner": owner,
+        "matrix_element": matrix_element,
+        "missing_owner": missing_owner,
+        "missing_matrix_element": missing_matrix_element,
+        "missing_ports": missing_ports,
+        "missing_owner_coordinates": missing_owner_coordinates,
+        "missing_matrix_produce": missing_matrix_produce,
+    }
+
+
 def _pattern_has_layer_match(profile: Any, pattern: str, layer: str) -> bool:
     for elem in profile.elements:
         if _matches_pattern(elem, pattern) and str(getattr(elem, "layer", "")) == layer:
@@ -227,8 +478,15 @@ def simulate_data_flow() -> dict[str, Any]:
     infra_profile = profiles["infra"]
     needs_profile = profiles["needs"]
     flow_profile = profiles["flow"]
+    governance_profile = profiles["governance"]
 
     versions = {layer: profile.version for layer, profile in profiles.items()}
+    governance_entrypoint = _validate_governance_entrypoint(governance_profile)
+    governance_model_api_contract = _validate_governance_model_api_contract(governance_profile)
+    layer_6x6_contracts = {
+        layer: _validate_layer_6x6_contract(layer, profile)
+        for layer, profile in profiles.items()
+    }
     relation_integrity_violations: dict[str, list[str]] = {}
     for layer, profile in profiles.items():
         undefined_relations = _find_undefined_relations(profile)
@@ -295,13 +553,20 @@ def simulate_data_flow() -> dict[str, Any]:
         and not missing_inputs
         and not flow_local_policy_gaps
         and bool(sequence)
+        and governance_entrypoint["passed"]
+        and governance_model_api_contract["passed"]
+        and all(result["passed"] for result in layer_6x6_contracts.values())
     )
 
     return {
         "passed": passed,
         "model_definition_order": list(MODEL_DEFINITION_ORDER),
+        "governance_entrypoint_order": list(GOVERNANCE_ENTRYPOINT_ORDER),
         "governance_role": "layer-management-system",
-        "governance_model_registered_targets": list(MODEL_DEFINITION_ORDER),
+        "governance_model_registered_targets": list(GOVERNANCE_ENTRYPOINT_ORDER),
+        "governance_entrypoint": governance_entrypoint,
+        "governance_model_api_contract": governance_model_api_contract,
+        "layer_6x6_contracts": layer_6x6_contracts,
         "versions": versions,
         "independent_relation_integrity_ok": not relation_integrity_violations,
         "relation_integrity_violations": relation_integrity_violations,
@@ -404,7 +669,109 @@ def main() -> int:
         seq = " -> ".join(report["flow_sequence"]) if report["flow_sequence"] else "(none)"
         print(f"[sim] model-order: {' > '.join(report['model_definition_order'])}")
         print(f"[sim] governance-role: {report['governance_role']}")
+        print(
+            f"[sim] governance-entrypoint-order: "
+            f"{' > '.join(report['governance_entrypoint_order'])}"
+        )
+        entry_status = "passed" if report["governance_entrypoint"]["passed"] else "failed"
+        print(f"[sim] governance-entrypoint: {entry_status}")
+        model_api_status = "passed" if report["governance_model_api_contract"]["passed"] else "failed"
+        print(f"[sim] governance-model-api-contract: {model_api_status}")
+        layer_6x6_status = (
+            "passed"
+            if all(result["passed"] for result in report["layer_6x6_contracts"].values())
+            else "failed"
+        )
+        print(f"[sim] layer-6x6-contract: {layer_6x6_status}")
+        print("[sim] layer-6x6-owner: flow")
         print(f"[sim] flow-sequence: {seq}")
+        if report["governance_entrypoint"]["missing_ports"]:
+            print(
+                "[sim][fail] governance-missing-ports: "
+                f"{','.join(report['governance_entrypoint']['missing_ports'])}"
+            )
+        if report["governance_entrypoint"]["missing_entry_port"]:
+            print("[sim][fail] governance-missing-entry-port: GovernanceEntryPort")
+        if report["governance_entrypoint"]["missing_registry_targets"]:
+            print(
+                "[sim][fail] governance-missing-registry-targets: "
+                f"{','.join(report['governance_entrypoint']['missing_registry_targets'])}"
+            )
+        if report["governance_entrypoint"]["missing_entrypoint_routing"]:
+            print(
+                "[sim][fail] governance-missing-entry-routing: "
+                f"{','.join(report['governance_entrypoint']['missing_entrypoint_routing'])}"
+            )
+        if report["governance_entrypoint"]["missing_model_definition_coordinates"]:
+            print(
+                "[sim][fail] governance-missing-model-flow: "
+                f"{','.join(report['governance_entrypoint']['missing_model_definition_coordinates'])}"
+            )
+        if report["governance_model_api_contract"]["missing_endpoints"]:
+            print(
+                "[sim][fail] governance-model-api-missing-endpoints: "
+                f"{','.join(report['governance_model_api_contract']['missing_endpoints'])}"
+            )
+        if report["governance_model_api_contract"]["missing_records"]:
+            print(
+                "[sim][fail] governance-model-api-missing-records: "
+                f"{','.join(report['governance_model_api_contract']['missing_records'])}"
+            )
+        if report["governance_model_api_contract"]["missing_entrypoint_coordinates"]:
+            print(
+                "[sim][fail] governance-model-api-missing-entry-routing: "
+                f"{','.join(report['governance_model_api_contract']['missing_entrypoint_coordinates'])}"
+            )
+        if report["governance_model_api_contract"]["missing_port_coordinates"]:
+            print(
+                "[sim][fail] governance-model-api-missing-port-routing: "
+                f"{','.join(report['governance_model_api_contract']['missing_port_coordinates'])}"
+            )
+        if report["governance_model_api_contract"]["missing_service_coordinates"]:
+            print(
+                "[sim][fail] governance-model-api-missing-service-routing: "
+                f"{','.join(report['governance_model_api_contract']['missing_service_coordinates'])}"
+            )
+        if report["governance_model_api_contract"]["missing_consumes"]:
+            print(
+                "[sim][fail] governance-model-api-missing-consumes: "
+                f"{','.join(report['governance_model_api_contract']['missing_consumes'])}"
+            )
+        if report["governance_model_api_contract"]["missing_produces"]:
+            print(
+                "[sim][fail] governance-model-api-missing-produces: "
+                f"{','.join(report['governance_model_api_contract']['missing_produces'])}"
+            )
+        for layer_name, contract in sorted(report["layer_6x6_contracts"].items()):
+            if contract["passed"]:
+                continue
+            if contract["missing_ports"]:
+                print(
+                    f"[sim][fail] layer-6x6-missing-ports layer={layer_name} "
+                    f"ports={','.join(contract['missing_ports'])}"
+                )
+            if contract.get("mode") != "owner":
+                continue
+            if contract["missing_owner"]:
+                print(
+                    f"[sim][fail] layer-6x6-missing-owner layer={layer_name} "
+                    f"owner={contract['owner']}"
+                )
+            if contract["missing_matrix_element"]:
+                print(
+                    f"[sim][fail] layer-6x6-missing-matrix layer={layer_name} "
+                    f"matrix={contract['matrix_element']}"
+                )
+            if contract["missing_owner_coordinates"]:
+                print(
+                    f"[sim][fail] layer-6x6-missing-coordinates layer={layer_name} "
+                    f"pairs={','.join(contract['missing_owner_coordinates'])}"
+                )
+            if contract["missing_matrix_produce"]:
+                print(
+                    f"[sim][fail] layer-6x6-missing-matrix-produce layer={layer_name} "
+                    f"pairs={','.join(contract['missing_matrix_produce'])}"
+                )
         if report["relation_integrity_violations"]:
             for layer, rels in sorted(report["relation_integrity_violations"].items()):
                 print(f"[sim][fail] relation-integrity layer={layer} undefined={','.join(rels)}")

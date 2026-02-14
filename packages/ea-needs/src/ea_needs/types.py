@@ -70,6 +70,30 @@ class NeedRelationType(StrEnum):
     SUPERSEDES = "supersedes"
 
 
+class NeedCauseType(StrEnum):
+    """Root cause domains that can generate a need."""
+    EMOTIONAL = "emotional"
+    SITUATIONAL = "situational"
+    PHYSICAL = "physical"
+    LOGICAL = "logical"
+    MENTAL = "mental"
+    PHILOSOPHICAL = "philosophical"
+
+
+class NeedResolutionComplexity(StrEnum):
+    """Expected complexity of need resolution process."""
+    SIMPLE = "simple"
+    PROCEDURAL = "procedural"
+    COMPLEX = "complex"
+
+
+class NeedProcessStage(StrEnum):
+    """Canonical process stages for need modeling units."""
+    IDENTIFY = "identify"
+    QUERY = "query"
+    MODEL_DETAIL = "model_detail"
+
+
 # ---------------------------------------------------------------------------
 # Frozen value objects
 # ---------------------------------------------------------------------------
@@ -112,6 +136,34 @@ class Justification:
 
 
 @dataclass(frozen=True)
+class UseCase:
+    """Use-case vocabulary captured by the needs layer."""
+    id: str
+    title: str
+    actor: str
+    situation: str
+    purpose: str
+    outcome: str = ""
+    tags: list[str] = field(default_factory=list)
+    version: int = 1
+    created_at: str = field(default_factory=_now)
+    updated_at: str = field(default_factory=_now)
+
+
+@dataclass(frozen=True)
+class NeedProcessUnit:
+    """Modeling unit for need processes (identify/query/model detail)."""
+    id: str
+    need_id: str
+    stage: NeedProcessStage
+    label: str
+    description: str = ""
+    sequence: int = 0
+    metadata: dict[str, str] = field(default_factory=dict)
+    created_at: str = field(default_factory=_now)
+
+
+@dataclass(frozen=True)
 class NeedStatement:
     """A complete, immutable expression of a stakeholder need.
 
@@ -123,4 +175,8 @@ class NeedStatement:
     justifications: list[Justification] = field(default_factory=list)
     kernel_refs: list[str] = field(default_factory=list)  # ea-kernel entity IDs
     tags: list[str] = field(default_factory=list)
+    use_case_id: str | None = None
+    purpose: str = ""
+    cause_types: list[NeedCauseType] = field(default_factory=list)
+    complexity: NeedResolutionComplexity = NeedResolutionComplexity.PROCEDURAL
     expressed_at: str = field(default_factory=_now)

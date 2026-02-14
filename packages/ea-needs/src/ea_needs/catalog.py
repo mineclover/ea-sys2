@@ -1,7 +1,7 @@
 """NeedCatalog aggregate root (N2).
 
-Mutable container managing stakeholders, needs, and their relations.
-Need wraps immutable NeedStatement with mutable status/priority lifecycle.
+Mutable container managing use-cases, stakeholders, needs, and process-model units.
+Need wraps immutable NeedStatement with mutable status/priority/version lifecycle.
 """
 
 from __future__ import annotations
@@ -14,11 +14,16 @@ from ea_needs.types import (
     Desire,
     Justification,
     JustificationType,
+    NeedCauseType,
     NeedPriority,
+    NeedProcessStage,
+    NeedProcessUnit,
     NeedRelationType,
+    NeedResolutionComplexity,
     NeedStatement,
     NeedStatus,
     Stakeholder,
+    UseCase,
     _generate_id,
     _now,
 )
@@ -35,6 +40,52 @@ _VALID_TRANSITIONS: dict[NeedStatus, list[NeedStatus]] = {
     NeedStatus.WITHDRAWN: [],
 }
 
+_UNSET = object()
+
+
+# ---------------------------------------------------------------------------
+# Internal normalizers
+# ---------------------------------------------------------------------------
+
+def _normalize_cause_types(values: list[NeedCauseType | str] | None) -> list[NeedCauseType]:
+    if not values:
+        return []
+    normalized: list[NeedCauseType] = []
+    for value in values:
+        if isinstance(value, NeedCauseType):
+            normalized.append(value)
+        else:
+            normalized.append(NeedCauseType(value))
+    return normalized
+
+
+def _normalize_complexity(
+    value: NeedResolutionComplexity | str | None,
+) -> NeedResolutionComplexity:
+    if value is None:
+        return NeedResolutionComplexity.PROCEDURAL
+    if isinstance(value, NeedResolutionComplexity):
+        return value
+    return NeedResolutionComplexity(value)
+
+
+def _normalize_stage(value: NeedProcessStage | str) -> NeedProcessStage:
+    if isinstance(value, NeedProcessStage):
+        return value
+    return NeedProcessStage(value)
+
+
+def _build_justifications(justifications: list[dict[str, str]] | None) -> list[Justification]:
+    result: list[Justification] = []
+    for payload in justifications or []:
+        result.append(
+            Justification(
+                type=JustificationType(payload["type"]),
+                description=payload["description"],
+            )
+        )
+    return result
+
 
 # ---------------------------------------------------------------------------
 # Need — mutable wrapper around frozen NeedStatement
@@ -45,15 +96,25 @@ class Need:
     """Mutable lifecycle wrapper around an immutable NeedStatement.
 
     The statement itself (stakeholder_id, desire, justifications) never changes.
-    Only status, priority, decision_ref, and timestamps are mutable.
+    Status, priority, decision link/evidence, and timestamps are mutable.
     """
+
     id: str
     statement: NeedStatement
     status: NeedStatus = NeedStatus.DRAFT
     priority: NeedPriority = NeedPriority.MEDIUM
-    decision_ref: str | None = None  # link to ea-decision topic id
+    decision_ref: str | None = None  # link to ea-decision topic/report id
+    decision_evidence_refs: list[str] = field(default_factory=list)
+    inherited_from_decisions: list[str] = field(default_factory=list)
+    use_case_id: str | None = None
+    lineage_id: str = ""
+    version: int = 1
     created_at: str = field(default_factory=_now)
     updated_at: str = field(default_factory=_now)
+
+    def __post_init__(self) -> None:
+        if not self.lineage_id:
+            self.lineage_id = self.id
 
     def transition_to(self, new_status: NeedStatus) -> None:
         """Transition to a new status, enforcing valid transitions."""
@@ -80,6 +141,15 @@ class Need:
     def withdraw(self) -> None:
         self.transition_to(NeedStatus.WITHDRAWN)
 
+    def inherit_decision_evidence(self, decision_id: str, refs: list[str]) -> None:
+        """Merge decision evidence references into this need."""
+        for ref in refs:
+            if ref not in self.decision_evidence_refs:
+                self.decision_evidence_refs.append(ref)
+        if decision_id and decision_id not in self.inherited_from_decisions:
+            self.inherited_from_decisions.append(decision_id)
+        self.updated_at = _now()
+
 
 # ---------------------------------------------------------------------------
 # NeedRelation — directed relationship between needs
@@ -88,6 +158,7 @@ class Need:
 @dataclass
 class NeedRelation:
     """Directed relationship between two needs."""
+
     id: str
     source_id: str
     target_id: str
@@ -102,18 +173,49 @@ class NeedRelation:
 
 @dataclass
 class NeedCatalog:
-    """Aggregate root containing stakeholders, needs, and relations.
+    """Aggregate root containing use-cases, stakeholders, needs, and relations.
 
     All mutations go through catalog methods to maintain consistency.
     """
+
     name: str
     description: str = ""
+    use_cases: list[UseCase] = field(default_factory=list)
     stakeholders: list[Stakeholder] = field(default_factory=list)
     needs: list[Need] = field(default_factory=list)
     relations: list[NeedRelation] = field(default_factory=list)
+    process_units: list[NeedProcessUnit] = field(default_factory=list)
     created_at: str = field(default_factory=_now)
     updated_at: str = field(default_factory=_now)
     id: str = field(default_factory=lambda: _generate_id("catalog"))
+
+    # -- Use-case modeling --
+
+    def add_use_case(
+        self,
+        title: str,
+        actor: str,
+        situation: str,
+        purpose: str,
+        outcome: str = "",
+        tags: list[str] | None = None,
+    ) -> UseCase:
+        """Register a structured use-case for downstream need expression."""
+        use_case = UseCase(
+            id=_generate_id("uc"),
+            title=title,
+            actor=actor,
+            situation=situation,
+            purpose=purpose,
+            outcome=outcome,
+            tags=list(tags or []),
+        )
+        self.use_cases.append(use_case)
+        self.updated_at = _now()
+        return use_case
+
+    def get_use_case(self, use_case_id: str) -> UseCase | None:
+        return next((u for u in self.use_cases if u.id == use_case_id), None)
 
     # -- Stakeholder management --
 
@@ -139,6 +241,10 @@ class NeedCatalog:
         priority: NeedPriority = NeedPriority.MEDIUM,
         kernel_refs: list[str] | None = None,
         tags: list[str] | None = None,
+        use_case_id: str | None = None,
+        cause_types: list[NeedCauseType | str] | None = None,
+        purpose: str = "",
+        complexity: NeedResolutionComplexity | str = NeedResolutionComplexity.PROCEDURAL,
     ) -> Need:
         """Express a new need from a stakeholder.
 
@@ -151,36 +257,264 @@ class NeedCatalog:
             priority: Urgency level.
             kernel_refs: ea-kernel entity IDs related to this need.
             tags: Free-form labels.
+            use_case_id: Optional use-case linkage.
+            cause_types: Need-generating cause domains.
+            purpose: Intended objective from this need.
+            complexity: Expected resolution complexity.
 
         Returns:
-            The newly created Need (status=DRAFT).
+            The newly created Need (status=DRAFT, version=1).
         """
         if not self.get_stakeholder(stakeholder_id):
             raise ValueError(f"Stakeholder {stakeholder_id} not found in catalog")
-
-        justs = []
-        for j in (justifications or []):
-            justs.append(Justification(
-                type=JustificationType(j["type"]),
-                description=j["description"],
-            ))
+        if use_case_id and not self.get_use_case(use_case_id):
+            raise ValueError(f"Use-case {use_case_id} not found in catalog")
 
         statement = NeedStatement(
             stakeholder_id=stakeholder_id,
             desire=Desire(action=action, subject=subject, target=target),
-            justifications=justs,
-            kernel_refs=kernel_refs or [],
-            tags=tags or [],
+            justifications=_build_justifications(justifications),
+            kernel_refs=list(kernel_refs or []),
+            tags=list(tags or []),
+            use_case_id=use_case_id,
+            purpose=purpose,
+            cause_types=_normalize_cause_types(cause_types),
+            complexity=_normalize_complexity(complexity),
         )
 
         need = Need(
             id=_generate_id("need"),
             statement=statement,
             priority=priority,
+            use_case_id=use_case_id,
+            lineage_id="",
+            version=1,
         )
         self.needs.append(need)
         self.updated_at = _now()
         return need
+
+    def revise_need(
+        self,
+        need_id: str,
+        *,
+        action: str | None = None,
+        subject: str | None = None,
+        target: str | None | object = _UNSET,
+        justifications: list[dict[str, str]] | None | object = _UNSET,
+        priority: NeedPriority | None = None,
+        kernel_refs: list[str] | None | object = _UNSET,
+        tags: list[str] | None | object = _UNSET,
+        use_case_id: str | None | object = _UNSET,
+        cause_types: list[NeedCauseType | str] | None | object = _UNSET,
+        purpose: str | object = _UNSET,
+        complexity: NeedResolutionComplexity | str | object = _UNSET,
+        clone_process_units: bool = True,
+    ) -> Need:
+        """Create a new version from an existing need lineage."""
+        current = self.get_need(need_id)
+        if current is None:
+            raise ValueError(f"Need {need_id} not found")
+
+        if use_case_id is not _UNSET and use_case_id is not None and not self.get_use_case(use_case_id):
+            raise ValueError(f"Use-case {use_case_id} not found in catalog")
+
+        if justifications is _UNSET:
+            next_justifications = [
+                {"type": j.type.value, "description": j.description}
+                for j in current.statement.justifications
+            ]
+        else:
+            next_justifications = justifications
+
+        if kernel_refs is _UNSET:
+            next_kernel_refs = list(current.statement.kernel_refs)
+        else:
+            next_kernel_refs = list(kernel_refs or [])
+
+        next_tags = list(current.statement.tags) if tags is _UNSET else list(tags or [])
+
+        if cause_types is _UNSET:
+            next_cause_types: list[NeedCauseType | str] | None = list(current.statement.cause_types)
+        else:
+            next_cause_types = cause_types
+
+        next_purpose = current.statement.purpose if purpose is _UNSET else str(purpose)
+
+        if complexity is _UNSET:
+            next_complexity = current.statement.complexity
+        else:
+            next_complexity = _normalize_complexity(
+                complexity if isinstance(complexity, NeedResolutionComplexity | str) else None
+            )
+
+        if target is _UNSET:
+            next_target = current.statement.desire.target
+        else:
+            next_target = target if isinstance(target, str) or target is None else None
+
+        if use_case_id is _UNSET:
+            next_use_case_id = current.use_case_id
+        else:
+            next_use_case_id = use_case_id if isinstance(use_case_id, str) or use_case_id is None else None
+
+        statement = NeedStatement(
+            stakeholder_id=current.statement.stakeholder_id,
+            desire=Desire(
+                action=action if action is not None else current.statement.desire.action,
+                subject=subject if subject is not None else current.statement.desire.subject,
+                target=next_target,
+            ),
+            justifications=_build_justifications(next_justifications),
+            kernel_refs=next_kernel_refs,
+            tags=next_tags,
+            use_case_id=next_use_case_id,
+            purpose=next_purpose,
+            cause_types=_normalize_cause_types(next_cause_types),
+            complexity=next_complexity,
+        )
+
+        next_version = 1 + max(
+            (n.version for n in self.needs if n.lineage_id == current.lineage_id),
+            default=0,
+        )
+
+        revised = Need(
+            id=_generate_id("need"),
+            statement=statement,
+            status=NeedStatus.DRAFT,
+            priority=priority or current.priority,
+            decision_ref=current.decision_ref,
+            decision_evidence_refs=list(current.decision_evidence_refs),
+            inherited_from_decisions=list(current.inherited_from_decisions),
+            use_case_id=next_use_case_id,
+            lineage_id=current.lineage_id,
+            version=next_version,
+        )
+        self.needs.append(revised)
+
+        if clone_process_units:
+            for unit in self.process_units_for_need(current.id):
+                self.process_units.append(
+                    NeedProcessUnit(
+                        id=_generate_id("pu"),
+                        need_id=revised.id,
+                        stage=unit.stage,
+                        label=unit.label,
+                        description=unit.description,
+                        sequence=unit.sequence,
+                        metadata=dict(unit.metadata),
+                    )
+                )
+
+        self.updated_at = _now()
+        return revised
+
+    def inherit_decision_evidence(
+        self,
+        need_id: str,
+        decision_id: str,
+        evidence_refs: list[str],
+    ) -> Need:
+        """Inherit rationale/evidence references from a decision artifact."""
+        need = self.get_need(need_id)
+        if need is None:
+            raise ValueError(f"Need {need_id} not found")
+        need.inherit_decision_evidence(decision_id=decision_id, refs=evidence_refs)
+        self.updated_at = _now()
+        return need
+
+    # -- Process-unit modeling --
+
+    def add_process_unit(
+        self,
+        need_id: str,
+        stage: NeedProcessStage | str,
+        label: str,
+        description: str = "",
+        sequence: int | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> NeedProcessUnit:
+        """Attach a process-model unit to a need."""
+        if not self.get_need(need_id):
+            raise ValueError(f"Need {need_id} not found")
+
+        normalized_stage = _normalize_stage(stage)
+        if sequence is None:
+            current = [
+                u.sequence
+                for u in self.process_units
+                if u.need_id == need_id and u.stage == normalized_stage
+            ]
+            sequence = (max(current) + 1) if current else 1
+
+        unit = NeedProcessUnit(
+            id=_generate_id("pu"),
+            need_id=need_id,
+            stage=normalized_stage,
+            label=label,
+            description=description,
+            sequence=sequence,
+            metadata=dict(metadata or {}),
+        )
+        self.process_units.append(unit)
+        self.updated_at = _now()
+        return unit
+
+    def process_units_for_need(
+        self,
+        need_id: str,
+        stage: NeedProcessStage | str | None = None,
+    ) -> list[NeedProcessUnit]:
+        """List process units for a need, optionally filtering by stage."""
+        if stage is None:
+            units = [u for u in self.process_units if u.need_id == need_id]
+        else:
+            normalized_stage = _normalize_stage(stage)
+            units = [
+                u for u in self.process_units if u.need_id == need_id and u.stage == normalized_stage
+            ]
+        return sorted(units, key=lambda unit: (unit.stage.value, unit.sequence, unit.created_at))
+
+    def process_units_by_stage(self, stage: NeedProcessStage | str) -> list[NeedProcessUnit]:
+        normalized_stage = _normalize_stage(stage)
+        units = [u for u in self.process_units if u.stage == normalized_stage]
+        return sorted(units, key=lambda unit: (unit.need_id, unit.sequence, unit.created_at))
+
+    def modeled_need_detail(self, need_id: str) -> dict[str, Any] | None:
+        """Return an identified need with grouped process-model details."""
+        need = self.get_need(need_id)
+        if need is None:
+            return None
+
+        grouped: dict[str, list[dict[str, Any]]] = {
+            NeedProcessStage.IDENTIFY.value: [],
+            NeedProcessStage.QUERY.value: [],
+            NeedProcessStage.MODEL_DETAIL.value: [],
+        }
+        for unit in self.process_units_for_need(need_id):
+            grouped[unit.stage.value].append(
+                {
+                    "id": unit.id,
+                    "label": unit.label,
+                    "description": unit.description,
+                    "sequence": unit.sequence,
+                    "metadata": dict(unit.metadata),
+                }
+            )
+
+        return {
+            "need_id": need.id,
+            "lineage_id": need.lineage_id,
+            "version": need.version,
+            "status": need.status.value,
+            "priority": need.priority.value,
+            "use_case_id": need.use_case_id,
+            "purpose": need.statement.purpose,
+            "cause_types": [c.value for c in need.statement.cause_types],
+            "complexity": need.statement.complexity.value,
+            "process_units": grouped,
+        }
 
     # -- Relations --
 
@@ -213,6 +547,37 @@ class NeedCatalog:
     def get_need(self, need_id: str) -> Need | None:
         return next((n for n in self.needs if n.id == need_id), None)
 
+    def identify_need(self, reference: str, version: int | None = None) -> Need | None:
+        """Identify a need by exact id or by lineage id (+ optional version)."""
+        exact = self.get_need(reference)
+        if exact is not None:
+            versions = self.need_versions(exact.lineage_id)
+            if version is not None:
+                if exact.version == version:
+                    return exact
+                return next((need for need in versions if need.version == version), None)
+            return versions[-1] if versions else exact
+
+        lineage = [n for n in self.needs if n.lineage_id == reference]
+        if not lineage:
+            return None
+        if version is None:
+            return max(lineage, key=lambda n: n.version)
+        return next((n for n in lineage if n.version == version), None)
+
+    def need_versions(self, lineage_id: str) -> list[Need]:
+        """List all versions for a need lineage."""
+        return sorted(
+            [n for n in self.needs if n.lineage_id == lineage_id],
+            key=lambda n: n.version,
+        )
+
+    def latest_need_version(self, lineage_id: str) -> Need | None:
+        versions = self.need_versions(lineage_id)
+        if not versions:
+            return None
+        return versions[-1]
+
     def needs_by_stakeholder(self, stakeholder_id: str) -> list[Need]:
         return [n for n in self.needs if n.statement.stakeholder_id == stakeholder_id]
 
@@ -222,31 +587,62 @@ class NeedCatalog:
     def needs_by_priority(self, priority: NeedPriority) -> list[Need]:
         return [n for n in self.needs if n.priority == priority]
 
+    def needs_by_use_case(self, use_case_id: str) -> list[Need]:
+        return [n for n in self.needs if n.use_case_id == use_case_id]
+
     def get_relations_for(self, need_id: str) -> list[NeedRelation]:
         return [r for r in self.relations if r.source_id == need_id or r.target_id == need_id]
 
     def get_timeline(self) -> list[dict[str, Any]]:
-        """Return chronological events across all needs."""
+        """Return chronological events across use-cases, needs, relations, and process units."""
         events: list[dict[str, Any]] = []
-        for n in self.needs:
-            events.append({
-                "type": "need_created",
-                "date": n.created_at,
-                "need_id": n.id,
-                "status": n.status.value,
-                "action": n.statement.desire.action,
-                "subject": n.statement.desire.subject,
-            })
-        for r in self.relations:
-            events.append({
-                "type": "relation_created",
-                "date": r.created_at,
-                "relation_id": r.id,
-                "source_id": r.source_id,
-                "target_id": r.target_id,
-                "relation_type": r.type.value,
-            })
-        return sorted(events, key=lambda x: x["date"])
+        for use_case in self.use_cases:
+            events.append(
+                {
+                    "type": "use_case_created",
+                    "date": use_case.created_at,
+                    "use_case_id": use_case.id,
+                    "title": use_case.title,
+                    "version": use_case.version,
+                }
+            )
+        for need in self.needs:
+            events.append(
+                {
+                    "type": "need_created",
+                    "date": need.created_at,
+                    "need_id": need.id,
+                    "lineage_id": need.lineage_id,
+                    "version": need.version,
+                    "status": need.status.value,
+                    "action": need.statement.desire.action,
+                    "subject": need.statement.desire.subject,
+                }
+            )
+        for relation in self.relations:
+            events.append(
+                {
+                    "type": "relation_created",
+                    "date": relation.created_at,
+                    "relation_id": relation.id,
+                    "source_id": relation.source_id,
+                    "target_id": relation.target_id,
+                    "relation_type": relation.type.value,
+                }
+            )
+        for unit in self.process_units:
+            events.append(
+                {
+                    "type": "process_unit_modeled",
+                    "date": unit.created_at,
+                    "process_unit_id": unit.id,
+                    "need_id": unit.need_id,
+                    "stage": unit.stage.value,
+                    "sequence": unit.sequence,
+                    "label": unit.label,
+                }
+            )
+        return sorted(events, key=lambda item: item["date"])
 
     # -- Serialization --
 
@@ -258,6 +654,21 @@ class NeedCatalog:
             "description": self.description,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "use_cases": [
+                {
+                    "id": use_case.id,
+                    "title": use_case.title,
+                    "actor": use_case.actor,
+                    "situation": use_case.situation,
+                    "purpose": use_case.purpose,
+                    "outcome": use_case.outcome,
+                    "tags": list(use_case.tags),
+                    "version": use_case.version,
+                    "created_at": use_case.created_at,
+                    "updated_at": use_case.updated_at,
+                }
+                for use_case in self.use_cases
+            ],
             "stakeholders": [
                 {"id": s.id, "name": s.name, "role": s.role, "context": s.context}
                 for s in self.stakeholders
@@ -265,9 +676,14 @@ class NeedCatalog:
             "needs": [
                 {
                     "id": n.id,
+                    "lineage_id": n.lineage_id,
+                    "version": n.version,
                     "status": n.status.value,
                     "priority": n.priority.value,
                     "decision_ref": n.decision_ref,
+                    "decision_evidence_refs": list(n.decision_evidence_refs),
+                    "inherited_from_decisions": list(n.inherited_from_decisions),
+                    "use_case_id": n.use_case_id,
                     "created_at": n.created_at,
                     "updated_at": n.updated_at,
                     "statement": {
@@ -283,6 +699,10 @@ class NeedCatalog:
                         ],
                         "kernel_refs": list(n.statement.kernel_refs),
                         "tags": list(n.statement.tags),
+                        "use_case_id": n.statement.use_case_id,
+                        "purpose": n.statement.purpose,
+                        "cause_types": [cause.value for cause in n.statement.cause_types],
+                        "complexity": n.statement.complexity.value,
                         "expressed_at": n.statement.expressed_at,
                     },
                 }
@@ -298,6 +718,19 @@ class NeedCatalog:
                     "created_at": r.created_at,
                 }
                 for r in self.relations
+            ],
+            "process_units": [
+                {
+                    "id": unit.id,
+                    "need_id": unit.need_id,
+                    "stage": unit.stage.value,
+                    "label": unit.label,
+                    "description": unit.description,
+                    "sequence": unit.sequence,
+                    "metadata": dict(unit.metadata),
+                    "created_at": unit.created_at,
+                }
+                for unit in self.process_units
             ],
         }
         return json.dumps(data, indent=2, ensure_ascii=False)
@@ -315,53 +748,102 @@ class NeedCatalog:
             id=data.get("id", _generate_id("catalog")),
         )
 
+        # Hydrate use-cases
+        for use_case_data in data.get("use_cases", []):
+            catalog.use_cases.append(
+                UseCase(
+                    id=use_case_data["id"],
+                    title=use_case_data["title"],
+                    actor=use_case_data["actor"],
+                    situation=use_case_data.get("situation", ""),
+                    purpose=use_case_data.get("purpose", ""),
+                    outcome=use_case_data.get("outcome", ""),
+                    tags=list(use_case_data.get("tags", [])),
+                    version=use_case_data.get("version", 1),
+                    created_at=use_case_data.get("created_at", ""),
+                    updated_at=use_case_data.get("updated_at", ""),
+                )
+            )
+
         # Hydrate stakeholders
-        for s_data in data.get("stakeholders", []):
-            catalog.stakeholders.append(Stakeholder(**s_data))
+        for stakeholder_data in data.get("stakeholders", []):
+            catalog.stakeholders.append(Stakeholder(**stakeholder_data))
 
         # Hydrate needs
-        for n_data in data.get("needs", []):
-            stmt_data = n_data["statement"]
-            desire = Desire(
-                action=stmt_data["desire"]["action"],
-                subject=stmt_data["desire"]["subject"],
-                target=stmt_data["desire"].get("target"),
-            )
+        for need_data in data.get("needs", []):
+            statement_data = need_data["statement"]
+            desire_data = statement_data["desire"]
             justifications = [
                 Justification(
-                    type=JustificationType(j["type"]),
-                    description=j["description"],
+                    type=JustificationType(item["type"]),
+                    description=item["description"],
                 )
-                for j in stmt_data.get("justifications", [])
+                for item in statement_data.get("justifications", [])
             ]
+            cause_types = [
+                NeedCauseType(value) for value in statement_data.get("cause_types", [])
+            ]
+            complexity = _normalize_complexity(statement_data.get("complexity", "procedural"))
+
             statement = NeedStatement(
-                stakeholder_id=stmt_data["stakeholder_id"],
-                desire=desire,
+                stakeholder_id=statement_data["stakeholder_id"],
+                desire=Desire(
+                    action=desire_data["action"],
+                    subject=desire_data["subject"],
+                    target=desire_data.get("target"),
+                ),
                 justifications=justifications,
-                kernel_refs=stmt_data.get("kernel_refs", []),
-                tags=stmt_data.get("tags", []),
-                expressed_at=stmt_data.get("expressed_at", ""),
+                kernel_refs=list(statement_data.get("kernel_refs", [])),
+                tags=list(statement_data.get("tags", [])),
+                use_case_id=statement_data.get("use_case_id"),
+                purpose=statement_data.get("purpose", ""),
+                cause_types=cause_types,
+                complexity=complexity,
+                expressed_at=statement_data.get("expressed_at", ""),
             )
+
             need = Need(
-                id=n_data["id"],
+                id=need_data["id"],
                 statement=statement,
-                status=NeedStatus(n_data.get("status", "draft")),
-                priority=NeedPriority(n_data.get("priority", "medium")),
-                decision_ref=n_data.get("decision_ref"),
-                created_at=n_data.get("created_at", ""),
-                updated_at=n_data.get("updated_at", ""),
+                status=NeedStatus(need_data.get("status", "draft")),
+                priority=NeedPriority(need_data.get("priority", "medium")),
+                decision_ref=need_data.get("decision_ref"),
+                decision_evidence_refs=list(need_data.get("decision_evidence_refs", [])),
+                inherited_from_decisions=list(need_data.get("inherited_from_decisions", [])),
+                use_case_id=need_data.get("use_case_id", statement.use_case_id),
+                lineage_id=need_data.get("lineage_id", need_data["id"]),
+                version=need_data.get("version", 1),
+                created_at=need_data.get("created_at", ""),
+                updated_at=need_data.get("updated_at", ""),
             )
             catalog.needs.append(need)
 
         # Hydrate relations
-        for r_data in data.get("relations", []):
-            catalog.relations.append(NeedRelation(
-                id=r_data["id"],
-                source_id=r_data["source_id"],
-                target_id=r_data["target_id"],
-                type=NeedRelationType(r_data["type"]),
-                description=r_data.get("description", ""),
-                created_at=r_data.get("created_at", ""),
-            ))
+        for relation_data in data.get("relations", []):
+            catalog.relations.append(
+                NeedRelation(
+                    id=relation_data["id"],
+                    source_id=relation_data["source_id"],
+                    target_id=relation_data["target_id"],
+                    type=NeedRelationType(relation_data["type"]),
+                    description=relation_data.get("description", ""),
+                    created_at=relation_data.get("created_at", ""),
+                )
+            )
+
+        # Hydrate process units
+        for unit_data in data.get("process_units", []):
+            catalog.process_units.append(
+                NeedProcessUnit(
+                    id=unit_data["id"],
+                    need_id=unit_data["need_id"],
+                    stage=NeedProcessStage(unit_data["stage"]),
+                    label=unit_data["label"],
+                    description=unit_data.get("description", ""),
+                    sequence=unit_data.get("sequence", 0),
+                    metadata=dict(unit_data.get("metadata", {})),
+                    created_at=unit_data.get("created_at", ""),
+                )
+            )
 
         return catalog

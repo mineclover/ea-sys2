@@ -19,15 +19,15 @@
 ## 레퍼런스 데이터셋 구성
 
 시드 입력:
-- `packages/ea-kernel/examples/ralph_tui_layers/00-infra.toml`
-- `packages/ea-kernel/examples/ralph_tui_layers/10-governance.toml`
-- `packages/ea-kernel/examples/ralph_tui_layers/20-decision.toml`
-- `packages/ea-kernel/examples/ralph_tui_layers/30-needs.toml`
-- `packages/ea-kernel/examples/ralph_tui_layers/40-kernel.toml`
-- `packages/ea-kernel/examples/ralph_tui_layers/50-flow.toml`
+- `packages/ea-kernel/examples/ea-sys/00-infra.toml`
+- `packages/ea-kernel/examples/ea-sys/10-governance.toml`
+- `packages/ea-kernel/examples/ea-sys/20-decision.toml`
+- `packages/ea-kernel/examples/ea-sys/30-needs.toml`
+- `packages/ea-kernel/examples/ea-sys/40-kernel.toml`
+- `packages/ea-kernel/examples/ea-sys/50-flow.toml`
 
 시드 규칙:
-1. 각 레이어는 독립 모델명으로 등록한다: `RalphTUIImplementation.<layer>`
+1. 각 레이어는 독립 모델명으로 등록한다: `EASystemLayerModel.<layer>`
 2. 커널 레이어(`.kernel`)만 활성화한다.
 3. 커널 레이어는 등록 시 검증 + 독립 재검증 1회를 수행한다.
 4. 골든 스냅샷은 비결정적 값(UUID/timestamp)을 직접 고정하지 않고,

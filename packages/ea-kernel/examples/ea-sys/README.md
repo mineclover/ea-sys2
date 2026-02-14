@@ -22,6 +22,12 @@ Governance role:
 
 - Governance manages meta-meta/meta/instance control for all layer models.
 - Infra may define control contracts/ports, while governance implements control workflows on top.
+- Runtime/API entrypoint convention uses governance as the single layer gateway:
+  - `infra > governance > decision > needs > kernel > flow`
+  - requests enter via `GovernanceEntryPort` and are routed to layer-specific model ports.
+- Governance also models `/models/*` API as explicit endpoint contracts:
+  - endpoints: `ModelRegisterEndpoint`, `ModelValidateEndpoint`, `ModelActivateEndpoint`, `ModelStateEndpoint`
+  - records: request/response/error/transaction contracts are modeled as passive structures in `10-governance.toml`
 
 ## Validate Layers
 
@@ -42,3 +48,9 @@ Run static data-flow simulation (no runtime execution):
 ```bash
 PYTHONPATH=packages/ea-kernel/src uv run python packages/ea-kernel/examples/validate_ea_sys_layers.py --simulate
 ```
+
+Simulation includes:
+
+- governance entrypoint contract check
+- governance model API contract check (`/models/*` endpoint/record flow)
+- 6x6 delegated contract check (`ea-flow` owns matrix/coordination, other layers keep port declarations)

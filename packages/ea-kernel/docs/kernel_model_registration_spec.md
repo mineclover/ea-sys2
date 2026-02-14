@@ -109,9 +109,52 @@
 - `POST /models/activate`
 - `GET /models/{model_name}`
 
-### Ralph TUI 레이어 검증 스크립트 연동
+## EA-SYS 거버넌스 모델 계약 (v0.4.1)
 
-- `packages/ea-kernel/examples/validate_ralph_tui_layers.py`
+`ea-sys` 기준으로 `/models/*` 엔드포인트를 TOML 모델로 명시한다.
+
+- 파일: `packages/ea-kernel/examples/ea-sys/10-governance.toml`
+- 엔트리포인트: `GovernanceEntryPort`
+- 엔드포인트 요소:
+  - `ModelRegisterEndpoint`
+  - `ModelValidateEndpoint`
+  - `ModelActivateEndpoint`
+  - `ModelStateEndpoint`
+- 요청/응답/오류/트랜잭션 레코드:
+  - `ModelRegisterRequestRecord`, `ModelRegisterResponseRecord`
+  - `ModelValidateRequestRecord`, `ModelValidateResponseRecord`
+  - `ModelActivateRequestRecord`, `ModelActivateResponseRecord`
+  - `ModelStateQueryRecord`, `ModelStateResponseRecord`
+  - `ModelApiErrorRecord`, `ModelTransactionRecord`
+
+엔드포인트 계약 원칙:
+
+1. 모든 `/models/*` 요청은 `GovernanceEntryPort`를 통과한다.
+2. 모든 `/models/*` 엔드포인트는 `KernelModelPort`로 위임된다.
+3. 각 엔드포인트는 요청 레코드를 `consumes`, 응답/오류/트랜잭션 레코드를 `produces`한다.
+4. 등록/검증/활성화/조회 라우팅은 각각 `LayerModelRegistry`, `ValidationCoordinator`, `ActivationCoordinator`, `VersionLifecycleManager`와의 `coordinates` 관계로 고정한다.
+
+API 오류 응답 계약:
+
+- `/models/*` 오류는 `ModelApiErrorRecord` 형식으로 반환한다.
+  - `status_code`
+  - `detail`
+  - `category`
+
+API 성공 응답 계약:
+
+- 등록/검증/활성화 응답은 `transaction_id`를 포함하여 `ModelTransactionRecord` 추적을 지원한다.
+
+검증:
+
+- `packages/ea-kernel/examples/validate_ea_sys_layers.py --simulate`
+  - `governance-entrypoint`
+  - `governance-model-api-contract`
+  두 계약이 모두 `passed`여야 한다.
+
+### EA System 레이어 검증 스크립트 연동
+
+- `packages/ea-kernel/examples/validate_ea_sys_layers.py`
 - 등록 옵션:
   - `--register`
   - `--db-path`

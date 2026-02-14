@@ -28,10 +28,7 @@ from pydantic import BaseModel
 from ea_kernel.governance import GovernanceSystem
 from ea_kernel.governance_types import RuleLifecycleState
 from ea_kernel.model_io import ModelIOManager
-from ea_kernel.model_registration import (
-    KernelModelRegistrationService,
-    ModelRegistrationError,
-)
+from ea_kernel.model_registration import ModelRegistrationError
 from ea_kernel.types import KernelSchema
 
 # --- Logging ---
@@ -59,14 +56,38 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def _typed_post(*args: Any, **kwargs: Any) -> Callable[[endpoint_fn], endpoint_fn]:
         return app.post(*args, **kwargs)
 
+    def _model_api_error(
+        *,
+        status_code: int,
+        detail: str,
+        category: str,
+    ) -> HTTPException:
+        # Keep the error envelope deterministic for ModelApiErrorRecord mapping.
+        return HTTPException(
+            status_code=status_code,
+            detail={
+                "status_code": status_code,
+                "detail": detail,
+                "category": category,
+            },
+        )
+
     def _get_governance_container() -> Any:
         cached = getattr(app.state, "governance_container", None)
         if cached is not None:
+            if getattr(app.state, "registration", None) is None:
+                app.state.registration = getattr(cached, "model_registration", None)
             return cached
         from ea_governance.facade import GovernanceContainer
 
-        container = GovernanceContainer(data_dir, schema)
+        try:
+            container = GovernanceContainer(data_dir, schema, kernel_system=system)
+        except TypeError as err:
+            if "kernel_system" not in str(err):
+                raise
+            container = GovernanceContainer(data_dir, schema)
         app.state.governance_container = container
+        app.state.registration = getattr(container, "model_registration", None)
         return container
 
     def _get_governance_diagram_schema() -> KernelSchema:
@@ -105,9 +126,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     # Initialize Managers
     logger.info(f"Initializing Governance System at {data_dir.resolve()}")
     system = GovernanceSystem(data_dir / "default", schema)
-    registration = KernelModelRegistrationService(data_dir / "default" / "profiles.db", schema)
     app.state.system = system  # Expose for testing
-    app.state.registration = registration
+    app.state.registration = None
     io_manager = ModelIOManager(system)
 
     # --- Models ---
@@ -154,107 +174,132 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
 
     @_typed_get("/")
     def health_check() -> dict[str, Any]:
+        container = _get_governance_container()
+        kernel = getattr(container, "kernel", system)
         return {
             "status": "ok",
             "service": "ea-kernel-governance",
             "data_dir": str(data_dir),
-            "rule_count": system.rule_store.count(),
-            "decision_count": system.decision_store.count()
+            "rule_count": kernel.rule_store.count(),
+            "decision_count": kernel.decision_store.count()
         }
 
     # 0. Model Registration
     @_typed_post("/models/register")
     def register_model(req: ModelRegisterRequest) -> dict[str, Any]:
-        from ea_kernel.profile_loader import ProfileLoadError, load_profile_from_content
-        from ea_kernel.profile_types import KernelProfile
+        from ea_kernel.profile_loader import ProfileLoadError
 
-        if req.on_exists not in ("validate", "error"):
-            raise HTTPException(status_code=400, detail="on_exists must be 'validate' or 'error'")
-
+        container = _get_governance_container()
         try:
-            profile = load_profile_from_content(req.profile_toml, kernel=schema)
-        except ProfileLoadError as err:
-            raise HTTPException(status_code=400, detail=f"Invalid profile TOML: {err}") from err
-
-        if req.model_name and req.model_name != profile.name:
-            profile = KernelProfile(
-                name=req.model_name,
-                version=profile.version,
-                kernel_version=profile.kernel_version,
-                elements=profile.elements,
-                relations=profile.relations,
-                validity_rules=profile.validity_rules,
-                metadata=profile.metadata,
-            )
-
-        context = {
-            "source": "api:models/register",
-            **(req.context or {}),
-        }
-
-        try:
-            result = registration.register(
-                profile,
+            result = container.register_kernel_model(
+                req.profile_toml,
                 owner=req.owner or "api-user",
                 created_by=req.created_by or "api-user",
-                context=context,
+                model_name=req.model_name,
+                activate=bool(req.activate),
+                context={"source": "api:models/register", **(req.context or {})},
+                on_exists=req.on_exists or "validate",
+                actor=req.created_by or "api-user",
+                return_transaction=True,
             )
-            created = True
-            run_id = result.validation_run_id
+            if isinstance(result, dict):
+                return {
+                    "model_name": result.get("model_name"),
+                    "version": result.get("version"),
+                    "created": bool(result.get("created", False)),
+                    "validation_run_id": result.get("validation_run_id"),
+                    "activated": bool(result.get("activated", False)),
+                    "status": result.get("status"),
+                    "active_version_id": result.get("active_version_id"),
+                    "transaction_id": result.get("transaction_id"),
+                }
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400,
+                detail=str(err),
+                category="bad_request",
+            ) from err
+        except ProfileLoadError as err:
+            raise _model_api_error(
+                status_code=400,
+                detail=f"Invalid profile TOML: {err}",
+                category="invalid_profile",
+            ) from err
         except ModelRegistrationError as err:
             text = str(err)
-            if req.on_exists == "validate" and "already exists" in text:
-                rerun = registration.validate_registered(
-                    profile.name,
-                    profile.version,
-                    context={**context, "mode": "reregister"},
-                )
-                created = False
-                run_id = rerun.run_id
-                if not rerun.passed:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Existing model version revalidation failed",
-                    ) from err
-            elif "already exists" in text:
-                raise HTTPException(status_code=409, detail=text) from err
-            else:
-                raise HTTPException(status_code=400, detail=text) from err
-
-        activation = None
-        if req.activate:
-            try:
-                activation = registration.activate(
-                    profile.name,
-                    profile.version,
-                    actor=req.created_by or "api-user",
-                )
-            except ModelRegistrationError as err:
-                raise HTTPException(status_code=409, detail=str(err)) from err
-
-        return {
-            "model_name": profile.name,
-            "version": profile.version,
-            "created": created,
-            "validation_run_id": run_id,
-            "activated": activation is not None,
-            "status": activation.status if activation else "registered",
-            "active_version_id": activation.active_version_id if activation else None,
-        }
+            if (
+                "already exists" in text
+                or "revalidation failed" in text
+                or "Cannot activate" in text
+            ):
+                raise _model_api_error(
+                    status_code=409,
+                    detail=text,
+                    category="conflict",
+                ) from err
+            raise _model_api_error(
+                status_code=400,
+                detail=text,
+                category="registration_error",
+            ) from err
+        except HTTPException:
+            raise
+        except Exception as err:
+            logger.exception("Unhandled /models/register error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
 
     @_typed_post("/models/validate")
     def validate_model(req: ModelValidateRequest) -> dict[str, Any]:
+        container = _get_governance_container()
         try:
-            run = registration.validate_registered(
+            validate_result = container.validate_kernel_model(
                 req.model_name,
                 req.version,
                 context={"source": "api:models/validate", **(req.context or {})},
+                actor="api-user",
+                return_transaction=True,
             )
+            run = validate_result
+            transaction_id: str | None = None
+            if isinstance(validate_result, dict):
+                run = validate_result.get("run")
+                tx = validate_result.get("transaction_id")
+                if isinstance(tx, str) and len(tx.strip()) > 0:
+                    transaction_id = tx
+
+            if run is None:
+                raise _model_api_error(
+                    status_code=500,
+                    detail="Validation run is missing from governance response",
+                    category="internal_error",
+                )
         except ModelRegistrationError as err:
             text = str(err)
             if "not found" in text:
-                raise HTTPException(status_code=404, detail=text) from err
-            raise HTTPException(status_code=400, detail=text) from err
+                raise _model_api_error(
+                    status_code=404,
+                    detail=text,
+                    category="not_found",
+                ) from err
+            raise _model_api_error(
+                status_code=400,
+                detail=text,
+                category="validation_error",
+            ) from err
+        except HTTPException:
+            raise
+        except Exception as err:
+            logger.exception("Unhandled /models/validate error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
 
         return {
             "model_name": req.model_name,
@@ -262,72 +307,101 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             "passed": run.passed,
             "run_id": run.run_id,
             "errors": list(run.errors),
+            "transaction_id": transaction_id,
         }
 
     @_typed_post("/models/activate")
     def activate_model(req: ModelActivateRequest) -> dict[str, Any]:
+        container = _get_governance_container()
         try:
-            model = registration.activate(req.model_name, req.version, actor=req.actor or "api-user")
+            activate_result = container.activate_kernel_model(
+                req.model_name,
+                req.version,
+                actor=req.actor or "api-user",
+                return_transaction=True,
+            )
+            model = activate_result
+            transaction_id: str | None = None
+            if isinstance(activate_result, dict):
+                model = activate_result.get("model")
+                tx = activate_result.get("transaction_id")
+                if isinstance(tx, str) and len(tx.strip()) > 0:
+                    transaction_id = tx
+
+            if model is None:
+                raise _model_api_error(
+                    status_code=500,
+                    detail="Activation model state is missing from governance response",
+                    category="internal_error",
+                )
         except ModelRegistrationError as err:
             text = str(err)
             if "not found" in text:
-                raise HTTPException(status_code=404, detail=text) from err
-            raise HTTPException(status_code=409, detail=text) from err
+                raise _model_api_error(
+                    status_code=404,
+                    detail=text,
+                    category="not_found",
+                ) from err
+            raise _model_api_error(
+                status_code=409,
+                detail=text,
+                category="activation_conflict",
+            ) from err
+        except HTTPException:
+            raise
+        except Exception as err:
+            logger.exception("Unhandled /models/activate error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
 
         return {
             "model_name": model.model_name,
             "status": model.status,
             "active_version_id": model.active_version_id,
             "owner": model.owner,
+            "transaction_id": transaction_id,
         }
 
     @_typed_get("/models/{model_name}")
     def get_model(model_name: str, limit_runs: int = 5) -> dict[str, Any]:
-        model = registration.get_model(model_name)
-        if model is None:
-            raise HTTPException(status_code=404, detail=f"Model not found: {model_name}")
-
-        versions = registration.list_versions(model_name)
-        runs = registration.list_validation_runs(model_name=model_name, limit=limit_runs)
-        return {
-            "model": {
-                "model_id": model.model_id,
-                "model_name": model.model_name,
-                "owner": model.owner,
-                "status": model.status,
-                "active_version_id": model.active_version_id,
-                "created_at": model.created_at,
-                "updated_at": model.updated_at,
-            },
-            "versions": [
-                {
-                    "version_id": v.version_id,
-                    "version": v.version,
-                    "content_hash": v.content_hash,
-                    "parent_version_id": v.parent_version_id,
-                    "created_by": v.created_by,
-                    "created_at": v.created_at,
-                }
-                for v in versions
-            ],
-            "validation_runs": [
-                {
-                    "run_id": run.run_id,
-                    "version_id": run.version_id,
-                    "passed": run.passed,
-                    "errors": list(run.errors),
-                    "context": run.context,
-                    "created_at": run.created_at,
-                }
-                for run in runs
-            ],
-        }
+        container = _get_governance_container()
+        if limit_runs <= 0:
+            raise _model_api_error(
+                status_code=400,
+                detail="limit_runs must be greater than zero",
+                category="bad_request",
+            )
+        try:
+            model_state = container.get_kernel_model_state(model_name, limit_runs=limit_runs)
+        except Exception as err:
+            logger.exception("Unhandled /models/{model_name} error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
+        if model_state is None:
+            raise _model_api_error(
+                status_code=404,
+                detail=f"Model not found: {model_name}",
+                category="not_found",
+            )
+        return model_state
 
     # 1. Judgment
     @_typed_post("/judgment/execute")
     def execute_judgment(req: ExecuteJudgmentRequest) -> dict[str, Any]:
         """Execute logic judgment for a triple."""
-        result = system.evaluate(req.source, req.target, req.relation)
+        container = _get_governance_container()
+        result = container.evaluate_kernel(
+            req.source,
+            req.target,
+            req.relation,
+            actor=req.actor or "api-user",
+        )
         return {
             "verdict": result.judgment.verdict,
             "confidence": result.judgment.confidence.value,
@@ -339,20 +413,11 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     @_typed_get("/rules")
     def list_rules(state: str | None = None) -> list[dict[str, Any]]:
         """List active or all rules."""
-        if state:
-            try:
-                # Case-insensitive mapping
-                state_upper = state.upper()
-                try:
-                    lifecycle_state = RuleLifecycleState(state_upper)
-                except ValueError:
-                    lifecycle_state = RuleLifecycleState(state) # try exact match
-
-                rules = system.rule_store.list_by_state(lifecycle_state)
-            except ValueError as err:
-                raise HTTPException(status_code=400, detail=f"Invalid state: {state}") from err
-        else:
-            rules = system.rule_store.query() # All
+        container = _get_governance_container()
+        try:
+            rules = container.list_kernel_rules(state=state)
+        except ValueError as err:
+            raise HTTPException(status_code=400, detail=f"Invalid state: {state}") from err
 
         return [
             {
@@ -368,7 +433,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def approve_rule(rule_id: str, actor: str = "api-user") -> dict[str, Any]:
         """Approve a rule."""
         try:
-            asset = system.approve_rule(rule_id, actor)
+            container = _get_governance_container()
+            asset = container.approve_kernel_rule(rule_id, actor=actor)
             return {"status": "approved", "rule_id": asset.id}
         except ValueError as err:
             raise HTTPException(status_code=400, detail=str(err)) from err
@@ -407,10 +473,12 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         # Determine schema to use: Base Kernel + Governance Profile (if requested)
         # By default (or if profile="GovernanceLifecycle"), we show the self-model
         target_schema = _get_governance_diagram_schema()
+        container = _get_governance_container()
+        kernel = getattr(container, "kernel", system)
 
         # Build graph from current system state
         # profile maps to domain in TopologyGraph
-        graph = TopologyGraph(target_schema, system.corpus, domain=profile)
+        graph = TopologyGraph(target_schema, kernel.corpus, domain=profile)
         exporter = DiagramExporter(graph)
 
         return Response(
@@ -436,7 +504,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     @_typed_get("/automation/promotions")
     def get_promotion_proposals() -> list[dict[str, Any]]:
         """Get rule promotion proposals based on analysis."""
-        proposals = system.get_promotion_proposals()
+        container = _get_governance_container()
+        proposals = container.get_kernel_promotion_proposals()
         return [
             {
                 "id": p.proposal_id,
@@ -479,7 +548,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         )
 
         # Simulate
-        result = system.simulate_proposal(proposal)
+        container = _get_governance_container()
+        result = container.simulate_kernel_proposal(proposal)
 
         return {
             "simulation_id": result.simulation_id,

@@ -1,7 +1,7 @@
 """Build and verify kernel governance DB v1 reference snapshot.
 
 K5 scope:
-- seed canonical reference dataset (Ralph TUI layer profiles),
+- seed canonical reference dataset (EA System layer profiles),
 - produce stable golden snapshot JSON,
 - verify runtime DB state against the snapshot contract.
 """
@@ -53,7 +53,7 @@ DB_TABLES: dict[str, tuple[str, ...]] = {
 REFERENCE_VERSION = "1.0.0"
 SCRIPT_NAME = "kernel_governance_reference_snapshot.py"
 PACKAGE_ROOT = Path(__file__).resolve().parents[3]
-LAYER_DIR = PACKAGE_ROOT / "examples" / "ralph_tui_layers"
+LAYER_DIR = PACKAGE_ROOT / "examples" / "ea-sys"
 DEFAULT_SNAPSHOT_PATH = (
     PACKAGE_ROOT
     / "docs"

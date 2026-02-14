@@ -185,6 +185,53 @@ class TransactionManager:
 
         return [self._row_to_event(row) for row in rows]
 
+    def add_event(
+        self,
+        tx_id: str,
+        event_type: str,
+        message: str,
+        payload: dict[str, Any] | None = None,
+    ) -> bool:
+        """Append a domain-specific event to an existing transaction."""
+        tx = self.get_transaction(tx_id)
+        if tx is None:
+            return False
+        self._persist_event(tx_id, event_type, message, payload)
+        return True
+
+    def list_transactions(
+        self,
+        *,
+        tx_type: str | None = None,
+        status: TransactionStatus | None = None,
+        limit: int | None = None,
+    ) -> list[TransactionUnit]:
+        """List transactions with optional filtering."""
+        query = (
+            "SELECT id, name, tx_type, status, created_at, updated_at, payload_json, logs_json "
+            "FROM transactions"
+        )
+        clauses: list[str] = []
+        params: list[Any] = []
+        if tx_type is not None:
+            clauses.append("tx_type = ?")
+            params.append(tx_type)
+        if status is not None:
+            clauses.append("status = ?")
+            params.append(status.value)
+
+        if clauses:
+            query = f"{query} WHERE {' AND '.join(clauses)}"
+
+        query = f"{query} ORDER BY updated_at DESC"
+        if limit is not None:
+            query = f"{query} LIMIT ?"
+            params.append(limit)
+
+        with self._connection() as conn:
+            rows = conn.execute(query, tuple(params)).fetchall()
+        return [self._row_to_transaction(row) for row in rows]
+
     def _persist_upsert(self, tx: TransactionUnit) -> None:
         with self._connection() as conn:
             conn.execute(

@@ -3,7 +3,7 @@
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.3.0"
+version = "0.4.1"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -135,6 +135,42 @@ category = "Governance"
 description = "Policy constraints for data/ownership boundary enforcement."
 
 [[elements]]
+name = "GovernanceEntryPort"
+layer = "Governance"
+category = "Interface"
+description = "Single governance entrypoint for all layer-facing model operations."
+
+[[elements]]
+name = "GovernanceModelPort"
+layer = "Governance"
+category = "Interface"
+description = "6x6 contract port for governance-layer model interface."
+
+[[elements]]
+name = "ModelRegisterEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for model registration requests."
+
+[[elements]]
+name = "ModelValidateEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for independent model validation requests."
+
+[[elements]]
+name = "ModelActivateEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for activating a validated model version."
+
+[[elements]]
+name = "ModelStateEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for querying model/versions/validation state."
+
+[[elements]]
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
@@ -205,6 +241,66 @@ name = "FeedbackRecord"
 layer = "Governance"
 category = "PassiveStructure"
 description = "Post-activation feedback and incident observations."
+
+[[elements]]
+name = "ModelRegisterRequestRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Payload contract for /models/register (profile_toml, owner, created_by, model_name, activate, context, on_exists)."
+
+[[elements]]
+name = "ModelRegisterResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response contract for /models/register (model_name, version, created, validation_run_id, activated, status, active_version_id)."
+
+[[elements]]
+name = "ModelValidateRequestRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Payload contract for /models/validate (model_name, version, context)."
+
+[[elements]]
+name = "ModelValidateResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response contract for /models/validate (model_name, version, passed, run_id, errors)."
+
+[[elements]]
+name = "ModelActivateRequestRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Payload contract for /models/activate (model_name, version, actor)."
+
+[[elements]]
+name = "ModelActivateResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response contract for /models/activate (model_name, status, active_version_id, owner)."
+
+[[elements]]
+name = "ModelStateQueryRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Query contract for /models/{model_name} (model_name, limit_runs)."
+
+[[elements]]
+name = "ModelStateResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response contract for /models/{model_name} (model, versions, validation_runs)."
+
+[[elements]]
+name = "ModelApiErrorRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Shared error contract for /models/* endpoints (status_code, detail, category)."
+
+[[elements]]
+name = "ModelTransactionRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Transaction trace contract for model operations (tx_id, tx_type, event_type, actor, created_at)."
 
 [[elements]]
 name = "RegistrationReviewStep"
@@ -363,6 +459,20 @@ notes = "Events may trigger governance actions directly."
 
 [[rules]]
 source = "LayerModelRegistry"
+target = "GovernanceEntryPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers governance entrypoint port."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "GovernanceModelPort"
+relation = "registers"
+priority = 70
+notes = "Registry registers governance layer models."
+
+[[rules]]
+source = "LayerModelRegistry"
 target = "InfraModelPort"
 relation = "registers"
 priority = 70
@@ -395,6 +505,104 @@ target = "FlowModelPort"
 relation = "registers"
 priority = 70
 notes = "Registry registers flow layer models."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "InfraModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Entrypoint routes incoming model operations to infra layer port."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Entrypoint routes incoming model operations to decision layer port."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "NeedsModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Entrypoint routes incoming model operations to needs layer port."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Entrypoint routes incoming model operations to kernel layer port."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Entrypoint routes incoming model operations to flow layer port."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "GovernanceModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Entrypoint routes incoming model operations to governance layer port."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "ModelRegisterEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes /models/register to register endpoint contract."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "ModelValidateEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes /models/validate to validate endpoint contract."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "ModelActivateEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes /models/activate to activate endpoint contract."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "ModelStateEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes /models/{model_name} to state query endpoint contract."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 78
+notes = "Register endpoint delegates directly only for kernel-target registrations; non-kernel targets are routed by governance layer-port matrix."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 78
+notes = "Validate endpoint delegates directly only for kernel-target validations; non-kernel targets are routed by governance layer-port matrix."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 78
+notes = "Activate endpoint delegates directly only for kernel-target activations; non-kernel targets are routed by governance layer-port matrix."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "KernelModelPort"
+relation = "coordinates"
+priority = 78
+notes = "State endpoint delegates directly only for kernel-target state queries; non-kernel targets are routed by governance layer-port matrix."
 
 [[rules]]
 source = "LayerModelRegistry"
@@ -558,6 +766,244 @@ priority = 70
 notes = "Boundary policy constrains feedback routing scope."
 
 [[rules]]
+source = "RegistrationPolicy"
+target = "ModelRegisterEndpoint"
+relation = "constrains"
+priority = 78
+notes = "Registration policy constrains register endpoint request handling."
+
+[[rules]]
+source = "CompatibilityPolicy"
+target = "ModelValidateEndpoint"
+relation = "constrains"
+priority = 78
+notes = "Compatibility policy constrains validation endpoint checks."
+
+[[rules]]
+source = "ApprovalPolicy"
+target = "ModelActivateEndpoint"
+relation = "constrains"
+priority = 78
+notes = "Approval policy constrains activation endpoint decisions."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "ModelStateEndpoint"
+relation = "constrains"
+priority = 78
+notes = "Boundary policy constrains model state exposure scope."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "ModelStateResponseRecord"
+relation = "constrains"
+priority = 78
+notes = "Boundary policy constrains model state response fields."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "ModelApiErrorRecord"
+relation = "constrains"
+priority = 78
+notes = "Boundary policy constrains API error payload fields to avoid cross-scope data leakage."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 79
+notes = "Register endpoint coordinates with model registry."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "ValidationCoordinator"
+relation = "coordinates"
+priority = 79
+notes = "Register endpoint coordinates with validation coordinator."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "AgreementCoordinator"
+relation = "coordinates"
+priority = 79
+notes = "Register endpoint coordinates with agreement coordinator for ownership checks."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ValidationCoordinator"
+relation = "coordinates"
+priority = 79
+notes = "Validate endpoint coordinates validation reruns."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "ActivationCoordinator"
+relation = "coordinates"
+priority = 79
+notes = "Activate endpoint coordinates release/activation workflow."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "VersionLifecycleManager"
+relation = "coordinates"
+priority = 79
+notes = "Activate endpoint coordinates active version pointer transition."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 79
+notes = "State endpoint coordinates model metadata lookup."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "VersionLifecycleManager"
+relation = "coordinates"
+priority = 79
+notes = "State endpoint coordinates version and activation state lookup."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "ModelRegisterRequestRecord"
+relation = "consumes"
+priority = 79
+notes = "Register endpoint consumes register request payload."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "ModelRegisterResponseRecord"
+relation = "produces"
+priority = 79
+notes = "Register endpoint produces register response payload."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "ModelRegistrationRequestedEvent"
+relation = "produces"
+priority = 79
+notes = "Register endpoint emits model registration requested event."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "ModelApiErrorRecord"
+relation = "produces"
+priority = 79
+notes = "Register endpoint produces error payload when registration fails."
+
+[[rules]]
+source = "ModelRegisterEndpoint"
+target = "ModelTransactionRecord"
+relation = "produces"
+priority = 79
+notes = "Register endpoint emits transaction trace for audit."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ModelValidateRequestRecord"
+relation = "consumes"
+priority = 79
+notes = "Validate endpoint consumes validation request payload."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ModelValidateResponseRecord"
+relation = "produces"
+priority = 79
+notes = "Validate endpoint produces validation response payload."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ValidationPassedEvent"
+relation = "produces"
+priority = 79
+notes = "Validate endpoint emits passed event when validation succeeds."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ValidationFailedEvent"
+relation = "produces"
+priority = 79
+notes = "Validate endpoint emits failed event when validation fails."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ModelApiErrorRecord"
+relation = "produces"
+priority = 79
+notes = "Validate endpoint produces error payload when validation request is invalid."
+
+[[rules]]
+source = "ModelValidateEndpoint"
+target = "ModelTransactionRecord"
+relation = "produces"
+priority = 79
+notes = "Validate endpoint emits transaction trace for audit."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "ModelActivateRequestRecord"
+relation = "consumes"
+priority = 79
+notes = "Activate endpoint consumes activation request payload."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "ModelActivateResponseRecord"
+relation = "produces"
+priority = 79
+notes = "Activate endpoint produces activation response payload."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "ActivationApprovedEvent"
+relation = "produces"
+priority = 79
+notes = "Activate endpoint emits activation approved event when activation succeeds."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "ModelApiErrorRecord"
+relation = "produces"
+priority = 79
+notes = "Activate endpoint produces error payload when activation fails."
+
+[[rules]]
+source = "ModelActivateEndpoint"
+target = "ModelTransactionRecord"
+relation = "produces"
+priority = 79
+notes = "Activate endpoint emits transaction trace for audit."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "ModelStateQueryRecord"
+relation = "consumes"
+priority = 79
+notes = "State endpoint consumes model query payload."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "ModelStateResponseRecord"
+relation = "produces"
+priority = 79
+notes = "State endpoint produces model state response payload."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "ModelApiErrorRecord"
+relation = "produces"
+priority = 79
+notes = "State endpoint produces error payload when model is not found."
+
+[[rules]]
+source = "ModelStateEndpoint"
+target = "ModelTransactionRecord"
+relation = "produces"
+priority = 79
+notes = "State endpoint emits transaction trace for audit."
+
+[[rules]]
 source = "ModelRegistrationRequestedEvent"
 target = "RegistrationReviewStep"
 relation = "triggers"
@@ -696,6 +1142,13 @@ target = "AgreementRecord"
 relation = "produces"
 priority = 75
 notes = "Rejection action produces agreement outcome record."
+
+[[rules]]
+source = "RejectChangeAction"
+target = "ChangeRejectedEvent"
+relation = "produces"
+priority = 75
+notes = "Rejection action emits change rejected event for feedback routing trigger."
 
 [[rules]]
 source = "ActivateVersionAction"

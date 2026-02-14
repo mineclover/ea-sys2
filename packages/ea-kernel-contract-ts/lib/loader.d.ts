@@ -1,11 +1,15 @@
-import type { IContractLoadOptions, IContractPaths, IKernelContractBundle, IKernelContractIndex, IKernelContractModel, IKernelContractSummary, IKernelFeedbackTarget, IKernelRelationshipEvaluation, IKernelRelationshipEvaluationInput, IKernelRule, KernelFeedbackTargetType } from "./types";
+import type { IContractLoadOptions, IContractPaths, IKernelContractBundle, IKernelContractIndex, IKernelContractModel, IKernelContractSummary, IKernelFeedbackTarget, IKernelRelationshipEvaluation, IKernelRelationshipEvaluationInput, IKernelRule, ILayerContractComposeOptions, ILayerContractConvention, ILayerContractOverlay, KernelFeedbackTargetType } from "./types";
 export declare const EA_KERNEL_CONTRACT_DIR = "EA_KERNEL_CONTRACT_DIR";
 export declare const SCHEMA_FILE = "kernel_schema.snapshot.json";
 export declare const RULES_FILE = "kernel_rules.snapshot.json";
 export declare const VECTORS_FILE = "kernel_judgment_vectors.snapshot.json";
+export declare const DEFAULT_MANAGED_GOVERNANCE_LAYERS: readonly ["infra", "decision", "needs", "kernel", "flow"];
 export declare function validateKernelContractBundle(bundle: IKernelContractBundle): string[];
 export declare function buildKernelContractIndex(bundle: IKernelContractBundle): IKernelContractIndex;
 export declare function getKernelContractFingerprint(bundle: IKernelContractBundle): string;
+export declare function buildLayerContractConvention(layerId: string): ILayerContractConvention;
+export declare function composeKernelContractBundle(baseBundle: IKernelContractBundle, overlays: ILayerContractOverlay[], options?: ILayerContractComposeOptions): IKernelContractBundle;
+export declare function composeKernelContractModel(baseModel: IKernelContractModel, overlays: ILayerContractOverlay[], options?: ILayerContractComposeOptions): IKernelContractModel;
 export declare function listKernelFeedbackTargets(model: IKernelContractModel, targetType?: KernelFeedbackTargetType): IKernelFeedbackTarget[];
 export declare function listKernelEntityAncestors(model: IKernelContractModel, entityName: string): string[];
 export declare function entityMatchesKernelPattern(model: IKernelContractModel, entityName: string, pattern: string): boolean;
@@ -15,6 +19,10 @@ export declare function resolveKernelContractDir(options?: IContractLoadOptions)
 export declare function resolveKernelContractPaths(options?: IContractLoadOptions): IContractPaths;
 export declare function loadKernelContractBundle(options?: IContractLoadOptions): IKernelContractBundle;
 export declare function buildKernelContractModel(options?: IContractLoadOptions): IKernelContractModel;
+export declare function buildLayerContractModel(overlays: ILayerContractOverlay[], options?: {
+    base?: IContractLoadOptions;
+    compose?: ILayerContractComposeOptions;
+}): IKernelContractModel;
 export declare function toKernelFeedbackTarget(targetType: KernelFeedbackTargetType, targetId: string): IKernelFeedbackTarget;
 export declare function parseKernelFeedbackTarget(raw: string): IKernelFeedbackTarget;
 export declare function resolveKernelFeedbackTarget(raw: string, model: IKernelContractModel): IKernelFeedbackTarget;

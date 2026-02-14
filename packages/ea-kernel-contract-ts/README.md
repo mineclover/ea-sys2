@@ -40,6 +40,8 @@ This build automatically syncs latest snapshots from:
 
 ```ts
 import {
+  buildLayerContractConvention,
+  buildLayerContractModel,
   buildKernelContractModel,
   evaluateKernelRelationship,
   getEntityRequiredKeys,
@@ -64,6 +66,28 @@ const verdict = evaluateKernelRelationship(model, {
   relation: "association",
 });
 console.log(verdict.allowed, verdict.winnerRuleId);
+
+const layerConvention = buildLayerContractConvention("decision");
+console.log(layerConvention.tsPackageName);
+
+const decisionModel = buildLayerContractModel([
+  {
+    layerId: "decision",
+    explicitRules: [
+      {
+        id: "allow-event-trigger-structure",
+        source_pattern: "event",
+        target_pattern: "structure",
+        relation: "triggering",
+        valid: true,
+        priority: 95,
+        conditions: [],
+        notes: "Decision-layer override example",
+      },
+    ],
+  },
+]);
+console.log(decisionModel.fingerprint);
 ```
 
 ## Feedback Canonical IDs
@@ -72,6 +96,24 @@ console.log(verdict.allowed, verdict.winnerRuleId);
 - `relation_type:{relationName}`
 - `rule:{ruleId}`
 - `layer_constraint:{constraintId}`
+
+## Layer Package Convention
+
+Use the same filenames per package (`contracts/` inside each layer package):
+
+- `kernel_schema.snapshot.json`
+- `kernel_rules.snapshot.json`
+- `kernel_judgment_vectors.snapshot.json`
+
+Recommended package names:
+
+- TS: `@ea-sys2/<layer>-contract-sdk`
+- Python: `ea-<layer>-contract`
+
+Use namespaced ids for layer overlays by default:
+
+- rule id: `<layer>:<rule_id>`
+- layer constraint id: `<layer>:<constraint_id>`
 
 ## Consume From `ea-web`
 

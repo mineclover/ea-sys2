@@ -3,10 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VECTORS_FILE = exports.RULES_FILE = exports.SCHEMA_FILE = exports.EA_KERNEL_CONTRACT_DIR = void 0;
+exports.DEFAULT_MANAGED_GOVERNANCE_LAYERS = exports.VECTORS_FILE = exports.RULES_FILE = exports.SCHEMA_FILE = exports.EA_KERNEL_CONTRACT_DIR = void 0;
 exports.validateKernelContractBundle = validateKernelContractBundle;
 exports.buildKernelContractIndex = buildKernelContractIndex;
 exports.getKernelContractFingerprint = getKernelContractFingerprint;
+exports.buildLayerContractConvention = buildLayerContractConvention;
+exports.composeKernelContractBundle = composeKernelContractBundle;
+exports.composeKernelContractModel = composeKernelContractModel;
 exports.listKernelFeedbackTargets = listKernelFeedbackTargets;
 exports.listKernelEntityAncestors = listKernelEntityAncestors;
 exports.entityMatchesKernelPattern = entityMatchesKernelPattern;
@@ -16,6 +19,7 @@ exports.resolveKernelContractDir = resolveKernelContractDir;
 exports.resolveKernelContractPaths = resolveKernelContractPaths;
 exports.loadKernelContractBundle = loadKernelContractBundle;
 exports.buildKernelContractModel = buildKernelContractModel;
+exports.buildLayerContractModel = buildLayerContractModel;
 exports.toKernelFeedbackTarget = toKernelFeedbackTarget;
 exports.parseKernelFeedbackTarget = parseKernelFeedbackTarget;
 exports.resolveKernelFeedbackTarget = resolveKernelFeedbackTarget;
@@ -34,6 +38,13 @@ const LAYER_ORDER = {
     L3: 3,
     L4: 4,
 };
+exports.DEFAULT_MANAGED_GOVERNANCE_LAYERS = [
+    "infra",
+    "decision",
+    "needs",
+    "kernel",
+    "flow",
+];
 function asRecord(value, context) {
     if (typeof value !== "object" || value === null || Array.isArray(value))
         throw new Error(`${context} must be an object`);
@@ -449,6 +460,168 @@ function computeFingerprintFromPaths(paths) {
 function getKernelContractFingerprint(bundle) {
     return computeFingerprintFromPaths(bundle.paths);
 }
+function toLayerSlug(layerId) {
+    const slug = layerId
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    if (slug.length === 0)
+        throw new Error(`invalid layerId: ${JSON.stringify(layerId)}`);
+    return slug;
+}
+function namespaceId(layerSlug, rawId, separator, shouldNamespace) {
+    const id = rawId.trim();
+    if (id.length === 0)
+        throw new Error("id cannot be empty");
+    if (!shouldNamespace)
+        return id;
+    const prefix = `${layerSlug}${separator}`;
+    if (id.startsWith(prefix))
+        return id;
+    return `${prefix}${id}`;
+}
+function stableSerialize(value) {
+    if (Array.isArray(value))
+        return `[${value.map((row) => stableSerialize(row)).join(",")}]`;
+    if (value !== null && typeof value === "object") {
+        const row = value;
+        const keys = Object.keys(row).sort();
+        return `{${keys
+            .map((key) => `${JSON.stringify(key)}:${stableSerialize(row[key])}`)
+            .join(",")}}`;
+    }
+    return JSON.stringify(value);
+}
+function computeFingerprintFromBundle(bundle) {
+    const hash = (0, node_crypto_1.createHash)("sha256");
+    hash.update(stableSerialize(bundle), "utf8");
+    return hash.digest("hex");
+}
+function buildLayerContractConvention(layerId) {
+    const layerSlug = toLayerSlug(layerId);
+    return {
+        layerId,
+        layerSlug,
+        tsPackageName: `@ea-sys2/${layerSlug}-contract-sdk`,
+        pyPackageName: `ea-${layerSlug}-contract`,
+        contractsDir: "contracts",
+        schemaFile: exports.SCHEMA_FILE,
+        rulesFile: exports.RULES_FILE,
+        vectorsFile: exports.VECTORS_FILE,
+        feedbackIdPrefix: `${layerSlug}:`,
+    };
+}
+function composeKernelContractBundle(baseBundle, overlays, options) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+    const namespaceIds = (_a = options === null || options === void 0 ? void 0 : options.namespaceIds) !== null && _a !== void 0 ? _a : true;
+    const namespaceSeparator = (_b = options === null || options === void 0 ? void 0 : options.namespaceSeparator) !== null && _b !== void 0 ? _b : ":";
+    const mergeVectors = (_c = options === null || options === void 0 ? void 0 : options.mergeVectors) !== null && _c !== void 0 ? _c : false;
+    const allowRuleIdCollision = (_d = options === null || options === void 0 ? void 0 : options.allowRuleIdCollision) !== null && _d !== void 0 ? _d : false;
+    const allowConstraintIdCollision = (_e = options === null || options === void 0 ? void 0 : options.allowConstraintIdCollision) !== null && _e !== void 0 ? _e : false;
+    const explicitRules = [...baseBundle.rules.explicit_rules];
+    const fallbackRulesByRelation = new Map(baseBundle.rules.fallback_rules.map((rule) => [rule.relation, rule]));
+    const ruleIds = new Set([...explicitRules, ...fallbackRulesByRelation.values()].map((rule) => rule.id));
+    const layerConstraintsById = new Map(baseBundle.rules.layer_constraints.map((constraint) => [constraint.id, constraint]));
+    const vectors = [...baseBundle.vectors.vectors];
+    const vectorIds = new Set(vectors.map((vector) => vector.id));
+    for (const overlay of overlays) {
+        const layerSlug = toLayerSlug(overlay.layerId);
+        const explicit = (_f = overlay.explicitRules) !== null && _f !== void 0 ? _f : [];
+        const fallback = (_g = overlay.fallbackRules) !== null && _g !== void 0 ? _g : [];
+        const constraints = (_h = overlay.layerConstraints) !== null && _h !== void 0 ? _h : [];
+        const overlayVectors = (_j = overlay.vectors) !== null && _j !== void 0 ? _j : [];
+        for (const row of explicit) {
+            const id = namespaceId(layerSlug, row.id, namespaceSeparator, namespaceIds);
+            if (!allowRuleIdCollision && ruleIds.has(id))
+                throw new Error(`duplicate rule id after composition: ${id}`);
+            ruleIds.add(id);
+            explicitRules.push({
+                ...row,
+                id,
+            });
+        }
+        for (const row of fallback) {
+            const id = namespaceId(layerSlug, row.id, namespaceSeparator, namespaceIds);
+            const previous = fallbackRulesByRelation.get(row.relation);
+            if (!allowRuleIdCollision &&
+                ruleIds.has(id) &&
+                (previous === undefined || previous.id !== id))
+                throw new Error(`duplicate rule id after composition: ${id}`);
+            if (previous !== undefined)
+                ruleIds.delete(previous.id);
+            ruleIds.add(id);
+            fallbackRulesByRelation.set(row.relation, {
+                ...row,
+                id,
+            });
+        }
+        for (const row of constraints) {
+            const id = namespaceId(layerSlug, row.id, namespaceSeparator, namespaceIds);
+            if (!allowConstraintIdCollision && layerConstraintsById.has(id))
+                throw new Error(`duplicate layer constraint id after composition: ${id}`);
+            layerConstraintsById.set(id, {
+                ...row,
+                id,
+            });
+        }
+        if (mergeVectors) {
+            for (const row of overlayVectors) {
+                const id = namespaceId(layerSlug, row.id, namespaceSeparator, namespaceIds);
+                if (vectorIds.has(id))
+                    throw new Error(`duplicate vector id after composition: ${id}`);
+                vectorIds.add(id);
+                vectors.push({
+                    ...row,
+                    id,
+                });
+            }
+        }
+    }
+    const fallbackRules = Array.from(fallbackRulesByRelation.values());
+    const layerConstraints = Array.from(layerConstraintsById.values());
+    const metadataEntries = explicitRules.filter((rule) => rule.metadata !== undefined).length;
+    const allowVectors = vectors.filter((vector) => vector.expected_verdict).length;
+    const composed = {
+        ...baseBundle,
+        rules: {
+            ...baseBundle.rules,
+            stats: {
+                ...baseBundle.rules.stats,
+                total_rules: explicitRules.length + fallbackRules.length,
+                explicit_rules: explicitRules.length,
+                fallback_rules: fallbackRules.length,
+                layer_constraints: layerConstraints.length,
+                metadata_entries: metadataEntries,
+            },
+            explicit_rules: explicitRules,
+            fallback_rules: fallbackRules,
+            layer_constraints: layerConstraints,
+        },
+        vectors: {
+            ...baseBundle.vectors,
+            stats: {
+                ...baseBundle.vectors.stats,
+                vectors: vectors.length,
+                allow_vectors: allowVectors,
+                deny_vectors: vectors.length - allowVectors,
+            },
+            vectors,
+        },
+    };
+    const issues = validateKernelContractBundle(composed);
+    if (issues.length > 0)
+        throw new Error(`invalid composed kernel contract bundle: ${issues.join("; ")}`);
+    return composed;
+}
+function composeKernelContractModel(baseModel, overlays, options) {
+    const bundle = composeKernelContractBundle(baseModel.bundle, overlays, options);
+    return {
+        bundle,
+        index: buildKernelContractIndex(bundle),
+        fingerprint: computeFingerprintFromBundle(bundle),
+    };
+}
 function listKernelFeedbackTargets(model, targetType) {
     const targets = [];
     if (targetType === undefined || targetType === "entity_type") {
@@ -725,6 +898,10 @@ function buildKernelContractModel(options) {
         index: buildKernelContractIndex(bundle),
         fingerprint,
     };
+}
+function buildLayerContractModel(overlays, options) {
+    const baseModel = buildKernelContractModel(options === null || options === void 0 ? void 0 : options.base);
+    return composeKernelContractModel(baseModel, overlays, options === null || options === void 0 ? void 0 : options.compose);
 }
 function toKernelFeedbackTarget(targetType, targetId) {
     const trimmed = targetId.trim();

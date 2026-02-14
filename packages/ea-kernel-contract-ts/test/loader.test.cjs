@@ -127,3 +127,73 @@ test('evaluateKernelRelationship returns constraint block details', () => {
   assert.equal(evaluation.reason, 'constraint_denied');
   assert.equal(evaluation.blockingConstraintId, 'lc-00-l4-l4-association');
 });
+
+test('buildLayerContractConvention returns package convention', () => {
+  const convention = sdk.buildLayerContractConvention('Decision Layer');
+  assert.equal(convention.layerSlug, 'decision_layer');
+  assert.equal(convention.tsPackageName, '@ea-sys2/decision_layer-contract-sdk');
+  assert.equal(convention.pyPackageName, 'ea-decision_layer-contract');
+  assert.equal(convention.schemaFile, 'kernel_schema.snapshot.json');
+});
+
+test('composeKernelContractModel applies namespaced layer overlay rules', () => {
+  const base = sdk.buildKernelContractModel();
+  const composed = sdk.composeKernelContractModel(base, [
+    {
+      layerId: 'decision',
+      explicitRules: [
+        {
+          id: 'allow-event-trigger-structure',
+          source_pattern: 'event',
+          target_pattern: 'structure',
+          relation: 'triggering',
+          valid: true,
+          priority: 95,
+          conditions: [],
+          notes: 'decision layer override',
+        },
+      ],
+    },
+  ]);
+
+  const evaluation = sdk.evaluateKernelRelationship(composed, {
+    sourceEntity: 'event',
+    targetEntity: 'structure',
+    relation: 'triggering',
+  });
+
+  assert.equal(evaluation.allowed, true);
+  assert.equal(evaluation.winnerRuleId, 'decision:allow-event-trigger-structure');
+  assert.equal(composed.index.ruleById.has('decision:allow-event-trigger-structure'), true);
+  assert.notEqual(composed.fingerprint, base.fingerprint);
+});
+
+test('composeKernelContractBundle replaces fallback rule per relation', () => {
+  const base = sdk.loadKernelContractBundle();
+  const composed = sdk.composeKernelContractBundle(base, [
+    {
+      layerId: 'infra',
+      fallbackRules: [
+        {
+          id: 'fallback-membership-infra',
+          source_pattern: '*',
+          target_pattern: '*',
+          relation: 'membership',
+          valid: false,
+          priority: 1,
+          conditions: [],
+          notes: 'infra fallback',
+        },
+      ],
+    },
+  ]);
+
+  const fallback = composed.rules.fallback_rules.find(
+    (row) => row.relation === 'membership',
+  );
+  assert.equal(fallback.id, 'infra:fallback-membership-infra');
+  assert.equal(
+    composed.rules.fallback_rules.filter((row) => row.relation === 'membership').length,
+    1,
+  );
+});

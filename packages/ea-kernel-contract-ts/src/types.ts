@@ -11,6 +11,12 @@ export interface IContractPaths {
 }
 
 export type KernelLayer = "L1" | "L2" | "L3" | "L4";
+export type ManagedGovernanceLayer =
+  | "infra"
+  | "decision"
+  | "needs"
+  | "kernel"
+  | "flow";
 export type KernelRuleConditionType =
   | "same_layer"
   | "layer_order"
@@ -223,4 +229,33 @@ export interface IKernelRelationshipEvaluation {
   blockingConstraintId: string | null;
   conditionChecks: IKernelConditionEvaluation[];
   notes: string;
+}
+
+export interface ILayerContractOverlay {
+  layerId: string;
+  source?: string;
+  explicitRules?: IKernelRule[];
+  fallbackRules?: IKernelRule[];
+  layerConstraints?: IKernelLayerConstraint[];
+  vectors?: IKernelJudgmentVector[];
+}
+
+export interface ILayerContractComposeOptions {
+  namespaceIds?: boolean;
+  namespaceSeparator?: string;
+  mergeVectors?: boolean;
+  allowRuleIdCollision?: boolean;
+  allowConstraintIdCollision?: boolean;
+}
+
+export interface ILayerContractConvention {
+  layerId: string;
+  layerSlug: string;
+  tsPackageName: string;
+  pyPackageName: string;
+  contractsDir: string;
+  schemaFile: string;
+  rulesFile: string;
+  vectorsFile: string;
+  feedbackIdPrefix: string;
 }

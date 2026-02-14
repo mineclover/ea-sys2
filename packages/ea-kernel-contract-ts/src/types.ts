@@ -11,6 +11,13 @@ export interface IContractPaths {
 }
 
 export type KernelLayer = "L1" | "L2" | "L3" | "L4";
+export type KernelRuleConditionType =
+  | "same_layer"
+  | "layer_order"
+  | "ancestor_of"
+  | "same_branch"
+  | "same_category"
+  | (string & {});
 
 export type KernelFeedbackTargetType =
   | "entity_type"
@@ -67,7 +74,7 @@ export interface IKernelSchemaSnapshot {
 }
 
 export interface IKernelRuleCondition {
-  type: string;
+  type: KernelRuleConditionType;
   parameters: Record<string, string>;
 }
 
@@ -158,6 +165,7 @@ export interface IKernelContractSummary {
   available: boolean;
   contractDir: string | null;
   kernelVersion: string | null;
+  fingerprint: string | null;
   entityCount: number;
   relationCount: number;
   totalRules: number;
@@ -178,10 +186,41 @@ export interface IKernelContractIndex {
 export interface IKernelContractModel {
   bundle: IKernelContractBundle;
   index: IKernelContractIndex;
+  fingerprint: string;
 }
 
 export interface IKernelFeedbackTarget {
   targetType: KernelFeedbackTargetType;
   targetId: string;
   canonicalId: string;
+}
+
+export interface IKernelRelationshipEvaluationInput {
+  sourceEntity: string;
+  targetEntity: string;
+  relation: string;
+}
+
+export type KernelRelationshipEvaluationReason =
+  | "unknown_entity"
+  | "unknown_relation"
+  | "constraint_denied"
+  | "no_matching_rule"
+  | "condition_failed"
+  | "rule_verdict";
+
+export interface IKernelConditionEvaluation {
+  type: KernelRuleConditionType;
+  passed: boolean;
+  note: string;
+}
+
+export interface IKernelRelationshipEvaluation {
+  allowed: boolean;
+  reason: KernelRelationshipEvaluationReason;
+  winnerRuleId: string | null;
+  matchedRuleIds: string[];
+  blockingConstraintId: string | null;
+  conditionChecks: IKernelConditionEvaluation[];
+  notes: string;
 }

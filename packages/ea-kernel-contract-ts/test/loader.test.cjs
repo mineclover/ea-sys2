@@ -13,6 +13,8 @@ test('loads contract bundle and summary', () => {
   assert.equal(summary.available, true);
   assert.equal(summary.kernelVersion, bundle.kernelVersion);
   assert.equal(summary.entityCount, bundle.schema.entities.length);
+  assert.equal(typeof summary.fingerprint, 'string');
+  assert.equal(summary.fingerprint.length, 64);
 });
 
 test('buildKernelContractModel builds stable indexes', () => {
@@ -24,6 +26,8 @@ test('buildKernelContractModel builds stable indexes', () => {
     model.index.layerConstraintById.has('lc-00-l4-l4-association'),
     true,
   );
+  assert.equal(typeof model.fingerprint, 'string');
+  assert.equal(model.fingerprint.length, 64);
 });
 
 test('resolveKernelFeedbackTarget validates canonical ids', () => {
@@ -78,4 +82,48 @@ test('validateKernelContractBundle detects duplicate layer constraint ids', () =
     issues.some((issue) => issue.includes('rules.layer_constraints.id duplicated')),
     true,
   );
+});
+
+test('listKernelFeedbackTargets returns canonical targets', () => {
+  const model = sdk.buildKernelContractModel();
+  const all = sdk.listKernelFeedbackTargets(model);
+  assert.equal(all.length > 0, true);
+  assert.equal(all.some((row) => row.canonicalId === 'rule:mem-01'), true);
+  assert.equal(
+    all.some(
+      (row) =>
+        row.canonicalId ===
+        'layer_constraint:lc-00-l4-l4-association',
+    ),
+    true,
+  );
+
+  const onlyRules = sdk.listKernelFeedbackTargets(model, 'rule');
+  assert.equal(onlyRules.every((row) => row.targetType === 'rule'), true);
+});
+
+test('evaluateKernelRelationship follows vector contract', () => {
+  const model = sdk.buildKernelContractModel();
+  for (const vector of model.bundle.vectors.vectors) {
+    const evaluation = sdk.evaluateKernelRelationship(model, {
+      sourceEntity: vector.triple[0],
+      targetEntity: vector.triple[1],
+      relation: vector.triple[2],
+    });
+    assert.equal(evaluation.allowed, vector.expected_verdict);
+    assert.equal(evaluation.winnerRuleId, vector.expected_winner_rule_id);
+  }
+});
+
+test('evaluateKernelRelationship returns constraint block details', () => {
+  const model = sdk.buildKernelContractModel();
+  const evaluation = sdk.evaluateKernelRelationship(model, {
+    sourceEntity: 'event',
+    targetEntity: 'event',
+    relation: 'association',
+  });
+
+  assert.equal(evaluation.allowed, false);
+  assert.equal(evaluation.reason, 'constraint_denied');
+  assert.equal(evaluation.blockingConstraintId, 'lc-00-l4-l4-association');
 });

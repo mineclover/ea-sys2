@@ -13,6 +13,11 @@ TypeScript SDK for deterministic `ea-kernel` contract snapshots.
   - unique ids and names
   - schema-reference integrity (rules, roles, layer constraints, vectors)
 - Prebuilt runtime index for fast lookup in Nestia/backends
+- Deterministic contract fingerprint (`sha256`) for cache/version checks
+- Built-in relationship evaluation (`source/target/relation`) with:
+  - layer constraint enforcement
+  - winner rule resolution
+  - condition evaluation trace
 - Feedback-target utilities for canonical governance ids
 
 ## Directory Resolution Order
@@ -36,6 +41,7 @@ This build automatically syncs latest snapshots from:
 ```ts
 import {
   buildKernelContractModel,
+  evaluateKernelRelationship,
   getEntityRequiredKeys,
   resolveKernelFeedbackTarget,
 } from "@ea-sys2/kernel-contract-sdk";
@@ -48,8 +54,16 @@ const target = resolveKernelFeedbackTarget(
 );
 
 console.log(model.bundle.kernelVersion);
+console.log(model.fingerprint);
 console.log(required);
 console.log(target.canonicalId);
+
+const verdict = evaluateKernelRelationship(model, {
+  sourceEntity: "structure",
+  targetEntity: "structure",
+  relation: "association",
+});
+console.log(verdict.allowed, verdict.winnerRuleId);
 ```
 
 ## Feedback Canonical IDs

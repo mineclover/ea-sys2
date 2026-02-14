@@ -6,6 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.VECTORS_FILE = exports.RULES_FILE = exports.SCHEMA_FILE = exports.EA_KERNEL_CONTRACT_DIR = void 0;
 exports.validateKernelContractBundle = validateKernelContractBundle;
 exports.buildKernelContractIndex = buildKernelContractIndex;
+exports.getKernelContractFingerprint = getKernelContractFingerprint;
+exports.listKernelFeedbackTargets = listKernelFeedbackTargets;
+exports.listKernelEntityAncestors = listKernelEntityAncestors;
+exports.entityMatchesKernelPattern = entityMatchesKernelPattern;
+exports.findKernelMatchingRules = findKernelMatchingRules;
+exports.evaluateKernelRelationship = evaluateKernelRelationship;
 exports.resolveKernelContractDir = resolveKernelContractDir;
 exports.resolveKernelContractPaths = resolveKernelContractPaths;
 exports.loadKernelContractBundle = loadKernelContractBundle;
@@ -15,12 +21,19 @@ exports.parseKernelFeedbackTarget = parseKernelFeedbackTarget;
 exports.resolveKernelFeedbackTarget = resolveKernelFeedbackTarget;
 exports.getEntityRequiredKeys = getEntityRequiredKeys;
 exports.summarizeKernelContract = summarizeKernelContract;
+const node_crypto_1 = require("node:crypto");
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 exports.EA_KERNEL_CONTRACT_DIR = "EA_KERNEL_CONTRACT_DIR";
 exports.SCHEMA_FILE = "kernel_schema.snapshot.json";
 exports.RULES_FILE = "kernel_rules.snapshot.json";
 exports.VECTORS_FILE = "kernel_judgment_vectors.snapshot.json";
+const LAYER_ORDER = {
+    L1: 1,
+    L2: 2,
+    L3: 3,
+    L4: 4,
+};
 function asRecord(value, context) {
     if (typeof value !== "object" || value === null || Array.isArray(value))
         throw new Error(`${context} must be an object`);
@@ -422,6 +435,250 @@ function buildKernelContractIndex(bundle) {
         vectorById: new Map(bundle.vectors.vectors.map((vector) => [vector.id, vector])),
     };
 }
+function computeFingerprintFromPaths(paths) {
+    const hash = (0, node_crypto_1.createHash)("sha256");
+    const files = [paths.schemaPath, paths.rulesPath, paths.vectorsPath];
+    for (const filePath of files) {
+        hash.update(node_path_1.default.basename(filePath), "utf8");
+        hash.update("\0", "utf8");
+        hash.update(node_fs_1.default.readFileSync(filePath));
+        hash.update("\0", "utf8");
+    }
+    return hash.digest("hex");
+}
+function getKernelContractFingerprint(bundle) {
+    return computeFingerprintFromPaths(bundle.paths);
+}
+function listKernelFeedbackTargets(model, targetType) {
+    const targets = [];
+    if (targetType === undefined || targetType === "entity_type") {
+        for (const name of model.index.entityByName.keys())
+            targets.push(toKernelFeedbackTarget("entity_type", name));
+    }
+    if (targetType === undefined || targetType === "relation_type") {
+        for (const name of model.index.relationByName.keys())
+            targets.push(toKernelFeedbackTarget("relation_type", name));
+    }
+    if (targetType === undefined || targetType === "rule") {
+        for (const id of model.index.ruleById.keys())
+            targets.push(toKernelFeedbackTarget("rule", id));
+    }
+    if (targetType === undefined || targetType === "layer_constraint") {
+        for (const id of model.index.layerConstraintById.keys())
+            targets.push(toKernelFeedbackTarget("layer_constraint", id));
+    }
+    return targets.sort((a, b) => a.canonicalId.localeCompare(b.canonicalId));
+}
+function listKernelEntityAncestors(model, entityName) {
+    const ancestors = [];
+    const seen = new Set();
+    let cursor = model.index.entityByName.get(entityName);
+    while ((cursor === null || cursor === void 0 ? void 0 : cursor.parent) !== undefined) {
+        if (seen.has(cursor.parent))
+            throw new Error(`entity parent cycle detected at: ${cursor.parent}`);
+        seen.add(cursor.parent);
+        ancestors.push(cursor.parent);
+        cursor = model.index.entityByName.get(cursor.parent);
+    }
+    return ancestors;
+}
+function entityMatchesKernelPattern(model, entityName, pattern) {
+    if (pattern === "*")
+        return model.index.entityByName.has(entityName);
+    if (pattern.endsWith("*")) {
+        const base = pattern.slice(0, -1);
+        if (entityName === base)
+            return true;
+        return listKernelEntityAncestors(model, entityName).includes(base);
+    }
+    return entityName === pattern;
+}
+function findKernelMatchingRules(model, input) {
+    const rules = [
+        ...model.bundle.rules.explicit_rules,
+        ...model.bundle.rules.fallback_rules,
+    ];
+    const matched = rules.filter((rule) => {
+        if (rule.relation !== input.relation)
+            return false;
+        if (entityMatchesKernelPattern(model, input.sourceEntity, rule.source_pattern) ===
+            false)
+            return false;
+        if (entityMatchesKernelPattern(model, input.targetEntity, rule.target_pattern) ===
+            false)
+            return false;
+        return true;
+    });
+    return matched.sort((a, b) => b.priority - a.priority || (a.valid === b.valid ? 0 : a.valid ? 1 : -1));
+}
+function evaluateRuleCondition(model, condition, input) {
+    const source = model.index.entityByName.get(input.sourceEntity);
+    const target = model.index.entityByName.get(input.targetEntity);
+    if (source === undefined || target === undefined)
+        return {
+            type: condition.type,
+            passed: false,
+            note: "entity not found",
+        };
+    const conditionType = condition.type;
+    switch (conditionType) {
+        case "same_layer": {
+            const passed = source.layer === target.layer;
+            return {
+                type: condition.type,
+                passed,
+                note: `${input.sourceEntity}.layer=${source.layer} vs ${input.targetEntity}.layer=${target.layer}`,
+            };
+        }
+        case "layer_order": {
+            const sourceOrder = LAYER_ORDER[source.layer];
+            const targetOrder = LAYER_ORDER[target.layer];
+            const passed = sourceOrder <= targetOrder;
+            return {
+                type: condition.type,
+                passed,
+                note: `${input.sourceEntity}(L${sourceOrder}) <= ${input.targetEntity}(L${targetOrder})`,
+            };
+        }
+        case "ancestor_of": {
+            const passed = listKernelEntityAncestors(model, input.targetEntity).includes(input.sourceEntity);
+            return {
+                type: condition.type,
+                passed,
+                note: `${input.sourceEntity} ${passed ? "is" : "is not"} ancestor of ${input.targetEntity}`,
+            };
+        }
+        case "same_category": {
+            return {
+                type: condition.type,
+                passed: true,
+                note: "same_category is profile-level only (skipped at kernel)",
+            };
+        }
+        case "same_branch": {
+            const sourceChain = new Set([
+                input.sourceEntity,
+                ...listKernelEntityAncestors(model, input.sourceEntity),
+            ]);
+            const targetChain = new Set([
+                input.targetEntity,
+                ...listKernelEntityAncestors(model, input.targetEntity),
+            ]);
+            const shared = Array.from(sourceChain).filter((name) => targetChain.has(name));
+            const sharedNonRoot = shared.filter((name) => {
+                const entity = model.index.entityByName.get(name);
+                return entity !== undefined && entity.parent !== undefined;
+            });
+            return {
+                type: condition.type,
+                passed: sharedNonRoot.length > 0,
+                note: `shared non-root ancestors: ${sharedNonRoot.length > 0 ? sharedNonRoot.join(", ") : "none"}`,
+            };
+        }
+        default: {
+            return {
+                type: condition.type,
+                passed: false,
+                note: `unknown condition type: ${condition.type}`,
+            };
+        }
+    }
+}
+function evaluateKernelRelationship(model, input) {
+    const sourceEntity = model.index.entityByName.get(input.sourceEntity);
+    if (sourceEntity === undefined) {
+        return {
+            allowed: false,
+            reason: "unknown_entity",
+            winnerRuleId: null,
+            matchedRuleIds: [],
+            blockingConstraintId: null,
+            conditionChecks: [],
+            notes: `unknown entity: ${input.sourceEntity}`,
+        };
+    }
+    const targetEntity = model.index.entityByName.get(input.targetEntity);
+    if (targetEntity === undefined) {
+        return {
+            allowed: false,
+            reason: "unknown_entity",
+            winnerRuleId: null,
+            matchedRuleIds: [],
+            blockingConstraintId: null,
+            conditionChecks: [],
+            notes: `unknown entity: ${input.targetEntity}`,
+        };
+    }
+    if (model.index.relationByName.has(input.relation) === false) {
+        return {
+            allowed: false,
+            reason: "unknown_relation",
+            winnerRuleId: null,
+            matchedRuleIds: [],
+            blockingConstraintId: null,
+            conditionChecks: [],
+            notes: `unknown relation: ${input.relation}`,
+        };
+    }
+    for (const constraint of model.bundle.rules.layer_constraints) {
+        if (constraint.forbidden_relations.includes(input.relation) === false)
+            continue;
+        if (sourceEntity.layer !== constraint.source_layer ||
+            targetEntity.layer !== constraint.target_layer)
+            continue;
+        const exempt = constraint.allowed_pairs.some(([sourcePattern, targetPattern]) => {
+            return (entityMatchesKernelPattern(model, input.sourceEntity, sourcePattern) &&
+                entityMatchesKernelPattern(model, input.targetEntity, targetPattern));
+        });
+        if (exempt === false) {
+            return {
+                allowed: false,
+                reason: "constraint_denied",
+                winnerRuleId: null,
+                matchedRuleIds: [],
+                blockingConstraintId: constraint.id,
+                conditionChecks: [],
+                notes: constraint.notes ||
+                    `layer constraint: ${constraint.source_layer} entities cannot use ${input.relation} with ${constraint.target_layer} entities`,
+            };
+        }
+    }
+    const matched = findKernelMatchingRules(model, input);
+    if (matched.length === 0) {
+        return {
+            allowed: false,
+            reason: "no_matching_rule",
+            winnerRuleId: null,
+            matchedRuleIds: [],
+            blockingConstraintId: null,
+            conditionChecks: [],
+            notes: "no matching rule (deny-by-default)",
+        };
+    }
+    const winner = matched[0];
+    const conditionChecks = winner.conditions.map((condition) => evaluateRuleCondition(model, condition, input));
+    const failedCondition = conditionChecks.find((row) => row.passed === false);
+    if (failedCondition !== undefined) {
+        return {
+            allowed: false,
+            reason: "condition_failed",
+            winnerRuleId: winner.id,
+            matchedRuleIds: matched.map((rule) => rule.id),
+            blockingConstraintId: null,
+            conditionChecks,
+            notes: `condition failed: ${failedCondition.note}`,
+        };
+    }
+    return {
+        allowed: winner.valid,
+        reason: "rule_verdict",
+        winnerRuleId: winner.id,
+        matchedRuleIds: matched.map((rule) => rule.id),
+        blockingConstraintId: null,
+        conditionChecks,
+        notes: winner.notes,
+    };
+}
 function resolveKernelContractDir(options) {
     const explicit = options === null || options === void 0 ? void 0 : options.contractDir;
     if (explicit && explicit.trim().length > 0)
@@ -462,9 +719,11 @@ function loadKernelContractBundle(options) {
 }
 function buildKernelContractModel(options) {
     const bundle = loadKernelContractBundle(options);
+    const fingerprint = getKernelContractFingerprint(bundle);
     return {
         bundle,
         index: buildKernelContractIndex(bundle),
+        fingerprint,
     };
 }
 function toKernelFeedbackTarget(targetType, targetId) {
@@ -555,6 +814,7 @@ function summarizeKernelContract(options) {
             available: true,
             contractDir: bundle.paths.contractDir,
             kernelVersion: bundle.kernelVersion,
+            fingerprint: getKernelContractFingerprint(bundle),
             entityCount: bundle.schema.stats.entities,
             relationCount: bundle.schema.stats.relations,
             totalRules: bundle.rules.stats.total_rules,
@@ -566,6 +826,7 @@ function summarizeKernelContract(options) {
             available: false,
             contractDir: (_a = process.env.EA_KERNEL_CONTRACT_DIR) !== null && _a !== void 0 ? _a : null,
             kernelVersion: null,
+            fingerprint: null,
             entityCount: 0,
             relationCount: 0,
             totalRules: 0,

@@ -262,3 +262,404 @@ target = "StorageLifecycleService"
 relation = "constrains"
 priority = 70
 notes = "Policy constrains migration and retention lifecycle routines."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer: Infra 관점에서 본 다른 5개 레이어
+# ══════════════════════════════════════════════════════════════
+
+# ── Infra → Governance: 거버넌스 데이터 저장소 설계 ────────────
+
+[[elements]]
+name = "GovernanceStorageSchema"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Infra view of Governance: row schema design for governance model/version/agreement records."
+
+[[elements]]
+name = "GovernanceAuditStore"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Infra view of Governance: audit trail storage for governance decisions and approvals."
+
+[[elements]]
+name = "GovernanceRetentionPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Infra view of Governance: retention/archival policy for governance data."
+
+[[elements]]
+name = "GovernanceDataMigration"
+layer = "Governance"
+category = "Behavior"
+description = "Infra view of Governance: schema migration steps for governance data evolution."
+
+# ── Infra → Decision: 의사결정 데이터 저장소 설계 ──────────────
+
+[[elements]]
+name = "DecisionDataSchema"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Infra view of Decision: row schema for decision context/option/evaluation/outcome records."
+
+[[elements]]
+name = "DecisionIndexStrategy"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Infra view of Decision: indexing strategy for decision trace queries."
+
+[[elements]]
+name = "DecisionArchivePolicy"
+layer = "Decision"
+category = "Governance"
+description = "Infra view of Decision: retention policy for decision history data."
+
+# ── Infra → Needs: 요구 데이터 저장소 설계 ─────────────────────
+
+[[elements]]
+name = "NeedsDataSchema"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Infra view of Needs: row schema for use-case/actor/constraint/prioritized-need records."
+
+[[elements]]
+name = "NeedsContextStore"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Infra view of Needs: context snapshot storage for needs traceability."
+
+[[elements]]
+name = "NeedsBacklogIndex"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Infra view of Needs: indexing for backlog priority queries."
+
+# ── Infra → Kernel: 커널 데이터 저장소 설계 ────────────────────
+
+[[elements]]
+name = "KernelSpecSchema"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Infra view of Kernel: row schema for kernel spec/rule/profile storage."
+
+[[elements]]
+name = "KernelGraphStore"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Infra view of Kernel: graph data storage for kernel topology."
+
+[[elements]]
+name = "KernelValidationLogStore"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Infra view of Kernel: validation run log storage."
+
+[[elements]]
+name = "KernelStorageMigration"
+layer = "Kernel"
+category = "Behavior"
+description = "Infra view of Kernel: schema migration for kernel data evolution."
+
+# ── Infra → Flow: 플로우 데이터 저장소 설계 ────────────────────
+
+[[elements]]
+name = "FlowExecutionLogSchema"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Infra view of Flow: row schema for flow execution/step/outcome logs."
+
+[[elements]]
+name = "FlowCheckpointStore"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Infra view of Flow: state checkpoint storage for flow resumption."
+
+[[elements]]
+name = "FlowEventLogStore"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Infra view of Flow: event log storage for flow triggers and transitions."
+
+[[elements]]
+name = "FlowDataRetentionPolicy"
+layer = "Flow"
+category = "Governance"
+description = "Infra view of Flow: retention policy for flow execution data."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Infra ↔ Governance
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "GovernanceStorageSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Gov: governance model port exposes storage schema."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "GovernanceAuditStore"
+relation = "contains"
+priority = 65
+notes = "Infra-Gov: governance model port exposes audit store."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "GovernanceRetentionPolicy"
+relation = "contains"
+priority = 65
+notes = "Infra-Gov: governance model port exposes retention policy."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "GovernanceDataMigration"
+relation = "contains"
+priority = 65
+notes = "Infra-Gov: governance model port exposes data migration."
+
+[[rules]]
+source = "DataPlatformService"
+target = "GovernanceStorageSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Gov: platform service depends on governance storage schema for row access."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "GovernanceDataMigration"
+relation = "coordinates"
+priority = 72
+notes = "Infra-Gov: lifecycle service coordinates governance data migration steps."
+
+[[rules]]
+source = "GovernanceRetentionPolicy"
+target = "StorageLifecycleService"
+relation = "constrains"
+priority = 72
+notes = "Infra-Gov: governance retention policy constrains lifecycle routines."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "GovernanceAuditStore"
+relation = "produces"
+priority = 72
+notes = "Infra-Gov: lifecycle service produces governance audit trail entries."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Infra ↔ Decision
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionDataSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Decision: decision model port exposes data schema."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionIndexStrategy"
+relation = "contains"
+priority = 65
+notes = "Infra-Decision: decision model port exposes index strategy."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionArchivePolicy"
+relation = "contains"
+priority = 65
+notes = "Infra-Decision: decision model port exposes archive policy."
+
+[[rules]]
+source = "DataPlatformService"
+target = "DecisionDataSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Decision: platform service depends on decision data schema for row access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "DecisionIndexStrategy"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Decision: platform service depends on decision index strategy for query optimization."
+
+[[rules]]
+source = "DecisionArchivePolicy"
+target = "StorageLifecycleService"
+relation = "constrains"
+priority = 72
+notes = "Infra-Decision: decision archive policy constrains lifecycle routines."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Infra ↔ Needs
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsDataSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Needs: needs model port exposes data schema."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsContextStore"
+relation = "contains"
+priority = 65
+notes = "Infra-Needs: needs model port exposes context store."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsBacklogIndex"
+relation = "contains"
+priority = 65
+notes = "Infra-Needs: needs model port exposes backlog index."
+
+[[rules]]
+source = "DataPlatformService"
+target = "NeedsDataSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Needs: platform service depends on needs data schema for row access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "NeedsBacklogIndex"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Needs: platform service depends on needs backlog index for priority queries."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "NeedsContextStore"
+relation = "produces"
+priority = 72
+notes = "Infra-Needs: lifecycle service produces needs context snapshots."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Infra ↔ Kernel
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelSpecSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Kernel: kernel model port exposes spec schema."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelGraphStore"
+relation = "contains"
+priority = 65
+notes = "Infra-Kernel: kernel model port exposes graph store."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelValidationLogStore"
+relation = "contains"
+priority = 65
+notes = "Infra-Kernel: kernel model port exposes validation log store."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelStorageMigration"
+relation = "contains"
+priority = 65
+notes = "Infra-Kernel: kernel model port exposes storage migration."
+
+[[rules]]
+source = "DataPlatformService"
+target = "KernelSpecSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Kernel: platform service depends on kernel spec schema for row access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "KernelGraphStore"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Kernel: platform service depends on kernel graph store for topology queries."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "KernelStorageMigration"
+relation = "coordinates"
+priority = 72
+notes = "Infra-Kernel: lifecycle service coordinates kernel storage migration steps."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "KernelValidationLogStore"
+relation = "produces"
+priority = 72
+notes = "Infra-Kernel: lifecycle service produces kernel validation log entries."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Infra ↔ Flow
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowExecutionLogSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Flow: flow model port exposes execution log schema."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowCheckpointStore"
+relation = "contains"
+priority = 65
+notes = "Infra-Flow: flow model port exposes checkpoint store."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowEventLogStore"
+relation = "contains"
+priority = 65
+notes = "Infra-Flow: flow model port exposes event log store."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowDataRetentionPolicy"
+relation = "contains"
+priority = 65
+notes = "Infra-Flow: flow model port exposes data retention policy."
+
+[[rules]]
+source = "DataPlatformService"
+target = "FlowExecutionLogSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Flow: platform service depends on flow execution log schema for row access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "FlowCheckpointStore"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Flow: platform service depends on flow checkpoint store for state queries."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "FlowEventLogStore"
+relation = "produces"
+priority = 72
+notes = "Infra-Flow: lifecycle service produces flow event log entries."
+
+[[rules]]
+source = "FlowDataRetentionPolicy"
+target = "StorageLifecycleService"
+relation = "constrains"
+priority = 72
+notes = "Infra-Flow: flow data retention policy constrains lifecycle routines."
+
+[[rules]]
+source = "StoragePolicy"
+target = "FlowCheckpointStore"
+relation = "constrains"
+priority = 72
+notes = "Infra-Flow: storage policy constrains checkpoint store retention and partitioning."

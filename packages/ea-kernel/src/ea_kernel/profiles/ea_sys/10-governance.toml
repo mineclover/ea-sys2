@@ -1,5 +1,5 @@
 # EA System Layer: Governance
-# Role: 위 5개 레이어 전체를 관리하는 관리 시스템으로 동작한다
+# Role: 위 5개 레이어 전체를 관리하는 별도 관리 시스템으로 동작한다
 
 [profile]
 name = "EASystemLayerModel"
@@ -1434,3 +1434,485 @@ target = "GovernanceModelPort"
 relation = "coordinates"
 priority = 72
 notes = "Feedback closure: flow evidence routes back to governance management plane."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer: Governance 관점에서 본 다른 5개 레이어
+# ══════════════════════════════════════════════════════════════
+
+# ── Governance → Infra: Gov가 보는 Infra ─────────────────────
+
+[[elements]]
+name = "InfraSchemaGovernance"
+layer = "Infra"
+category = "Behavior"
+description = "Gov view — governance review step for infra schema changes."
+
+[[elements]]
+name = "InfraCapacityAudit"
+layer = "Infra"
+category = "Behavior"
+description = "Gov view — audit step for storage capacity and health."
+
+[[elements]]
+name = "InfraCompliancePolicy"
+layer = "Infra"
+category = "Governance"
+description = "Gov view — compliance policy for infra data handling."
+
+[[elements]]
+name = "InfraChangeRecord"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Gov view — change history for infra schema evolution."
+
+# ── Governance → Decision: Gov가 보는 Decision ───────────────
+
+[[elements]]
+name = "DecisionProcessAudit"
+layer = "Decision"
+category = "Behavior"
+description = "Gov view — audit step for decision process compliance."
+
+[[elements]]
+name = "DecisionModelApproval"
+layer = "Decision"
+category = "Behavior"
+description = "Gov view — approval gate for decision meta-model changes."
+
+[[elements]]
+name = "DecisionGovernancePolicy"
+layer = "Decision"
+category = "Governance"
+description = "Gov view — policy governing decision model registration/versioning."
+
+[[elements]]
+name = "DecisionComplianceRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Gov view — compliance record for decision process adherence."
+
+# ── Governance → Needs: Gov가 보는 Needs ─────────────────────
+
+[[elements]]
+name = "NeedsRegistrationGate"
+layer = "Needs"
+category = "Behavior"
+description = "Gov view — registration gate for needs catalog changes."
+
+[[elements]]
+name = "NeedsPriorityAudit"
+layer = "Needs"
+category = "Behavior"
+description = "Gov view — audit step for priority changes and backlog modifications."
+
+[[elements]]
+name = "NeedsGovernancePolicy"
+layer = "Needs"
+category = "Governance"
+description = "Gov view — policy governing needs registration and change approval."
+
+[[elements]]
+name = "NeedsChangeRecord"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Gov view — change history for needs catalog evolution."
+
+# ── Governance → Kernel: Gov가 보는 Kernel ───────────────────
+
+[[elements]]
+name = "KernelContractApproval"
+layer = "Kernel"
+category = "Behavior"
+description = "Gov view — approval gate for kernel contract publication."
+
+[[elements]]
+name = "KernelRulePromotionGate"
+layer = "Kernel"
+category = "Behavior"
+description = "Gov view — promotion/deprecation gate for kernel rules."
+
+[[elements]]
+name = "KernelGovernancePolicy"
+layer = "Kernel"
+category = "Governance"
+description = "Gov view — policy governing kernel model lifecycle."
+
+[[elements]]
+name = "KernelEvolutionRecord"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Gov view — evolution history for kernel spec versions."
+
+[[elements]]
+name = "KernelQualityGate"
+layer = "Kernel"
+category = "Behavior"
+description = "Gov view — quality gate for kernel profile validation."
+
+# ── Governance → Flow: Gov가 보는 Flow ───────────────────────
+
+[[elements]]
+name = "FlowExecutionAudit"
+layer = "Flow"
+category = "Behavior"
+description = "Gov view — audit step for flow execution compliance."
+
+[[elements]]
+name = "FlowContractComplianceCheck"
+layer = "Flow"
+category = "Behavior"
+description = "Gov view — 6x6 contract matrix compliance check."
+
+[[elements]]
+name = "FlowGovernancePolicy"
+layer = "Flow"
+category = "Governance"
+description = "Gov view — policy governing flow model changes and execution audit."
+
+[[elements]]
+name = "FlowComplianceRecord"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Gov view — compliance record for flow execution adherence."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Governance ↔ Infra
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "InfraModelPort"
+target = "InfraSchemaGovernance"
+relation = "contains"
+priority = 65
+notes = "Gov-Infra: infra model port exposes schema governance step."
+
+[[rules]]
+source = "InfraModelPort"
+target = "InfraCapacityAudit"
+relation = "contains"
+priority = 65
+notes = "Gov-Infra: infra model port exposes capacity audit step."
+
+[[rules]]
+source = "InfraModelPort"
+target = "InfraCompliancePolicy"
+relation = "contains"
+priority = 65
+notes = "Gov-Infra: infra model port exposes compliance policy."
+
+[[rules]]
+source = "InfraModelPort"
+target = "InfraChangeRecord"
+relation = "contains"
+priority = 65
+notes = "Gov-Infra: infra model port exposes change record."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "InfraSchemaGovernance"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Infra: validation coordinator runs infra schema governance review."
+
+[[rules]]
+source = "CompatibilityPolicy"
+target = "InfraSchemaGovernance"
+relation = "constrains"
+priority = 72
+notes = "Gov-Infra: compatibility policy constrains infra schema governance review."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "InfraChangeRecord"
+relation = "depends_on"
+priority = 72
+notes = "Gov-Infra: layer model registry depends on infra change history."
+
+[[rules]]
+source = "InfraCompliancePolicy"
+target = "InfraCapacityAudit"
+relation = "constrains"
+priority = 72
+notes = "Gov-Infra: compliance policy constrains capacity audit scope."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Governance ↔ Decision
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionProcessAudit"
+relation = "contains"
+priority = 65
+notes = "Gov-Decision: decision model port exposes process audit step."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionModelApproval"
+relation = "contains"
+priority = 65
+notes = "Gov-Decision: decision model port exposes model approval gate."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionGovernancePolicy"
+relation = "contains"
+priority = 65
+notes = "Gov-Decision: decision model port exposes governance policy."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionComplianceRecord"
+relation = "contains"
+priority = 65
+notes = "Gov-Decision: decision model port exposes compliance record."
+
+[[rules]]
+source = "AgreementCoordinator"
+target = "DecisionModelApproval"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Decision: agreement coordinator drives decision model approval gate."
+
+[[rules]]
+source = "ApprovalPolicy"
+target = "DecisionModelApproval"
+relation = "constrains"
+priority = 72
+notes = "Gov-Decision: approval policy constrains decision model approval criteria."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "DecisionProcessAudit"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Decision: validation coordinator runs decision process audit."
+
+[[rules]]
+source = "DecisionGovernancePolicy"
+target = "DecisionProcessAudit"
+relation = "constrains"
+priority = 72
+notes = "Gov-Decision: governance policy constrains decision process audit scope."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "DecisionComplianceRecord"
+relation = "depends_on"
+priority = 72
+notes = "Gov-Decision: version lifecycle manager depends on decision compliance history."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Governance ↔ Needs
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsRegistrationGate"
+relation = "contains"
+priority = 65
+notes = "Gov-Needs: needs model port exposes registration gate."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsPriorityAudit"
+relation = "contains"
+priority = 65
+notes = "Gov-Needs: needs model port exposes priority audit step."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsGovernancePolicy"
+relation = "contains"
+priority = 65
+notes = "Gov-Needs: needs model port exposes governance policy."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsChangeRecord"
+relation = "contains"
+priority = 65
+notes = "Gov-Needs: needs model port exposes change record."
+
+[[rules]]
+source = "AgreementCoordinator"
+target = "NeedsRegistrationGate"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Needs: agreement coordinator drives needs registration gate."
+
+[[rules]]
+source = "RegistrationPolicy"
+target = "NeedsRegistrationGate"
+relation = "constrains"
+priority = 72
+notes = "Gov-Needs: registration policy constrains needs registration gate."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "NeedsPriorityAudit"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Needs: validation coordinator runs needs priority audit."
+
+[[rules]]
+source = "NeedsGovernancePolicy"
+target = "NeedsPriorityAudit"
+relation = "constrains"
+priority = 72
+notes = "Gov-Needs: governance policy constrains needs priority audit scope."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "NeedsChangeRecord"
+relation = "depends_on"
+priority = 72
+notes = "Gov-Needs: layer model registry depends on needs change history."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Governance ↔ Kernel
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelContractApproval"
+relation = "contains"
+priority = 65
+notes = "Gov-Kernel: kernel model port exposes contract approval gate."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelRulePromotionGate"
+relation = "contains"
+priority = 65
+notes = "Gov-Kernel: kernel model port exposes rule promotion gate."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelGovernancePolicy"
+relation = "contains"
+priority = 65
+notes = "Gov-Kernel: kernel model port exposes governance policy."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelEvolutionRecord"
+relation = "contains"
+priority = 65
+notes = "Gov-Kernel: kernel model port exposes evolution record."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelQualityGate"
+relation = "contains"
+priority = 65
+notes = "Gov-Kernel: kernel model port exposes quality gate."
+
+[[rules]]
+source = "ActivationCoordinator"
+target = "KernelContractApproval"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Kernel: activation coordinator drives kernel contract approval gate."
+
+[[rules]]
+source = "ApprovalPolicy"
+target = "KernelContractApproval"
+relation = "constrains"
+priority = 72
+notes = "Gov-Kernel: approval policy constrains kernel contract approval criteria."
+
+[[rules]]
+source = "VersionLifecycleManager"
+target = "KernelRulePromotionGate"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Kernel: version lifecycle manager drives kernel rule promotion gate."
+
+[[rules]]
+source = "KernelGovernancePolicy"
+target = "KernelRulePromotionGate"
+relation = "constrains"
+priority = 72
+notes = "Gov-Kernel: governance policy constrains kernel rule promotion criteria."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "KernelQualityGate"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Kernel: validation coordinator runs kernel quality gate."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "KernelEvolutionRecord"
+relation = "depends_on"
+priority = 72
+notes = "Gov-Kernel: layer model registry depends on kernel evolution history."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Governance ↔ Flow
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowExecutionAudit"
+relation = "contains"
+priority = 65
+notes = "Gov-Flow: flow model port exposes execution audit step."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowContractComplianceCheck"
+relation = "contains"
+priority = 65
+notes = "Gov-Flow: flow model port exposes contract compliance check."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowGovernancePolicy"
+relation = "contains"
+priority = 65
+notes = "Gov-Flow: flow model port exposes governance policy."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowComplianceRecord"
+relation = "contains"
+priority = 65
+notes = "Gov-Flow: flow model port exposes compliance record."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "FlowContractComplianceCheck"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Flow: validation coordinator runs flow contract compliance check."
+
+[[rules]]
+source = "CompatibilityPolicy"
+target = "FlowContractComplianceCheck"
+relation = "constrains"
+priority = 72
+notes = "Gov-Flow: compatibility policy constrains flow contract compliance check."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "FlowExecutionAudit"
+relation = "coordinates"
+priority = 72
+notes = "Gov-Flow: validation coordinator runs flow execution audit."
+
+[[rules]]
+source = "FlowGovernancePolicy"
+target = "FlowExecutionAudit"
+relation = "constrains"
+priority = 72
+notes = "Gov-Flow: governance policy constrains flow execution audit scope."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "FlowComplianceRecord"
+relation = "depends_on"
+priority = 72
+notes = "Gov-Flow: layer model registry depends on flow compliance history."

@@ -580,3 +580,385 @@ target = "FlowModelPort"
 relation = "coordinates"
 priority = 80
 notes = "6x6 contract: flow -> flow interface contract."
+
+# ─────────────────────────────────────────────────────────────
+# 6x6 Cross-Layer Perspectives — Flow → Infra (보강)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowStateCheckpoint"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Flow view — checkpoint storage for flow execution resumption."
+
+[[elements]]
+name = "FlowExecutionLog"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Flow view — execution log storage for step-level audit trail."
+
+[[rules]]
+source = "InfraModelPort"
+target = "FlowStateCheckpoint"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains flow state checkpoint."
+
+[[rules]]
+source = "InfraModelPort"
+target = "FlowExecutionLog"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains flow execution log."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "FlowStateCheckpoint"
+relation = "depends_on"
+priority = 72
+notes = "Persistence step depends on checkpoint storage for resumption."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "FlowExecutionLog"
+relation = "produces"
+priority = 72
+notes = "Persistence step produces step-level execution log."
+
+[[rules]]
+source = "ExecuteKernelAction"
+target = "FlowStateCheckpoint"
+relation = "depends_on"
+priority = 72
+notes = "Execution action depends on checkpoint for state recovery."
+
+# ─────────────────────────────────────────────────────────────
+# 6x6 Cross-Layer Perspectives — Flow → Governance
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowApprovalGate"
+layer = "Governance"
+category = "Behavior"
+description = "Flow view — governance approval gate for flow model changes."
+
+[[elements]]
+name = "FlowAuditSubmission"
+layer = "Governance"
+category = "Interface"
+description = "Flow view — audit port for submitting flow execution evidence."
+
+[[elements]]
+name = "FlowCompliancePolicy"
+layer = "Governance"
+category = "Governance"
+description = "Flow view — governance compliance policy for flow execution."
+
+[[elements]]
+name = "FlowChangeRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Flow view — change history for flow model evolution."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "FlowApprovalGate"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains flow approval gate."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "FlowAuditSubmission"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains flow audit submission port."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "FlowCompliancePolicy"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains flow compliance policy."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "FlowChangeRecord"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains flow change record."
+
+[[rules]]
+source = "FlowCompliancePolicy"
+target = "ExecuteKernelAction"
+relation = "constrains"
+priority = 72
+notes = "Governance compliance policy constrains kernel execution."
+
+[[rules]]
+source = "FlowCompliancePolicy"
+target = "PersistFlowStateStep"
+relation = "constrains"
+priority = 72
+notes = "Governance compliance policy constrains flow state persistence."
+
+[[rules]]
+source = "PublishFlowOutcomeAction"
+target = "FlowAuditSubmission"
+relation = "coordinates"
+priority = 72
+notes = "Publish action coordinates audit submission for evidence."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "FlowChangeRecord"
+relation = "produces"
+priority = 72
+notes = "Persistence step produces flow model change record."
+
+[[rules]]
+source = "ContextIngestStep"
+target = "FlowApprovalGate"
+relation = "coordinates"
+priority = 72
+notes = "Context ingestion coordinates governance approval gate."
+
+# ─────────────────────────────────────────────────────────────
+# 6x6 Cross-Layer Perspectives — Flow → Decision
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowDecisionGate"
+layer = "Decision"
+category = "Behavior"
+description = "Flow view — decision evaluation point within flow execution."
+
+[[elements]]
+name = "FlowBranchInput"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Flow view — decision branch input consumed at flow transition points."
+
+[[elements]]
+name = "FlowDecisionOutcome"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Flow view — decision outcome consumed for flow path selection."
+
+[[elements]]
+name = "FlowDecisionFeedback"
+layer = "Decision"
+category = "Interface"
+description = "Flow view — feedback port for reporting flow results to decision layer."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "FlowDecisionGate"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains flow decision gate."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "FlowBranchInput"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains flow branch input."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "FlowDecisionOutcome"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains flow decision outcome."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "FlowDecisionFeedback"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains flow decision feedback port."
+
+[[rules]]
+source = "MapKernelSpecStep"
+target = "FlowDecisionGate"
+relation = "coordinates"
+priority = 72
+notes = "Kernel spec mapping coordinates decision evaluation gate."
+
+[[rules]]
+source = "FlowBranchInput"
+target = "BuildKernelInputStep"
+relation = "consumes"
+priority = 72
+notes = "Kernel input builder consumes decision branch input."
+
+[[rules]]
+source = "FlowDecisionOutcome"
+target = "ExecuteKernelAction"
+relation = "consumes"
+priority = 72
+notes = "Execution action consumes decision outcome for path selection."
+
+[[rules]]
+source = "PublishFlowOutcomeAction"
+target = "FlowDecisionFeedback"
+relation = "coordinates"
+priority = 72
+notes = "Publish action coordinates decision feedback reporting."
+
+[[rules]]
+source = "ContextIngestStep"
+target = "FlowBranchInput"
+relation = "produces"
+priority = 72
+notes = "Context ingestion extracts decision branch input from upstream context."
+
+[[rules]]
+source = "MapKernelSpecStep"
+target = "FlowDecisionOutcome"
+relation = "produces"
+priority = 72
+notes = "Kernel spec mapping produces decision gate evaluation outcome."
+
+# ─────────────────────────────────────────────────────────────
+# 6x6 Cross-Layer Perspectives — Flow → Needs (보강)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "NeedsFulfillmentReport"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Flow view — fulfillment report tracking which needs are satisfied by flow."
+
+[[elements]]
+name = "NeedsCompletionNotification"
+layer = "Needs"
+category = "Event"
+description = "Flow view — notification event when flow completes a needs-linked task."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsFulfillmentReport"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs fulfillment report."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsCompletionNotification"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs completion notification."
+
+[[rules]]
+source = "VerifyOutcomeStep"
+target = "NeedsFulfillmentReport"
+relation = "produces"
+priority = 72
+notes = "Verification step produces needs fulfillment report."
+
+[[rules]]
+source = "PublishFlowOutcomeAction"
+target = "NeedsCompletionNotification"
+relation = "produces"
+priority = 72
+notes = "Publish action produces needs completion notification."
+
+# ─────────────────────────────────────────────────────────────
+# 6x6 Cross-Layer Perspectives — Flow → Kernel
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "KernelContractReference"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Flow view — active kernel contract consumed for spec mapping."
+
+[[elements]]
+name = "KernelValidationResult"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Flow view — validation result consumed for outcome verification."
+
+[[elements]]
+name = "KernelSpecVersion"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Flow view — kernel spec version metadata for contract alignment."
+
+[[elements]]
+name = "KernelConstraintHook"
+layer = "Kernel"
+category = "Interface"
+description = "Flow view — hook for invoking kernel validation during flow execution."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelContractReference"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel contract reference."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelValidationResult"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel validation result."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelSpecVersion"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel spec version."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelConstraintHook"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel constraint hook."
+
+[[rules]]
+source = "KernelContractReference"
+target = "MapKernelSpecStep"
+relation = "consumes"
+priority = 72
+notes = "Kernel spec mapping consumes active kernel contract reference."
+
+[[rules]]
+source = "KernelValidationResult"
+target = "VerifyOutcomeStep"
+relation = "consumes"
+priority = 72
+notes = "Outcome verification consumes kernel validation result."
+
+[[rules]]
+source = "MapKernelSpecStep"
+target = "KernelSpecVersion"
+relation = "depends_on"
+priority = 72
+notes = "Kernel spec mapping depends on kernel spec version metadata."
+
+[[rules]]
+source = "ExecuteKernelAction"
+target = "KernelConstraintHook"
+relation = "coordinates"
+priority = 72
+notes = "Execution action coordinates kernel constraint hook for validation."
+
+[[rules]]
+source = "BuildKernelInputStep"
+target = "KernelContractReference"
+relation = "produces"
+priority = 72
+notes = "Kernel input builder resolves and produces active contract reference."
+
+[[rules]]
+source = "ExecuteKernelAction"
+target = "KernelValidationResult"
+relation = "produces"
+priority = 72
+notes = "Kernel execution produces validation result for outcome verification."

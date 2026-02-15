@@ -606,3 +606,414 @@ target = "PublishDecisionModelAction"
 relation = "constrains"
 priority = 75
 notes = "Traceability goal constrains publication completeness."
+
+# ============================================================
+# 6x6 Cross-Layer Perspectives — Decision이 보는 다른 5개 레이어
+# ============================================================
+
+# ------------------------------------------------------------
+# Decision → Infra (Decision이 보는 Infra)
+# ------------------------------------------------------------
+
+[[elements]]
+name = "DecisionDataAvailability"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Decision view — data availability preconditions for decision inputs."
+
+[[elements]]
+name = "DecisionStorageContract"
+layer = "Infra"
+category = "Interface"
+description = "Decision view — storage contract for persisting decision instances."
+
+[[elements]]
+name = "DecisionQueryIndex"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Decision view — index contract for decision trace retrieval."
+
+[[rules]]
+source = "InfraModelPort"
+target = "DecisionDataAvailability"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains decision data availability element."
+
+[[rules]]
+source = "InfraModelPort"
+target = "DecisionStorageContract"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains decision storage contract element."
+
+[[rules]]
+source = "InfraModelPort"
+target = "DecisionQueryIndex"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains decision query index element."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "DecisionDataAvailability"
+relation = "depends_on"
+priority = 72
+notes = "Registry depends on infra data availability preconditions."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionStorageContract"
+relation = "depends_on"
+priority = 72
+notes = "Schema service depends on infra storage contract for persistence."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionQueryIndex"
+relation = "depends_on"
+priority = 72
+notes = "Schema service depends on infra query index for trace retrieval."
+
+# ------------------------------------------------------------
+# Decision → Governance (Decision이 보는 Governance)
+# ------------------------------------------------------------
+
+[[elements]]
+name = "DecisionApprovalReference"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Decision view — governance approval state referenced during decision evaluation."
+
+[[elements]]
+name = "DecisionPolicyConstraint"
+layer = "Governance"
+category = "Governance"
+description = "Decision view — governance policies that constrain decision options."
+
+[[elements]]
+name = "DecisionAuditSubmission"
+layer = "Governance"
+category = "Interface"
+description = "Decision view — audit submission port for governance compliance."
+
+[[elements]]
+name = "DecisionVersionControl"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Decision view — version metadata for decision meta-model evolution."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "DecisionApprovalReference"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains decision approval reference element."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "DecisionPolicyConstraint"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains decision policy constraint element."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "DecisionAuditSubmission"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains decision audit submission element."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "DecisionVersionControl"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains decision version control element."
+
+[[rules]]
+source = "DecisionCriteriaModel"
+target = "DecisionPolicyConstraint"
+relation = "depends_on"
+priority = 72
+notes = "Criteria model depends on governance policy constraints."
+
+[[rules]]
+source = "DecisionAgreementService"
+target = "DecisionAuditSubmission"
+relation = "coordinates"
+priority = 72
+notes = "Agreement service coordinates audit submission for governance compliance."
+
+[[rules]]
+source = "DecisionPolicyConstraint"
+target = "FinalizeDecisionStep"
+relation = "constrains"
+priority = 72
+notes = "Governance policy constrains decision finalization."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "DecisionVersionControl"
+relation = "depends_on"
+priority = 72
+notes = "Registry depends on governance version metadata for meta-model evolution."
+
+[[rules]]
+source = "EvaluateOptionGraphStep"
+target = "DecisionApprovalReference"
+relation = "consumes"
+priority = 72
+notes = "Option evaluation consumes governance approval state reference."
+
+# ------------------------------------------------------------
+# Decision → Needs (Decision이 보는 Needs)
+# ------------------------------------------------------------
+
+[[elements]]
+name = "NeedsDecisionTrigger"
+layer = "Needs"
+category = "Event"
+description = "Decision view — needs-originated event triggering decision instances."
+
+[[elements]]
+name = "NeedsGoalReference"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Decision view — goal/requirement references used as decision context input."
+
+[[elements]]
+name = "NeedsPriorityInput"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Decision view — prioritized needs consumed by option evaluation."
+
+[[elements]]
+name = "NeedsSatisfactionFeedback"
+layer = "Needs"
+category = "Interface"
+description = "Decision view — feedback port for reporting decision results to needs."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsDecisionTrigger"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs decision trigger element."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsGoalReference"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs goal reference element."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsPriorityInput"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs priority input element."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsSatisfactionFeedback"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs satisfaction feedback element."
+
+[[rules]]
+source = "NeedsDecisionTrigger"
+target = "CaptureDecisionContextStep"
+relation = "triggers"
+priority = 72
+notes = "Needs trigger event starts decision context capture."
+
+[[rules]]
+source = "CaptureDecisionContextStep"
+target = "NeedsGoalReference"
+relation = "consumes"
+priority = 72
+notes = "Context capture consumes needs goal references as input."
+
+[[rules]]
+source = "EvaluateOptionGraphStep"
+target = "NeedsPriorityInput"
+relation = "consumes"
+priority = 72
+notes = "Option evaluation consumes prioritized needs input."
+
+[[rules]]
+source = "PublishDecisionModelAction"
+target = "NeedsSatisfactionFeedback"
+relation = "coordinates"
+priority = 72
+notes = "Publish action coordinates needs satisfaction feedback reporting."
+
+# ------------------------------------------------------------
+# Decision → Kernel (Decision이 보는 Kernel)
+# ------------------------------------------------------------
+
+[[elements]]
+name = "KernelConstraintReference"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Decision view — kernel domain constraints referenced during option evaluation."
+
+[[elements]]
+name = "KernelValidityCheck"
+layer = "Kernel"
+category = "Interface"
+description = "Decision view — validation hook for checking decision outputs against kernel rules."
+
+[[elements]]
+name = "KernelTypeMapping"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Decision view — mapping from decision node types to kernel entity types."
+
+[[elements]]
+name = "KernelFeedbackInput"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Decision view — kernel validation results consumed for decision re-evaluation."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelConstraintReference"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel constraint reference element."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelValidityCheck"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel validity check element."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelTypeMapping"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel type mapping element."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelFeedbackInput"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel feedback input element."
+
+[[rules]]
+source = "DecisionCriteriaModel"
+target = "KernelConstraintReference"
+relation = "depends_on"
+priority = 72
+notes = "Criteria model depends on kernel domain constraints."
+
+[[rules]]
+source = "EvaluateOptionGraphStep"
+target = "KernelValidityCheck"
+relation = "coordinates"
+priority = 72
+notes = "Option evaluation coordinates kernel validity check hook."
+
+[[rules]]
+source = "DecisionMetaModelRegistry"
+target = "KernelTypeMapping"
+relation = "depends_on"
+priority = 72
+notes = "Registry depends on kernel type mapping for node-entity alignment."
+
+[[rules]]
+source = "FinalizeDecisionStep"
+target = "KernelFeedbackInput"
+relation = "consumes"
+priority = 72
+notes = "Finalization consumes kernel validation feedback for re-evaluation."
+
+# ------------------------------------------------------------
+# Decision → Flow (Decision이 보는 Flow)
+# ------------------------------------------------------------
+
+[[elements]]
+name = "FlowDecisionPoint"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Decision view — execution points in flow where decisions are required."
+
+[[elements]]
+name = "FlowBranchCondition"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Decision view — conditional branch definitions for flow step transitions."
+
+[[elements]]
+name = "FlowResultFeedback"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Decision view — flow execution results consumed for decision model correction."
+
+[[elements]]
+name = "FlowDecisionHook"
+layer = "Flow"
+category = "Interface"
+description = "Decision view — hook for flow to invoke decision evaluation mid-execution."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowDecisionPoint"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow decision point element."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowBranchCondition"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow branch condition element."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowResultFeedback"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow result feedback element."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowDecisionHook"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow decision hook element."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "FlowDecisionPoint"
+relation = "depends_on"
+priority = 72
+notes = "Schema service depends on flow decision points for schema alignment."
+
+[[rules]]
+source = "BuildOptionGraphStep"
+target = "FlowBranchCondition"
+relation = "consumes"
+priority = 72
+notes = "Option graph build consumes flow branch conditions."
+
+[[rules]]
+source = "DecisionAgreementService"
+target = "FlowResultFeedback"
+relation = "consumes"
+priority = 72
+notes = "Agreement service consumes flow execution result feedback."
+
+[[rules]]
+source = "FlowDecisionHook"
+target = "DecisionFlowSchemaService"
+relation = "coordinates"
+priority = 72
+notes = "Flow decision hook coordinates schema service for mid-execution evaluation."

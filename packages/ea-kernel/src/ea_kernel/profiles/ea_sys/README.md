@@ -8,7 +8,7 @@ All six layers share kernel category/relation vocabulary, but each file models a
 Policy/constraint ownership is also layer-local: each layer defines and manages its own control semantics.
 
 - `00-infra.toml` - row 데이터 설계
-- `10-governance.toml` - 위 5개 레이어 전체를 관리하는 관리 시스템으로 동작한다
+- `10-governance.toml` - 위 5개 레이어 전체를 관리하는 별도 관리 시스템으로 동작한다
 - `20-decision.toml` - 의사결정 메타-메타 모델 정의
 - `30-needs.toml` - 요구 모델 정의
 - `40-kernel.toml` - 도메인 핵심 모델 정의

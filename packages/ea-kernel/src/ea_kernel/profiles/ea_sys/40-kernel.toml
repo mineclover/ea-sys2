@@ -665,6 +665,9 @@ notes = "Profile endpoint delegates to contract service for contract sync."
 # ══════════════════════════════════════════════════════════════
 
 # ── Kernel → Infra: 커널 아티팩트 영속화 인터페이스 ──────────
+# Kernel이 Infra를 바라보는 관점: 커널 아티팩트(spec/rule/profile/audit)의
+# 영속화 계약. Infra는 이 아티팩트들의 row-level 저장소·스키마·인덱싱을 책임지고,
+# Kernel은 무엇을 어떤 형태로 영속화할지 정의한다.
 
 [[elements]]
 name = "KernelSpecStore"
@@ -691,6 +694,9 @@ category = "PassiveStructure"
 description = "Kernel view of Infra: append-only audit log for validation runs and contract changes."
 
 # ── Kernel → Governance: 커널 모델 거버넌스 참여 ─────────────
+# Kernel이 Governance를 바라보는 관점: 커널 모델의 등록/승인/변경 추적 게이트.
+# 모델 정의가 추가·변경·폐기될 때 어떤 승인 절차와 호환성 검사를 거쳐야 하는지,
+# 그리고 변경 이력이 어떻게 기록되는지를 Kernel 관점에서 정의한다.
 
 [[elements]]
 name = "KernelModelRegistration"
@@ -723,6 +729,9 @@ category = "PassiveStructure"
 description = "Kernel view of Governance: change history record for kernel model evolution tracking."
 
 # ── Kernel → Decision: 의사결정 구조의 커널 해석 ─────────────
+# Kernel이 Decision을 바라보는 관점: 의사결정 결과가 커널 제약으로 변환되는 경로.
+# Decision 레이어의 결론(옵션 선택·평가 결과)이 Kernel 규칙·매핑 테이블로 흡수되고,
+# 검증 결과가 다시 Decision으로 피드백되는 양방향 추적 구조를 정의한다.
 
 [[elements]]
 name = "DecisionConstraintInput"
@@ -749,6 +758,9 @@ category = "Interface"
 description = "Kernel view of Decision: feedback port for reporting kernel constraint violations to decision layer."
 
 # ── Kernel → Needs: 요구사항의 커널 도메인 매핑 ──────────────
+# Kernel이 Needs를 바라보는 관점: 요구사항이 커널 도메인 요소로 매핑되는 경로.
+# Needs 카탈로그의 목표·요구사항이 커널 엔티티/릴레이션으로 어떻게 표현되는지,
+# 그리고 요구 변경 시 커널 모델 재검증이 어떻게 트리거되는지를 정의한다.
 
 [[elements]]
 name = "NeedsDomainMapping"
@@ -775,6 +787,9 @@ category = "Event"
 description = "Kernel view of Needs: event raised when needs change requires kernel model re-validation."
 
 # ── Kernel → Flow: 커널 계약의 실행 인터페이스 ───────────────
+# Kernel이 Flow를 바라보는 관점: 커널 계약이 실행 단계에서 소비/검증되는 경로.
+# 발행된 커널 계약 스냅샷을 Flow가 실행 중에 참조하고, 검증 훅을 통해 런타임
+# 제약 위반을 감지하며, 실행 결과가 커널에 피드백되는 인터페이스를 정의한다.
 
 [[elements]]
 name = "FlowContractSnapshot"

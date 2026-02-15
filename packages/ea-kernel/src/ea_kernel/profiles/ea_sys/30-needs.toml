@@ -282,3 +282,384 @@ target = "KernelModelPort"
 relation = "coordinates"
 priority = 70
 notes = "Runtime chain handoff: needs publication routes to kernel model port."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer: Needs 관점에서 본 다른 5개 레이어
+# ══════════════════════════════════════════════════════════════
+
+# ── Needs → Infra: 요구 카탈로그 영속화 인터페이스 ─────────────
+
+[[elements]]
+name = "NeedsStorageContract"
+layer = "Infra"
+category = "Interface"
+description = "Needs view of Infra: storage port contract for persisting needs catalog."
+
+[[elements]]
+name = "NeedsContextDataSource"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Needs view of Infra: data source for actor/environment context ingestion."
+
+[[elements]]
+name = "NeedsBacklogStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Needs view of Infra: persistent backlog storage for prioritization state."
+
+# ── Needs → Governance: 요구 모델 거버넌스 참여 ────────────────
+
+[[elements]]
+name = "NeedsApprovalGate"
+layer = "Governance"
+category = "Behavior"
+description = "Needs view of Governance: governance approval gate for needs registration changes."
+
+[[elements]]
+name = "NeedsChangePolicy"
+layer = "Governance"
+category = "Governance"
+description = "Needs view of Governance: governance policy for needs change control."
+
+[[elements]]
+name = "NeedsAuditPort"
+layer = "Governance"
+category = "Interface"
+description = "Needs view of Governance: audit submission port for governance compliance."
+
+[[elements]]
+name = "NeedsVersionRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Needs view of Governance: version metadata for needs catalog evolution."
+
+# ── Needs → Decision: 의사결정 결과의 요구 해석 ────────────────
+
+[[elements]]
+name = "DecisionOutcomeInput"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Needs view of Decision: decision outcomes consumed as needs prioritization input."
+
+[[elements]]
+name = "DecisionContextReference"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Needs view of Decision: decision context references for needs traceability."
+
+[[elements]]
+name = "DecisionTriggerPort"
+layer = "Decision"
+category = "Interface"
+description = "Needs view of Decision: port for triggering decision instances from needs changes."
+
+# ── Needs → Kernel: 커널 도메인의 요구 매핑 ────────────────────
+
+[[elements]]
+name = "KernelDomainReference"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Needs view of Kernel: kernel domain element references for mapping needs to domain."
+
+[[elements]]
+name = "KernelConstraintInput"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Needs view of Kernel: kernel constraints that validate needs feasibility."
+
+[[elements]]
+name = "KernelValidationPort"
+layer = "Kernel"
+category = "Interface"
+description = "Needs view of Kernel: validation port for checking needs against kernel rules."
+
+[[elements]]
+name = "KernelCoverageTarget"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Needs view of Kernel: kernel coverage targets that needs must satisfy."
+
+# ── Needs → Flow: 실행 흐름의 요구 충족 추적 ──────────────────
+
+[[elements]]
+name = "FlowFulfillmentStatus"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Needs view of Flow: flow execution status for tracking needs fulfillment."
+
+[[elements]]
+name = "FlowProgressFeedback"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Needs view of Flow: progress feedback from flow execution for backlog updates."
+
+[[elements]]
+name = "FlowCompletionEvent"
+layer = "Flow"
+category = "Event"
+description = "Needs view of Flow: event raised when flow completes a needs-linked execution."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Needs ↔ Infra
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "InfraModelPort"
+target = "NeedsStorageContract"
+relation = "contains"
+priority = 65
+notes = "Needs-Infra: infra model port exposes needs storage contract."
+
+[[rules]]
+source = "InfraModelPort"
+target = "NeedsContextDataSource"
+relation = "contains"
+priority = 65
+notes = "Needs-Infra: infra model port exposes context data source."
+
+[[rules]]
+source = "InfraModelPort"
+target = "NeedsBacklogStore"
+relation = "contains"
+priority = 65
+notes = "Needs-Infra: infra model port exposes backlog storage."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsStorageContract"
+relation = "depends_on"
+priority = 72
+notes = "Needs-Infra: catalog service depends on storage contract for persistence."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "NeedsContextDataSource"
+relation = "consumes"
+priority = 72
+notes = "Needs-Infra: refinement step consumes context data source for actor/environment ingestion."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsBacklogStore"
+relation = "depends_on"
+priority = 72
+notes = "Needs-Infra: catalog service depends on backlog store for prioritization state."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Needs ↔ Governance
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "NeedsApprovalGate"
+relation = "contains"
+priority = 65
+notes = "Needs-Gov: governance port exposes needs approval gate."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "NeedsChangePolicy"
+relation = "contains"
+priority = 65
+notes = "Needs-Gov: governance port exposes needs change policy."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "NeedsAuditPort"
+relation = "contains"
+priority = 65
+notes = "Needs-Gov: governance port exposes needs audit port."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "NeedsVersionRecord"
+relation = "contains"
+priority = 65
+notes = "Needs-Gov: governance port exposes needs version record."
+
+[[rules]]
+source = "NeedsChangePolicy"
+target = "NeedRefinementStep"
+relation = "constrains"
+priority = 72
+notes = "Needs-Gov: change policy constrains refinement step execution."
+
+[[rules]]
+source = "NeedsChangePolicy"
+target = "PublishNeedSetAction"
+relation = "constrains"
+priority = 72
+notes = "Needs-Gov: change policy constrains publication action."
+
+[[rules]]
+source = "PublishNeedSetAction"
+target = "NeedsAuditPort"
+relation = "coordinates"
+priority = 72
+notes = "Needs-Gov: publication action coordinates audit submission for compliance."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsVersionRecord"
+relation = "depends_on"
+priority = 72
+notes = "Needs-Gov: catalog service depends on version record for evolution tracking."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsApprovalGate"
+relation = "coordinates"
+priority = 72
+notes = "Needs-Gov: catalog service coordinates approval gate for registration changes."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Needs ↔ Decision
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionOutcomeInput"
+relation = "contains"
+priority = 65
+notes = "Needs-Decision: decision port exposes outcome input."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionContextReference"
+relation = "contains"
+priority = 65
+notes = "Needs-Decision: decision port exposes context reference."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionTriggerPort"
+relation = "contains"
+priority = 65
+notes = "Needs-Decision: decision port exposes trigger port."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "DecisionOutcomeInput"
+relation = "consumes"
+priority = 72
+notes = "Needs-Decision: refinement step consumes decision outcomes for prioritization."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "DecisionContextReference"
+relation = "depends_on"
+priority = 72
+notes = "Needs-Decision: catalog service depends on decision context for traceability."
+
+[[rules]]
+source = "PublishNeedSetAction"
+target = "DecisionTriggerPort"
+relation = "coordinates"
+priority = 72
+notes = "Needs-Decision: publication action coordinates decision trigger from needs changes."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Needs ↔ Kernel
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelDomainReference"
+relation = "contains"
+priority = 65
+notes = "Needs-Kernel: kernel port exposes domain reference."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelConstraintInput"
+relation = "contains"
+priority = 65
+notes = "Needs-Kernel: kernel port exposes constraint input."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelValidationPort"
+relation = "contains"
+priority = 65
+notes = "Needs-Kernel: kernel port exposes validation port."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelCoverageTarget"
+relation = "contains"
+priority = 65
+notes = "Needs-Kernel: kernel port exposes coverage target."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "KernelDomainReference"
+relation = "consumes"
+priority = 72
+notes = "Needs-Kernel: refinement step consumes domain references for needs-to-domain mapping."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "KernelConstraintInput"
+relation = "consumes"
+priority = 72
+notes = "Needs-Kernel: refinement step consumes kernel constraints for feasibility validation."
+
+[[rules]]
+source = "PublishNeedSetAction"
+target = "KernelValidationPort"
+relation = "coordinates"
+priority = 72
+notes = "Needs-Kernel: publication action coordinates kernel validation for needs checking."
+
+[[rules]]
+source = "NeedVersionGoal"
+target = "KernelCoverageTarget"
+relation = "constrains"
+priority = 72
+notes = "Needs-Kernel: version goal constrains kernel coverage targets that needs must satisfy."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Needs ↔ Flow
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowFulfillmentStatus"
+relation = "contains"
+priority = 65
+notes = "Needs-Flow: flow port exposes fulfillment status."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowProgressFeedback"
+relation = "contains"
+priority = 65
+notes = "Needs-Flow: flow port exposes progress feedback."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowCompletionEvent"
+relation = "contains"
+priority = 65
+notes = "Needs-Flow: flow port exposes completion event."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "FlowFulfillmentStatus"
+relation = "depends_on"
+priority = 72
+notes = "Needs-Flow: catalog service depends on fulfillment status for tracking."
+
+[[rules]]
+source = "FlowCompletionEvent"
+target = "NeedRefinementStep"
+relation = "triggers"
+priority = 72
+notes = "Needs-Flow: flow completion event triggers needs refinement rerun."
+
+[[rules]]
+source = "NeedRefinementStep"
+target = "FlowProgressFeedback"
+relation = "consumes"
+priority = 72
+notes = "Needs-Flow: refinement step consumes flow progress feedback for backlog updates."

@@ -9,6 +9,8 @@ interface ProfileSidePanelProps {
     profileName: string;
     visibleLayers: Set<string>;
     onToggleLayer: (layer: string) => void;
+    crossLayerOnly: boolean;
+    onToggleCrossLayer: () => void;
 }
 
 const LAYER_COLORS: Record<string, string> = {
@@ -24,6 +26,8 @@ export default function ProfileSidePanel({
     profileName,
     visibleLayers,
     onToggleLayer,
+    crossLayerOnly,
+    onToggleCrossLayer,
 }: ProfileSidePanelProps) {
     const [desc, setDesc] = useState<ProfileDescription | null>(null);
     const [topo, setTopo] = useState<ProfileTopologyResponse | null>(null);
@@ -155,6 +159,22 @@ export default function ProfileSidePanel({
                             </label>
                         );
                     })}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '6px 0 0', marginTop: 4,
+                        borderTop: '1px solid #e2e8f0',
+                        cursor: 'pointer',
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={crossLayerOnly}
+                            onChange={onToggleCrossLayer}
+                            style={{ accentColor: '#f97316' }}
+                        />
+                        <span style={{ fontSize: 11, fontWeight: 600, color: crossLayerOnly ? '#f97316' : '#64748b' }}>
+                            Cross-layer only
+                        </span>
+                    </label>
                 </div>
             )}
 

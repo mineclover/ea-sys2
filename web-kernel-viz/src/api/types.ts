@@ -81,7 +81,55 @@ export interface ImpactResponse {
     affected_count: number;
 }
 
-// --- Kernel Schema Exploration ---
+// --- Kernel Schema (Entities & Relations) ---
+
+/** I18n string: either a plain string or a language-keyed dict */
+export type I18nString = string | Record<string, string>;
+
+export interface KernelEntityItem {
+    name: string;
+    parent: string | null;
+    is_abstract: boolean;
+    description: I18nString;
+    display_name: I18nString | null;
+}
+
+export interface KernelEntityLayer {
+    name: string;
+    count: number;
+    entities: KernelEntityItem[];
+}
+
+export interface KernelEntitiesResponse {
+    total: number;
+    layers: KernelEntityLayer[];
+}
+
+export interface KernelRoleItem {
+    name: string;
+    player: string;
+}
+
+export interface KernelRelationItem {
+    name: string;
+    parent: string | null;
+    roles: KernelRoleItem[];
+    description: I18nString;
+    display_name: I18nString | null;
+}
+
+export interface KernelRelationLayer {
+    name: string;
+    count: number;
+    relations: KernelRelationItem[];
+}
+
+export interface KernelRelationsResponse {
+    total: number;
+    layers: KernelRelationLayer[];
+}
+
+// --- Kernel Rules Exploration ---
 
 export interface KernelRuleSummary {
     id: string;

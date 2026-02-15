@@ -6,6 +6,8 @@ import type {
     ReachableResponse,
     PathsResponse,
     ImpactResponse,
+    KernelEntitiesResponse,
+    KernelRelationsResponse,
     KernelRulesResponse,
     KernelRuleDetail,
     JudgeResponse,
@@ -50,8 +52,14 @@ export function fetchProfileDescription(name: string): Promise<ProfileDescriptio
     return fetchJson(`/profiles/${encodeURIComponent(name)}`);
 }
 
-export function fetchProfileTopology(name: string): Promise<ProfileTopologyResponse> {
-    return fetchJson(`/profiles/${encodeURIComponent(name)}/topology`);
+export function fetchProfileTopology(
+    name: string,
+    opts?: { cross_layer?: boolean },
+): Promise<ProfileTopologyResponse> {
+    const params = new URLSearchParams();
+    if (opts?.cross_layer) params.set('cross_layer', 'true');
+    const qs = params.toString();
+    return fetchJson(`/profiles/${encodeURIComponent(name)}/topology${qs ? `?${qs}` : ''}`);
 }
 
 export function fetchReachable(
@@ -88,7 +96,23 @@ export function fetchImpact(
     return fetchJson(`/profiles/${encodeURIComponent(name)}/impact?${params}`);
 }
 
-// --- Kernel Schema Exploration ---
+// --- Kernel Schema (Entities & Relations) ---
+
+export function fetchKernelEntities(opts?: { lang?: string }): Promise<KernelEntitiesResponse> {
+    const params = new URLSearchParams();
+    if (opts?.lang) params.set('lang', opts.lang);
+    const qs = params.toString();
+    return fetchJson(`/kernel/entities${qs ? `?${qs}` : ''}`);
+}
+
+export function fetchKernelRelations(opts?: { lang?: string }): Promise<KernelRelationsResponse> {
+    const params = new URLSearchParams();
+    if (opts?.lang) params.set('lang', opts.lang);
+    const qs = params.toString();
+    return fetchJson(`/kernel/relations${qs ? `?${qs}` : ''}`);
+}
+
+// --- Kernel Rules Exploration ---
 
 export function fetchKernelRules(opts?: {
     group?: string;

@@ -11,6 +11,7 @@ export interface HandleConfig {
 
 export type DynamicNodeData = {
     label: string;
+    subLabel?: string;
     handles?: {
         top?: HandleConfig[];
         right?: HandleConfig[];
@@ -113,11 +114,13 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
 
             {/* Body */}
             <div style={{
-                padding: '12px 16px',
+                padding: '10px 16px',
                 minHeight: 40,
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: data.subLabel ? 2 : 0,
             }}>
                 <span style={{
                     fontSize: 14,
@@ -128,6 +131,16 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
                 }}>
                     {data.label}
                 </span>
+                {data.subLabel && (
+                    <span style={{
+                        fontSize: 10,
+                        color: '#94a3b8',
+                        textAlign: 'center',
+                        lineHeight: 1.2,
+                    }}>
+                        {data.subLabel}
+                    </span>
+                )}
             </div>
 
             <HandleGroup configs={data.handles?.top} position={Position.Top} accentColor={config.color} />

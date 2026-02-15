@@ -25,6 +25,7 @@ function App() {
     const [selectedProfile, setSelectedProfile] = useState('');
     const ALL_LAYERS = ['Infra', 'Governance', 'Decision', 'Needs', 'Kernel', 'Flow'];
     const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(ALL_LAYERS));
+    const [crossLayerOnly, setCrossLayerOnly] = useState(false);
 
     const onToggleLayer = useCallback((layer: string) => {
         setVisibleLayers((prev) => {
@@ -82,6 +83,8 @@ function App() {
                         profileName={selectedProfile}
                         visibleLayers={visibleLayers}
                         onToggleLayer={onToggleLayer}
+                        crossLayerOnly={crossLayerOnly}
+                        onToggleCrossLayer={() => setCrossLayerOnly((v) => !v)}
                     />
                 );
             default:
@@ -100,7 +103,7 @@ function App() {
                 return <FlowGraph />;
             case 'profile-graph':
                 return selectedProfile
-                    ? <ProfileGraph profileName={selectedProfile} visibleLayers={visibleLayers} onShowDetail={onShowDetail} />
+                    ? <ProfileGraph profileName={selectedProfile} visibleLayers={visibleLayers} crossLayerOnly={crossLayerOnly} onShowDetail={onShowDetail} />
                     : <div style={{ padding: 40, color: '#94a3b8', fontFamily: 'system-ui' }}>Loading profiles...</div>;
             case 'rules':
                 return <RulesView onShowDetail={onShowDetail} sidePanel={null} />;

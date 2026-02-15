@@ -37,12 +37,12 @@ def test_build_and_verify_reference_snapshot(tmp_path: Path):
 
     assert snapshot_path.exists()
     assert payload["reference_version"] == "1.0.0"
-    assert len(payload["model_registry"]) == 6
+    assert len(payload["model_registry"]) == 7
     assert payload["active_models"] == ["EASystemLayerModel.kernel"]
-    assert payload["db_contract"]["profiles.db"]["row_counts"]["model_registry"] == 6
-    assert payload["db_contract"]["profiles.db"]["row_counts"]["validation_runs"] == 7
+    assert payload["db_contract"]["profiles.db"]["row_counts"]["model_registry"] == 7
+    assert payload["db_contract"]["profiles.db"]["row_counts"]["validation_runs"] == 8
     seed_profiles = payload["seed_profiles"]
-    assert len(seed_profiles) == 6
+    assert len(seed_profiles) == 7
 
     base_rule_count = len(module.KERNEL_SPEC.validity_rules)
     by_layer = {row["layer"]: row for row in seed_profiles}

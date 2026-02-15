@@ -1429,41 +1429,6 @@ priority = 72
 notes = "Approval policy constrains flow model activation gate."
 
 [[rules]]
-source = "InfraModelPort"
-target = "GovernanceModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Support flow: infra row-data design > governance entrypoint design."
-
-[[rules]]
-source = "GovernanceModelPort"
-target = "DecisionModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Runtime entry handoff: governance > decision."
-
-[[rules]]
-source = "DecisionModelPort"
-target = "NeedsModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Runtime chain: decision > needs."
-
-[[rules]]
-source = "NeedsModelPort"
-target = "KernelModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Runtime chain: needs > kernel."
-
-[[rules]]
-source = "KernelModelPort"
-target = "FlowModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Runtime chain: kernel > flow."
-
-[[rules]]
 source = "FlowModelPort"
 target = "GovernanceModelPort"
 relation = "coordinates"

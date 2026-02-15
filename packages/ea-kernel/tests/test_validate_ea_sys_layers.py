@@ -22,7 +22,7 @@ def _load_validate_module():
     ("layer", "filename", "expected"),
     [
         ("infra", "00-infra.toml", (15, 10, 24)),
-        ("governance", "10-governance.toml", (61, 10, 157)),
+        ("governance", "10-governance.toml", (61, 10, 152)),
         ("decision", "20-decision.toml", (28, 10, 62)),
         ("needs", "30-needs.toml", (16, 10, 26)),
         ("kernel", "40-kernel.toml", (31, 10, 63)),

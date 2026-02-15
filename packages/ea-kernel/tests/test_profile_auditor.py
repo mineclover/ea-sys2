@@ -120,8 +120,9 @@ class TestAuditRegistry:
         registry.bootstrap()
         report = auditor.audit_registry(registry)
         assert isinstance(report, RegistryAuditReport)
-        assert report.total_profiles == 5
-        assert report.passed_profiles == 5
+        # 5 framework + 7 EA-sys layer + 2 governance stack = 14
+        assert report.total_profiles == 14
+        assert report.passed_profiles == 14
 
     def test_empty_registry(self, auditor):
         registry = ProfileRegistry()

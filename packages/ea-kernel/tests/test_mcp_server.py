@@ -140,16 +140,18 @@ HAS_MCP = importlib.util.find_spec("mcp.server.fastmcp") is not None
 
 @pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 class TestMCPServerStructure:
-    def test_server_has_seven_tools(self):
+    def test_server_has_ten_tools(self):
         from ea_kernel.mcp_server import mcp
         tools = mcp._tool_manager._tools
-        assert len(tools) == 7
+        assert len(tools) == 10
 
-    def test_all_tools_have_kernel_prefix(self):
+    def test_all_tools_have_expected_prefix(self):
         from ea_kernel.mcp_server import mcp
         tools = mcp._tool_manager._tools
         for name in tools:
-            assert name.startswith("kernel_"), f"Tool {name} missing kernel_ prefix"
+            assert name.startswith("kernel_") or name.startswith("profile_"), (
+                f"Tool {name} missing kernel_ or profile_ prefix"
+            )
 
     def test_tool_names(self):
         from ea_kernel.mcp_server import mcp
@@ -162,5 +164,8 @@ class TestMCPServerStructure:
             "kernel_describe_rule",
             "kernel_judge",
             "kernel_get_entity_names",
+            "profile_reachable",
+            "profile_paths",
+            "profile_impact",
         }
         assert set(tools.keys()) == expected

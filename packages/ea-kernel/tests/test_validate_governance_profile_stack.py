@@ -29,7 +29,7 @@ def _load_validate_module():
     ("profile_id", "filename", "expected"),
     [
         ("meta", "00-governance-meta-model.toml", (23, 10, 52)),
-        ("ea_sys", "10-governance.toml", (61, 10, 157)),
+        ("ea_sys", "10-governance.toml", (61, 10, 152)),
         ("external", "20-external-governance.toml", (22, 10, 55)),
     ],
 )

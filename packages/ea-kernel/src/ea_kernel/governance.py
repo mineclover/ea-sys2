@@ -12,6 +12,7 @@ Provides a single entry point (GovernanceSystem) to interact with:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from ea_kernel.corpus_version_store import SQLiteCorpusVersionStore
 from ea_kernel.decision_store import SQLiteDecisionStore
@@ -236,6 +237,20 @@ class GovernanceSystem:
     def analyze(self) -> AnalysisReport:
         """S4: Analyze evidence."""
         return self.analyzer.generate_report()
+
+    def audit_i18n(self, lang: str = "ko") -> dict[str, Any]:
+        """i18n 번역 감사 — 스키마 대비 누락/불일치 확인."""
+        from ea_kernel.schema_loader import audit_i18n_patch
+        report = audit_i18n_patch(self._base_schema, lang)
+        return {
+            "lang": report.lang,
+            "coverage": report.coverage,
+            "total_issues": report.total_issues,
+            "is_clean": report.is_clean,
+            "missing_count": len(report.missing),
+            "orphan_count": len(report.orphan),
+            "stale_count": len(report.stale),
+        }
 
     def run_automation(self) -> None:
         """S5: Run automation loop (Analyze -> Promote)."""

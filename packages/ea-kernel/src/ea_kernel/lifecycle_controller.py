@@ -187,6 +187,22 @@ class LifecycleController:
                         level="warning",
                     ))
 
+        # i18n audit trigger — 스키마 변경 시 번역 동기화 확인
+        try:
+            from ea_kernel.schema_loader import audit_i18n_patch, load_kernel_schema_from_package
+            schema = load_kernel_schema_from_package()
+            for lang in ("ko",):
+                report = audit_i18n_patch(schema, lang)
+                if not report.is_clean:
+                    self.notifier.send(Notification(
+                        recipient="i18n-team",
+                        subject=f"i18n Audit Alert ({lang}): {report.total_issues} issues",
+                        message=f"Coverage: {report.coverage:.0%}, Missing: {len(report.missing)}, Stale: {len(report.stale)}",
+                        level="warning",
+                    ))
+        except Exception:
+            pass  # i18n 감사 실패가 코퍼스 업데이트를 막으면 안 됨
+
     # ── Helpers ────────────────────────────────────────────────────────
 
     def _get_latest_version_id(self) -> str:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ea_kernel.kernel_service import (
+    audit_i18n,
     describe_profile,
     describe_rule,
     get_entity_names,
@@ -10,6 +11,7 @@ from ea_kernel.kernel_service import (
     list_entities,
     list_relations,
     list_rules,
+    profile_topology,
 )
 
 
@@ -41,6 +43,16 @@ class TestListEntities:
         total_from_layers = sum(layer["count"] for layer in result["layers"])
         assert result["total"] == total_from_layers
 
+    def test_lang_ko_returns_i18n_fields(self):
+        result = list_entities(lang="ko")
+        has_dict = False
+        for layer in result["layers"]:
+            for e in layer["entities"]:
+                if isinstance(e["description"], dict):
+                    has_dict = True
+                    assert "ko" in e["description"]
+        assert has_dict, "Expected at least one entity with dict description"
+
 
 class TestListRelations:
     """UC1: list_relations()."""
@@ -65,6 +77,16 @@ class TestListRelations:
                 for role in r["roles"]:
                     assert "name" in role
                     assert "player" in role
+
+    def test_lang_ko_returns_i18n_fields(self):
+        result = list_relations(lang="ko")
+        has_dict = False
+        for layer in result["layers"]:
+            for r in layer["relations"]:
+                if isinstance(r["description"], dict):
+                    has_dict = True
+                    assert "ko" in r["description"]
+        assert has_dict, "Expected at least one relation with dict description"
 
 
 class TestListRules:
@@ -188,3 +210,61 @@ class TestGetEntityNames:
         assert "element" in names
         assert "classifier" in names
         assert "feature" in names
+
+
+class TestProfileTopology:
+    """UC6: profile_topology()."""
+
+    def test_topology_returns_nodes_and_edges(self):
+        result = profile_topology("ArchiMate")
+        assert "nodes" in result
+        assert "edges" in result
+        assert result["node_count"] > 0
+        assert result["edge_count"] > 0
+
+    def test_cross_layer_filters_same_layer_edges(self):
+        result = profile_topology("ArchiMate", cross_layer=True)
+        assert result["cross_layer"] is True
+        # Build a layer lookup from the returned nodes
+        layer_of = {n["name"]: n["layer"] for n in result["nodes"]}
+        for edge in result["edges"]:
+            src_layer = layer_of.get(edge["source"])
+            tgt_layer = layer_of.get(edge["target"])
+            if src_layer is not None and tgt_layer is not None:
+                assert src_layer != tgt_layer
+
+    def test_cross_layer_prunes_nodes(self):
+        full = profile_topology("ArchiMate")
+        cross = profile_topology("ArchiMate", cross_layer=True)
+        assert cross["node_count"] <= full["node_count"]
+
+    def test_unknown_profile_returns_error(self):
+        result = profile_topology("NonExistentProfile")
+        assert "error" in result
+
+
+class TestI18nService:
+    """I18n service functions."""
+
+    def test_audit_i18n_returns_report(self):
+        result = audit_i18n("ko")
+        assert "lang" in result
+        assert result["lang"] == "ko"
+        assert "coverage" in result
+        assert "total_schema_items" in result
+        assert "total_translated" in result
+        assert "is_clean" in result
+        assert isinstance(result["missing"], list)
+        assert isinstance(result["orphan"], list)
+        assert isinstance(result["stale"], list)
+
+    def test_audit_i18n_ko_has_full_coverage(self):
+        result = audit_i18n("ko")
+        assert result["total_translated"] == result["total_schema_items"]
+        assert result["coverage"] == 1.0
+
+    def test_audit_i18n_unknown_lang(self):
+        result = audit_i18n("xx")
+        assert result["lang"] == "xx"
+        assert result["coverage"] == 0.0
+        assert result["total_translated"] == 0

@@ -110,16 +110,18 @@ Kernel이 증명한 7가지 원칙:
 
 | 모듈 | 줄수 | 역할 | Kernel 의존도 |
 |------|-----|------|-------------|
-| `profile_types.py` | 303 | ProfileElement, ProfileRelation, KernelProfile 타입 | KernelValidityRule import ⚠️ |
-| `profile_builder.py` | 624 | 플루언트 빌더 + 카테고리 추론 + 자동검증 | KernelSchema optional |
-| `profile_loader.py` | 178 | TOML → ProfileBuilder → KernelProfile | KernelSchema optional |
-| `profile_rule_compiler.py` | 311 | @Category/#Layer → 구체 규칙 확장 | 없음 |
-| `profile_quality_gate.py` | 202 | 데드 규칙, 충돌, 커버리지 정적 분석 | KernelSpec optional |
-| `profile_serializer.py` | 167 | dict ↔ KernelProfile 라운드트립 | 없음 |
-| `profile_store.py` | 379 | SQLite 기반 버전 저장 + 태깅 | 없음 |
-| `profile_registry.py` | 125 | 인메모리 캐시 + 영속 스토어 연동 | 없음 |
-| `profile_query.py` | 111 | 체인 쿼리 빌더 | 없음 |
-| `profile_composer.py` | 96 | extend/subset 합성 | 없음 |
+| `profile_types.py` | 303 | ProfileElement, ProfileRelation, KernelProfile 타입 | None (ea_profile 추출) |
+| `profile_builder.py` | 624 | 플루언트 빌더 + 카테고리 추론 + 자동검증 | None (ea_profile 추출) |
+| `profile_loader.py` | 178 | TOML → ProfileBuilder → KernelProfile | None (ea_profile 추출) |
+| `profile_rule_compiler.py` | 311 | @Category/#Layer → 구체 규칙 확장 | None (ea_profile 추출) |
+| `profile_quality_gate.py` | 202 | 데드 규칙, 충돌, 커버리지 정적 분석 | None (ea_profile 추출) |
+| `profile_serializer.py` | 167 | dict ↔ KernelProfile 라운드트립 | None (ea_profile 추출) |
+| `profile_store.py` | 379 | SQLite 기반 버전 저장 + 태깅 | None (ea_profile 추출) |
+| `profile_registry.py` | 125 | 인메모리 캐시 + 영속 스토어 연동 | None (ea_profile 추출) |
+| `profile_query.py` | 111 | 체인 쿼리 빌더 | None (ea_profile 추출) |
+| `profile_composer.py` | 96 | extend/subset 합성 | None (ea_profile 추출) |
+
+> **비고**: 위 모듈은 `packages/ea-profile/`로 추출 완료. `ea_kernel.profile_*.py`는 re-export shim으로 전환. `ea_kernel.profile_builder`만 `build_with_corpus()` 커널 전용 확장을 보유.
 
 ---
 
@@ -185,10 +187,16 @@ ProfileRule (kernel-agnostic)
 ```
 
 완료 기준:
-- [ ] `ProfileRule` 타입이 `KernelValidityRule`과 분리
-- [ ] `profile_builder.py`가 `ProfileRule`로 동작 (KernelValidityRule은 kernel 전용 확장)
-- [ ] `profile_loader.py`가 kernel 없이도 TOML → KernelProfile 반환 가능
-- [ ] 기존 테스트 전체 통과
+- [x] `ProfileRule` 타입이 `KernelValidityRule`과 분리
+- [x] `profile_builder.py`가 `ProfileRule`로 동작 (KernelValidityRule은 kernel 전용 확장)
+- [x] `profile_loader.py`가 kernel 없이도 TOML → KernelProfile 반환 가능
+- [x] 기존 테스트 전체 통과
+
+**완료 노트** (2026-02-15):
+- `packages/ea-profile/` 독립 패키지로 추출 완료 (13개 모듈, zero dependency)
+- ea-kernel의 `profile_*.py`는 ea_profile re-export shim으로 전환 (12개 파일)
+- `profile_builder.py` shim만 `build_with_corpus()` 커널 전용 확장을 보유
+- ea-kernel이 ea-profile을 pyproject.toml에서 의존
 
 ### Phase 1: Decision 레이어 메타-메타 모델 운영화
 

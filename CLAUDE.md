@@ -58,7 +58,8 @@
 
 | Package | 대응 레이어 | 의존성 | 상세 문서 |
 |---------|-----------|--------|----------|
-| `packages/ea-kernel` | Kernel — 경량 커널 메타모델 (KerML 설계 철학) | Pure Python, zero dep | → `packages/ea-kernel/CLAUDE.md` |
+| `packages/ea-profile` | Profile — kernel-agnostic 프로파일 프레임워크 | Pure Python, zero dep | → `packages/ea-profile/CLAUDE.md` |
+| `packages/ea-kernel` | Kernel — 경량 커널 메타모델 (KerML 설계 철학) | ea-profile | → `packages/ea-kernel/CLAUDE.md` |
 | `packages/ea-needs` | Needs — 목표/요구/백로그/컨텍스트 정형 표현 | ea-kernel | → `packages/ea-needs/CLAUDE.md` |
 | `packages/ea-decision` | Decision — 의사결정 활동/상태/옵션/평가/결론 어휘·전이 규칙 | ea-kernel, ea-needs | |
 | `packages/ea-flow` | Flow — 단계 순서·입출력·트리거/전이, 6x6 계약 소유 | ea-kernel, ea-decision | |
@@ -71,7 +72,9 @@
 ```
 ea-infra (독립, row 데이터 설계)     web-kernel-viz (독립, Node)
 
-ea-kernel (도메인 핵심 모델, zero dep)
+ea-profile (프로파일 프레임워크, zero dep)
+    ↑
+ea-kernel (도메인 핵심 모델, depends on ea-profile)
     ↑
 ea-needs (요구 모델, depends on kernel)
     ↑

@@ -1,5 +1,8 @@
 # ea-kernel — Coding Conventions & Module Rules
 
+> **공통 구현 컨벤션**: `docs/ea-sys-conventions.md` 참조.
+> 본 문서는 커널 고유 사항(L1-L4 온톨로지, 스키마 판정, 규칙 코퍼스)만 기술한다.
+
 경량 커널 메타모델. UML 2.5.1 구조 참고 + KerML 설계 철학 기반. Python >=3.11, core는 zero dependency.
 
 ## Design Philosophy
@@ -85,64 +88,137 @@ element (root, abstract — uid/name/description/qualified_name/layer)
 
 ## Module Structure (flat)
 
+### 핵심 모듈 (Kernel core)
+
 ```
 src/ea_kernel/
 ├── types.py              # L1-L4 커널 타입 + Rule Corpus + Graph/Instance/AI 타입
 ├── definition.py         # 커널 정의/규칙
 ├── spec.py               # 스펙 정의
 ├── spec_loader.py        # 스펙 로더 + 메타데이터 파싱
+├── schema_loader.py      # TOML 스키마 파서 (specs/ → KernelSchema)
 ├── rule_corpus.py        # 규칙 코퍼스 — 메타데이터·쿼리·증거 기반 판단
+├── profile_rule_compiler.py # @Category/#Layer → 구체 규칙 확장 (커널 런타임용)
+├── profile_graph.py      # 프로파일 기반 토폴로지 그래프
 ├── graph_view.py         # 토폴로지 그래프 탐색 + 경로 열거 (Phase 2)
 ├── instance_validator.py # M0 인스턴스 적합성 검증 (Phase 3)
 ├── decision_ledger.py    # 의사결정 기록 + 패턴 탐지 (Phase 3)
 ├── ai_interface.py       # AI 에이전트 의사결정 인터페이스 (Phase 4)
 ├── kernel_service.py     # 서비스 계층 — 7개 온보딩 함수 (UC1-UC5)
 ├── mcp_server.py         # MCP 서버 — 7개 도구 + instructions
-├── profile_types.py      # Profile 타입 정의
-├── profile_builder.py    # Profile 빌더 + build_with_corpus()
-├── profile_loader.py     # TOML 로더
-├── profile_quality_gate.py # 품질 게이트
-├── profile_serializer.py # 직렬화
-├── profile_store.py      # 영속화
-├── profile_registry.py   # 레지스트리
-├── profile_diff.py       # diff/비교
-├── profile_schema.py     # 스키마 검증
-├── profile_query.py      # 쿼리
-├── profile_composer.py   # 프로파일 합성
-├── profile_auditor.py    # 프로파일 감사
-├── profile_backup.py     # 프로파일 백업/복원
+├── governance.py         # 거버넌스 관리
+├── governance_types.py   # 거버넌스 타입 (RuleAsset, 수명주기)
+├── lifecycle_controller.py # 수명주기 컨트롤러
+├── i18n_store.py         # i18n 번역 저장소
+├── localizer.py          # 프로파일 로컬라이저
 ├── rule_verifier.py      # 규칙 검증
-├── test_harness.py       # 테스트 하네스
-└── profiles/             # 5개 프레임워크 프로파일
-    ├── archimate.py
-    ├── togaf.py
-    ├── zachman.py
-    ├── sysml2.py
-    └── bpmn.py
+└── test_harness.py       # 테스트 하네스
 ```
+
+### Re-export shim 모듈 (ea_profile → ea_kernel 호환)
+
+ea-profile로 추출된 모듈의 후방 호환 shim. 기존 `from ea_kernel.profile_*` import를 유지.
+
+```
+src/ea_kernel/
+├── profile_types.py      # → ea_profile.types re-export
+├── profile_builder.py    # → ea_profile.builder re-export + build_with_corpus() 확장
+├── profile_loader.py     # → ea_profile.loader re-export
+├── profile_quality_gate.py # → ea_profile.quality_gate re-export
+├── profile_serializer.py # → ea_profile.serializer re-export
+├── profile_store.py      # → ea_profile.store re-export
+├── profile_registry.py   # → ea_profile.registry re-export
+├── profile_diff.py       # → ea_profile.diff re-export
+├── profile_schema.py     # → ea_profile.schema re-export
+├── profile_query.py      # → ea_profile.query re-export
+├── profile_composer.py   # → ea_profile.composer re-export
+├── profile_auditor.py    # → ea_profile.auditor re-export
+└── profile_backup.py     # 프로파일 백업/복원
+```
+
+> **Note**: `profile_builder.py`만 단순 re-export가 아님 — `build_with_corpus()`가 `ea_kernel.rule_corpus`와 `ea_kernel.types`에 의존하는 커널 전용 확장.
+
+## Specs Convention
+
+`specs/` 디렉토리는 커널 스키마와 규칙의 정규 TOML 정의를 보관한다.
+
+```
+src/ea_kernel/specs/
+├── kernel_schema.toml      # 정규 스키마 — 엔티티/관계/속성 정의
+├── kernel_schema.ko.toml   # i18n — 한국어 스키마 번역
+└── kernel_rules.toml       # 정규 규칙 — 67 explicit + 14 fallback = 81 rules
+```
+
+- 네이밍: `kernel_{aspect}.toml`, i18n: `kernel_{aspect}.{lang}.toml`
+- `[meta]` 섹션 필수: `kernel_version`, `total_entities`, `total_relations` 등 집계 메타데이터
+- 파서: `schema_loader.py` (스키마 TOML → KernelSchema), `spec_loader.py` (스펙 TOML → 메타데이터)
+
+## Profiles Convention
+
+`profiles/` 디렉토리는 프레임워크 프로파일과 시스템 프로파일을 보관한다.
+
+```
+src/ea_kernel/profiles/
+├── archimate.toml          # ArchiMate 3.2 프레임워크 프로파일
+├── togaf.toml              # TOGAF 10
+├── zachman.toml            # Zachman Framework
+├── sysml2.toml             # SysML v2
+├── bpmn.toml               # BPMN 2.0
+├── system_self_model.toml  # 시스템 자기 모델
+├── governance_lifecycle.toml
+├── systemselfmodel.ko.patch.toml   # i18n patch
+├── ea_sys/                 # EA-system 레이어 프로파일
+│   ├── 00-infra.toml
+│   ├── 10-governance.toml
+│   ├── 20-decision.toml
+│   ├── 30-needs.toml
+│   ├── 40-kernel.toml
+│   ├── 50-flow.toml
+│   ├── 60-web-kernel-viz.toml
+│   ├── easystem-infra.ko.patch.toml
+│   ├── easystem-governance.ko.patch.toml
+│   ├── easystem-decision.ko.patch.toml
+│   ├── easystem-needs.ko.patch.toml
+│   ├── easystem-kernel.ko.patch.toml
+│   └── easystem-flow.ko.patch.toml
+└── governance_profile_stack/
+    ├── 00-governance-meta-model.toml
+    └── 20-external-governance.toml
+```
+
+- 넘버링: `{NN}-{name}.toml` — NN은 레이어 정렬 순서 (00 infra, 10 governance, 20 decision, ...)
+- i18n patches: `easystem-{layer}.ko.patch.toml` — description/display_name 필드만 오버라이드
+- TOML 포맷 상세 → `packages/ea-profile/CLAUDE.md` 참조
 
 ## Import Convention
 
-**절대 경로 중심**.
+공통 import 규율은 `docs/ea-sys-conventions.md` §9 참조. 커널 고유 예시:
 
 ```python
-from ea_kernel.types import KernelEntity, KernelRelation
-from ea_kernel.profile_types import ProfileDef, RuleDef
+# Kernel core
+from ea_kernel.types import KernelEntity, KernelRelation, KernelSchema
+
+# Profile (권장: ea_profile 직접 import)
+from ea_profile.types import KernelProfile, ProfileRule, ProfileElement
+from ea_profile.builder import ProfileBuilder
+
+# Profile (후방 호환 via shim)
+from ea_kernel.profile_types import KernelProfile, ProfileRule
+from ea_kernel.profile_builder import ProfileBuilder
 ```
 
-## Typing Convention
+## Typing / File Size
 
-- Python 3.11+ 현대 문법: `list[]`, `dict[]`, `str | None`
+공통: `docs/ea-sys-conventions.md` §1.5, §10.2, §10.3 참조. Schema data 파일 예외.
 
 ## Module Rules
 
-### File Size
-
-목표 700줄, 경고 1000줄, 강제분할 1500줄. Schema data 파일 예외.
-
 ### Dependency Direction
 
+**외부 의존**: ea-kernel은 `ea-profile`을 pyproject.toml에서 의존한다. profile_*.py shim 모듈이 ea_profile을 re-export.
+
 ```
+[Kernel core]
 types.py ← definition.py, spec.py
          ← rule_corpus.py (types만 import)
          ← graph_view.py (types + spec lazy import)
@@ -153,29 +229,43 @@ types.py ← definition.py, spec.py
 
 kernel_service.py ← mcp_server.py (도구 함수 내부에서 lazy import)
 
-types.py + rule_corpus.py ← profile_builder.py (build_with_corpus에서 lazy import)
-
-profile_types.py ← profile_builder.py ← profile_loader.py
-                 ← profile_quality_gate.py
-                 ← profile_auditor.py
-                 ← profile_backup.py
-                 ← test_harness.py
-                 ← profile_serializer.py
-                 ← profile_store.py ← profile_registry.py
-                 ← profile_diff.py
-                 ← profile_schema.py
-                 ← profile_query.py
-                 ← profile_composer.py
+[Kernel ← ea_profile]
+types.py + rule_corpus.py ← profile_builder.py (shim: build_with_corpus에서 lazy import)
+profile_rule_compiler.py ← ea_kernel.types + ea_kernel.profile_types (shim)
 
 rule_corpus.py ← rule_verifier.py
 ```
 
-Profile 모듈은 types.py에 의존하지만, types.py/definition.py는 Profile 모듈을 모른다.
-rule_corpus.py는 types.py만 import. profile_builder.py는 build_with_corpus() 내부에서 lazy import.
-kernel_service.py는 순수 함수로 구조화된 dict 반환, mcp_server.py는 이를 JSON으로 래핑.
+- profile_*.py shim 모듈은 ea_profile 대응 모듈을 단순 re-export (profile_builder.py 제외).
+- profile_builder.py shim만 `build_with_corpus()` 확장을 보유 (ea_kernel.rule_corpus + ea_kernel.types 의존).
+- types.py/definition.py는 ea_profile을 모른다 (역방향 의존 금지).
+- kernel_service.py는 순수 함수로 구조화된 dict 반환, mcp_server.py는 이를 JSON으로 래핑.
 
 ### Test Convention
 
-- 절대 경로 import
-- self-contained 테스트 파일
+공통: `docs/ea-sys-conventions.md` §8 참조. 커널 전용:
 - TypeDB 의존 테스트: `@pytest.mark.typedb`
+
+## Kernel-Specific Patterns
+
+공통 컨벤션(`docs/ea-sys-conventions.md`)에 더해 커널만 적용하는 패턴:
+
+### L1-L4 Layer 추상화
+- `Layer(StrEnum)`: L1/L2/L3/L4 고정 (다른 레이어는 자체 분류 사용)
+- `KernelSchema.__post_init__`: 엔티티/관계/규칙 O(1) 인덱스 구축
+- `effective_plays()`: 상속 트리 탐색으로 엔티티 역할 합산
+
+### KernelValidityRule (ProfileRule 확장)
+- ProfileRule의 커널 전용 서브클래스
+- KernelConditionType 바인딩 (SAME_LAYER, LAYER_ORDER, ANCESTOR_OF, SAME_BRANCH)
+- LayerConstraint: L4↔L4 제한 등 레이어 수준 사전 검증
+
+### Rule Corpus / Evidence-Based Judgment
+- RuleCorpus.from_kernel_spec(): 팩토리 메서드
+- judge() → JudgmentReport: 증거 목록 + 승자 규칙 + confidence
+- RuleMetadata 자동 추론 (관계 계층 → 도메인 분류)
+
+### Profile Rule Compiler
+- @Category/#Layer → 커널 엔티티명으로 확장
+- 확장된 규칙에 __c{seq} 접미사 ID 부여
+- ProfileRuleCompilationStats로 확장 통계 추적

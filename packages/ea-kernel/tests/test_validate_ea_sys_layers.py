@@ -54,4 +54,9 @@ def test_main_simulate_success(monkeypatch, capsys):
     assert "[sim] governance-model-api-contract: passed" in out
     assert "[sim] layer-6x6-contract: passed" in out
     assert "[sim] layer-6x6-owner: flow" in out
+    assert "[sim] common-layer-spec:" in out
+    assert (
+        "[sim] common-layer-spec: ok" in out
+        or "[sim][warn] common-layer-spec:" in out
+    )
     assert "[sim] passed" in out

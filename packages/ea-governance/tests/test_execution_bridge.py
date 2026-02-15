@@ -39,10 +39,10 @@ def test_full_execution_bridge(mock_kernel):
 
     # 3. Execute via Service
     service = ExecutionService(mock_kernel)
-    success = service.execute_report(report)
+    success = service.interpret_report(report)
 
     # 4. Assertions
     assert success is True
     assert report.executed_at is not None
-    assert any("Submitting rule cost-limit-rule" in log for log in report.execution_log)
-    assert report.modeling_actions[0].status == "completed"
+    assert any("Planned kernel rule submission intent: cost-limit-rule" in log for log in report.execution_log)
+    assert report.modeling_actions[0].status == "interpreted"

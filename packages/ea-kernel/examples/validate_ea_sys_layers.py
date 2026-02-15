@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import Counter
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -465,6 +466,88 @@ def _validate_layer_6x6_contract(layer: str, profile: Any) -> dict[str, Any]:
     }
 
 
+def _most_common_value(values: dict[str, Any]) -> Any:
+    counts = Counter(values.values())
+    top_count = max(counts.values())
+    candidates = sorted(value for value, count in counts.items() if count == top_count)
+    return candidates[0]
+
+
+def _relation_signature(profile: Any) -> tuple[tuple[str, str, str], ...]:
+    rows: list[tuple[str, str, str]] = []
+    for rel in profile.relations:
+        rows.append((rel.name, rel.kernel_relation, rel.direction or ""))
+    return tuple(sorted(rows))
+
+
+def _format_relation_rows(rows: list[tuple[str, str, str]]) -> str:
+    return ",".join(
+        f"{name}:{kernel}:{direction if direction else '-'}"
+        for name, kernel, direction in rows
+    )
+
+
+def _collect_common_spec_warnings(profiles: dict[str, Any]) -> dict[str, Any]:
+    layer_to_profile_version = {layer: profile.version for layer, profile in profiles.items()}
+    layer_to_kernel_version = {layer: profile.kernel_version for layer, profile in profiles.items()}
+    layer_to_relation_signature = {
+        layer: _relation_signature(profile) for layer, profile in profiles.items()
+    }
+
+    expected_profile_version = _most_common_value(layer_to_profile_version)
+    expected_kernel_version = _most_common_value(layer_to_kernel_version)
+    expected_relation_signature = _most_common_value(layer_to_relation_signature)
+
+    warnings: list[str] = []
+
+    for layer in sorted(profiles):
+        profile_version = layer_to_profile_version[layer]
+        if profile_version != expected_profile_version:
+            warnings.append(
+                "profile-version-drift "
+                f"layer={layer} value={profile_version} expected={expected_profile_version}"
+            )
+
+    for layer in sorted(profiles):
+        kernel_version = layer_to_kernel_version[layer]
+        if kernel_version != expected_kernel_version:
+            warnings.append(
+                "kernel-version-drift "
+                f"layer={layer} value={kernel_version} expected={expected_kernel_version}"
+            )
+
+    expected_relations = set(expected_relation_signature)
+    for layer in sorted(profiles):
+        actual_relations = set(layer_to_relation_signature[layer])
+        extras = sorted(actual_relations - expected_relations)
+        missing = sorted(expected_relations - actual_relations)
+        if extras:
+            warnings.append(
+                "relation-spec-extra "
+                f"layer={layer} values={_format_relation_rows(extras)}"
+            )
+        if missing:
+            warnings.append(
+                "relation-spec-missing "
+                f"layer={layer} values={_format_relation_rows(missing)}"
+            )
+
+    return {
+        "status": "ok" if not warnings else "warning",
+        "warnings": warnings,
+        "expected_profile_version": expected_profile_version,
+        "expected_kernel_version": expected_kernel_version,
+        "expected_relations": [
+            {
+                "name": name,
+                "kernel_relation": kernel_relation,
+                "direction": direction,
+            }
+            for name, kernel_relation, direction in expected_relation_signature
+        ],
+    }
+
+
 def _pattern_has_layer_match(profile: Any, pattern: str, layer: str) -> bool:
     for elem in profile.elements:
         if _matches_pattern(elem, pattern) and str(getattr(elem, "layer", "")) == layer:
@@ -487,6 +570,7 @@ def simulate_data_flow() -> dict[str, Any]:
         layer: _validate_layer_6x6_contract(layer, profile)
         for layer, profile in profiles.items()
     }
+    common_spec_audit = _collect_common_spec_warnings(profiles)
     relation_integrity_violations: dict[str, list[str]] = {}
     for layer, profile in profiles.items():
         undefined_relations = _find_undefined_relations(profile)
@@ -567,6 +651,7 @@ def simulate_data_flow() -> dict[str, Any]:
         "governance_entrypoint": governance_entrypoint,
         "governance_model_api_contract": governance_model_api_contract,
         "layer_6x6_contracts": layer_6x6_contracts,
+        "common_spec_audit": common_spec_audit,
         "versions": versions,
         "independent_relation_integrity_ok": not relation_integrity_violations,
         "relation_integrity_violations": relation_integrity_violations,
@@ -684,7 +769,10 @@ def main() -> int:
         )
         print(f"[sim] layer-6x6-contract: {layer_6x6_status}")
         print("[sim] layer-6x6-owner: flow")
+        print(f"[sim] common-layer-spec: {report['common_spec_audit']['status']}")
         print(f"[sim] flow-sequence: {seq}")
+        for warning in report["common_spec_audit"]["warnings"]:
+            print(f"[sim][warn] common-layer-spec: {warning}")
         if report["governance_entrypoint"]["missing_ports"]:
             print(
                 "[sim][fail] governance-missing-ports: "

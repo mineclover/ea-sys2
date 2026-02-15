@@ -38,7 +38,7 @@ class DesignWorkflowSpec(WorkflowSpec):
         return self._steps
 
 class ExecutionService:
-    """Bridges DesignReport with Flow Execution."""
+    """Bridges DesignReport with flow interpretation/planning."""
 
     def __init__(
         self,
@@ -67,8 +67,8 @@ class ExecutionService:
             return kernel_data_dir.parent / "transactions.db"
         return Path("transactions.db")
 
-    def execute_report(self, report: DesignReport) -> bool:
-        """Translates report actions into a workflow and executes them."""
+    def interpret_report(self, report: DesignReport) -> bool:
+        """Translates report actions into a workflow and interprets intent outputs."""
         steps = []
         for i, action in enumerate(report.modeling_actions):
             step = self._map_action_to_step(action, f"idx_{i}")
@@ -76,7 +76,7 @@ class ExecutionService:
                 steps.append(step)
 
         if not steps:
-            report.execution_log.append("No executable actions found in report.")
+            report.execution_log.append("No interpretable actions found in report.")
             return False
 
         workflow = DesignWorkflowSpec(f"report_{report.id}", steps, anchor=f"ea:governance:report:{report.id}")
@@ -86,29 +86,35 @@ class ExecutionService:
         tx = self.tx_manager.begin_transaction(f"exec_{report.id}", tx_type="design_realization")
         report.transaction_id = tx.id
 
-        # Execute using Runtime
-        result = self.runtime.execute(workflow, variables)
+        # Interpret using runtime (side-effect free)
+        result = self.runtime.interpret(workflow, variables)
 
         # Update Report & Transaction
         report.executed_at = datetime.now(UTC).isoformat() + "Z"
         report.execution_log.extend(result.logs)
+        for intent in result.interpreted_intents:
+            report.execution_log.append(f"intent: {intent}")
         tx.logs.extend(result.logs)
 
         if result.success:
             self.tx_manager.commit(tx.id)
             for action in report.modeling_actions:
-                action.status = "completed"
+                action.status = "interpreted"
             return True
         else:
-            report.execution_log.append("Execution failed.")
+            report.execution_log.append("Interpretation failed.")
             if getattr(result, "rollback_occurred", False):
-                self.tx_manager.rollback(tx.id, reason="Workflow Execution Failed")
-                report.execution_log.append("Transactional Rollback Completed.")
+                self.tx_manager.rollback(tx.id, reason="Workflow Interpretation Failed")
+                report.execution_log.append("Compensation planning completed.")
                 for action in report.modeling_actions:
                     action.status = "rolled_back"
             else:
                 self.tx_manager.fail(tx.id, error_msg="Unknown Failure")
             return False
+
+    def execute_report(self, report: DesignReport) -> bool:
+        """Backward-compatible alias for `interpret_report`."""
+        return self.interpret_report(report)
 
     def _map_action_to_step(self, action: ModelingAction, index_key: str) -> StepSpec | None:
         """Mapping logic between business actions and declarative specs."""

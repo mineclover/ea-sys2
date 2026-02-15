@@ -60,5 +60,4 @@ def test_rollback_sequence():
     assert impl.executed == ["S1", "S2"]
     # S2 and then S1 should have rolled back (reverse order)
     assert impl.rolled_back == ["S2", "S1"]
-    # The message in runtime.py uses StepSpec suffix
-    assert "StepSpec 'S3' failed. Initiating rollback..." in result.logs
+    assert "StepSpec 'S3' rejected. Planning compensation..." in result.logs

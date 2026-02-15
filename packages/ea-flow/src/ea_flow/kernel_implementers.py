@@ -4,39 +4,49 @@ from ea_flow.spec import ExecutionContext, StepSpec
 
 
 class AddRuleImplementer(StepImplementer):
-    """How to actually add a rule to the kernel."""
+    """Interpret add-rule specs into declarative kernel intents."""
 
     def execute(self, spec: StepSpec, context: ExecutionContext) -> StepExecutionResult:
         if not isinstance(spec, AddRuleStepSpec):
             return StepExecutionResult(False, None, ["Error: invalid step type for AddRuleImplementer"])
 
-        system = context.variables.get("governance_system")
-        if not system:
-            return StepExecutionResult(False, None, ["Error: governance_system not found in context"])
+        rule_id = str(spec.rule_data.get("id", "")).strip()
+        if not rule_id:
+            return StepExecutionResult(False, None, ["Error: rule id is required"])
 
-        # In a real system, we'd call system.submit_rule(spec.rule_data)
-        logs = [f"Submitting rule {spec.rule_data.get('id')} to kernel"]
-        return StepExecutionResult(True, {"rule_id": spec.rule_data.get("id")}, logs)
+        intent = {
+            "intent_type": "kernel.submit_rule",
+            "rule_id": rule_id,
+            "rule_payload": dict(spec.rule_data),
+            "kernel_anchor": spec.kernel_anchor,
+        }
+        logs = [f"Planned kernel rule submission intent: {rule_id}"]
+        return StepExecutionResult(True, intent, logs)
 
     def rollback(self, spec: StepSpec, context: ExecutionContext) -> bool:
-        if not isinstance(spec, AddRuleStepSpec):
-            return False
-        print(f"[Rollback] Removing rule {spec.rule_data.get('id')}")
-        return True
+        # Intent planning is side-effect free; rollback only confirms compensation feasibility.
+        return isinstance(spec, AddRuleStepSpec)
 
 
 class DeprecateRuleImplementer(StepImplementer):
-    """How to actually deprecate a rule in the kernel."""
+    """Interpret deprecate-rule specs into declarative kernel intents."""
 
     def execute(self, spec: StepSpec, context: ExecutionContext) -> StepExecutionResult:
         if not isinstance(spec, DeprecateRuleStepSpec):
             return StepExecutionResult(False, None, ["Error: invalid step type for DeprecateRuleImplementer"])
 
-        logs = [f"Deprecating rule {spec.rule_id}"]
-        return StepExecutionResult(True, {"deprecated_id": spec.rule_id}, logs)
+        rule_id = spec.rule_id.strip()
+        if not rule_id:
+            return StepExecutionResult(False, None, ["Error: rule id is required"])
+
+        intent = {
+            "intent_type": "kernel.deprecate_rule",
+            "rule_id": rule_id,
+            "kernel_anchor": spec.kernel_anchor,
+        }
+        logs = [f"Planned kernel rule deprecation intent: {rule_id}"]
+        return StepExecutionResult(True, intent, logs)
 
     def rollback(self, spec: StepSpec, context: ExecutionContext) -> bool:
-        if not isinstance(spec, DeprecateRuleStepSpec):
-            return False
-        print(f"[Rollback] Restoring rule {spec.rule_id}")
-        return True
+        # Intent planning is side-effect free; rollback only confirms compensation feasibility.
+        return isinstance(spec, DeprecateRuleStepSpec)

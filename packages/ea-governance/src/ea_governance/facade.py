@@ -111,13 +111,13 @@ class GovernanceContainer:
 
     def execute_decision(self, report_id: str, topic: Topic) -> dict[str, Any]:
         """
-        Executes the modeling actions of a finalized report.
+        Interprets the modeling actions of a finalized report.
         Returns {"success": bool, "transaction_id": str}
         """
         if not topic.report or topic.report.id != report_id:
             return {"success": False, "error": "Invalid Report ID"}
 
-        success = self.execution_service.execute_report(topic.report)
+        success = self.execution_service.interpret_report(topic.report)
         return {
             "success": success,
             "transaction_id": topic.report.transaction_id,
@@ -125,7 +125,7 @@ class GovernanceContainer:
 
     def execute_use_case(self, use_case: UseCaseSpec, variables: dict[str, Any]) -> dict[str, Any]:
         """
-        Executes a Use Case Specification using the system runtime.
+        Interprets a Use Case Specification using the flow runtime.
         """
         tx_name = f"use_case_{use_case.name}"
         tx = self.execution_service.tx_manager.begin_transaction(tx_name, tx_type="use_case_execution")
@@ -134,8 +134,8 @@ class GovernanceContainer:
             # COORDINATION: Prepare context and resolve execution
             context_vars = {**variables, "governance_system": self.kernel}
 
-            # Execute process (Procedural Truth)
-            result = self.runtime.execute(use_case, context_vars)
+            # Interpret process (Procedural Truth)
+            result = self.runtime.interpret(use_case, context_vars)
 
             # Update Transaction with logs
             tx.logs.extend(result.logs)
@@ -148,7 +148,7 @@ class GovernanceContainer:
                     "metrics": {"specs_processed": len(result.step_results)},
                 }
             else:
-                self.execution_service.tx_manager.fail(tx.id, "Use Case execution failed")
+                self.execution_service.tx_manager.fail(tx.id, "Use Case interpretation failed")
                 return {"success": False, "transaction_id": tx.id, "logs": result.logs}
 
         except Exception as e:

@@ -14,26 +14,27 @@ def test_add_rule_implementer_rejects_wrong_spec_type() -> None:
     assert "invalid step type" in result.logs[0]
 
 
-def test_add_rule_implementer_requires_governance_system() -> None:
+def test_add_rule_implementer_requires_rule_id() -> None:
+    implementer = AddRuleImplementer()
+    context = ExecutionContext("exec-1", {})
+    spec = AddRuleStepSpec("act-1", {})
+
+    result = implementer.execute(spec, context)
+
+    assert not result.success
+    assert "rule id is required" in result.logs[0]
+
+
+def test_add_rule_implementer_returns_kernel_intent() -> None:
     implementer = AddRuleImplementer()
     context = ExecutionContext("exec-1", {})
     spec = AddRuleStepSpec("act-1", {"id": "rule-1"})
 
     result = implementer.execute(spec, context)
 
-    assert not result.success
-    assert "governance_system not found" in result.logs[0]
-
-
-def test_add_rule_implementer_success_path() -> None:
-    implementer = AddRuleImplementer()
-    context = ExecutionContext("exec-1", {"governance_system": object()})
-    spec = AddRuleStepSpec("act-1", {"id": "rule-1"})
-
-    result = implementer.execute(spec, context)
-
     assert result.success
-    assert result.output == {"rule_id": "rule-1"}
+    assert result.output["intent_type"] == "kernel.submit_rule"
+    assert result.output["rule_id"] == "rule-1"
 
 
 def test_deprecate_rule_implementer_success_and_rollback() -> None:
@@ -44,5 +45,6 @@ def test_deprecate_rule_implementer_success_and_rollback() -> None:
     result = implementer.execute(spec, context)
 
     assert result.success
-    assert result.output == {"deprecated_id": "rule-1"}
+    assert result.output["intent_type"] == "kernel.deprecate_rule"
+    assert result.output["rule_id"] == "rule-1"
     assert implementer.rollback(spec, context) is True

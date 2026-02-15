@@ -26,6 +26,7 @@ dependencies = [
     "ea-decision>=0.1.0",
     "ea-flow>=0.1.0",
     "ea-needs>=0.1.0",
+    "ea-profile>=0.1.0",
 ]
 
 [project.optional-dependencies]

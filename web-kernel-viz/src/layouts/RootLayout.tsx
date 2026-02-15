@@ -8,18 +8,21 @@ import { fetchProfiles } from '@/api/client';
 import type { ProfileListItem } from '@/api/types';
 
 /** Map a URL pathname to the (section, subView) pair TopNav expects. */
-function resolveNav(pathname: string): { section: Section; subView: SubView } {
+function resolveNav(pathname: string): { section: Section; subView: SubView; isDashboard: boolean } {
+    if (pathname === '/') {
+        return { section: 'explorer', subView: '' as SubView, isDashboard: true };
+    }
     if (pathname.startsWith('/governance')) {
         const sub = pathname.split('/')[2] || 'rule-lifecycle';
-        return { section: 'governance', subView: sub as SubView };
+        return { section: 'governance', subView: sub as SubView, isDashboard: false };
     }
     if (pathname.startsWith('/needs')) {
         const sub = pathname.split('/')[2] || 'catalog';
-        return { section: 'needs', subView: sub as SubView };
+        return { section: 'needs', subView: sub as SubView, isDashboard: false };
     }
     const sub = pathname.split('/')[2] || 'kernel-schema';
     const subView = sub === 'profile' ? 'profile-graph' : sub;
-    return { section: 'explorer', subView: subView as SubView };
+    return { section: 'explorer', subView: subView as SubView, isDashboard: false };
 }
 
 /** Map a (section, subView) to a URL path. */
@@ -40,7 +43,7 @@ export default function RootLayout() {
         closeDetail, detailOpen, detailTitle, detailContent,
     } = useAppState();
 
-    const { section, subView } = resolveNav(location.pathname);
+    const { section, subView, isDashboard } = resolveNav(location.pathname);
 
     // Profile list (fetched once)
     const [profiles, setProfiles] = useState<ProfileListItem[]>([]);
@@ -84,6 +87,7 @@ export default function RootLayout() {
                 section={section}
                 subView={subView}
                 onNavigate={onNavigate}
+                onGoHome={() => navigate('/')}
                 onToggleSidePanel={toggleSidePanel}
                 sidePanelOpen={sidePanelOpen}
                 lang={lang}
@@ -93,7 +97,7 @@ export default function RootLayout() {
                 onSelectProfile={onSelectProfile}
             />
 
-            <div style={{ marginTop: 76, flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div style={{ marginTop: isDashboard ? 48 : 76, flex: 1, display: 'flex', overflow: 'hidden' }}>
                 <Outlet />
             </div>
 

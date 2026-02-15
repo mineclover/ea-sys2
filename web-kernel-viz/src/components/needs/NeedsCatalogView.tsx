@@ -170,7 +170,7 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
         setError(null);
         fetchNeedsCatalogs()
             .then(setCatalogs)
-            .catch((err) => setError(String(err)))
+            .catch(() => setError('unavailable'))
             .finally(() => setLoading(false));
     }, []);
 
@@ -250,7 +250,7 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                     </span>
                 )}
                 <div style={{ marginLeft: 'auto' }}>
-                    {!selectedCatalogId && (
+                    {!selectedCatalogId && error !== 'unavailable' && (
                         <button
                             onClick={() => setShowCreateForm((v) => !v)}
                             style={{
@@ -267,7 +267,26 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                 </div>
             </div>
 
-            {error && (
+            {error === 'unavailable' && (
+                <div style={{
+                    margin: '12px 16px', padding: '14px 16px',
+                    border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc',
+                    fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                    <span>Unable to load catalogs — API server may be unavailable.</span>
+                    <button
+                        onClick={loadCatalogs}
+                        style={{
+                            padding: '4px 12px', fontSize: 11, fontWeight: 600,
+                            border: '1px solid #cbd5e1', borderRadius: 4,
+                            background: '#fff', color: '#475569', cursor: 'pointer',
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+            {error && error !== 'unavailable' && (
                 <div style={{
                     margin: '12px 16px', padding: '10px 14px',
                     border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2',

@@ -135,16 +135,19 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
     const [judgeTarget, setJudgeTarget] = useState('');
     const [judgeRelation, setJudgeRelation] = useState('');
 
-    useEffect(() => {
+    const loadGroups = useCallback(() => {
         setLoading(true);
+        setError(null);
         fetchKernelRules()
             .then((res) => {
                 setGroups(res.groups || []);
                 setRules([]);
                 setLoading(false);
             })
-            .catch((err) => { setError(String(err)); setLoading(false); });
+            .catch(() => { setError('unavailable'); setLoading(false); });
     }, []);
+
+    useEffect(() => { loadGroups(); }, [loadGroups]);
 
     const onSelectGroup = useCallback((group: string) => {
         setActiveGroup(group);
@@ -176,8 +179,23 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
             });
     }, [judgeSource, judgeTarget, judgeRelation, onShowDetail]);
 
-    if (error) {
-        return <div style={{ padding: 40, color: '#ef4444', fontFamily: 'system-ui' }}>{error}</div>;
+    if (error === 'unavailable') {
+        return (
+            <div style={{ padding: 40, fontFamily: 'system-ui' }}>
+                <div style={{
+                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
+                    background: '#f8fafc', fontSize: 12, color: '#64748b',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                    <span>Unable to load kernel rules — API server may be unavailable.</span>
+                    <button onClick={loadGroups} style={{
+                        padding: '4px 12px', fontSize: 11, fontWeight: 600,
+                        border: '1px solid #cbd5e1', borderRadius: 4,
+                        background: '#fff', color: '#475569', cursor: 'pointer',
+                    }}>Retry</button>
+                </div>
+            </div>
+        );
     }
 
     return (

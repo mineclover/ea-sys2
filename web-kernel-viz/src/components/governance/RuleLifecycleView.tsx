@@ -23,9 +23,10 @@ export default function RuleLifecycleView({ onShowDetail }: RuleLifecycleViewPro
 
     const load = useCallback(() => {
         setLoading(true);
+        setError(null);
         fetchGovernanceRules(stateFilter || undefined)
             .then((data) => { setRules(data); setLoading(false); })
-            .catch((err) => { setError(String(err)); setLoading(false); });
+            .catch(() => { setError('unavailable'); setLoading(false); });
     }, [stateFilter]);
 
     useEffect(() => { load(); }, [load]);
@@ -41,11 +42,23 @@ export default function RuleLifecycleView({ onShowDetail }: RuleLifecycleViewPro
             });
     }, [onShowDetail, load]);
 
-    if (error) {
-        return <div style={{ padding: 40, color: '#ef4444', fontFamily: 'system-ui' }}>
-            Failed to load governance rules. Governance system may not be initialized.
-            <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>{error}</div>
-        </div>;
+    if (error === 'unavailable') {
+        return (
+            <div style={{ padding: 40, fontFamily: 'system-ui' }}>
+                <div style={{
+                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
+                    background: '#f8fafc', fontSize: 12, color: '#64748b',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                    <span>Unable to load governance rules — API server may be unavailable.</span>
+                    <button onClick={load} style={{
+                        padding: '4px 12px', fontSize: 11, fontWeight: 600,
+                        border: '1px solid #cbd5e1', borderRadius: 4,
+                        background: '#fff', color: '#475569', cursor: 'pointer',
+                    }}>Retry</button>
+                </div>
+            </div>
+        );
     }
 
     return (

@@ -31,6 +31,7 @@ interface TopNavProps {
     section: Section;
     subView: SubView;
     onNavigate: (section: Section, subView: SubView) => void;
+    onGoHome?: () => void;
     onToggleSidePanel: () => void;
     sidePanelOpen: boolean;
     lang: Lang;
@@ -100,10 +101,11 @@ const langBtnStyle = (active: boolean) => ({
 });
 
 export default function TopNav({
-    section, subView, onNavigate, onToggleSidePanel, sidePanelOpen,
+    section, subView, onNavigate, onGoHome, onToggleSidePanel, sidePanelOpen,
     lang, onToggleLang,
     profiles, selectedProfile, onSelectProfile,
 }: TopNavProps) {
+    const isDashboard = !subView;
     const views = section === 'explorer' ? EXPLORER_VIEWS : section === 'needs' ? NEEDS_VIEWS : GOVERNANCE_VIEWS;
     const showProfileSelector = subView === 'profile-graph' && profiles && profiles.length > 0;
 
@@ -126,22 +128,31 @@ export default function TopNav({
                 >
                     {sidePanelOpen ? '\u25C1' : '\u25B7'}
                 </button>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginRight: 8 }}>EA-Sys</span>
+                <button
+                    onClick={onGoHome}
+                    style={{
+                        fontSize: 14, fontWeight: 700, color: '#1e293b', marginRight: 8,
+                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                        fontFamily: 'inherit',
+                    }}
+                >
+                    EA-Sys
+                </button>
                 <button
                     onClick={() => onNavigate('explorer', 'kernel-schema')}
-                    style={sectionBtnStyle(section === 'explorer')}
+                    style={sectionBtnStyle(!isDashboard && section === 'explorer')}
                 >
                     Explorer
                 </button>
                 <button
                     onClick={() => onNavigate('needs', 'catalog')}
-                    style={sectionBtnStyle(section === 'needs')}
+                    style={sectionBtnStyle(!isDashboard && section === 'needs')}
                 >
                     Needs
                 </button>
                 <button
                     onClick={() => onNavigate('governance', 'rule-lifecycle')}
-                    style={sectionBtnStyle(section === 'governance')}
+                    style={sectionBtnStyle(!isDashboard && section === 'governance')}
                 >
                     Governance
                 </button>
@@ -181,18 +192,20 @@ export default function TopNav({
                 )}
             </div>
 
-            {/* Sub-view row */}
-            <div style={{ display: 'flex', gap: 4, padding: '0 16px 0 58px', borderTop: '1px solid #f1f5f9' }}>
-                {views.map((v) => (
-                    <button
-                        key={v.key}
-                        onClick={() => onNavigate(section, v.key)}
-                        style={subBtnStyle(subView === v.key)}
-                    >
-                        {v.label}
-                    </button>
-                ))}
-            </div>
+            {/* Sub-view row (hidden on dashboard) */}
+            {!isDashboard && (
+                <div style={{ display: 'flex', gap: 4, padding: '0 16px 0 58px', borderTop: '1px solid #f1f5f9' }}>
+                    {views.map((v) => (
+                        <button
+                            key={v.key}
+                            onClick={() => onNavigate(section, v.key)}
+                            style={subBtnStyle(subView === v.key)}
+                        >
+                            {v.label}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

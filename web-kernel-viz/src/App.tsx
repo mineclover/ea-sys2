@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import RootLayout from '@/layouts/RootLayout';
+import { DashboardPage } from '@/pages/dashboard';
 import { KernelSchemaPage, ProfileGraphPage, RulesPage } from '@/pages/explorer';
 import { RuleLifecyclePage, ModelsPage, DecisionsPage, SimulationPage } from '@/pages/governance';
 import { NeedsCatalogPage } from '@/pages/needs';
@@ -12,7 +13,7 @@ export default function App() {
             <BrowserRouter>
                 <Routes>
                     <Route element={<RootLayout />}>
-                        <Route index element={<Navigate to="/explorer/kernel-schema" replace />} />
+                        <Route index element={<DashboardPage />} />
                         <Route path="explorer">
                             <Route path="kernel-schema" element={<KernelSchemaPage />} />
                             <Route path="profile/:profileName" element={<ProfileGraphPage />} />
@@ -28,7 +29,7 @@ export default function App() {
                             <Route path="decisions" element={<DecisionsPage />} />
                             <Route path="simulation" element={<SimulationPage />} />
                         </Route>
-                        <Route path="*" element={<Navigate to="/explorer/kernel-schema" replace />} />
+                        <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>
                 </Routes>
             </BrowserRouter>

@@ -12,6 +12,8 @@ import type {
     KernelRulesResponse,
     KernelRuleDetail,
     JudgeResponse,
+    GovernanceDashboardResponse,
+    CrossLayerSummaryResponse,
     GovernanceRuleItem,
     GovernanceJudgmentResult,
     ModelState,
@@ -152,6 +154,16 @@ export function fetchJudge(
     relation: string,
 ): Promise<JudgeResponse> {
     return postJson('/kernel/judge', { source, target, relation });
+}
+
+// --- Dashboard ---
+
+export function fetchGovernanceDashboard(): Promise<GovernanceDashboardResponse> {
+    return fetchJson('/governance/dashboard');
+}
+
+export function fetchCrossLayerSummary(): Promise<CrossLayerSummaryResponse> {
+    return fetchJson('/governance/layers/summary');
 }
 
 // --- Governance ---

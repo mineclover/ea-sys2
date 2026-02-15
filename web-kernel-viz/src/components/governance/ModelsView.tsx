@@ -60,8 +60,11 @@ export default function ModelsView({ onShowDetail }: ModelsViewProps) {
                     </button>
                 </div>
                 {error && (
-                    <div style={{ padding: '12px 14px', border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2', fontSize: 12, color: '#991b1b' }}>
-                        {error}
+                    <div style={{
+                        padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
+                        background: '#f8fafc', fontSize: 12, color: '#64748b',
+                    }}>
+                        Unable to look up model — API server may be unavailable.
                     </div>
                 )}
                 <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 16 }}>

@@ -298,7 +298,7 @@ const LayoutFlow = ({ lang }: LayoutFlowProps) => {
                 setNodes(n);
                 setEdges(e);
             })
-            .catch((err) => setError(String(err)));
+            .catch(() => setError('unavailable'));
     }, [setNodes, setEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Rebuild nodes when lang changes
@@ -339,10 +339,15 @@ const LayoutFlow = ({ lang }: LayoutFlowProps) => {
 
     const onPaneClick = useCallback(() => setInfo(null), []);
 
-    if (error) {
+    if (error === 'unavailable') {
         return (
-            <div style={{ padding: 40, color: '#ef4444', fontFamily: 'system-ui' }}>
-                Failed to load kernel schema: {error}
+            <div style={{ padding: 40, fontFamily: 'system-ui' }}>
+                <div style={{
+                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
+                    background: '#f8fafc', fontSize: 12, color: '#64748b',
+                }}>
+                    Unable to load kernel schema — API server may be unavailable.
+                </div>
             </div>
         );
     }

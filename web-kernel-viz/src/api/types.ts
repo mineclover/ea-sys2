@@ -192,6 +192,63 @@ export interface JudgeResponse {
     conflicts: string[];
 }
 
+// --- Dashboard ---
+
+export interface DashboardLayerInfo {
+    layer_key: string;
+    profile_name: string;
+    loaded: boolean;
+    name: string;
+    version: string;
+    element_count: number;
+    relation_count: number;
+    rule_count: number;
+}
+
+export interface DashboardGovernanceStackInfo {
+    stack_id: string;
+    profile_name: string;
+    loaded: boolean;
+    name: string;
+    version: string;
+    element_count: number;
+    relation_count: number;
+    rule_count: number;
+}
+
+export interface GovernanceDashboardResponse {
+    managed_layers: {
+        layers: DashboardLayerInfo[];
+        governance_stack: DashboardGovernanceStackInfo[];
+        total_profiles: number;
+    };
+    schema: {
+        entity_count: number;
+        relation_count: number;
+        entities: string[];
+        relations: string[];
+    };
+    frameworks: {
+        name: string;
+        version: string;
+        element_count: number;
+        relation_count: number;
+        rule_count: number;
+    }[];
+}
+
+export interface CrossLayerSummaryResponse {
+    layers: {
+        layer_key: string;
+        loaded: boolean;
+        node_count: number;
+        edge_count: number;
+        top_relations: { relation: string; count: number }[];
+    }[];
+    total_nodes: number;
+    total_edges: number;
+}
+
 // --- Governance ---
 
 export interface GovernanceRuleItem {

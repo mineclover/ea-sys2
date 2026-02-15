@@ -308,3 +308,81 @@ def load_schema_i18n(
         new_relations.append(replace(r, description=new_desc, display_name=new_dn))
 
     return replace(schema, entities=tuple(new_entities), relations=tuple(new_relations))
+
+
+def audit_i18n_patch(
+    schema: KernelSchema,
+    lang: str,
+    patch_path: Path | None = None,
+) -> "I18nAuditReport":
+    """TOML 패치 파일 기반 i18n 감사. DB 불필요.
+
+    스키마의 모든 entity/relation에 대해 번역 누락(missing),
+    레거시 패치(orphan), 영문 원본 불일치(stale)를 감지한다.
+    """
+    from ea_kernel.i18n_store import I18nAuditEntry, I18nAuditReport, _schema_items
+
+    path = patch_path or (SPECS_DIR / f"kernel_schema.{lang}.toml")
+    schema_items = _schema_items(schema)
+
+    # Parse TOML patch (if exists)
+    patch_data: dict[str, dict[str, dict[str, str]]] = {"entities": {}, "relations": {}}
+    if path.exists():
+        try:
+            doc = tomllib.loads(path.read_text(encoding="utf-8"))
+            patch_data["entities"] = doc.get("entities", {})
+            patch_data["relations"] = doc.get("relations", {})
+        except (OSError, tomllib.TOMLDecodeError):
+            pass
+
+    section_map = {"entity": "entities", "relation": "relations"}
+
+    missing: list[I18nAuditEntry] = []
+    stale: list[I18nAuditEntry] = []
+    orphan: list[I18nAuditEntry] = []
+    schema_keys: set[tuple[str, str, str]] = set()
+
+    for (kind, name), en_fields in schema_items.items():
+        section = section_map[kind]
+        patch = patch_data[section].get(name, {})
+
+        for field_name, en_value in en_fields.items():
+            schema_keys.add((kind, name, field_name))
+
+            if not isinstance(patch, dict) or field_name not in patch:
+                missing.append(I18nAuditEntry(
+                    kind=kind, name=name, issue="missing",
+                    field=field_name, en_current=en_value, en_recorded="",
+                ))
+            else:
+                en_key = f"_en_{field_name}"
+                en_recorded = patch.get(en_key, "")
+                if en_recorded and en_recorded != en_value:
+                    stale.append(I18nAuditEntry(
+                        kind=kind, name=name, issue="stale",
+                        field=field_name, en_current=en_value, en_recorded=en_recorded,
+                    ))
+
+    # Orphan: items in patch but not in schema
+    for section, kind in (("entities", "entity"), ("relations", "relation")):
+        for item_name, fields in patch_data[section].items():
+            if not isinstance(fields, dict):
+                continue
+            for field_name in ("display_name", "description"):
+                if field_name in fields and (kind, item_name, field_name) not in schema_keys:
+                    orphan.append(I18nAuditEntry(
+                        kind=kind, name=item_name, issue="orphan",
+                        field=field_name, en_current="", en_recorded=fields.get(f"_en_{field_name}", ""),
+                    ))
+
+    total_slots = sum(len(fields) for fields in schema_items.values())
+    translated = total_slots - len(missing)
+
+    return I18nAuditReport(
+        lang=lang,
+        missing=tuple(missing),
+        orphan=tuple(orphan),
+        stale=tuple(stale),
+        total_schema_items=total_slots,
+        total_translated=translated,
+    )

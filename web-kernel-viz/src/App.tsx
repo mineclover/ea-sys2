@@ -80,8 +80,6 @@ function App() {
                 return (
                     <ProfileSidePanel
                         profileName={selectedProfile}
-                        profiles={profiles.map((p) => ({ name: p.name, version: p.version }))}
-                        onSelectProfile={setSelectedProfile}
                         visibleLayers={visibleLayers}
                         onToggleLayer={onToggleLayer}
                     />
@@ -127,6 +125,9 @@ function App() {
                 onNavigate={onNavigate}
                 onToggleSidePanel={() => setSidePanelOpen((v) => !v)}
                 sidePanelOpen={sidePanelOpen}
+                profiles={profiles.map((p) => ({ name: p.name, version: p.version }))}
+                selectedProfile={selectedProfile}
+                onSelectProfile={setSelectedProfile}
             />
 
             {/* Main area below nav (nav height ~76px) */}

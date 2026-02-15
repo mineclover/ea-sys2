@@ -1,4 +1,6 @@
 
+import { useState, useCallback } from 'react';
+
 export type Section = 'explorer' | 'governance';
 
 export type ExplorerView = 'kernel-schema' | 'profile-graph' | 'rules';
@@ -24,6 +26,10 @@ interface TopNavProps {
     onNavigate: (section: Section, subView: SubView) => void;
     onToggleSidePanel: () => void;
     sidePanelOpen: boolean;
+    // Profile selector (shown when profile-graph is active)
+    profiles?: { name: string; version: string }[];
+    selectedProfile?: string;
+    onSelectProfile?: (name: string) => void;
 }
 
 const sectionBtnStyle = (active: boolean) => ({
@@ -48,8 +54,37 @@ const subBtnStyle = (active: boolean) => ({
     cursor: 'pointer' as const,
 });
 
-export default function TopNav({ section, subView, onNavigate, onToggleSidePanel, sidePanelOpen }: TopNavProps) {
+function CopyBtn({ value, title }: { value: string; title?: string }) {
+    const [copied, setCopied] = useState(false);
+    const onClick = useCallback(() => {
+        navigator.clipboard.writeText(value).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1200);
+        });
+    }, [value]);
+    return (
+        <button
+            onClick={onClick}
+            title={title || 'Copy'}
+            style={{
+                width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid #e2e8f0', borderRadius: 4,
+                background: copied ? '#dcfce7' : '#fff',
+                cursor: 'pointer', fontSize: 12, color: copied ? '#166534' : '#64748b',
+                transition: 'background 0.2s, color 0.2s',
+            }}
+        >
+            {copied ? '\u2713' : '\u2398'}
+        </button>
+    );
+}
+
+export default function TopNav({
+    section, subView, onNavigate, onToggleSidePanel, sidePanelOpen,
+    profiles, selectedProfile, onSelectProfile,
+}: TopNavProps) {
     const views = section === 'explorer' ? EXPLORER_VIEWS : GOVERNANCE_VIEWS;
+    const showProfileSelector = subView === 'profile-graph' && profiles && profiles.length > 0;
 
     return (
         <div style={{
@@ -83,6 +118,32 @@ export default function TopNav({ section, subView, onNavigate, onToggleSidePanel
                 >
                     Governance
                 </button>
+
+                {/* Profile selector — right-aligned when profile-graph is active */}
+                {showProfileSelector && (
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
+                            Profile
+                        </span>
+                        <select
+                            value={selectedProfile}
+                            onChange={(e) => onSelectProfile?.(e.target.value)}
+                            style={{
+                                padding: '4px 8px', fontSize: 12,
+                                border: '1px solid #cbd5e1', borderRadius: 4,
+                                background: '#fff', color: '#1e293b',
+                                maxWidth: 220,
+                            }}
+                        >
+                            {profiles.map((p) => (
+                                <option key={p.name} value={p.name}>
+                                    {p.name} (v{p.version})
+                                </option>
+                            ))}
+                        </select>
+                        <CopyBtn value={selectedProfile || ''} title="Copy profile name" />
+                    </div>
+                )}
             </div>
 
             {/* Sub-view row */}

@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import { fetchProfileDescription, fetchProfileTopology } from '@/api/client';
 import type { ProfileDescription, ProfileTopologyResponse } from '@/api/types';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
+
 interface ProfileSidePanelProps {
     profileName: string;
-    profiles: { name: string; version: string }[];
-    onSelectProfile: (name: string) => void;
     visibleLayers: Set<string>;
     onToggleLayer: (layer: string) => void;
 }
@@ -22,8 +22,6 @@ const LAYER_COLORS: Record<string, string> = {
 
 export default function ProfileSidePanel({
     profileName,
-    profiles,
-    onSelectProfile,
     visibleLayers,
     onToggleLayer,
 }: ProfileSidePanelProps) {
@@ -36,23 +34,57 @@ export default function ProfileSidePanel({
         fetchProfileTopology(profileName).then(setTopo).catch(() => setTopo(null));
     }, [profileName]);
 
+    const summaryText = desc && topo
+        ? [
+            `Profile: ${profileName}`,
+            `Elements: ${desc.element_count}`,
+            `Relations: ${desc.relation_count}`,
+            `Rules: ${desc.rule_count} (Allow ${desc.rule_summary.allow} / Deny ${desc.rule_summary.deny})`,
+            `Edges: ${topo.edge_count}`,
+        ].join('\n')
+        : '';
+
+    const encodedName = encodeURIComponent(profileName);
+    const endpointsText = [
+        `# ${profileName}`,
+        `/profiles/${encodedName}`,
+        `/profiles/${encodedName}/topology`,
+        `/profiles/${encodedName}/reachable?element={element}&max_depth=3`,
+        `/profiles/${encodedName}/paths?source={src}&target={tgt}`,
+        `/profiles/${encodedName}/impact?element={element}`,
+    ].join('\n');
+
     return (
         <div style={{ fontSize: 12, lineHeight: 1.6 }}>
-            {/* Profile Selector */}
-            <div style={sectionStyle}>
-                <div style={labelStyle}>Profile</div>
-                <select
-                    value={profileName}
-                    onChange={(e) => onSelectProfile(e.target.value)}
-                    style={selectStyle}
-                >
-                    {profiles.map((p) => (
-                        <option key={p.name} value={p.name}>
-                            {p.name} (v{p.version})
-                        </option>
-                    ))}
-                </select>
-            </div>
+            {/* Current Profile */}
+            {profileName && (
+                <div style={{ marginBottom: 14, padding: '8px 10px', background: '#f1f5f9', borderRadius: 6 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>
+                        Current Profile
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', wordBreak: 'break-all' }}>
+                        {profileName}
+                    </div>
+                    {desc && (
+                        <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                            v{desc.version} · {desc.standard} · {desc.organization}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                        {Array.from(visibleLayers).map((layer) => (
+                            <span key={layer} style={{
+                                fontSize: 9, fontWeight: 600,
+                                padding: '1px 6px', borderRadius: 3,
+                                background: LAYER_COLORS[layer] ? `${LAYER_COLORS[layer]}18` : '#e2e8f020',
+                                color: LAYER_COLORS[layer] || '#64748b',
+                                border: `1px solid ${LAYER_COLORS[layer] || '#e2e8f0'}40`,
+                            }}>
+                                {layer}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Summary Stats */}
             {desc && topo && (
@@ -64,7 +96,7 @@ export default function ProfileSidePanel({
                         <StatBadge label="Rules" value={desc.rule_count} color="#f97316" />
                         <StatBadge label="Edges" value={topo.edge_count} color="#22c55e" />
                     </div>
-                    <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+                    <div style={{ marginTop: 6, display: 'flex', gap: 6, marginBottom: 8 }}>
                         <span style={{ ...miniPill, background: '#dcfce7', color: '#166534' }}>
                             Allow {desc.rule_summary.allow}
                         </span>
@@ -72,6 +104,20 @@ export default function ProfileSidePanel({
                             Deny {desc.rule_summary.deny}
                         </span>
                     </div>
+                    <textarea
+                        readOnly
+                        value={summaryText}
+                        onFocus={(e) => e.target.select()}
+                        rows={5}
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            fontSize: 10, fontFamily: 'monospace',
+                            color: '#475569', background: '#f8fafc',
+                            border: '1px solid #e2e8f0', borderRadius: 4,
+                            padding: '6px 8px', resize: 'vertical',
+                            lineHeight: 1.6,
+                        }}
+                    />
                 </div>
             )}
 
@@ -163,6 +209,27 @@ export default function ProfileSidePanel({
                         ))}
                 </div>
             )}
+
+            {/* API Endpoints */}
+            {profileName && (
+                <div style={sectionStyle}>
+                    <div style={labelStyle}>API Endpoints</div>
+                    <textarea
+                        readOnly
+                        value={endpointsText}
+                        onFocus={(e) => e.target.select()}
+                        rows={6}
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            fontSize: 10, fontFamily: 'monospace',
+                            color: '#475569', background: '#f8fafc',
+                            border: '1px solid #e2e8f0', borderRadius: 4,
+                            padding: '6px 8px', resize: 'vertical',
+                            lineHeight: 1.6,
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 }
@@ -190,14 +257,6 @@ const labelStyle = {
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     marginBottom: 6,
-};
-const selectStyle = {
-    width: '100%',
-    padding: '6px 8px',
-    fontSize: 12,
-    border: '1px solid #cbd5e1',
-    borderRadius: 4,
-    background: '#fff',
 };
 const statsGridStyle = {
     display: 'grid' as const,

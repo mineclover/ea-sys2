@@ -297,6 +297,48 @@ def _load_profile(name: str) -> Any:
     return registry.get(name)
 
 
+def profile_topology(profile_name: str) -> dict[str, Any]:
+    """UC6: Full topology graph (nodes + edges) for a profile."""
+    from ea_kernel.profile_graph import ProfileTopologyGraph
+
+    profile = _load_profile(profile_name)
+    if profile is None:
+        return {"error": f"Profile not found: {profile_name}"}
+
+    graph = ProfileTopologyGraph(profile)
+
+    nodes = [
+        {
+            "name": elem.name,
+            "layer": elem.layer,
+            "category": elem.category,
+            "kernel_type": elem.kernel_type,
+            "description": elem.description,
+        }
+        for elem in profile.elements
+    ]
+
+    edges: list[dict[str, Any]] = []
+    for src in graph.nodes:
+        for edge in graph.outgoing(src):
+            edges.append({
+                "source": edge.source,
+                "target": edge.target,
+                "relation": edge.relation,
+                "rule_id": edge.rule_id,
+                "priority": edge.priority,
+            })
+
+    return {
+        "profile": profile_name,
+        "nodes": nodes,
+        "edges": edges,
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+        "relation_distribution": graph.relation_distribution(),
+    }
+
+
 def profile_reachable(
     profile_name: str,
     element: str,

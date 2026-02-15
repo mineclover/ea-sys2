@@ -1,0 +1,776 @@
+# EA System Layer: Web Kernel Viz (Frontend)
+# Role: 커널/프로파일/거버넌스 시각화 및 탐색 프론트엔드
+
+[profile]
+name = "EASystemLayerModel"
+version = "1.0.0"
+kernel_version = "2.5.0"
+id_prefix = "wkv"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Goal = "state"
+Context = "state"
+Page = "structure"
+Layout = "structure"
+
+# ── Relations ──────────────────────────────────────────────
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Boundary containment."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Data consumption."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Data production."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Navigation or step sequence."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Goal or policy constraint."
+
+[[relations]]
+name = "available_in"
+kernel_relation = "association"
+description = "Context provides access to an experience."
+
+[[relations]]
+name = "renders"
+kernel_relation = "association"
+description = "Layout component renders a page or view."
+
+# ── Elements: Application Boundary ───────────────────────
+
+[[elements]]
+name = "WebKernelVizApp"
+layer = "Kernel"
+category = "Composite"
+description = "Top-level application boundary for web-kernel-viz frontend."
+
+# ── Elements: Context (사용자 역할) ──────────────────────
+
+[[elements]]
+name = "ExplorerContext"
+layer = "Kernel"
+category = "Context"
+description = "User context for exploring kernel schema, profile topology, and rules."
+
+[[elements]]
+name = "GovernanceOperatorContext"
+layer = "Governance"
+category = "Context"
+description = "User context for monitoring rule lifecycle, models, and decisions."
+
+[[elements]]
+name = "ModelDesignerContext"
+layer = "Kernel"
+category = "Context"
+description = "User context for designing and authoring profiles (future editor tab)."
+
+# ── Elements: Goal (목표) ────────────────────────────────
+
+[[elements]]
+name = "ModelUnderstandingGoal"
+layer = "Kernel"
+category = "Goal"
+description = "G1: Understand model structure visually through topology and traversal."
+
+[[elements]]
+name = "RuleDiscoveryGoal"
+layer = "Kernel"
+category = "Goal"
+description = "G2: Explore rules by group, inspect details, and execute triple judgments."
+
+[[elements]]
+name = "GovernanceMonitoringGoal"
+layer = "Governance"
+category = "Goal"
+description = "G4: Monitor rule lifecycle states, model versions, and decision history."
+
+[[elements]]
+name = "ChangeSimulationGoal"
+layer = "Governance"
+category = "Goal"
+description = "G5: Simulate impact of rule promotions before applying changes."
+
+# ── Elements: Experience (경험 경계) ─────────────────────
+
+[[elements]]
+name = "ExplorerExperience"
+layer = "Kernel"
+category = "Composite"
+description = "Experience boundary for model exploration journey (G1+G2)."
+
+[[elements]]
+name = "GovernanceExperience"
+layer = "Governance"
+category = "Composite"
+description = "Experience boundary for governance monitoring journey (G4+G5)."
+
+# ── Elements: Layout (공통 레이아웃) ─────────────────────
+
+[[elements]]
+name = "AppShell"
+layer = "Kernel"
+category = "Layout"
+description = "Root layout shell: top nav + side panel + canvas + detail slide-over."
+
+[[elements]]
+name = "TopNavComponent"
+layer = "Kernel"
+category = "Layout"
+description = "Primary navigation bar with section/sub-view selection."
+
+[[elements]]
+name = "SidePanelComponent"
+layer = "Kernel"
+category = "Layout"
+description = "Collapsible left panel for contextual filters and controls."
+
+[[elements]]
+name = "DetailSlideOverComponent"
+layer = "Kernel"
+category = "Layout"
+description = "Right slide-over panel for inspecting node/rule/judgment details."
+
+# ── Elements: Page (Explorer) ────────────────────────────
+
+[[elements]]
+name = "KernelSchemaPage"
+layer = "Kernel"
+category = "Page"
+description = "Kernel entity/relation graph visualization (FlowGraph)."
+
+[[elements]]
+name = "ProfileGraphPage"
+layer = "Kernel"
+category = "Page"
+description = "Profile topology graph with reachable traversal highlighting."
+
+[[elements]]
+name = "RulesPage"
+layer = "Kernel"
+category = "Page"
+description = "Rule group browser, rule table, and triple judge interface."
+
+# ── Elements: Page (Governance) ──────────────────────────
+
+[[elements]]
+name = "RuleLifecyclePage"
+layer = "Governance"
+category = "Page"
+description = "Rule lifecycle state board with state filter and approve action."
+
+[[elements]]
+name = "ModelsPage"
+layer = "Governance"
+category = "Page"
+description = "Model state lookup and version inspection."
+
+[[elements]]
+name = "DecisionsPage"
+layer = "Governance"
+category = "Page"
+description = "Decision trace lookup and evidence inspection."
+
+[[elements]]
+name = "SimulationPage"
+layer = "Governance"
+category = "Page"
+description = "What-if simulation for rule promotion impact analysis."
+
+# ── Elements: API Endpoint (consumed by pages) ──────────
+
+[[elements]]
+name = "KernelSchemaEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API: /kernel/entities, /kernel/relations — kernel schema data."
+
+[[elements]]
+name = "KernelRulesEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API: /kernel/rules, /kernel/rules/{id} — rule exploration."
+
+[[elements]]
+name = "KernelJudgeEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API: /kernel/judge — evidence-based triple judgment."
+
+[[elements]]
+name = "ProfileListEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API: /profiles — registered profile listing."
+
+[[elements]]
+name = "ProfileTopologyEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API: /profiles/{name}/topology — full graph nodes+edges."
+
+[[elements]]
+name = "ProfileTraversalEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API: /profiles/{name}/reachable, /paths, /impact — graph traversal."
+
+[[elements]]
+name = "GovernanceRulesEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "API: /rules — governance rule lifecycle CRUD."
+
+[[elements]]
+name = "GovernanceModelsEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "API: /models/{name} — model state lookup."
+
+[[elements]]
+name = "GovernanceDecisionsEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "API: /models/decisions/{id} — decision trace."
+
+[[elements]]
+name = "GovernanceSimulationEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "API: /simulation/what-if — promotion simulation."
+
+# ── Elements: Data Artifact ──────────────────────────────
+
+[[elements]]
+name = "TopologyData"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Graph data (nodes + edges) consumed by visualization components."
+
+[[elements]]
+name = "TraversalResult"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Reachable set / paths result from graph traversal API."
+
+[[elements]]
+name = "JudgmentResult"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Verdict + evidence from triple judgment execution."
+
+[[elements]]
+name = "SimulationResult"
+layer = "Governance"
+category = "PassiveStructure"
+description = "What-if simulation output: impact, risk, verdict changes."
+
+# ── Elements: Behavior / Action ──────────────────────────
+
+[[elements]]
+name = "TraversalInteraction"
+layer = "Kernel"
+category = "Behavior"
+description = "Node click → fetchReachable → highlight reachable set."
+
+[[elements]]
+name = "JudgeInteraction"
+layer = "Kernel"
+category = "Behavior"
+description = "Enter triple → execute judge → show verdict in detail panel."
+
+[[elements]]
+name = "SimulateAction"
+layer = "Governance"
+category = "Executable"
+description = "Submit rule + confidence → run what-if → display results."
+
+# ══════════════════════════════════════════════════════════
+# Rules
+# ══════════════════════════════════════════════════════════
+
+# ── Pattern: App Boundary Containment ────────────────────
+
+[[rules]]
+source = "WebKernelVizApp"
+target = "@Composite"
+relation = "contains"
+priority = 60
+notes = "App boundary contains experiences."
+
+[[rules]]
+source = "WebKernelVizApp"
+target = "@Layout"
+relation = "contains"
+priority = 60
+notes = "App boundary contains layout components."
+
+[[rules]]
+source = "WebKernelVizApp"
+target = "@Context"
+relation = "contains"
+priority = 60
+notes = "App boundary contains user contexts."
+
+[[rules]]
+source = "WebKernelVizApp"
+target = "@Goal"
+relation = "contains"
+priority = 60
+notes = "App boundary contains goals."
+
+# ── Pattern: Experience Containment ──────────────────────
+
+[[rules]]
+source = "@Composite"
+target = "@Page"
+relation = "contains"
+priority = 60
+notes = "Experiences contain pages."
+
+[[rules]]
+source = "@Composite"
+target = "@Interface"
+relation = "contains"
+priority = 60
+notes = "Experiences contain endpoints."
+
+[[rules]]
+source = "@Composite"
+target = "@Behavior"
+relation = "contains"
+priority = 60
+notes = "Experiences contain interactive behaviors."
+
+[[rules]]
+source = "@Composite"
+target = "@Executable"
+relation = "contains"
+priority = 60
+notes = "Experiences contain executable actions."
+
+[[rules]]
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 60
+notes = "Experiences contain data artifacts."
+
+# ── Pattern: Context → Experience ────────────────────────
+
+[[rules]]
+source = "@Context"
+target = "@Composite"
+relation = "available_in"
+priority = 60
+notes = "Contexts provide access to experiences."
+
+# ── Pattern: Goal → Behavior Constraint ──────────────────
+
+[[rules]]
+source = "@Goal"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Goals constrain interactive behaviors."
+
+[[rules]]
+source = "@Goal"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Goals constrain executable actions."
+
+# ── Pattern: Page ↔ Endpoint ─────────────────────────────
+
+[[rules]]
+source = "@Page"
+target = "@Interface"
+relation = "coordinates"
+priority = 60
+notes = "Pages coordinate with API endpoints."
+
+# ── Pattern: Layout ↔ Page ───────────────────────────────
+
+[[rules]]
+source = "@Layout"
+target = "@Page"
+relation = "renders"
+priority = 60
+notes = "Layout components render pages."
+
+# ── Pattern: Behavior → Data ─────────────────────────────
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Interactions produce data artifacts."
+
+[[rules]]
+source = "@Interface"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Endpoints produce data artifacts."
+
+# ── Pattern: Page Navigation ─────────────────────────────
+
+[[rules]]
+source = "@Page"
+target = "@Page"
+relation = "next"
+priority = 60
+notes = "Page-to-page navigation sequence."
+
+# ── Explicit: Context → Experience ───────────────────────
+
+[[rules]]
+source = "ExplorerContext"
+target = "ExplorerExperience"
+relation = "available_in"
+priority = 70
+notes = "Explorers access the explorer experience."
+
+[[rules]]
+source = "GovernanceOperatorContext"
+target = "GovernanceExperience"
+relation = "available_in"
+priority = 70
+notes = "Governance operators access the governance experience."
+
+[[rules]]
+source = "ModelDesignerContext"
+target = "ExplorerExperience"
+relation = "available_in"
+priority = 70
+notes = "Designers access explorer for read-only topology inspection."
+
+# ── Explicit: Goal → Behavior ────────────────────────────
+
+[[rules]]
+source = "ModelUnderstandingGoal"
+target = "TraversalInteraction"
+relation = "constrains"
+priority = 70
+notes = "Understanding goal drives traversal interaction design."
+
+[[rules]]
+source = "RuleDiscoveryGoal"
+target = "JudgeInteraction"
+relation = "constrains"
+priority = 70
+notes = "Rule discovery goal drives judge interaction design."
+
+[[rules]]
+source = "ChangeSimulationGoal"
+target = "SimulateAction"
+relation = "constrains"
+priority = 70
+notes = "Simulation goal drives what-if action design."
+
+# ── Explicit: Experience → Page ──────────────────────────
+
+[[rules]]
+source = "ExplorerExperience"
+target = "KernelSchemaPage"
+relation = "contains"
+priority = 70
+notes = "Explorer experience contains the kernel schema view."
+
+[[rules]]
+source = "ExplorerExperience"
+target = "ProfileGraphPage"
+relation = "contains"
+priority = 70
+notes = "Explorer experience contains the profile graph view."
+
+[[rules]]
+source = "ExplorerExperience"
+target = "RulesPage"
+relation = "contains"
+priority = 70
+notes = "Explorer experience contains the rules view."
+
+[[rules]]
+source = "GovernanceExperience"
+target = "RuleLifecyclePage"
+relation = "contains"
+priority = 70
+notes = "Governance experience contains rule lifecycle view."
+
+[[rules]]
+source = "GovernanceExperience"
+target = "ModelsPage"
+relation = "contains"
+priority = 70
+notes = "Governance experience contains models view."
+
+[[rules]]
+source = "GovernanceExperience"
+target = "DecisionsPage"
+relation = "contains"
+priority = 70
+notes = "Governance experience contains decisions view."
+
+[[rules]]
+source = "GovernanceExperience"
+target = "SimulationPage"
+relation = "contains"
+priority = 70
+notes = "Governance experience contains simulation view."
+
+# ── Explicit: Layout → Page ──────────────────────────────
+
+[[rules]]
+source = "AppShell"
+target = "TopNavComponent"
+relation = "contains"
+priority = 70
+notes = "App shell contains top nav."
+
+[[rules]]
+source = "AppShell"
+target = "SidePanelComponent"
+relation = "contains"
+priority = 70
+notes = "App shell contains side panel."
+
+[[rules]]
+source = "AppShell"
+target = "DetailSlideOverComponent"
+relation = "contains"
+priority = 70
+notes = "App shell contains detail slide-over."
+
+[[rules]]
+source = "TopNavComponent"
+target = "ExplorerExperience"
+relation = "coordinates"
+priority = 70
+notes = "Top nav coordinates experience switching."
+
+[[rules]]
+source = "TopNavComponent"
+target = "GovernanceExperience"
+relation = "coordinates"
+priority = 70
+notes = "Top nav coordinates experience switching."
+
+# ── Explicit: Page → Endpoint ────────────────────────────
+
+[[rules]]
+source = "KernelSchemaPage"
+target = "KernelSchemaEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Kernel schema page fetches entity/relation data."
+
+[[rules]]
+source = "ProfileGraphPage"
+target = "ProfileListEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Profile graph page fetches profile list."
+
+[[rules]]
+source = "ProfileGraphPage"
+target = "ProfileTopologyEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Profile graph page fetches topology data."
+
+[[rules]]
+source = "ProfileGraphPage"
+target = "ProfileTraversalEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Profile graph page fetches reachable set on node click."
+
+[[rules]]
+source = "RulesPage"
+target = "KernelRulesEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Rules page fetches rule groups and rule details."
+
+[[rules]]
+source = "RulesPage"
+target = "KernelJudgeEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Rules page executes triple judgments."
+
+[[rules]]
+source = "RuleLifecyclePage"
+target = "GovernanceRulesEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Rule lifecycle page fetches governance rules."
+
+[[rules]]
+source = "ModelsPage"
+target = "GovernanceModelsEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Models page fetches model state."
+
+[[rules]]
+source = "DecisionsPage"
+target = "GovernanceDecisionsEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Decisions page fetches decision traces."
+
+[[rules]]
+source = "SimulationPage"
+target = "GovernanceSimulationEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Simulation page executes what-if."
+
+# ── Explicit: Behavior → Data ────────────────────────────
+
+[[rules]]
+source = "TraversalInteraction"
+target = "TraversalResult"
+relation = "produces"
+priority = 70
+notes = "Traversal interaction produces reachable set data."
+
+[[rules]]
+source = "ProfileTopologyEndpoint"
+target = "TopologyData"
+relation = "produces"
+priority = 70
+notes = "Topology endpoint produces graph data."
+
+[[rules]]
+source = "ProfileTraversalEndpoint"
+target = "TraversalResult"
+relation = "produces"
+priority = 70
+notes = "Traversal endpoint produces reachable/paths data."
+
+[[rules]]
+source = "KernelJudgeEndpoint"
+target = "JudgmentResult"
+relation = "produces"
+priority = 70
+notes = "Judge endpoint produces verdict + evidence."
+
+[[rules]]
+source = "GovernanceSimulationEndpoint"
+target = "SimulationResult"
+relation = "produces"
+priority = 70
+notes = "Simulation endpoint produces impact analysis."
+
+[[rules]]
+source = "ProfileGraphPage"
+target = "TopologyData"
+relation = "consumes"
+priority = 70
+notes = "Profile graph page renders topology data."
+
+[[rules]]
+source = "ProfileGraphPage"
+target = "TraversalResult"
+relation = "consumes"
+priority = 70
+notes = "Profile graph page highlights from traversal result."
+
+[[rules]]
+source = "JudgeInteraction"
+target = "JudgmentResult"
+relation = "produces"
+priority = 70
+notes = "Judge interaction produces judgment result for detail panel."
+
+# ── Explicit: Page Navigation ────────────────────────────
+
+[[rules]]
+source = "KernelSchemaPage"
+target = "ProfileGraphPage"
+relation = "next"
+priority = 70
+notes = "From kernel schema, navigate to profile graph."
+
+[[rules]]
+source = "ProfileGraphPage"
+target = "RulesPage"
+relation = "next"
+priority = 70
+notes = "From profile graph, navigate to rules."
+
+[[rules]]
+source = "RuleLifecyclePage"
+target = "ModelsPage"
+relation = "next"
+priority = 70
+notes = "From rule lifecycle, navigate to models."
+
+[[rules]]
+source = "ModelsPage"
+target = "DecisionsPage"
+relation = "next"
+priority = 70
+notes = "From models, navigate to decisions."
+
+[[rules]]
+source = "DecisionsPage"
+target = "SimulationPage"
+relation = "next"
+priority = 70
+notes = "From decisions, navigate to simulation."
+
+# ── Explicit: Detail Panel Coordination ──────────────────
+
+[[rules]]
+source = "DetailSlideOverComponent"
+target = "JudgmentResult"
+relation = "consumes"
+priority = 70
+notes = "Detail slide-over displays judgment results."
+
+[[rules]]
+source = "DetailSlideOverComponent"
+target = "SimulationResult"
+relation = "consumes"
+priority = 70
+notes = "Detail slide-over displays simulation results."

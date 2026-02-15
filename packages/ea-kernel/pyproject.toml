@@ -27,7 +27,9 @@ classifiers = [
 
 # Core: pure Python schema parser + kernel definitions
 # TypeDB dependency only for runtime schema loading
-dependencies = []
+dependencies = [
+    "ea-profile>=0.1.0",
+]
 
 [project.optional-dependencies]
 typedb = [

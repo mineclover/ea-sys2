@@ -1,96 +1,15 @@
-"""Central registry for profile discovery and access.
+"""Re-export from ea_profile for backward compatibility.
 
-In-memory cache backed by optional StoragePort for persistence.
+bootstrap() and bootstrap_all() remain here as they depend on
+ea_kernel.profiles (kernel-specific built-in profiles).
 """
 
-from __future__ import annotations
-
-from contextlib import suppress
-
-from ea_kernel.profile_store import StoragePort
-from ea_kernel.profile_types import (
-    KernelProfile,
-    ProfileOrigin,
-    ProfileRegistryError,
-    ProfileStoreError,
-)
+from ea_profile.registry import *  # noqa: F401, F403
+from ea_profile.registry import ProfileRegistry as _ProfileRegistry
 
 
-class ProfileRegistry:
-    """Central registry for profile discovery and access."""
-
-    def __init__(self, store: StoragePort | None = None) -> None:
-        self._profiles: dict[str, KernelProfile] = {}
-        self._origins: dict[str, ProfileOrigin] = {}
-        self._store = store
-
-    # ── Register ──────────────────────────────────────────────────
-
-    def register(self, profile: KernelProfile, *,
-                 origin: ProfileOrigin = ProfileOrigin.BUILDER) -> None:
-        """Register a profile in the registry (and persist if store present).
-
-        If the same (profile_name, version) already exists in the store,
-        the store write is skipped (the data is already persisted).
-        """
-        if profile.name in self._profiles:
-            raise ProfileRegistryError(
-                f"Profile already registered: '{profile.name}'"
-            )
-        self._profiles[profile.name] = profile
-        self._origins[profile.name] = origin
-
-        if self._store is not None:
-            with suppress(ProfileStoreError):
-                self._store.store(profile, origin=origin)
-
-    def get(self, name: str) -> KernelProfile | None:
-        return self._profiles.get(name)
-
-    def list_names(self) -> list[str]:
-        return sorted(self._profiles.keys())
-
-    def list_all(self) -> list[KernelProfile]:
-        return [self._profiles[n] for n in sorted(self._profiles.keys())]
-
-    def unregister(self, name: str) -> bool:
-        if name not in self._profiles:
-            return False
-        del self._profiles[name]
-        del self._origins[name]
-        return True
-
-    def origin(self, name: str) -> ProfileOrigin | None:
-        return self._origins.get(name)
-
-    # ── Store sync ─────────────────────────────────────────────────
-
-    def load_from_store(self) -> int:
-        """Load all latest profile versions from the store into the registry.
-
-        Skips profiles already registered. Returns the number loaded.
-        """
-        if self._store is None:
-            return 0
-        loaded = 0
-        for name in self._store.list_profiles():
-            if name in self._profiles:
-                continue
-            pv = self._store.get_latest(name)
-            if pv is None:
-                continue
-            from ea_kernel.profile_serializer import dict_to_profile
-            profile = dict_to_profile(pv.data)
-            self._profiles[name] = profile
-            if pv.origin:
-                try:
-                    self._origins[name] = ProfileOrigin(pv.origin)
-                except ValueError:
-                    self._origins[name] = ProfileOrigin.STORE
-            else:
-                self._origins[name] = ProfileOrigin.STORE
-            loaded += 1
-        return loaded
+class ProfileRegistry(_ProfileRegistry):
+    """Kernel-aware profile registry with bootstrap support."""
 
     def bootstrap_all(self) -> None:
         """Bootstrap built-in profiles and load any persisted profiles.
@@ -100,15 +19,21 @@ class ProfileRegistry:
         self.bootstrap()
         self.load_from_store()
 
-    # ── Bootstrap ─────────────────────────────────────────────────
-
     def bootstrap(self) -> None:
-        """Load all 5 built-in profiles into the registry."""
+        """Load all built-in profiles into the registry.
+
+        Includes 5 framework profiles + 6 EA-sys layer profiles
+        + 2 governance stack profiles.
+        """
+        from contextlib import suppress
+        from dataclasses import replace
+
         from ea_kernel.profiles.archimate import ARCHIMATE_PROFILE
         from ea_kernel.profiles.bpmn import BPMN_PROFILE
         from ea_kernel.profiles.sysml2 import SYSML2_PROFILE
         from ea_kernel.profiles.togaf import TOGAF_PROFILE
         from ea_kernel.profiles.zachman import ZACHMAN_PROFILE
+        from ea_profile.types import ProfileOrigin, ProfileStoreError
 
         for profile in (
             ARCHIMATE_PROFILE,
@@ -123,3 +48,50 @@ class ProfileRegistry:
                 if self._store is not None:
                     with suppress(ProfileStoreError):
                         self._store.store(profile, origin=ProfileOrigin.BUILTIN)
+
+        # EA-sys layer profiles (6 layers, each with unique registry name)
+        from ea_kernel.profiles.ea_sys import LAYER_ORDER, layer_path
+        from ea_profile.loader import load_profile
+
+        layer_name_map = {
+            "infra": "EASystem-Infra",
+            "governance": "EASystem-Governance",
+            "decision": "EASystem-Decision",
+            "needs": "EASystem-Needs",
+            "kernel": "EASystem-Kernel",
+            "flow": "EASystem-Flow",
+            "web-kernel-viz": "EASystem-WebKernelViz",
+        }
+        for layer_key in LAYER_ORDER:
+            reg_name = layer_name_map[layer_key]
+            if reg_name in self._profiles:
+                continue
+            try:
+                profile = load_profile(layer_path(layer_key))
+                profile = replace(profile, name=reg_name)
+                self._profiles[reg_name] = profile
+                self._origins[reg_name] = ProfileOrigin.TOML
+            except Exception:
+                pass  # skip if TOML load fails
+
+        # Governance profile stack (meta-model + external)
+        from ea_kernel.profiles.governance_profile_stack import (
+            PROFILE_FILE_MAP,
+            profile_path,
+        )
+
+        gov_name_map = {
+            "meta": "GovernanceStack-Meta",
+            "external": "GovernanceStack-External",
+        }
+        for profile_id in PROFILE_FILE_MAP:
+            reg_name = gov_name_map.get(profile_id, f"GovernanceStack-{profile_id}")
+            if reg_name in self._profiles:
+                continue
+            try:
+                profile = load_profile(profile_path(profile_id))
+                profile = replace(profile, name=reg_name)
+                self._profiles[reg_name] = profile
+                self._origins[reg_name] = ProfileOrigin.TOML
+            except Exception:
+                pass  # skip if TOML load fails

@@ -649,6 +649,156 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             ]
         }
 
+    # --- Kernel Schema Exploration API ---
+
+    @_typed_get("/kernel/entities")
+    def get_kernel_entities() -> dict[str, Any]:
+        """List all kernel entities grouped by layer."""
+        from ea_kernel.kernel_service import list_entities
+        return list_entities()
+
+    @_typed_get("/kernel/relations")
+    def get_kernel_relations() -> dict[str, Any]:
+        """List all kernel relations grouped by layer."""
+        from ea_kernel.kernel_service import list_relations
+        return list_relations()
+
+    @_typed_get("/kernel/rules")
+    def get_kernel_rules(group: str | None = None, relation: str | None = None) -> dict[str, Any]:
+        """List kernel rules with optional group/relation filter."""
+        from ea_kernel.kernel_service import list_rules as service_list_rules
+        return service_list_rules(group=group, relation=relation)
+
+    @_typed_get("/kernel/rules/{rule_id}")
+    def get_kernel_rule(rule_id: str) -> dict[str, Any]:
+        """Get full detail of a single kernel rule."""
+        from ea_kernel.kernel_service import describe_rule
+        result = describe_rule(rule_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Rule not found: {rule_id}")
+        return result
+
+    @_typed_post("/kernel/judge")
+    def kernel_judge(req: ExecuteJudgmentRequest) -> dict[str, Any]:
+        """Evidence-based judgment for a relationship triple."""
+        from ea_kernel.kernel_service import judge
+        result = judge(req.source, req.target, req.relation)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return result
+
+    # --- Profile Graph Traversal (Profile Topology API) ---
+
+    @_typed_get("/profiles")
+    def list_profiles() -> list[dict[str, Any]]:
+        """List all registered profiles."""
+        from ea_kernel.profile_registry import ProfileRegistry
+        registry = ProfileRegistry()
+        registry.bootstrap()
+        return [
+            {"name": p.name, "version": p.version}
+            for p in registry.list_all()
+        ]
+
+    @_typed_get("/profiles/{name}")
+    def get_profile(name: str) -> dict[str, Any]:
+        """Get profile metadata."""
+        from ea_kernel.kernel_service import describe_profile
+        result = describe_profile(name)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Profile not found: {name}")
+        return result
+
+    @_typed_get("/profiles/{name}/topology")
+    def get_profile_topology(name: str) -> dict[str, Any]:
+        """Get full profile topology graph (nodes + edges)."""
+        from ea_kernel.kernel_service import profile_topology
+        result = profile_topology(name)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_get("/profiles/{name}/reachable")
+    def get_profile_reachable(
+        name: str,
+        element: str = "",
+        max_depth: int = 3,
+        relation: str | None = None,
+    ) -> dict[str, Any]:
+        """Get reachable elements from a profile element."""
+        if not element:
+            raise HTTPException(status_code=400, detail="Missing required query param: element")
+        from ea_kernel.kernel_service import profile_reachable
+        result = profile_reachable(name, element, max_depth=max_depth, relation=relation)
+        if "error" in result:
+            status = 404 if "not found" in result["error"].lower() else 400
+            raise HTTPException(status_code=status, detail=result["error"])
+        return result
+
+    @_typed_get("/profiles/{name}/paths")
+    def get_profile_paths(
+        name: str,
+        source: str = "",
+        target: str = "",
+        max_depth: int = 5,
+        relation: str | None = None,
+    ) -> dict[str, Any]:
+        """Find paths between two profile elements."""
+        if not source or not target:
+            raise HTTPException(status_code=400, detail="Missing required query params: source, target")
+        from ea_kernel.kernel_service import profile_paths
+        result = profile_paths(name, source, target, max_depth=max_depth, relation=relation)
+        if "error" in result:
+            status = 404 if "not found" in result["error"].lower() else 400
+            raise HTTPException(status_code=status, detail=result["error"])
+        return result
+
+    @_typed_get("/profiles/{name}/impact")
+    def get_profile_impact(
+        name: str,
+        element: str = "",
+        direction: str = "both",
+        max_depth: int = 3,
+    ) -> dict[str, Any]:
+        """Impact analysis for a profile element."""
+        if not element:
+            raise HTTPException(status_code=400, detail="Missing required query param: element")
+        from ea_kernel.kernel_service import profile_impact
+        result = profile_impact(name, element, direction=direction, max_depth=max_depth)
+        if "error" in result:
+            status = 404 if "not found" in result["error"].lower() else 400
+            raise HTTPException(status_code=status, detail=result["error"])
+        return result
+
+    # --- Governance Service API ---
+
+    @_typed_get("/governance/layers")
+    def list_governance_layers() -> dict[str, Any]:
+        """List all managed EA-sys layers and governance stack profiles."""
+        from ea_governance.governance_service import list_managed_layers
+        return list_managed_layers()
+
+    @_typed_get("/governance/layers/summary")
+    def governance_cross_layer_summary() -> dict[str, Any]:
+        """Cross-layer comparison: node/edge counts, top relations."""
+        from ea_governance.governance_service import cross_layer_summary
+        return cross_layer_summary()
+
+    @_typed_get("/governance/layers/{layer_key}")
+    def governance_layer_detail(layer_key: str) -> dict[str, Any]:
+        """Specific layer profile detail + topology metrics."""
+        from ea_governance.governance_service import layer_profile_detail
+        result = layer_profile_detail(layer_key)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_get("/governance/dashboard")
+    def governance_dashboard_endpoint() -> dict[str, Any]:
+        """Overall governance status: layers, schema, frameworks."""
+        from ea_governance.governance_service import governance_dashboard
+        return governance_dashboard()
+
     # --- Governance Flow Logic (Phase 8 Extension) ---
     @_typed_get("/governance/flow/{anchor_id}")
     def get_flow_logic(anchor_id: str) -> dict[str, Any]:

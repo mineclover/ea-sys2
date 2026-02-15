@@ -122,12 +122,9 @@ def list_relations(*, lang: str | None = None) -> dict[str, Any]:
 # ── UC2: Profile detail ──────────────────────────────────────
 
 
-def describe_profile(name: str) -> dict[str, Any] | None:
+def describe_profile(name: str, *, lang: str | None = None) -> dict[str, Any] | None:
     """UC2: Describe a profile — elements by layer, relations, rule summary."""
-    from ea_kernel.profile_registry import ProfileRegistry
-    registry = ProfileRegistry()
-    registry.bootstrap()
-    profile = registry.get(name)
+    profile = _load_profile(name, lang=lang)
     if profile is None:
         return None
 
@@ -139,14 +136,22 @@ def describe_profile(name: str) -> dict[str, Any] | None:
             "layer": layer,
             "count": len(elems),
             "elements": [
-                {"name": e.name, "kernel_type": e.kernel_type}
+                {
+                    "name": e.name,
+                    "kernel_type": e.kernel_type,
+                    "display_name": _serialize_i18n(e.display_name) if e.display_name else None,
+                }
                 for e in elems
             ],
         })
 
     # Relations
     relations = [
-        {"name": r.name, "kernel_relation": r.kernel_relation}
+        {
+            "name": r.name,
+            "kernel_relation": r.kernel_relation,
+            "display_name": _serialize_i18n(r.display_name) if r.display_name else None,
+        }
         for r in profile.relations
     ]
 
@@ -306,14 +311,26 @@ def judge(source: str, target: str, relation: str) -> dict[str, Any]:
 # ── UC6: Profile graph traversal ──────────────────────────────
 
 
-def _load_profile(name: str) -> Any:
+def _load_profile(name: str, *, lang: str | None = None) -> Any:
     from ea_kernel.profile_registry import ProfileRegistry
     registry = ProfileRegistry()
     registry.bootstrap()
-    return registry.get(name)
+    profile = registry.get(name)
+    if profile is None or not lang or lang == "en":
+        return profile
+    from pathlib import Path
+    from ea_kernel.localizer import ProfileLocalizer
+    search_path = Path(__file__).parent / "profiles" / "ea_sys"
+    localizer = ProfileLocalizer(patch_dir=search_path)
+    return localizer.localize(profile, lang, search_path=search_path)
 
 
-def profile_topology(profile_name: str, *, cross_layer: bool = False) -> dict[str, Any]:
+def profile_topology(
+    profile_name: str,
+    *,
+    cross_layer: bool = False,
+    lang: str | None = None,
+) -> dict[str, Any]:
     """UC6: Full topology graph (nodes + edges) for a profile.
 
     When *cross_layer* is True only edges that connect elements from
@@ -322,7 +339,7 @@ def profile_topology(profile_name: str, *, cross_layer: bool = False) -> dict[st
     """
     from ea_kernel.profile_graph import ProfileTopologyGraph
 
-    profile = _load_profile(profile_name)
+    profile = _load_profile(profile_name, lang=lang)
     if profile is None:
         return {"error": f"Profile not found: {profile_name}"}
 
@@ -342,34 +359,27 @@ def profile_topology(profile_name: str, *, cross_layer: bool = False) -> dict[st
                 "priority": edge.priority,
             })
 
+    def _elem_dict(elem: Any) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "name": elem.name,
+            "layer": elem.layer,
+            "category": elem.category,
+            "kernel_type": elem.kernel_type,
+            "description": _serialize_i18n(elem.description),
+        }
+        if elem.display_name:
+            d["display_name"] = _serialize_i18n(elem.display_name)
+        return d
+
     if cross_layer:
         all_edges = [
             e for e in all_edges
             if layer_of.get(e["source"], "") != layer_of.get(e["target"], "")
         ]
         connected = {e["source"] for e in all_edges} | {e["target"] for e in all_edges}
-        nodes = [
-            {
-                "name": elem.name,
-                "layer": elem.layer,
-                "category": elem.category,
-                "kernel_type": elem.kernel_type,
-                "description": elem.description,
-            }
-            for elem in profile.elements
-            if elem.name in connected
-        ]
+        nodes = [_elem_dict(elem) for elem in profile.elements if elem.name in connected]
     else:
-        nodes = [
-            {
-                "name": elem.name,
-                "layer": elem.layer,
-                "category": elem.category,
-                "kernel_type": elem.kernel_type,
-                "description": elem.description,
-            }
-            for elem in profile.elements
-        ]
+        nodes = [_elem_dict(elem) for elem in profile.elements]
 
     # Relation distribution for the (possibly filtered) edge set
     rel_dist: dict[str, int] = {}
@@ -417,6 +427,41 @@ def profile_reachable(
         "relation_filter": relation,
         "reachable": list(reached),
         "count": len(reached),
+    }
+
+
+def profile_element_scope(
+    profile_name: str,
+    elements: list[str],
+    *,
+    max_depth: int = 4,
+) -> dict[str, Any]:
+    """Compute union of reachable sets from multiple seed elements."""
+    from ea_kernel.profile_graph import ProfileTopologyGraph
+
+    profile = _load_profile(profile_name)
+    if profile is None:
+        return {"error": f"Profile not found: {profile_name}"}
+
+    graph = ProfileTopologyGraph(profile)
+    missing = [e for e in elements if e not in graph.nodes]
+    if missing:
+        return {
+            "error": f"Element(s) not found: {', '.join(missing)}",
+            "available_elements": list(graph.nodes),
+        }
+
+    scope: set[str] = set()
+    for elem in elements:
+        reached = graph.reachable(elem, max_depth=max_depth)
+        scope.update(reached)
+        scope.add(elem)
+
+    return {
+        "profile": profile_name,
+        "seeds": elements,
+        "scope": sorted(scope),
+        "count": len(scope),
     }
 
 
@@ -521,3 +566,115 @@ def get_entity_names() -> list[str]:
     """List all valid entity names (for input validation)."""
     spec = _get_spec()
     return sorted(e.name for e in spec.entities)
+
+
+# ── I18n Service ─────────────────────────────────────────────
+
+
+def _get_i18n_store() -> "I18nStore":
+    from pathlib import Path
+
+    from ea_kernel.i18n_store import SQLiteI18nStore
+    db_path = Path(__file__).parent / "data" / "i18n.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return SQLiteI18nStore(db_path)
+
+
+def audit_i18n(lang: str = "ko") -> dict[str, Any]:
+    """TOML 패치 기반 i18n 감사 리포트."""
+    from ea_kernel.schema_loader import audit_i18n_patch
+    spec = _get_spec()
+    report = audit_i18n_patch(spec, lang)
+    return {
+        "lang": report.lang,
+        "coverage": report.coverage,
+        "total_schema_items": report.total_schema_items,
+        "total_translated": report.total_translated,
+        "total_issues": report.total_issues,
+        "is_clean": report.is_clean,
+        "missing": [
+            {"kind": e.kind, "name": e.name, "field": e.field, "en_current": e.en_current}
+            for e in report.missing
+        ],
+        "orphan": [
+            {"kind": e.kind, "name": e.name, "field": e.field}
+            for e in report.orphan
+        ],
+        "stale": [
+            {"kind": e.kind, "name": e.name, "field": e.field,
+             "en_current": e.en_current, "en_recorded": e.en_recorded}
+            for e in report.stale
+        ],
+    }
+
+
+def list_translations(lang: str, kind: str | None = None) -> dict[str, Any]:
+    """번역 목록 조회."""
+    store = _get_i18n_store()
+    entries = store.list_translations(lang, kind)
+    return {
+        "lang": lang,
+        "count": len(entries),
+        "translations": [
+            {
+                "kind": e.target_kind, "name": e.target_name,
+                "field": e.field, "value": e.value,
+                "version": e.version,
+            }
+            for e in entries
+        ],
+    }
+
+
+def get_translation(kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
+    """단일 번역 조회."""
+    store = _get_i18n_store()
+    entry = store.get(kind, name, lang, field)
+    if entry is None:
+        return {"error": f"Translation not found: {kind}/{name}/{lang}/{field}"}
+    return {
+        "kind": entry.target_kind, "name": entry.target_name,
+        "lang": entry.lang, "field": entry.field,
+        "value": entry.value, "en_source": entry.en_source,
+        "version": entry.version,
+        "created_by": entry.created_by,
+        "created_at": entry.created_at, "updated_at": entry.updated_at,
+    }
+
+
+def update_translation(kind: str, name: str, lang: str, field: str, value: str) -> dict[str, Any]:
+    """번역 수정."""
+    from ea_kernel.i18n_store import TranslationEntry
+    store = _get_i18n_store()
+    existing = store.get(kind, name, lang, field)
+    entry = TranslationEntry(
+        target_kind=kind, target_name=name, lang=lang, field=field,
+        value=value,
+        en_source=existing.en_source if existing else "",
+        version=0, created_by="manual",
+        created_at="", updated_at="",
+    )
+    result = store.upsert(entry)
+    return {
+        "kind": result.target_kind, "name": result.target_name,
+        "lang": result.lang, "field": result.field,
+        "value": result.value, "version": result.version,
+        "updated_at": result.updated_at,
+    }
+
+
+def translation_history(kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
+    """번역 이력 조회."""
+    store = _get_i18n_store()
+    entries = store.history(kind, name, lang, field)
+    return {
+        "kind": kind, "name": name, "lang": lang, "field": field,
+        "count": len(entries),
+        "history": [
+            {
+                "value": e.value, "version": e.version,
+                "created_by": e.created_by, "created_at": e.created_at,
+            }
+            for e in entries
+        ],
+    }

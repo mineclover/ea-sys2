@@ -1,0 +1,130 @@
+# EASystem-Needs — Korean (ko) i18n Patch
+
+[elements.NeedsLayer]
+display_name = "요구 계층"
+
+[elements.NeedsCatalogService]
+display_name = "요구 카탈로그 서비스"
+
+[elements.InfraModelPort]
+display_name = "인프라 모델 포트"
+
+[elements.GovernanceModelPort]
+display_name = "거버넌스 모델 포트"
+
+[elements.DecisionModelPort]
+display_name = "의사결정 모델 포트"
+
+[elements.NeedsModelPort]
+display_name = "요구 모델 포트"
+
+[elements.KernelModelPort]
+display_name = "커널 모델 포트"
+
+[elements.FlowModelPort]
+display_name = "흐름 모델 포트"
+
+[elements.UseCaseCatalog]
+display_name = "유스케이스 카탈로그"
+
+[elements.ActorContextCatalog]
+display_name = "액터 컨텍스트 카탈로그"
+
+[elements.ConstraintCatalog]
+display_name = "제약 카탈로그"
+
+[elements.PrioritizedNeedSet]
+display_name = "우선순위 요구 집합"
+
+[elements.NeedVersionGoal]
+display_name = "요구 버전 목표"
+
+[elements.NeedRefinementStep]
+display_name = "요구 정제 단계"
+
+[elements.PublishNeedSetAction]
+display_name = "요구 집합 발행 액션"
+
+[elements.NeedsFeedbackEvent]
+display_name = "요구 피드백 이벤트"
+
+[elements.NeedsStorageContract]
+display_name = "요구 저장 계약"
+
+[elements.NeedsContextDataSource]
+display_name = "요구 컨텍스트 데이터 소스"
+
+[elements.NeedsBacklogStore]
+display_name = "요구 백로그 저장소"
+
+[elements.NeedsApprovalGate]
+display_name = "요구 승인 게이트"
+
+[elements.NeedsChangePolicy]
+display_name = "요구 변경 정책"
+
+[elements.NeedsAuditPort]
+display_name = "요구 감사 포트"
+
+[elements.NeedsVersionRecord]
+display_name = "요구 버전 레코드"
+
+[elements.DecisionOutcomeInput]
+display_name = "의사결정 결과 입력"
+
+[elements.DecisionContextReference]
+display_name = "의사결정 컨텍스트 참조"
+
+[elements.DecisionTriggerPort]
+display_name = "의사결정 트리거 포트"
+
+[elements.KernelDomainReference]
+display_name = "커널 도메인 참조"
+
+[elements.KernelConstraintInput]
+display_name = "커널 제약 입력"
+
+[elements.KernelValidationPort]
+display_name = "커널 검증 포트"
+
+[elements.KernelCoverageTarget]
+display_name = "커널 커버리지 목표"
+
+[elements.FlowFulfillmentStatus]
+display_name = "흐름 충족 상태"
+
+[elements.FlowProgressFeedback]
+display_name = "흐름 진행 피드백"
+
+[elements.FlowCompletionEvent]
+display_name = "흐름 완료 이벤트"
+
+[relations.contains]
+display_name = "포함"
+
+[relations.registers]
+display_name = "등록"
+
+[relations.coordinates]
+display_name = "조율"
+
+[relations.depends_on]
+display_name = "의존"
+
+[relations.produces]
+display_name = "생산"
+
+[relations.consumes]
+display_name = "소비"
+
+[relations.next]
+display_name = "다음"
+
+[relations.triggers]
+display_name = "트리거"
+
+[relations.constrains]
+display_name = "제약"
+
+[relations.available_in]
+display_name = "가용"

@@ -1,0 +1,259 @@
+# EASystem-Governance — Korean (ko) i18n Patch
+
+[elements.GovernanceLayer]
+display_name = "거버넌스 계층"
+
+[elements.LayerModelRegistry]
+display_name = "계층 모델 레지스트리"
+
+[elements.VersionLifecycleManager]
+display_name = "버전 생명주기 관리자"
+
+[elements.ValidationCoordinator]
+display_name = "검증 조율자"
+
+[elements.AgreementCoordinator]
+display_name = "합의 조율자"
+
+[elements.ActivationCoordinator]
+display_name = "활성화 조율자"
+
+[elements.RegistrationPolicy]
+display_name = "등록 정책"
+
+[elements.VersionPolicy]
+display_name = "버전 정책"
+
+[elements.CompatibilityPolicy]
+display_name = "호환성 정책"
+
+[elements.ApprovalPolicy]
+display_name = "승인 정책"
+
+[elements.BoundaryPolicy]
+display_name = "경계 정책"
+
+[elements.GovernanceTransparencyGoal]
+display_name = "거버넌스 투명성 목표"
+
+[elements.GovernanceConsistencyGoal]
+display_name = "거버넌스 일관성 목표"
+
+[elements.GovernanceTraceabilityGoal]
+display_name = "거버넌스 추적성 목표"
+
+[elements.GovernanceEvolvabilityGoal]
+display_name = "거버넌스 진화가능성 목표"
+
+[elements.GovernanceEntryPort]
+display_name = "거버넌스 진입 포트"
+
+[elements.GovernanceModelPort]
+display_name = "거버넌스 모델 포트"
+
+[elements.ModelRegisterEndpoint]
+display_name = "모델 등록 엔드포인트"
+
+[elements.ModelValidateEndpoint]
+display_name = "모델 검증 엔드포인트"
+
+[elements.ModelActivateEndpoint]
+display_name = "모델 활성화 엔드포인트"
+
+[elements.ModelStateEndpoint]
+display_name = "모델 상태 엔드포인트"
+
+[elements.ModelDecisionTraceEndpoint]
+display_name = "모델 의사결정 추적 엔드포인트"
+
+[elements.InfraModelPort]
+display_name = "인프라 모델 포트"
+
+[elements.DecisionModelPort]
+display_name = "의사결정 모델 포트"
+
+[elements.NeedsModelPort]
+display_name = "요구 모델 포트"
+
+[elements.KernelModelPort]
+display_name = "커널 모델 포트"
+
+[elements.FlowModelPort]
+display_name = "흐름 모델 포트"
+
+[elements.GovernanceDbPort]
+display_name = "거버넌스 DB 포트"
+
+[elements.ModelDefinitionRecord]
+display_name = "모델 정의 레코드"
+
+[elements.ModelVersionRecord]
+display_name = "모델 버전 레코드"
+
+[elements.ValidationReportRecord]
+display_name = "검증 보고 레코드"
+
+[elements.AgreementRecord]
+display_name = "합의 레코드"
+
+[elements.ActivationRecord]
+display_name = "활성화 레코드"
+
+[elements.FeedbackRecord]
+display_name = "피드백 레코드"
+
+[elements.ModelRegisterRequestRecord]
+display_name = "모델 등록 요청 레코드"
+
+[elements.ModelRegisterResponseRecord]
+display_name = "모델 등록 응답 레코드"
+
+[elements.ModelValidateRequestRecord]
+display_name = "모델 검증 요청 레코드"
+
+[elements.ModelValidateResponseRecord]
+display_name = "모델 검증 응답 레코드"
+
+[elements.ModelActivateRequestRecord]
+display_name = "모델 활성화 요청 레코드"
+
+[elements.ModelActivateResponseRecord]
+display_name = "모델 활성화 응답 레코드"
+
+[elements.ModelStateQueryRecord]
+display_name = "모델 상태 조회 레코드"
+
+[elements.ModelStateResponseRecord]
+display_name = "모델 상태 응답 레코드"
+
+[elements.ModelDecisionTraceQueryRecord]
+display_name = "모델 의사결정 추적 조회 레코드"
+
+[elements.ModelDecisionTraceResponseRecord]
+display_name = "모델 의사결정 추적 응답 레코드"
+
+[elements.ModelDecisionTraceExploreResponseRecord]
+display_name = "모델 의사결정 추적 탐색 응답 레코드"
+
+[elements.ModelApiErrorRecord]
+display_name = "모델 API 오류 레코드"
+
+[elements.ModelTransactionRecord]
+display_name = "모델 트랜잭션 레코드"
+
+[elements.ModelEvidenceWarningRecord]
+display_name = "모델 증거 경고 레코드"
+
+[elements.RegistrationReviewStep]
+display_name = "등록 검토 단계"
+
+[elements.CompatibilityCheckStep]
+display_name = "호환성 검사 단계"
+
+[elements.OwnerApprovalStep]
+display_name = "소유자 승인 단계"
+
+[elements.ActivationReviewStep]
+display_name = "활성화 검토 단계"
+
+[elements.PersistModelAction]
+display_name = "모델 영속화 액션"
+
+[elements.RejectChangeAction]
+display_name = "변경 거부 액션"
+
+[elements.ActivateVersionAction]
+display_name = "버전 활성화 액션"
+
+[elements.RouteFeedbackAction]
+display_name = "피드백 라우팅 액션"
+
+[elements.ModelRegistrationRequestedEvent]
+display_name = "모델 등록 요청 이벤트"
+
+[elements.ValidationPassedEvent]
+display_name = "검증 통과 이벤트"
+
+[elements.ValidationFailedEvent]
+display_name = "검증 실패 이벤트"
+
+[elements.ActivationApprovedEvent]
+display_name = "활성화 승인 이벤트"
+
+[elements.ChangeRejectedEvent]
+display_name = "변경 거부 이벤트"
+
+[elements.InfraSchemaGovernance]
+display_name = "인프라 스키마 거버넌스"
+
+[elements.InfraCapacityAudit]
+display_name = "인프라 용량 감사"
+
+[elements.InfraCompliancePolicy]
+display_name = "인프라 준수 정책"
+
+[elements.InfraChangeRecord]
+display_name = "인프라 변경 레코드"
+
+[elements.DecisionProcessAudit]
+display_name = "의사결정 프로세스 감사"
+
+[elements.DecisionModelApproval]
+display_name = "의사결정 모델 승인"
+
+[elements.DecisionGovernancePolicy]
+display_name = "의사결정 거버넌스 정책"
+
+[elements.DecisionComplianceRecord]
+display_name = "의사결정 준수 레코드"
+
+[elements.NeedsRegistrationGate]
+display_name = "요구 등록 게이트"
+
+[elements.NeedsPriorityAudit]
+display_name = "요구 우선순위 감사"
+
+[elements.NeedsGovernancePolicy]
+display_name = "요구 거버넌스 정책"
+
+[elements.NeedsChangeRecord]
+display_name = "요구 변경 레코드"
+
+[elements.KernelContractApproval]
+display_name = "커널 계약 승인"
+
+[elements.KernelRulePromotionGate]
+display_name = "커널 규칙 승격 게이트"
+
+[elements.KernelGovernancePolicy]
+display_name = "커널 거버넌스 정책"
+
+[elements.KernelEvolutionRecord]
+display_name = "커널 진화 레코드"
+
+[elements.KernelQualityGate]
+display_name = "커널 품질 게이트"
+
+[elements.FlowExecutionAudit]
+display_name = "흐름 실행 감사"
+
+[elements.FlowContractComplianceCheck]
+display_name = "흐름 계약 준수 검사"
+
+[elements.FlowGovernancePolicy]
+display_name = "흐름 거버넌스 정책"
+
+[elements.FlowComplianceRecord]
+display_name = "흐름 준수 레코드"
+
+[relations]
+contains = "포함"
+registers = "등록"
+coordinates = "조율"
+depends_on = "의존"
+produces = "생산"
+consumes = "소비"
+next = "다음"
+triggers = "트리거"
+constrains = "제약"
+available_in = "가용"

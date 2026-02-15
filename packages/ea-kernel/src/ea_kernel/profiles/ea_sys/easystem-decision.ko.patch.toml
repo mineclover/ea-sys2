@@ -1,0 +1,172 @@
+# EASystem-Decision — Korean (ko) i18n Patch
+
+[elements.DecisionLayer]
+display_name = "의사결정 계층"
+
+[elements.DecisionMetaModelRegistry]
+display_name = "의사결정 메타모델 레지스트리"
+
+[elements.DecisionFlowSchemaService]
+display_name = "의사결정 흐름 스키마 서비스"
+
+[elements.DecisionAgreementService]
+display_name = "의사결정 합의 서비스"
+
+[elements.InfraModelPort]
+display_name = "인프라 모델 포트"
+
+[elements.GovernanceModelPort]
+display_name = "거버넌스 모델 포트"
+
+[elements.DecisionModelPort]
+display_name = "의사결정 모델 포트"
+
+[elements.NeedsModelPort]
+display_name = "요구 모델 포트"
+
+[elements.KernelModelPort]
+display_name = "커널 모델 포트"
+
+[elements.FlowModelPort]
+display_name = "흐름 모델 포트"
+
+[elements.DecisionCriteriaModel]
+display_name = "의사결정 기준 모델"
+
+[elements.DecisionHeuristicModel]
+display_name = "의사결정 휴리스틱 모델"
+
+[elements.DecisionRationaleModel]
+display_name = "의사결정 근거 모델"
+
+[elements.DecisionNodeTypeCatalog]
+display_name = "의사결정 노드 유형 카탈로그"
+
+[elements.DecisionRelationTypeCatalog]
+display_name = "의사결정 관계 유형 카탈로그"
+
+[elements.DecisionStateCatalog]
+display_name = "의사결정 상태 카탈로그"
+
+[elements.DecisionContextRecord]
+display_name = "의사결정 컨텍스트 레코드"
+
+[elements.DecisionOptionRecord]
+display_name = "의사결정 옵션 레코드"
+
+[elements.DecisionEvaluationRecord]
+display_name = "의사결정 평가 레코드"
+
+[elements.DecisionOutcomeRecord]
+display_name = "의사결정 결과 레코드"
+
+[elements.DecisionTraceGoal]
+display_name = "의사결정 추적 목표"
+
+[elements.CaptureDecisionContextStep]
+display_name = "의사결정 컨텍스트 포착 단계"
+
+[elements.BuildOptionGraphStep]
+display_name = "옵션 그래프 구축 단계"
+
+[elements.EvaluateOptionGraphStep]
+display_name = "옵션 그래프 평가 단계"
+
+[elements.FinalizeDecisionStep]
+display_name = "의사결정 확정 단계"
+
+[elements.PublishDecisionModelAction]
+display_name = "의사결정 모델 발행 액션"
+
+[elements.DecisionRequestedEvent]
+display_name = "의사결정 요청 이벤트"
+
+[elements.DecisionUpdatedEvent]
+display_name = "의사결정 갱신 이벤트"
+
+[elements.DecisionDataAvailability]
+display_name = "의사결정 데이터 가용성"
+
+[elements.DecisionStorageContract]
+display_name = "의사결정 저장 계약"
+
+[elements.DecisionQueryIndex]
+display_name = "의사결정 쿼리 인덱스"
+
+[elements.DecisionApprovalReference]
+display_name = "의사결정 승인 참조"
+
+[elements.DecisionPolicyConstraint]
+display_name = "의사결정 정책 제약"
+
+[elements.DecisionAuditSubmission]
+display_name = "의사결정 감사 제출"
+
+[elements.DecisionVersionControl]
+display_name = "의사결정 버전 관리"
+
+[elements.NeedsDecisionTrigger]
+display_name = "요구 의사결정 트리거"
+
+[elements.NeedsGoalReference]
+display_name = "요구 목표 참조"
+
+[elements.NeedsPriorityInput]
+display_name = "요구 우선순위 입력"
+
+[elements.NeedsSatisfactionFeedback]
+display_name = "요구 충족 피드백"
+
+[elements.KernelConstraintReference]
+display_name = "커널 제약 참조"
+
+[elements.KernelValidityCheck]
+display_name = "커널 유효성 검사"
+
+[elements.KernelTypeMapping]
+display_name = "커널 타입 매핑"
+
+[elements.KernelFeedbackInput]
+display_name = "커널 피드백 입력"
+
+[elements.FlowDecisionPoint]
+display_name = "흐름 의사결정 지점"
+
+[elements.FlowBranchCondition]
+display_name = "흐름 분기 조건"
+
+[elements.FlowResultFeedback]
+display_name = "흐름 결과 피드백"
+
+[elements.FlowDecisionHook]
+display_name = "흐름 의사결정 훅"
+
+[relations.contains]
+display_name = "포함"
+
+[relations.registers]
+display_name = "등록"
+
+[relations.coordinates]
+display_name = "조율"
+
+[relations.depends_on]
+display_name = "의존"
+
+[relations.produces]
+display_name = "생산"
+
+[relations.consumes]
+display_name = "소비"
+
+[relations.next]
+display_name = "다음"
+
+[relations.triggers]
+display_name = "트리거"
+
+[relations.constrains]
+display_name = "제약"
+
+[relations.available_in]
+display_name = "가용"

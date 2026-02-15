@@ -1,0 +1,169 @@
+# EASystem-Kernel — Korean (ko) i18n Patch
+
+[elements.KernelLayer]
+display_name = "커널 계층"
+
+[elements.KernelContractService]
+display_name = "커널 계약 서비스"
+
+[elements.KernelRuleCompiler]
+display_name = "커널 규칙 컴파일러"
+
+[elements.KernelValidationService]
+display_name = "커널 검증 서비스"
+
+[elements.KernelProfileRegistry]
+display_name = "커널 프로파일 레지스트리"
+
+[elements.KernelContractPort]
+display_name = "커널 계약 포트"
+
+[elements.InfraModelPort]
+display_name = "인프라 모델 포트"
+
+[elements.GovernanceModelPort]
+display_name = "거버넌스 모델 포트"
+
+[elements.DecisionModelPort]
+display_name = "의사결정 모델 포트"
+
+[elements.NeedsModelPort]
+display_name = "요구 모델 포트"
+
+[elements.KernelModelPort]
+display_name = "커널 모델 포트"
+
+[elements.FlowModelPort]
+display_name = "흐름 모델 포트"
+
+[elements.KernelCapabilityModel]
+display_name = "커널 역량 모델"
+
+[elements.KernelRuleSet]
+display_name = "커널 규칙 집합"
+
+[elements.KernelSpecSnapshot]
+display_name = "커널 스펙 스냅샷"
+
+[elements.KernelConsistencyGoal]
+display_name = "커널 일관성 목표"
+
+[elements.ContractReviewStep]
+display_name = "계약 검토 단계"
+
+[elements.PublishKernelContractAction]
+display_name = "커널 계약 발행 액션"
+
+[elements.KernelSpecPublishedEvent]
+display_name = "커널 스펙 발행 이벤트"
+
+[elements.ModelAuthorContext]
+display_name = "모델 저작 컨텍스트"
+
+[elements.ModelExplorerContext]
+display_name = "모델 탐색 컨텍스트"
+
+[elements.ModelValidatorContext]
+display_name = "모델 검증 컨텍스트"
+
+[elements.KernelModelingExperience]
+display_name = "커널 모델링 경험"
+
+[elements.KernelExplorationExperience]
+display_name = "커널 탐색 경험"
+
+[elements.KernelValidationExperience]
+display_name = "커널 검증 경험"
+
+[elements.KernelTopologyPage]
+display_name = "커널 토폴로지 페이지"
+
+[elements.KernelRuleBrowserPage]
+display_name = "커널 규칙 브라우저 페이지"
+
+[elements.KernelProfileEditorPage]
+display_name = "커널 프로파일 에디터 페이지"
+
+[elements.KernelQueryEndpoint]
+display_name = "커널 쿼리 엔드포인트"
+
+[elements.KernelValidateEndpoint]
+display_name = "커널 검증 엔드포인트"
+
+[elements.KernelProfileEndpoint]
+display_name = "커널 프로파일 엔드포인트"
+
+[elements.KernelSpecStore]
+display_name = "커널 스펙 저장소"
+
+[elements.KernelRuleStore]
+display_name = "커널 규칙 저장소"
+
+[elements.KernelProfileStore]
+display_name = "커널 프로파일 저장소"
+
+[elements.KernelAuditLog]
+display_name = "커널 감사 로그"
+
+[elements.KernelModelRegistration]
+display_name = "커널 모델 등록"
+
+[elements.KernelVersionGate]
+display_name = "커널 버전 게이트"
+
+[elements.KernelCompatibilityCheck]
+display_name = "커널 호환성 검사"
+
+[elements.KernelApprovalPolicy]
+display_name = "커널 승인 정책"
+
+[elements.KernelChangeRecord]
+display_name = "커널 변경 레코드"
+
+[elements.DecisionConstraintInput]
+display_name = "의사결정 제약 입력"
+
+[elements.DecisionRuleMapping]
+display_name = "의사결정 규칙 매핑"
+
+[elements.DecisionTraceReference]
+display_name = "의사결정 추적 참조"
+
+[elements.DecisionFeedbackChannel]
+display_name = "의사결정 피드백 채널"
+
+[elements.NeedsDomainMapping]
+display_name = "요구 도메인 매핑"
+
+[elements.RequirementConstraintBridge]
+display_name = "요구사항 제약 브릿지"
+
+[elements.NeedsCoverageReport]
+display_name = "요구 커버리지 보고서"
+
+[elements.NeedsChangeNotification]
+display_name = "요구 변경 알림"
+
+[elements.FlowContractSnapshot]
+display_name = "흐름 계약 스냅샷"
+
+[elements.FlowValidationHook]
+display_name = "흐름 검증 훅"
+
+[elements.FlowExecutionFeedback]
+display_name = "흐름 실행 피드백"
+
+[elements.FlowConstraintViolationEvent]
+display_name = "흐름 제약 위반 이벤트"
+
+[relations]
+contains = "포함"
+registers = "등록"
+coordinates = "조율"
+depends_on = "의존"
+produces = "생산"
+consumes = "소비"
+next = "다음"
+triggers = "트리거"
+constrains = "제약"
+available_in = "가용"

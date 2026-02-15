@@ -1,0 +1,157 @@
+# EASystem-Flow — Korean (ko) i18n Patch
+
+[elements.FlowLayer]
+display_name = "흐름 계층"
+
+[elements.InfraModelPort]
+display_name = "인프라 모델 포트"
+
+[elements.GovernanceModelPort]
+display_name = "거버넌스 모델 포트"
+
+[elements.DecisionModelPort]
+display_name = "의사결정 모델 포트"
+
+[elements.NeedsModelPort]
+display_name = "요구 모델 포트"
+
+[elements.KernelModelPort]
+display_name = "커널 모델 포트"
+
+[elements.FlowModelPort]
+display_name = "흐름 모델 포트"
+
+[elements.ContextIngestStep]
+display_name = "컨텍스트 수집 단계"
+
+[elements.NormalizeNeedStep]
+display_name = "요구 정규화 단계"
+
+[elements.BuildKernelInputStep]
+display_name = "커널 입력 구축 단계"
+
+[elements.MapKernelSpecStep]
+display_name = "커널 스펙 매핑 단계"
+
+[elements.ExecuteKernelAction]
+display_name = "커널 액션 실행"
+
+[elements.VerifyOutcomeStep]
+display_name = "결과 검증 단계"
+
+[elements.PersistFlowStateStep]
+display_name = "흐름 상태 영속화 단계"
+
+[elements.PublishFlowOutcomeAction]
+display_name = "흐름 결과 발행 액션"
+
+[elements.LayerVersionStore]
+display_name = "계층 버전 저장소"
+
+[elements.ValidationRunStore]
+display_name = "검증 실행 저장소"
+
+[elements.UseCaseCatalog]
+display_name = "유스케이스 카탈로그"
+
+[elements.ActorContextCatalog]
+display_name = "액터 컨텍스트 카탈로그"
+
+[elements.ConstraintCatalog]
+display_name = "제약 카탈로그"
+
+[elements.PrioritizedNeedSet]
+display_name = "우선순위 요구 집합"
+
+[elements.FlowPlanningPolicy]
+display_name = "흐름 계획 정책"
+
+[elements.FlowExecutionPolicy]
+display_name = "흐름 실행 정책"
+
+[elements.KernelInputDraft]
+display_name = "커널 입력 초안"
+
+[elements.ContractedPlanDraft]
+display_name = "계약된 계획 초안"
+
+[elements.FlowLayerContractMatrix]
+display_name = "흐름 계층 계약 매트릭스"
+
+[elements.FlowStateCheckpoint]
+display_name = "흐름 상태 체크포인트"
+
+[elements.FlowExecutionLog]
+display_name = "흐름 실행 로그"
+
+[elements.FlowApprovalGate]
+display_name = "흐름 승인 게이트"
+
+[elements.FlowAuditSubmission]
+display_name = "흐름 감사 제출"
+
+[elements.FlowCompliancePolicy]
+display_name = "흐름 준수 정책"
+
+[elements.FlowChangeRecord]
+display_name = "흐름 변경 레코드"
+
+[elements.FlowDecisionGate]
+display_name = "흐름 의사결정 게이트"
+
+[elements.FlowBranchInput]
+display_name = "흐름 분기 입력"
+
+[elements.FlowDecisionOutcome]
+display_name = "흐름 의사결정 결과"
+
+[elements.FlowDecisionFeedback]
+display_name = "흐름 의사결정 피드백"
+
+[elements.NeedsFulfillmentReport]
+display_name = "요구 충족 보고서"
+
+[elements.NeedsCompletionNotification]
+display_name = "요구 완료 알림"
+
+[elements.KernelContractReference]
+display_name = "커널 계약 참조"
+
+[elements.KernelValidationResult]
+display_name = "커널 검증 결과"
+
+[elements.KernelSpecVersion]
+display_name = "커널 스펙 버전"
+
+[elements.KernelConstraintHook]
+display_name = "커널 제약 훅"
+
+[relations.contains]
+display_name = "포함"
+
+[relations.registers]
+display_name = "등록"
+
+[relations.coordinates]
+display_name = "조율"
+
+[relations.depends_on]
+display_name = "의존"
+
+[relations.produces]
+display_name = "생산"
+
+[relations.consumes]
+display_name = "소비"
+
+[relations.next]
+display_name = "다음"
+
+[relations.triggers]
+display_name = "트리거"
+
+[relations.constrains]
+display_name = "제약"
+
+[relations.available_in]
+display_name = "가용"

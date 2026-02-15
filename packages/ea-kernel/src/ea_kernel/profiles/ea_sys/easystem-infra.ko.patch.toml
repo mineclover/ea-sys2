@@ -1,0 +1,130 @@
+# EASystem-Infra — Korean (ko) i18n Patch
+
+[elements.InfraLayer]
+display_name = "인프라 계층"
+
+[elements.DataPlatformService]
+display_name = "데이터 플랫폼 서비스"
+
+[elements.StorageLifecycleService]
+display_name = "저장소 생명주기 서비스"
+
+[elements.ProfileStoragePort]
+display_name = "프로파일 저장 포트"
+
+[elements.EventStoragePort]
+display_name = "이벤트 저장 포트"
+
+[elements.InfraModelPort]
+display_name = "인프라 모델 포트"
+
+[elements.GovernanceModelPort]
+display_name = "거버넌스 모델 포트"
+
+[elements.DecisionModelPort]
+display_name = "의사결정 모델 포트"
+
+[elements.NeedsModelPort]
+display_name = "요구 모델 포트"
+
+[elements.KernelModelPort]
+display_name = "커널 모델 포트"
+
+[elements.FlowModelPort]
+display_name = "흐름 모델 포트"
+
+[elements.LayerVersionStore]
+display_name = "계층 버전 저장소"
+
+[elements.ValidationRunStore]
+display_name = "검증 실행 저장소"
+
+[elements.EvidenceStore]
+display_name = "증거 저장소"
+
+[elements.StoragePolicy]
+display_name = "저장 정책"
+
+[elements.GovernanceStorageSchema]
+display_name = "거버넌스 저장 스키마"
+
+[elements.GovernanceAuditStore]
+display_name = "거버넌스 감사 저장소"
+
+[elements.GovernanceRetentionPolicy]
+display_name = "거버넌스 보존 정책"
+
+[elements.GovernanceDataMigration]
+display_name = "거버넌스 데이터 마이그레이션"
+
+[elements.DecisionDataSchema]
+display_name = "의사결정 데이터 스키마"
+
+[elements.DecisionIndexStrategy]
+display_name = "의사결정 인덱스 전략"
+
+[elements.DecisionArchivePolicy]
+display_name = "의사결정 아카이브 정책"
+
+[elements.NeedsDataSchema]
+display_name = "요구 데이터 스키마"
+
+[elements.NeedsContextStore]
+display_name = "요구 컨텍스트 저장소"
+
+[elements.NeedsBacklogIndex]
+display_name = "요구 백로그 인덱스"
+
+[elements.KernelSpecSchema]
+display_name = "커널 스펙 스키마"
+
+[elements.KernelGraphStore]
+display_name = "커널 그래프 저장소"
+
+[elements.KernelValidationLogStore]
+display_name = "커널 검증 로그 저장소"
+
+[elements.KernelStorageMigration]
+display_name = "커널 저장소 마이그레이션"
+
+[elements.FlowExecutionLogSchema]
+display_name = "흐름 실행 로그 스키마"
+
+[elements.FlowCheckpointStore]
+display_name = "흐름 체크포인트 저장소"
+
+[elements.FlowEventLogStore]
+display_name = "흐름 이벤트 로그 저장소"
+
+[elements.FlowDataRetentionPolicy]
+display_name = "흐름 데이터 보존 정책"
+
+[relations.contains]
+display_name = "포함"
+
+[relations.registers]
+display_name = "등록"
+
+[relations.coordinates]
+display_name = "조율"
+
+[relations.depends_on]
+display_name = "의존"
+
+[relations.produces]
+display_name = "생산"
+
+[relations.consumes]
+display_name = "소비"
+
+[relations.next]
+display_name = "다음"
+
+[relations.triggers]
+display_name = "트리거"
+
+[relations.constrains]
+display_name = "제약"
+
+[relations.available_in]
+display_name = "가용"

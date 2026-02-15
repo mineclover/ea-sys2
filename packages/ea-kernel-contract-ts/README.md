@@ -19,6 +19,8 @@ TypeScript SDK for deterministic `ea-kernel` contract snapshots.
   - winner rule resolution
   - condition evaluation trace
 - Feedback-target utilities for canonical governance ids
+- Decision-trace contract typings for `/models/decisions/*` responses
+  - `IDecisionTraceContract`, `IDecisionTraceExploration`
 
 ## Directory Resolution Order
 

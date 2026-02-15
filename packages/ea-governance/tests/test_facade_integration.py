@@ -38,8 +38,8 @@ def test_facade_decision_execution(mock_container):
     report = topic.finalize_plan("Plan", "Summary", topic.options[0].id, "Ratio")
     report.add_action("create_rule", "rule:x", "desc", payload={"id":"x"})
 
-    # 2. Execute via Facade
-    result = mock_container.execute_decision(report.id, topic)
+    # 2. Interpret via Facade
+    result = mock_container.interpret_decision(report.id, topic)
 
     # 3. Check Response
     assert result["success"] is True

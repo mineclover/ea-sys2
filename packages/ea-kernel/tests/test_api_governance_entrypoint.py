@@ -179,6 +179,68 @@ def test_model_registration_endpoints_use_governance_entrypoint(tmp_path):
     assert any(event["event_type"] == "kernel_model_validated" for event in events)
 
 
+def test_model_decision_trace_endpoints_expose_evidence_impact_history(tmp_path):
+    schema = load_kernel_schema_from_package()
+    app = create_app(tmp_path, schema)
+    client = TestClient(app)
+    decision_id = "dec-api-01"
+
+    register = client.post(
+        "/models/register",
+        json={
+            "profile_toml": _model_profile_toml(name="APIDecisionTraceModel"),
+            "owner": "qa-team",
+            "created_by": "api-tester",
+            "decision_id": decision_id,
+            "evidence_refs": ["ev://adr/0001"],
+        },
+    )
+    assert register.status_code == 200
+    assert register.json()["decision_trace"]["decision_id"] == decision_id
+
+    validate = client.post(
+        "/models/validate",
+        json={
+            "model_name": "APIDecisionTraceModel",
+            "version": "1.0",
+            "decision_id": decision_id,
+            "evidence_refs": [],
+        },
+    )
+    assert validate.status_code == 200
+    assert "missing_evidence_refs" in validate.json()["decision_trace"]["warnings"]
+
+    activate = client.post(
+        "/models/activate",
+        json={
+            "model_name": "APIDecisionTraceModel",
+            "version": "1.0",
+            "decision_id": decision_id,
+            "evidence_refs": ["ev://release/checklist"],
+        },
+    )
+    assert activate.status_code == 200
+    assert activate.json()["decision_trace"]["decision_id"] == decision_id
+
+    trace_response = client.get(f"/models/decisions/{decision_id}")
+    assert trace_response.status_code == 200
+    trace = trace_response.json()
+    assert trace["kind"] == "decision_trace_contract"
+    assert trace["decision_id"] == decision_id
+    assert len(trace["operations"]) == 3
+    assert "missing_evidence_refs" in trace["warnings"]
+
+    explore_response = client.get(f"/models/decisions/{decision_id}/explore")
+    assert explore_response.status_code == 200
+    explore = explore_response.json()
+    assert "validate" in explore["evidence"]["missing_evidence_operations"]
+    assert explore["impact"]["total_operations"] == 3
+    assert any(
+        row["event_type"] == "kernel_model_activated"
+        for row in explore["history"]
+    )
+
+
 def test_models_endpoints_do_not_bypass_governance_container(tmp_path):
     schema = load_kernel_schema_from_package()
     app = create_app(tmp_path, schema)
@@ -310,3 +372,8 @@ def test_models_endpoint_error_envelope_matches_model_api_error_record(tmp_path)
     assert bad_request.status_code == 400
     assert bad_request.json()["detail"]["status_code"] == 400
     assert bad_request.json()["detail"]["category"] == "bad_request"
+
+    missing_trace = client.get("/models/decisions/unknown-decision")
+    assert missing_trace.status_code == 404
+    assert missing_trace.json()["detail"]["status_code"] == 404
+    assert missing_trace.json()["detail"]["category"] == "not_found"

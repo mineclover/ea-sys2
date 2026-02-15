@@ -109,7 +109,7 @@
 - `POST /models/activate`
 - `GET /models/{model_name}`
 
-## EA-SYS 거버넌스 모델 계약 (v0.4.1)
+## EA-SYS 거버넌스 모델 계약 (v0.4.2)
 
 `ea-sys` 기준으로 `/models/*` 엔드포인트를 TOML 모델로 명시한다.
 
@@ -120,12 +120,16 @@
   - `ModelValidateEndpoint`
   - `ModelActivateEndpoint`
   - `ModelStateEndpoint`
+  - `ModelDecisionTraceEndpoint`
 - 요청/응답/오류/트랜잭션 레코드:
   - `ModelRegisterRequestRecord`, `ModelRegisterResponseRecord`
   - `ModelValidateRequestRecord`, `ModelValidateResponseRecord`
   - `ModelActivateRequestRecord`, `ModelActivateResponseRecord`
   - `ModelStateQueryRecord`, `ModelStateResponseRecord`
+  - `ModelDecisionTraceQueryRecord`, `ModelDecisionTraceResponseRecord`
+  - `ModelDecisionTraceExploreResponseRecord`
   - `ModelApiErrorRecord`, `ModelTransactionRecord`
+  - `ModelEvidenceWarningRecord`
 
 엔드포인트 계약 원칙:
 
@@ -144,13 +148,28 @@ API 오류 응답 계약:
 API 성공 응답 계약:
 
 - 등록/검증/활성화 응답은 `transaction_id`를 포함하여 `ModelTransactionRecord` 추적을 지원한다.
+- 등록/검증/활성화 요청은 선택적으로 `decision_id`, `evidence_refs[]`를 포함할 수 있다.
+- `decision_id`가 제공되면 거버넌스는 `DecisionTraceContract v1`를 decision 레이어에 기록한다.
+- `evidence_refs[]`가 비어있으면 `missing_evidence_refs` 경고를 `ModelEvidenceWarningRecord` 및 트랜잭션 이벤트(`decision_trace_warning`)로 남긴다.
+
+Decision trace 조회 계약:
+
+- `GET /models/decisions/{decision_id}`
+  - raw `DecisionTraceContract v1` payload 반환
+- `GET /models/decisions/{decision_id}/explore`
+  - 근거(`evidence`) / 영향(`impact`) / 변경 이력(`history`) 탐색 뷰 반환
 
 검증:
 
 - `packages/ea-kernel/examples/validate_ea_sys_layers.py --simulate`
   - `governance-entrypoint`
   - `governance-model-api-contract`
-  두 계약이 모두 `passed`여야 한다.
+  - `layer-6x6-contract`
+  - `layer-6x6-owner: flow`
+  - `entrypoint-order: decision > needs > kernel > flow`
+  - `infra-role: row-data-design`
+  - `governance-role: system-entrypoint-design`
+  위 계약/소유자 기준이 모두 `passed`여야 한다.
 
 ### EA System 레이어 검증 스크립트 연동
 

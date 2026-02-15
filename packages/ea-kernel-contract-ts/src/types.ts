@@ -259,3 +259,58 @@ export interface ILayerContractConvention {
   vectorsFile: string;
   feedbackIdPrefix: string;
 }
+
+export interface IDecisionTraceOperation {
+  id: string;
+  operation: string;
+  model_name: string;
+  version: string;
+  status: string;
+  actor: string;
+  transaction_id: string;
+  evidence_refs: string[];
+  warnings: string[];
+  detail: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface IDecisionTraceImpact {
+  operation: string;
+  model_name: string;
+  version: string;
+  status: string;
+  transaction_id: string;
+  actor: string;
+  created_at: string;
+  detail?: Record<string, unknown>;
+}
+
+export interface IDecisionTraceHistoryEvent {
+  transaction_id: string;
+  event_type: string;
+  message: string;
+  created_at: string;
+  payload?: Record<string, unknown>;
+  event_id?: number;
+}
+
+export interface IDecisionTraceContract {
+  kind: "decision_trace_contract" | string;
+  contract_version: string;
+  decision_id: string;
+  created_at: string;
+  updated_at: string;
+  evidence_refs: string[];
+  warnings: string[];
+  operations: IDecisionTraceOperation[];
+  impact: IDecisionTraceImpact[];
+  history: IDecisionTraceHistoryEvent[];
+}
+
+export interface IDecisionTraceExploration {
+  decision_id: string;
+  contract_version: string;
+  evidence: Record<string, unknown>;
+  impact: Record<string, unknown>;
+  history: IDecisionTraceHistoryEvent[];
+}

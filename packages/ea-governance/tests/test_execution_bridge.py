@@ -37,7 +37,7 @@ def test_full_execution_bridge(mock_kernel):
         payload={"id": "cost-limit-rule", "limit": 5}
     )
 
-    # 3. Execute via Service
+    # 3. Interpret via Service
     service = ExecutionService(mock_kernel)
     success = service.interpret_report(report)
 

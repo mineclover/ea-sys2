@@ -1,9 +1,9 @@
 # EA System Layer: Flow
-# Role: concrete step/action data-flow model for execution without runtime assumptions.
+# Role: 실행/데이터 흐름 모델 정의
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.0"
+version = "0.4.1"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -72,7 +72,7 @@ description = "Policy or guard constrains execution."
 name = "FlowLayer"
 layer = "Flow"
 category = "Composite"
-description = "Flow modeling boundary."
+description = "Flow modeling boundary and runtime chain terminal stage."
 
 [[elements]]
 name = "InfraModelPort"
@@ -114,7 +114,7 @@ description = "6x6 contract port for flow-layer model interface."
 name = "ContextIngestStep"
 layer = "Flow"
 category = "Behavior"
-description = "Collects initial needs and actor context."
+description = "Collects initial needs context handed off from upstream decision/needs modeling."
 
 [[elements]]
 name = "NormalizeNeedStep"
@@ -132,7 +132,7 @@ description = "Builds kernel-ready input payload."
 name = "MapKernelSpecStep"
 layer = "Flow"
 category = "Behavior"
-description = "Maps payload to active kernel contract/version."
+description = "Maps payload to active kernel contract/version from kernel-stage handoff."
 
 [[elements]]
 name = "ExecuteKernelAction"
@@ -150,7 +150,7 @@ description = "Verifies execution output against expected constraints."
 name = "PersistFlowStateStep"
 layer = "Flow"
 category = "Behavior"
-description = "Persists flow state and validation traces."
+description = "Persists flow state/validation traces and publishes layer-contract matrix ownership."
 
 [[elements]]
 name = "PublishFlowOutcomeAction"
@@ -222,7 +222,7 @@ description = "Kernel-contracted plan draft used for execution."
 name = "FlowLayerContractMatrix"
 layer = "Flow"
 category = "PassiveStructure"
-description = "Flow-owned 6x6 cross-layer contract matrix definition."
+description = "Flow-owned 6x6 cross-layer contract matrix (single owner artifact)."
 
 [[rules]]
 source = "@Composite"

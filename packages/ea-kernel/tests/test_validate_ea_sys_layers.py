@@ -22,7 +22,7 @@ def _load_validate_module():
     ("layer", "filename", "expected"),
     [
         ("infra", "00-infra.toml", (15, 9, 23)),
-        ("governance", "10-governance.toml", (52, 9, 131)),
+        ("governance", "10-governance.toml", (57, 9, 143)),
         ("decision", "20-decision.toml", (28, 9, 61)),
         ("needs", "30-needs.toml", (16, 9, 25)),
         ("kernel", "40-kernel.toml", (19, 9, 35)),
@@ -48,15 +48,21 @@ def test_main_simulate_success(monkeypatch, capsys):
     assert rc == 0
     assert "[sim] flow-sequence:" in out
     assert "[sim] model-order: infra > decision > needs > kernel > flow" in out
-    assert "[sim] governance-role: layer-management-system" in out
-    assert "[sim] governance-entrypoint-order: infra > governance > decision > needs > kernel > flow" in out
+    assert "[sim] infra-role: row-data-design" in out
+    assert "[sim] governance-role: system-entrypoint-design" in out
+    assert "[sim] entrypoint-order: decision > needs > kernel > flow" in out
     assert "[sim] governance-entrypoint: passed" in out
     assert "[sim] governance-model-api-contract: passed" in out
     assert "[sim] layer-6x6-contract: passed" in out
     assert "[sim] layer-6x6-owner: flow" in out
     assert "[sim] common-layer-spec:" in out
+    assert "[sim] layer-role-sync:" in out
     assert (
         "[sim] common-layer-spec: ok" in out
         or "[sim][warn] common-layer-spec:" in out
+    )
+    assert (
+        "[sim] layer-role-sync: ok" in out
+        or "[sim][warn] layer-role-sync:" in out
     )
     assert "[sim] passed" in out

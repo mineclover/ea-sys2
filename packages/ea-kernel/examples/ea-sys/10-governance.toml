@@ -1,5 +1,5 @@
 # EA System Layer: Governance
-# Role: registration/version/validation/change control for independent layer models.
+# Role: 위 5개 레이어 전체를 관리하는 관리 시스템으로 동작한다
 
 [profile]
 name = "EASystemLayerModel"
@@ -138,7 +138,7 @@ description = "Policy constraints for data/ownership boundary enforcement."
 name = "GovernanceEntryPort"
 layer = "Governance"
 category = "Interface"
-description = "Single governance entrypoint for all layer-facing model operations."
+description = "Single governance entrypoint; runtime model chain starts at decision port."
 
 [[elements]]
 name = "GovernanceModelPort"
@@ -171,34 +171,40 @@ category = "Interface"
 description = "Endpoint contract for querying model/versions/validation state."
 
 [[elements]]
+name = "ModelDecisionTraceEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for querying decision trace and exploration views."
+
+[[elements]]
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "Governance port for infra model registration."
+description = "Infra row-data design contract port consumed by governance control services."
 
 [[elements]]
 name = "DecisionModelPort"
 layer = "Decision"
 category = "Interface"
-description = "Governance port for decision model registration."
+description = "Decision meta-meta model port; first runtime chain stage."
 
 [[elements]]
 name = "NeedsModelPort"
 layer = "Needs"
 category = "Interface"
-description = "Governance port for needs model registration."
+description = "Needs model port; second runtime chain stage."
 
 [[elements]]
 name = "KernelModelPort"
 layer = "Kernel"
 category = "Interface"
-description = "Governance port for kernel model registration."
+description = "Kernel model port; third runtime chain stage."
 
 [[elements]]
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
-description = "Governance port for flow model registration."
+description = "Flow model port; terminal runtime chain stage."
 
 [[elements]]
 name = "GovernanceDbPort"
@@ -291,6 +297,24 @@ category = "PassiveStructure"
 description = "Response contract for /models/{model_name} (model, versions, validation_runs)."
 
 [[elements]]
+name = "ModelDecisionTraceQueryRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Query contract for /models/decisions/{decision_id} and /explore."
+
+[[elements]]
+name = "ModelDecisionTraceResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response contract for /models/decisions/{decision_id} (DecisionTraceContract v1)."
+
+[[elements]]
+name = "ModelDecisionTraceExploreResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response contract for /models/decisions/{decision_id}/explore (evidence, impact, history)."
+
+[[elements]]
 name = "ModelApiErrorRecord"
 layer = "Governance"
 category = "PassiveStructure"
@@ -301,6 +325,12 @@ name = "ModelTransactionRecord"
 layer = "Governance"
 category = "PassiveStructure"
 description = "Transaction trace contract for model operations (tx_id, tx_type, event_type, actor, created_at)."
+
+[[elements]]
+name = "ModelEvidenceWarningRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Evidence warning contract for decision-linked model operations (decision_id, warnings)."
 
 [[elements]]
 name = "RegistrationReviewStep"
@@ -508,45 +538,45 @@ notes = "Registry registers flow layer models."
 
 [[rules]]
 source = "GovernanceEntryPort"
-target = "InfraModelPort"
-relation = "coordinates"
-priority = 74
-notes = "Entrypoint routes incoming model operations to infra layer port."
-
-[[rules]]
-source = "GovernanceEntryPort"
 target = "DecisionModelPort"
 relation = "coordinates"
 priority = 74
-notes = "Entrypoint routes incoming model operations to decision layer port."
+notes = "Entrypoint starts runtime model chain at decision port."
 
 [[rules]]
-source = "GovernanceEntryPort"
+source = "DecisionModelPort"
 target = "NeedsModelPort"
 relation = "coordinates"
 priority = 74
-notes = "Entrypoint routes incoming model operations to needs layer port."
+notes = "Runtime model chain segment: decision > needs."
 
 [[rules]]
-source = "GovernanceEntryPort"
+source = "NeedsModelPort"
 target = "KernelModelPort"
 relation = "coordinates"
 priority = 74
-notes = "Entrypoint routes incoming model operations to kernel layer port."
+notes = "Runtime model chain segment: needs > kernel."
 
 [[rules]]
-source = "GovernanceEntryPort"
+source = "KernelModelPort"
 target = "FlowModelPort"
 relation = "coordinates"
 priority = 74
-notes = "Entrypoint routes incoming model operations to flow layer port."
+notes = "Runtime model chain segment: kernel > flow."
 
 [[rules]]
-source = "GovernanceEntryPort"
+source = "GovernanceModelPort"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 74
+notes = "Governance model port dispatches runtime model operations to decision chain."
+
+[[rules]]
+source = "InfraModelPort"
 target = "GovernanceModelPort"
 relation = "coordinates"
 priority = 74
-notes = "Entrypoint routes incoming model operations to governance layer port."
+notes = "Infra row-data design contract feeds governance entrypoint design."
 
 [[rules]]
 source = "GovernanceEntryPort"
@@ -575,6 +605,13 @@ target = "ModelStateEndpoint"
 relation = "coordinates"
 priority = 78
 notes = "Entrypoint routes /models/{model_name} to state query endpoint contract."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "ModelDecisionTraceEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes /models/decisions/{decision_id} and /explore to decision trace endpoint contract."
 
 [[rules]]
 source = "ModelRegisterEndpoint"
@@ -802,6 +839,27 @@ notes = "Boundary policy constrains model state response fields."
 
 [[rules]]
 source = "BoundaryPolicy"
+target = "ModelDecisionTraceEndpoint"
+relation = "constrains"
+priority = 78
+notes = "Boundary policy constrains decision trace query scope."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "ModelDecisionTraceResponseRecord"
+relation = "constrains"
+priority = 78
+notes = "Boundary policy constrains decision trace response payload fields."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "ModelDecisionTraceExploreResponseRecord"
+relation = "constrains"
+priority = 78
+notes = "Boundary policy constrains exploration response fields."
+
+[[rules]]
+source = "BoundaryPolicy"
 target = "ModelApiErrorRecord"
 relation = "constrains"
 priority = 78
@@ -862,6 +920,20 @@ target = "VersionLifecycleManager"
 relation = "coordinates"
 priority = 79
 notes = "State endpoint coordinates version and activation state lookup."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 79
+notes = "Decision trace endpoint coordinates decision-layer snapshot lookup."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "VersionLifecycleManager"
+relation = "coordinates"
+priority = 79
+notes = "Decision trace endpoint coordinates model version context lookup."
 
 [[rules]]
 source = "ModelRegisterEndpoint"
@@ -1002,6 +1074,48 @@ target = "ModelTransactionRecord"
 relation = "produces"
 priority = 79
 notes = "State endpoint emits transaction trace for audit."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "ModelDecisionTraceQueryRecord"
+relation = "consumes"
+priority = 79
+notes = "Decision trace endpoint consumes trace query payload."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "ModelDecisionTraceResponseRecord"
+relation = "produces"
+priority = 79
+notes = "Decision trace endpoint produces raw trace response payload."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "ModelDecisionTraceExploreResponseRecord"
+relation = "produces"
+priority = 79
+notes = "Decision trace endpoint produces exploration response payload."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "ModelEvidenceWarningRecord"
+relation = "produces"
+priority = 79
+notes = "Decision trace endpoint produces evidence warning summary."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "ModelApiErrorRecord"
+relation = "produces"
+priority = 79
+notes = "Decision trace endpoint produces error payload when decision trace is not found."
+
+[[rules]]
+source = "ModelDecisionTraceEndpoint"
+target = "ModelTransactionRecord"
+relation = "produces"
+priority = 79
+notes = "Decision trace endpoint exposes related transaction history for audit."
 
 [[rules]]
 source = "ModelRegistrationRequestedEvent"
@@ -1194,42 +1308,42 @@ notes = "Approval policy constrains flow model activation gate."
 
 [[rules]]
 source = "InfraModelPort"
+target = "GovernanceModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Support flow: infra row-data design > governance entrypoint design."
+
+[[rules]]
+source = "GovernanceModelPort"
 target = "DecisionModelPort"
 relation = "coordinates"
 priority = 72
-notes = "Expected model-definition flow: infra > decision."
+notes = "Runtime entry handoff: governance > decision."
 
 [[rules]]
 source = "DecisionModelPort"
 target = "NeedsModelPort"
 relation = "coordinates"
 priority = 72
-notes = "Expected model-definition flow: decision > needs."
+notes = "Runtime chain: decision > needs."
 
 [[rules]]
-source = "DecisionModelPort"
+source = "NeedsModelPort"
 target = "KernelModelPort"
 relation = "coordinates"
 priority = 72
-notes = "Expected model-definition flow: decision > kernel."
-
-[[rules]]
-source = "NeedsModelPort"
-target = "DecisionModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Expected feedback flow: needs > decision."
-
-[[rules]]
-source = "NeedsModelPort"
-target = "FlowModelPort"
-relation = "coordinates"
-priority = 72
-notes = "Expected model-definition flow: needs > flow."
+notes = "Runtime chain: needs > kernel."
 
 [[rules]]
 source = "KernelModelPort"
 target = "FlowModelPort"
 relation = "coordinates"
 priority = 72
-notes = "Expected model-definition flow: kernel > flow."
+notes = "Runtime chain: kernel > flow."
+
+[[rules]]
+source = "FlowModelPort"
+target = "GovernanceModelPort"
+relation = "coordinates"
+priority = 72
+notes = "Feedback closure: flow evidence routes back to governance management plane."

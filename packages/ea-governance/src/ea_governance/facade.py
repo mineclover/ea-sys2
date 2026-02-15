@@ -1,5 +1,6 @@
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ea_decision.topic import Topic
 from ea_flow.runtime import FlowRuntime
@@ -24,6 +25,14 @@ from ea_governance.layer_store import ALLOWED_LAYERS, GovernanceLayerStore
 from ea_governance.needs_store import GovernanceNeedsStore
 
 _KERNEL_MODEL_PREFIX = "model:"
+_DECISION_TRACE_PREFIX = "decision_trace:"
+_DECISION_TRACE_KIND = "decision_trace_contract"
+_DECISION_TRACE_VERSION = "1.0"
+_MISSING_EVIDENCE_WARNING = "missing_evidence_refs"
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).isoformat()
 
 
 class GovernanceContainer:
@@ -109,7 +118,7 @@ class GovernanceContainer:
             self.execution_service.tx_manager.fail(tx.id, str(e))
             raise e
 
-    def execute_decision(self, report_id: str, topic: Topic) -> dict[str, Any]:
+    def interpret_decision(self, report_id: str, topic: Topic) -> dict[str, Any]:
         """
         Interprets the modeling actions of a finalized report.
         Returns {"success": bool, "transaction_id": str}
@@ -123,7 +132,11 @@ class GovernanceContainer:
             "transaction_id": topic.report.transaction_id,
         }
 
-    def execute_use_case(self, use_case: UseCaseSpec, variables: dict[str, Any]) -> dict[str, Any]:
+    def execute_decision(self, report_id: str, topic: Topic) -> dict[str, Any]:
+        """Backward-compatible alias for `interpret_decision`."""
+        return self.interpret_decision(report_id, topic)
+
+    def interpret_use_case(self, use_case: UseCaseSpec, variables: dict[str, Any]) -> dict[str, Any]:
         """
         Interprets a Use Case Specification using the flow runtime.
         """
@@ -154,6 +167,10 @@ class GovernanceContainer:
         except Exception as e:
             self.execution_service.tx_manager.fail(tx.id, str(e))
             raise e
+
+    def execute_use_case(self, use_case: UseCaseSpec, variables: dict[str, Any]) -> dict[str, Any]:
+        """Backward-compatible alias for `interpret_use_case`."""
+        return self.interpret_use_case(use_case, variables)
 
     def get_transaction_status(self, tx_id: str) -> dict[str, Any] | None:
         """Retrieves the status of a governance transaction."""
@@ -226,6 +243,272 @@ class GovernanceContainer:
         )
         return snapshot_id
 
+    @staticmethod
+    def _normalize_decision_id(decision_id: str | None) -> str | None:
+        if decision_id is None:
+            return None
+        normalized = decision_id.strip()
+        if len(normalized) == 0:
+            return None
+        return normalized
+
+    @staticmethod
+    def _normalize_evidence_refs(evidence_refs: list[str] | tuple[str, ...] | None) -> list[str]:
+        if evidence_refs is None:
+            return []
+        normalized: list[str] = []
+        for raw in evidence_refs:
+            value = raw.strip()
+            if len(value) == 0:
+                continue
+            if value not in normalized:
+                normalized.append(value)
+        return normalized
+
+    @staticmethod
+    def _decision_trace_model_id(decision_id: str) -> str:
+        return f"{_DECISION_TRACE_PREFIX}{decision_id}"
+
+    @staticmethod
+    def _decision_trace_warnings(
+        decision_id: str | None,
+        evidence_refs: list[str],
+    ) -> list[str]:
+        warnings: list[str] = []
+        if decision_id is not None and len(evidence_refs) == 0:
+            warnings.append(_MISSING_EVIDENCE_WARNING)
+        return warnings
+
+    def _record_model_decision_trace(
+        self,
+        *,
+        decision_id: str,
+        operation: str,
+        model_name: str,
+        version: str,
+        status: str,
+        actor: str,
+        transaction_id: str,
+        evidence_refs: list[str],
+        warnings: list[str],
+        detail: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        store = self.layer_stores["decision"]
+        model_id = self._decision_trace_model_id(decision_id)
+        existing = store.get_payload(model_id)
+
+        if (
+            existing is None
+            or existing.get("kind") != _DECISION_TRACE_KIND
+            or existing.get("decision_id") != decision_id
+        ):
+            trace: dict[str, Any] = {
+                "kind": _DECISION_TRACE_KIND,
+                "contract_version": _DECISION_TRACE_VERSION,
+                "decision_id": decision_id,
+                "created_at": _now_iso(),
+                "updated_at": "",
+                "evidence_refs": [],
+                "warnings": [],
+                "operations": [],
+                "impact": [],
+                "history": [],
+            }
+        else:
+            trace = dict(existing)
+            trace["evidence_refs"] = [
+                item
+                for item in trace.get("evidence_refs", [])
+                if isinstance(item, str)
+            ]
+            trace["warnings"] = [
+                item
+                for item in trace.get("warnings", [])
+                if isinstance(item, str)
+            ]
+            trace["operations"] = [
+                item
+                for item in trace.get("operations", [])
+                if isinstance(item, dict)
+            ]
+            trace["impact"] = [
+                item
+                for item in trace.get("impact", [])
+                if isinstance(item, dict)
+            ]
+            trace["history"] = [
+                item
+                for item in trace.get("history", [])
+                if isinstance(item, dict)
+            ]
+
+        now = _now_iso()
+        merged_evidence_refs = cast(list[str], trace["evidence_refs"])
+        for ref in evidence_refs:
+            if ref not in merged_evidence_refs:
+                merged_evidence_refs.append(ref)
+
+        merged_warnings = cast(list[str], trace["warnings"])
+        for warning in warnings:
+            if warning not in merged_warnings:
+                merged_warnings.append(warning)
+
+        operations = cast(list[dict[str, Any]], trace["operations"])
+        op_id = f"{operation}:{transaction_id}"
+        operations = [
+            row
+            for row in operations
+            if str(row.get("id", "")) != op_id
+        ]
+        operations.append(
+            {
+                "id": op_id,
+                "operation": operation,
+                "model_name": model_name,
+                "version": version,
+                "status": status,
+                "actor": actor,
+                "transaction_id": transaction_id,
+                "evidence_refs": list(evidence_refs),
+                "warnings": list(warnings),
+                "detail": dict(detail or {}),
+                "created_at": now,
+            }
+        )
+        trace["operations"] = operations
+
+        impact = cast(list[dict[str, Any]], trace["impact"])
+        impact_entry = {
+            "operation": operation,
+            "model_name": model_name,
+            "version": version,
+            "status": status,
+            "transaction_id": transaction_id,
+            "actor": actor,
+            "created_at": now,
+        }
+        if detail:
+            impact_entry["detail"] = dict(detail)
+        impact.append(impact_entry)
+
+        history = cast(list[dict[str, Any]], trace["history"])
+        history.append(
+            {
+                "transaction_id": transaction_id,
+                "event_type": "decision_trace_linked",
+                "message": "Model operation linked to decision trace.",
+                "operation": operation,
+                "created_at": now,
+            }
+        )
+
+        trace["updated_at"] = now
+        store.save_payload(model_id=model_id, payload=trace)
+        return trace
+
+    def get_model_decision_trace(self, decision_id: str) -> dict[str, Any] | None:
+        """Read model decision trace contract from the decision layer store."""
+        normalized = self._normalize_decision_id(decision_id)
+        if normalized is None:
+            raise ValueError("decision_id must be a non-empty string")
+        return self.layer_stores["decision"].get_payload(self._decision_trace_model_id(normalized))
+
+    def explore_model_decision_trace(self, decision_id: str) -> dict[str, Any] | None:
+        """Return evidence/impact/history exploration view for one decision id."""
+        trace = self.get_model_decision_trace(decision_id)
+        if trace is None:
+            return None
+
+        operations = [
+            row
+            for row in trace.get("operations", [])
+            if isinstance(row, dict)
+        ]
+        warnings = [
+            row
+            for row in trace.get("warnings", [])
+            if isinstance(row, str)
+        ]
+        evidence_refs = [
+            row
+            for row in trace.get("evidence_refs", [])
+            if isinstance(row, str)
+        ]
+
+        missing_evidence_operations = [
+            str(row.get("operation"))
+            for row in operations
+            if any(
+                isinstance(warning, str) and warning == _MISSING_EVIDENCE_WARNING
+                for warning in cast(list[Any], row.get("warnings", []))
+            )
+        ]
+
+        tx_ids = []
+        for row in operations:
+            tx_id = row.get("transaction_id")
+            if isinstance(tx_id, str) and tx_id not in tx_ids:
+                tx_ids.append(tx_id)
+
+        history: list[dict[str, Any]] = [
+            row
+            for row in trace.get("history", [])
+            if isinstance(row, dict)
+        ]
+        for tx_id in tx_ids:
+            tx = self.execution_service.tx_manager.get_transaction(tx_id)
+            if tx is None:
+                continue
+            history.append(
+                {
+                    "transaction_id": tx.id,
+                    "event_type": "transaction_status",
+                    "message": f"Transaction status: {tx.status.value}",
+                    "created_at": tx.updated_at,
+                }
+            )
+            for event in self.execution_service.tx_manager.get_events(tx_id):
+                history.append(
+                    {
+                        "transaction_id": event.tx_id,
+                        "event_id": event.id,
+                        "event_type": event.event_type,
+                        "message": event.message,
+                        "payload": event.payload,
+                        "created_at": event.created_at,
+                    }
+                )
+
+        history.sort(
+            key=lambda row: (
+                str(row.get("created_at", "")),
+                str(row.get("event_id", "")),
+                str(row.get("event_type", "")),
+            )
+        )
+
+        return {
+            "decision_id": trace.get("decision_id"),
+            "contract_version": trace.get("contract_version"),
+            "evidence": {
+                "refs": evidence_refs,
+                "warnings": warnings,
+                "missing_evidence_operations": missing_evidence_operations,
+            },
+            "impact": {
+                "total_operations": len(operations),
+                "operations": operations,
+                "models": sorted(
+                    {
+                        str(row.get("model_name"))
+                        for row in operations
+                        if isinstance(row.get("model_name"), str)
+                    }
+                ),
+            },
+            "history": history,
+        }
+
     def register_kernel_model(
         self,
         profile_toml: str,
@@ -237,6 +520,8 @@ class GovernanceContainer:
         context: dict[str, Any] | None = None,
         on_exists: str = "validate",
         actor: str = "governance",
+        decision_id: str | None = None,
+        evidence_refs: list[str] | tuple[str, ...] | None = None,
         return_transaction: bool = False,
     ) -> dict[str, Any]:
         """Register/validate/activate a kernel model through governance control."""
@@ -255,6 +540,13 @@ class GovernanceContainer:
                 metadata=profile.metadata,
             )
 
+        normalized_decision_id = self._normalize_decision_id(decision_id)
+        normalized_evidence_refs = self._normalize_evidence_refs(evidence_refs)
+        decision_warnings = self._decision_trace_warnings(
+            normalized_decision_id,
+            normalized_evidence_refs,
+        )
+
         tx = self.execution_service.tx_manager.begin_transaction(
             f"kernel_model_register_{profile.name}_{profile.version}",
             tx_type="kernel_model_registry_write",
@@ -265,10 +557,16 @@ class GovernanceContainer:
                 "actor": actor,
                 "activate": activate,
                 "on_exists": on_exists,
+                "decision_id": normalized_decision_id,
+                "evidence_count": len(normalized_evidence_refs),
             },
         )
 
         context_obj = {"source": "governance:models/register", **(context or {})}
+        if normalized_decision_id is not None and "decision_id" not in context_obj:
+            context_obj["decision_id"] = normalized_decision_id
+        if normalized_evidence_refs and "evidence_refs" not in context_obj:
+            context_obj["evidence_refs"] = list(normalized_evidence_refs)
 
         try:
             try:
@@ -339,6 +637,50 @@ class GovernanceContainer:
                     "actor": actor,
                 },
             )
+            if normalized_decision_id is not None:
+                if decision_warnings:
+                    self.execution_service.tx_manager.add_event(
+                        tx.id,
+                        "decision_trace_warning",
+                        "Decision trace evidence warning detected.",
+                        payload={
+                            "decision_id": normalized_decision_id,
+                            "warnings": list(decision_warnings),
+                            "operation": "register",
+                            "model_name": profile.name,
+                            "version": profile.version,
+                        },
+                    )
+                self._record_model_decision_trace(
+                    decision_id=normalized_decision_id,
+                    operation="register",
+                    model_name=profile.name,
+                    version=profile.version,
+                    status=activation.status if activation else "registered",
+                    actor=actor,
+                    transaction_id=tx.id,
+                    evidence_refs=normalized_evidence_refs,
+                    warnings=decision_warnings,
+                    detail={
+                        "created": created,
+                        "validation_run_id": run_id,
+                        "activated": activation is not None,
+                        "active_version_id": (
+                            activation.active_version_id if activation else None
+                        ),
+                    },
+                )
+                self.execution_service.tx_manager.add_event(
+                    tx.id,
+                    "decision_trace_linked",
+                    "Model operation linked to decision trace.",
+                    payload={
+                        "decision_id": normalized_decision_id,
+                        "operation": "register",
+                        "model_name": profile.name,
+                        "version": profile.version,
+                    },
+                )
             self.execution_service.tx_manager.commit(tx.id)
         except Exception as exc:
             self.execution_service.tx_manager.fail(tx.id, str(exc))
@@ -353,6 +695,13 @@ class GovernanceContainer:
             "status": activation.status if activation else "registered",
             "active_version_id": activation.active_version_id if activation else None,
         }
+        if normalized_decision_id is not None:
+            response["decision_trace"] = {
+                "decision_id": normalized_decision_id,
+                "trace_model_id": self._decision_trace_model_id(normalized_decision_id),
+                "evidence_refs": list(normalized_evidence_refs),
+                "warnings": list(decision_warnings),
+            }
         if return_transaction:
             response["transaction_id"] = tx.id
         return response
@@ -364,9 +713,18 @@ class GovernanceContainer:
         *,
         context: dict[str, Any] | None = None,
         actor: str = "governance",
+        decision_id: str | None = None,
+        evidence_refs: list[str] | tuple[str, ...] | None = None,
         return_transaction: bool = False,
     ) -> ValidationRunEntry | dict[str, Any]:
         """Validate a registered kernel model through governance control."""
+        normalized_decision_id = self._normalize_decision_id(decision_id)
+        normalized_evidence_refs = self._normalize_evidence_refs(evidence_refs)
+        decision_warnings = self._decision_trace_warnings(
+            normalized_decision_id,
+            normalized_evidence_refs,
+        )
+
         tx = self.execution_service.tx_manager.begin_transaction(
             f"kernel_model_validate_{model_name}_{version}",
             tx_type="kernel_model_registry_validate",
@@ -375,14 +733,21 @@ class GovernanceContainer:
                 "model_name": model_name,
                 "version": version,
                 "actor": actor,
+                "decision_id": normalized_decision_id,
+                "evidence_count": len(normalized_evidence_refs),
             },
         )
 
         try:
+            context_obj = {"source": "governance:models/validate", **(context or {})}
+            if normalized_decision_id is not None and "decision_id" not in context_obj:
+                context_obj["decision_id"] = normalized_decision_id
+            if normalized_evidence_refs and "evidence_refs" not in context_obj:
+                context_obj["evidence_refs"] = list(normalized_evidence_refs)
             run = self.model_registration.validate_registered(
                 model_name,
                 version,
-                context={"source": "governance:models/validate", **(context or {})},
+                context=context_obj,
             )
             snapshot_id = self._save_kernel_model_snapshot(model_name, actor=actor)
             self.execution_service.tx_manager.add_event(
@@ -407,13 +772,63 @@ class GovernanceContainer:
                     "actor": actor,
                 },
             )
+            if normalized_decision_id is not None:
+                if decision_warnings:
+                    self.execution_service.tx_manager.add_event(
+                        tx.id,
+                        "decision_trace_warning",
+                        "Decision trace evidence warning detected.",
+                        payload={
+                            "decision_id": normalized_decision_id,
+                            "warnings": list(decision_warnings),
+                            "operation": "validate",
+                            "model_name": model_name,
+                            "version": version,
+                        },
+                    )
+                self._record_model_decision_trace(
+                    decision_id=normalized_decision_id,
+                    operation="validate",
+                    model_name=model_name,
+                    version=version,
+                    status="passed" if run.passed else "failed",
+                    actor=actor,
+                    transaction_id=tx.id,
+                    evidence_refs=normalized_evidence_refs,
+                    warnings=decision_warnings,
+                    detail={
+                        "run_id": run.run_id,
+                        "passed": run.passed,
+                        "errors": list(run.errors),
+                    },
+                )
+                self.execution_service.tx_manager.add_event(
+                    tx.id,
+                    "decision_trace_linked",
+                    "Model operation linked to decision trace.",
+                    payload={
+                        "decision_id": normalized_decision_id,
+                        "operation": "validate",
+                        "model_name": model_name,
+                        "version": version,
+                        "run_id": run.run_id,
+                    },
+                )
             self.execution_service.tx_manager.commit(tx.id)
         except Exception as exc:
             self.execution_service.tx_manager.fail(tx.id, str(exc))
             raise
 
         if return_transaction:
-            return {"run": run, "transaction_id": tx.id}
+            response: dict[str, Any] = {"run": run, "transaction_id": tx.id}
+            if normalized_decision_id is not None:
+                response["decision_trace"] = {
+                    "decision_id": normalized_decision_id,
+                    "trace_model_id": self._decision_trace_model_id(normalized_decision_id),
+                    "evidence_refs": list(normalized_evidence_refs),
+                    "warnings": list(decision_warnings),
+                }
+            return response
         return run
 
     def activate_kernel_model(
@@ -422,9 +837,18 @@ class GovernanceContainer:
         version: str,
         *,
         actor: str = "governance",
+        decision_id: str | None = None,
+        evidence_refs: list[str] | tuple[str, ...] | None = None,
         return_transaction: bool = False,
     ) -> ModelRegistryEntry | dict[str, Any]:
         """Activate a validated kernel model through governance control."""
+        normalized_decision_id = self._normalize_decision_id(decision_id)
+        normalized_evidence_refs = self._normalize_evidence_refs(evidence_refs)
+        decision_warnings = self._decision_trace_warnings(
+            normalized_decision_id,
+            normalized_evidence_refs,
+        )
+
         tx = self.execution_service.tx_manager.begin_transaction(
             f"kernel_model_activate_{model_name}_{version}",
             tx_type="kernel_model_registry_write",
@@ -433,6 +857,8 @@ class GovernanceContainer:
                 "model_name": model_name,
                 "version": version,
                 "actor": actor,
+                "decision_id": normalized_decision_id,
+                "evidence_count": len(normalized_evidence_refs),
             },
         )
 
@@ -460,13 +886,62 @@ class GovernanceContainer:
                     "actor": actor,
                 },
             )
+            if normalized_decision_id is not None:
+                if decision_warnings:
+                    self.execution_service.tx_manager.add_event(
+                        tx.id,
+                        "decision_trace_warning",
+                        "Decision trace evidence warning detected.",
+                        payload={
+                            "decision_id": normalized_decision_id,
+                            "warnings": list(decision_warnings),
+                            "operation": "activate",
+                            "model_name": model_name,
+                            "version": version,
+                        },
+                    )
+                self._record_model_decision_trace(
+                    decision_id=normalized_decision_id,
+                    operation="activate",
+                    model_name=model_name,
+                    version=version,
+                    status=model.status,
+                    actor=actor,
+                    transaction_id=tx.id,
+                    evidence_refs=normalized_evidence_refs,
+                    warnings=decision_warnings,
+                    detail={
+                        "active_version_id": model.active_version_id,
+                        "owner": model.owner,
+                    },
+                )
+                self.execution_service.tx_manager.add_event(
+                    tx.id,
+                    "decision_trace_linked",
+                    "Model operation linked to decision trace.",
+                    payload={
+                        "decision_id": normalized_decision_id,
+                        "operation": "activate",
+                        "model_name": model_name,
+                        "version": version,
+                        "active_version_id": model.active_version_id,
+                    },
+                )
             self.execution_service.tx_manager.commit(tx.id)
         except Exception as exc:
             self.execution_service.tx_manager.fail(tx.id, str(exc))
             raise
 
         if return_transaction:
-            return {"model": model, "transaction_id": tx.id}
+            response = {"model": model, "transaction_id": tx.id}
+            if normalized_decision_id is not None:
+                response["decision_trace"] = {
+                    "decision_id": normalized_decision_id,
+                    "trace_model_id": self._decision_trace_model_id(normalized_decision_id),
+                    "evidence_refs": list(normalized_evidence_refs),
+                    "warnings": list(decision_warnings),
+                }
+            return response
         return model
 
     def get_kernel_model_state(
@@ -770,17 +1245,17 @@ class GovernanceContainer:
         corpus_name: str | None = None,
     ) -> tuple[CorpusVersionInfo, ...]:
         """List kernel corpus versions."""
-        return self.kernel.list_versions(corpus_name)
+        return tuple(cast(tuple[CorpusVersionInfo, ...], self.kernel.list_versions(corpus_name)))
 
-    def get_kernel_promotion_proposals(self):
+    def get_kernel_promotion_proposals(self) -> tuple[Any, ...]:
         """Expose kernel promotion proposals through governance entrypoint."""
-        return self.kernel.get_promotion_proposals()
+        return tuple(cast(tuple[Any, ...], self.kernel.get_promotion_proposals()))
 
-    def simulate_kernel_proposal(self, proposal):
+    def simulate_kernel_proposal(self, proposal: Any) -> Any:
         """Expose kernel what-if simulation through governance entrypoint."""
         return self.kernel.simulate_proposal(proposal)
 
-    def get_kernel_corpus_at_version(self, version_id: str):
+    def get_kernel_corpus_at_version(self, version_id: str) -> Any | None:
         """Reconstruct kernel corpus at the given version id."""
         return self.kernel.get_corpus_at_version(version_id)
 
@@ -790,7 +1265,7 @@ class GovernanceContainer:
     ) -> tuple[RuleAsset, ...]:
         """List kernel rules, optionally filtered by lifecycle state."""
         if state is None:
-            return self.kernel.rule_store.query()
+            return tuple(cast(tuple[RuleAsset, ...], self.kernel.rule_store.query()))
 
         lifecycle_state = state
         if isinstance(state, str):
@@ -800,7 +1275,9 @@ class GovernanceContainer:
                 raise ValueError(f"Invalid kernel rule state: {state}") from exc
 
         assert isinstance(lifecycle_state, RuleLifecycleState)
-        return self.kernel.rule_store.list_by_state(lifecycle_state)
+        return tuple(
+            cast(tuple[RuleAsset, ...], self.kernel.rule_store.list_by_state(lifecycle_state))
+        )
 
     def get_kernel_rule_snapshot(self, rule_id: str) -> dict[str, Any] | None:
         """Get governance snapshot payload of a kernel rule."""

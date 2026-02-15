@@ -1,9 +1,9 @@
 # EA System Layer: Kernel
-# Role: canonical domain model and rule contract for all layers.
+# Role: 도메인 핵심 모델 정의
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.0"
+version = "0.4.1"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -72,7 +72,7 @@ description = "Policy or guard constrains execution."
 name = "KernelLayer"
 layer = "Kernel"
 category = "Composite"
-description = "Kernel specification boundary."
+description = "Kernel specification boundary and runtime chain third stage."
 
 [[elements]]
 name = "KernelContractService"
@@ -138,7 +138,7 @@ description = "6x6 contract port for kernel-layer model interface."
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
-description = "6x6 contract port for flow-layer model interface."
+description = "Flow model port used as downstream handoff target from kernel."
 
 [[elements]]
 name = "KernelCapabilityModel"
@@ -174,7 +174,7 @@ description = "Reviews compiled contracts before publication."
 name = "PublishKernelContractAction"
 layer = "Kernel"
 category = "Executable"
-description = "Publishes reviewed kernel contract artifacts."
+description = "Publishes reviewed kernel contract artifacts for flow-stage execution."
 
 [[elements]]
 name = "KernelSpecPublishedEvent"
@@ -344,11 +344,11 @@ priority = 70
 notes = "Contract service depends on profile registry state."
 
 [[rules]]
-source = "KernelValidationService"
-target = "KernelProfileRegistry"
-relation = "depends_on"
+source = "PublishKernelContractAction"
+target = "FlowModelPort"
+relation = "coordinates"
 priority = 70
-notes = "Validation service depends on registry metadata."
+notes = "Runtime chain handoff: kernel publication routes downstream to flow model port."
 
 [[rules]]
 source = "KernelConsistencyGoal"

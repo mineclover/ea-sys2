@@ -7,12 +7,12 @@ There is no merge/composition step.
 All six layers share kernel category/relation vocabulary, but each file models a different responsibility and implementation focus.
 Policy/constraint ownership is also layer-local: each layer defines and manages its own control semantics.
 
-- `00-infra.toml` - data management and persistence contracts
-- `10-governance.toml` - registration/version/validation/change control across layers
-- `20-decision.toml` - decision-flow meta-meta model (vocabulary/schema/state/activity structure)
-- `30-needs.toml` - use-case, constraint, and prioritized-needs definition
-- `40-kernel.toml` - canonical kernel contract and rule model
-- `50-flow.toml` - concrete step/action data-flow model
+- `00-infra.toml` - row 데이터 설계
+- `10-governance.toml` - 위 5개 레이어 전체를 관리하는 관리 시스템으로 동작한다
+- `20-decision.toml` - 의사결정 메타-메타 모델 정의
+- `30-needs.toml` - 요구 모델 정의
+- `40-kernel.toml` - 도메인 핵심 모델 정의
+- `50-flow.toml` - 실행/데이터 흐름 모델 정의
 
 Main model order:
 
@@ -21,10 +21,11 @@ Main model order:
 Governance role:
 
 - Governance manages meta-meta/meta/instance control for all layer models.
-- Infra may define control contracts/ports, while governance implements control workflows on top.
-- Runtime/API entrypoint convention uses governance as the single layer gateway:
-  - `infra > governance > decision > needs > kernel > flow`
-  - requests enter via `GovernanceEntryPort` and are routed to layer-specific model ports.
+- Infra defines row-data contracts and persistence-oriented structure/ports.
+- Governance defines system entrypoint contracts and routing/control workflows.
+- Runtime/API model entrypoint chain is:
+  - `decision > needs > kernel > flow`
+  - requests enter via `GovernanceEntryPort` and are routed according to the chain above.
 - Governance also models `/models/*` API as explicit endpoint contracts:
   - endpoints: `ModelRegisterEndpoint`, `ModelValidateEndpoint`, `ModelActivateEndpoint`, `ModelStateEndpoint`
   - records: request/response/error/transaction contracts are modeled as passive structures in `10-governance.toml`

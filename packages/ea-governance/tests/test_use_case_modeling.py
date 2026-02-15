@@ -40,9 +40,9 @@ def test_use_case_business_modeling(tmp_path):
         steps=[step1]
     )
 
-    # 3. Execute the Use Case Spec via Governance (Coordination Truth)
+    # 3. Interpret the Use Case Spec via Governance (Coordination Truth)
     variables = {"priority": "high"}
-    result = container.execute_use_case(uc, variables)
+    result = container.interpret_use_case(uc, variables)
 
     # 4. Verify Coordination & Integrity
     assert result["success"] is True

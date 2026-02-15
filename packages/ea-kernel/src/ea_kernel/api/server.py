@@ -159,16 +159,22 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         activate: bool | None = False
         context: dict[str, Any] | None = None
         on_exists: str | None = "validate"  # validate | error
+        decision_id: str | None = None
+        evidence_refs: list[str] | None = None
 
     class ModelValidateRequest(BaseModel):
         model_name: str
         version: str
         context: dict[str, Any] | None = None
+        decision_id: str | None = None
+        evidence_refs: list[str] | None = None
 
     class ModelActivateRequest(BaseModel):
         model_name: str
         version: str
         actor: str | None = "api-user"
+        decision_id: str | None = None
+        evidence_refs: list[str] | None = None
 
     # --- Endpoints ---
 
@@ -200,6 +206,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 context={"source": "api:models/register", **(req.context or {})},
                 on_exists=req.on_exists or "validate",
                 actor=req.created_by or "api-user",
+                decision_id=req.decision_id,
+                evidence_refs=req.evidence_refs,
                 return_transaction=True,
             )
             if isinstance(result, dict):
@@ -212,6 +220,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                     "status": result.get("status"),
                     "active_version_id": result.get("active_version_id"),
                     "transaction_id": result.get("transaction_id"),
+                    "decision_trace": result.get("decision_trace"),
                 }
             return result
         except ValueError as err:
@@ -262,15 +271,21 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 req.version,
                 context={"source": "api:models/validate", **(req.context or {})},
                 actor="api-user",
+                decision_id=req.decision_id,
+                evidence_refs=req.evidence_refs,
                 return_transaction=True,
             )
             run = validate_result
             transaction_id: str | None = None
+            decision_trace: dict[str, Any] | None = None
             if isinstance(validate_result, dict):
                 run = validate_result.get("run")
                 tx = validate_result.get("transaction_id")
                 if isinstance(tx, str) and len(tx.strip()) > 0:
                     transaction_id = tx
+                trace = validate_result.get("decision_trace")
+                if isinstance(trace, dict):
+                    decision_trace = trace
 
             if run is None:
                 raise _model_api_error(
@@ -308,6 +323,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             "run_id": run.run_id,
             "errors": list(run.errors),
             "transaction_id": transaction_id,
+            "decision_trace": decision_trace,
         }
 
     @_typed_post("/models/activate")
@@ -318,15 +334,21 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 req.model_name,
                 req.version,
                 actor=req.actor or "api-user",
+                decision_id=req.decision_id,
+                evidence_refs=req.evidence_refs,
                 return_transaction=True,
             )
             model = activate_result
             transaction_id: str | None = None
+            decision_trace: dict[str, Any] | None = None
             if isinstance(activate_result, dict):
                 model = activate_result.get("model")
                 tx = activate_result.get("transaction_id")
                 if isinstance(tx, str) and len(tx.strip()) > 0:
                     transaction_id = tx
+                trace = activate_result.get("decision_trace")
+                if isinstance(trace, dict):
+                    decision_trace = trace
 
             if model is None:
                 raise _model_api_error(
@@ -363,6 +385,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             "active_version_id": model.active_version_id,
             "owner": model.owner,
             "transaction_id": transaction_id,
+            "decision_trace": decision_trace,
         }
 
     @_typed_get("/models/{model_name}")
@@ -390,6 +413,60 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 category="not_found",
             )
         return model_state
+
+    @_typed_get("/models/decisions/{decision_id}")
+    def get_model_decision_trace(decision_id: str) -> dict[str, Any]:
+        container = _get_governance_container()
+        try:
+            trace = container.get_model_decision_trace(decision_id)
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400,
+                detail=str(err),
+                category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled /models/decisions/{decision_id} error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
+
+        if trace is None:
+            raise _model_api_error(
+                status_code=404,
+                detail=f"Decision trace not found: {decision_id}",
+                category="not_found",
+            )
+        return trace
+
+    @_typed_get("/models/decisions/{decision_id}/explore")
+    def explore_model_decision_trace(decision_id: str) -> dict[str, Any]:
+        container = _get_governance_container()
+        try:
+            exploration = container.explore_model_decision_trace(decision_id)
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400,
+                detail=str(err),
+                category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled /models/decisions/{decision_id}/explore error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
+
+        if exploration is None:
+            raise _model_api_error(
+                status_code=404,
+                detail=f"Decision trace not found: {decision_id}",
+                category="not_found",
+            )
+        return exploration
 
     # 1. Judgment
     @_typed_post("/judgment/execute")

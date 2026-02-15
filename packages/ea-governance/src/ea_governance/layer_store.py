@@ -6,7 +6,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ea_needs.types import _now
 
@@ -92,7 +92,7 @@ class GovernanceLayerStore:
             ).fetchone()
         if row is None:
             return None
-        return json.loads(str(row[0]))
+        return cast(dict[str, Any], json.loads(str(row[0])))
 
     def list_snapshots(self) -> list[LayerSnapshot]:
         with self._connect() as conn:
@@ -112,7 +112,7 @@ class GovernanceLayerStore:
                 LayerSnapshot(
                     layer=self.layer,
                     model_id=str(model_id),
-                    payload=json.loads(str(payload_json)),
+                    payload=cast(dict[str, Any], json.loads(str(payload_json))),
                     updated_at=str(updated_at),
                 )
             )

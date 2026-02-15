@@ -1,9 +1,11 @@
-# ea-decision (Layer 2: Decision/Intent)
+# ea-decision (Decision Layer)
 
 **"The Brain"**
 
 `ea-decision` captures the **Design Thinking process**—the thoughts, ideas, rationale, and strategic intent that drive the system's evolution.
 This layer provides the "Why" behind the "What" (Kernel) and "How" (Flow).
+In EA-SYS model order, decision is positioned before needs/kernel:
+`infra > decision > needs > kernel > flow`.
 
 ## Role in Architecture
 
@@ -48,4 +50,3 @@ The package supports a structured workflow that bridges abstract thinking and co
 ## Persistence
 
 All artifacts are persisted as JSON in a structured repository (`Topic`), serving as the **Reference** for all downstream modeling.
-

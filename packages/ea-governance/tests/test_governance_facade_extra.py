@@ -19,10 +19,10 @@ def test_facade_extra_cases(tmp_path):
     # 3. get_flow_spec None
     assert container.get_flow_spec("invalid") is None
 
-    # 4. execute_decision invalid report
+    # 4. interpret_decision invalid report
     from ea_decision.topic import Topic
     topic = Topic("T", "D")
-    res = container.execute_decision("wrong-id", topic)
+    res = container.interpret_decision("wrong-id", topic)
     assert res["success"] is False
     assert res["error"] == "Invalid Report ID"
 

@@ -7,6 +7,7 @@ import sys
 from collections import Counter
 from collections import defaultdict
 from pathlib import Path
+import re
 from typing import Any
 
 LAYER_FILE_MAP = {
@@ -20,7 +21,9 @@ LAYER_FILE_MAP = {
 
 VALIDATION_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow")
 MODEL_DEFINITION_ORDER = ("infra", "decision", "needs", "kernel", "flow")
-GOVERNANCE_ENTRYPOINT_ORDER = ("infra", "governance", "decision", "needs", "kernel", "flow")
+ENTRYPOINT_ORDER = ("decision", "needs", "kernel", "flow")
+INFRA_ROLE = "row-data-design"
+GOVERNANCE_ROLE = "system-entrypoint-design"
 LAYER_PORTS = {
     "infra": "InfraModelPort",
     "governance": "GovernanceModelPort",
@@ -31,12 +34,10 @@ LAYER_PORTS = {
 }
 FLOW_6X6_MATRIX_ELEMENT = "FlowLayerContractMatrix"
 FLOW_6X6_OWNER = "PersistFlowStateStep"
-EXPECTED_MODEL_DEFINITION_COORDINATES = (
-    ("InfraModelPort", "DecisionModelPort"),
+EXPECTED_ENTRYPOINT_START_TARGET = "DecisionModelPort"
+EXPECTED_RUNTIME_ENTRYPOINT_COORDINATES = (
     ("DecisionModelPort", "NeedsModelPort"),
-    ("DecisionModelPort", "KernelModelPort"),
-    ("NeedsModelPort", "DecisionModelPort"),
-    ("NeedsModelPort", "FlowModelPort"),
+    ("NeedsModelPort", "KernelModelPort"),
     ("KernelModelPort", "FlowModelPort"),
 )
 MODEL_API_ENDPOINTS = (
@@ -98,6 +99,9 @@ EXPECTED_MODEL_API_PRODUCES = (
     ("ModelStateEndpoint", "ModelTransactionRecord"),
 )
 LAYER_DIR = Path(__file__).parent / "ea-sys"
+DOCS_DIR = Path(__file__).resolve().parents[1] / "docs"
+SYSTEM_SPEC_LAYERS_PATH = DOCS_DIR / "system_spec_layers.md"
+LAYER_README_PATH = LAYER_DIR / "README.md"
 
 
 def parse_args() -> argparse.Namespace:
@@ -306,7 +310,11 @@ def _validate_governance_entrypoint(governance_profile: Any) -> dict[str, Any]:
 
     coordinates = _collect_exact_relation_edges(governance_profile, "coordinates")
     entrypoint_targets = coordinates.get("GovernanceEntryPort", set())
-    missing_entrypoint_routing = sorted(expected_ports - entrypoint_targets)
+    missing_entrypoint_routing = (
+        []
+        if EXPECTED_ENTRYPOINT_START_TARGET in entrypoint_targets
+        else [EXPECTED_ENTRYPOINT_START_TARGET]
+    )
 
     coordinate_pairs = {
         (src, dst)
@@ -315,7 +323,7 @@ def _validate_governance_entrypoint(governance_profile: Any) -> dict[str, Any]:
     }
     missing_model_definition_coordinates = sorted(
         f"{src}->{dst}"
-        for (src, dst) in EXPECTED_MODEL_DEFINITION_COORDINATES
+        for (src, dst) in EXPECTED_RUNTIME_ENTRYPOINT_COORDINATES
         if (src, dst) not in coordinate_pairs
     )
 
@@ -548,6 +556,135 @@ def _collect_common_spec_warnings(profiles: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_role_text(text: str) -> str:
+    lowered = text.strip().lower()
+    lowered = lowered.replace("`", "")
+    lowered = re.sub(r"[^0-9a-zA-Z가-힣]+", " ", lowered)
+    return re.sub(r"\s+", " ", lowered).strip()
+
+
+def _load_system_spec_layer_roles(path: Path = SYSTEM_SPEC_LAYERS_PATH) -> tuple[dict[str, str], list[str]]:
+    if not path.exists():
+        return {}, [f"system-spec-missing path={path}"]
+
+    content = path.read_text(encoding="utf-8")
+    roles: dict[str, str] = {}
+    warnings: list[str] = []
+
+    table_pattern = re.compile(
+        r"^\|\s*\*\*(Infra|Decision|Needs|Kernel|Flow)\*\*\s*\|\s*([^|]+?)\s*\|",
+        re.MULTILINE,
+    )
+    for match in table_pattern.finditer(content):
+        layer = match.group(1).lower()
+        responsibility = match.group(2).strip()
+        roles[layer] = responsibility
+
+    governance_pattern = re.compile(r"^`Governance`는\s*(.+?)\.\s*$", re.MULTILINE)
+    governance_match = governance_pattern.search(content)
+    if governance_match:
+        roles["governance"] = governance_match.group(1).strip()
+    else:
+        warnings.append("system-spec-missing-governance-role")
+
+    for layer in VALIDATION_LAYERS:
+        if layer not in roles:
+            warnings.append(f"system-spec-missing-layer-role layer={layer}")
+    return roles, warnings
+
+
+def _load_toml_header_roles() -> tuple[dict[str, str], list[str]]:
+    roles: dict[str, str] = {}
+    warnings: list[str] = []
+
+    role_pattern = re.compile(r"^#\s*Role:\s*(.+)$")
+    for layer, filename in LAYER_FILE_MAP.items():
+        path = LAYER_DIR / filename
+        if not path.exists():
+            warnings.append(f"toml-file-missing layer={layer} path={path}")
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        role_text = None
+        for line in lines[:20]:
+            match = role_pattern.match(line.strip())
+            if match:
+                role_text = match.group(1).strip()
+                break
+        if role_text is None:
+            warnings.append(f"toml-role-comment-missing layer={layer} path={path}")
+            continue
+        roles[layer] = role_text
+
+    return roles, warnings
+
+
+def _load_readme_layer_roles(path: Path = LAYER_README_PATH) -> tuple[dict[str, str], list[str]]:
+    if not path.exists():
+        return {}, [f"layer-readme-missing path={path}"]
+
+    content = path.read_text(encoding="utf-8")
+    roles: dict[str, str] = {}
+    warnings: list[str] = []
+
+    bullet_pattern = re.compile(
+        r"^- `\d{2}-(infra|governance|decision|needs|kernel|flow)\.toml` - (.+)$",
+        re.MULTILINE,
+    )
+    for match in bullet_pattern.finditer(content):
+        layer = match.group(1)
+        role_text = match.group(2).strip()
+        roles[layer] = role_text
+
+    for layer in VALIDATION_LAYERS:
+        if layer not in roles:
+            warnings.append(f"readme-layer-role-missing layer={layer}")
+
+    return roles, warnings
+
+
+def _collect_layer_role_sync_warnings() -> dict[str, Any]:
+    expected_roles, expected_parse_warnings = _load_system_spec_layer_roles()
+    toml_roles, toml_parse_warnings = _load_toml_header_roles()
+    readme_roles, readme_parse_warnings = _load_readme_layer_roles()
+
+    warnings = [
+        *expected_parse_warnings,
+        *toml_parse_warnings,
+        *readme_parse_warnings,
+    ]
+
+    for layer in VALIDATION_LAYERS:
+        expected = expected_roles.get(layer)
+        if expected is None:
+            continue
+
+        toml_role = toml_roles.get(layer)
+        if toml_role is None:
+            warnings.append(f"toml-role-missing layer={layer}")
+        elif _normalize_role_text(toml_role) != _normalize_role_text(expected):
+            warnings.append(
+                "toml-role-drift "
+                f"layer={layer} expected={expected!r} actual={toml_role!r}"
+            )
+
+        readme_role = readme_roles.get(layer)
+        if readme_role is None:
+            warnings.append(f"readme-role-missing layer={layer}")
+        elif _normalize_role_text(readme_role) != _normalize_role_text(expected):
+            warnings.append(
+                "readme-role-drift "
+                f"layer={layer} expected={expected!r} actual={readme_role!r}"
+            )
+
+    return {
+        "status": "ok" if not warnings else "warning",
+        "warnings": warnings,
+        "expected_roles": expected_roles,
+        "toml_roles": toml_roles,
+        "readme_roles": readme_roles,
+    }
+
+
 def _pattern_has_layer_match(profile: Any, pattern: str, layer: str) -> bool:
     for elem in profile.elements:
         if _matches_pattern(elem, pattern) and str(getattr(elem, "layer", "")) == layer:
@@ -571,6 +708,7 @@ def simulate_data_flow() -> dict[str, Any]:
         for layer, profile in profiles.items()
     }
     common_spec_audit = _collect_common_spec_warnings(profiles)
+    layer_role_sync = _collect_layer_role_sync_warnings()
     relation_integrity_violations: dict[str, list[str]] = {}
     for layer, profile in profiles.items():
         undefined_relations = _find_undefined_relations(profile)
@@ -645,13 +783,17 @@ def simulate_data_flow() -> dict[str, Any]:
     return {
         "passed": passed,
         "model_definition_order": list(MODEL_DEFINITION_ORDER),
-        "governance_entrypoint_order": list(GOVERNANCE_ENTRYPOINT_ORDER),
-        "governance_role": "layer-management-system",
-        "governance_model_registered_targets": list(GOVERNANCE_ENTRYPOINT_ORDER),
+        "entrypoint_order": list(ENTRYPOINT_ORDER),
+        # Backward compatibility key for earlier consumers.
+        "governance_entrypoint_order": list(ENTRYPOINT_ORDER),
+        "infra_role": INFRA_ROLE,
+        "governance_role": GOVERNANCE_ROLE,
+        "governance_model_registered_targets": governance_entrypoint["registered_targets"],
         "governance_entrypoint": governance_entrypoint,
         "governance_model_api_contract": governance_model_api_contract,
         "layer_6x6_contracts": layer_6x6_contracts,
         "common_spec_audit": common_spec_audit,
+        "layer_role_sync": layer_role_sync,
         "versions": versions,
         "independent_relation_integrity_ok": not relation_integrity_violations,
         "relation_integrity_violations": relation_integrity_violations,
@@ -753,11 +895,9 @@ def main() -> int:
         report = simulate_data_flow()
         seq = " -> ".join(report["flow_sequence"]) if report["flow_sequence"] else "(none)"
         print(f"[sim] model-order: {' > '.join(report['model_definition_order'])}")
+        print(f"[sim] infra-role: {report['infra_role']}")
         print(f"[sim] governance-role: {report['governance_role']}")
-        print(
-            f"[sim] governance-entrypoint-order: "
-            f"{' > '.join(report['governance_entrypoint_order'])}"
-        )
+        print(f"[sim] entrypoint-order: {' > '.join(report['entrypoint_order'])}")
         entry_status = "passed" if report["governance_entrypoint"]["passed"] else "failed"
         print(f"[sim] governance-entrypoint: {entry_status}")
         model_api_status = "passed" if report["governance_model_api_contract"]["passed"] else "failed"
@@ -770,9 +910,12 @@ def main() -> int:
         print(f"[sim] layer-6x6-contract: {layer_6x6_status}")
         print("[sim] layer-6x6-owner: flow")
         print(f"[sim] common-layer-spec: {report['common_spec_audit']['status']}")
+        print(f"[sim] layer-role-sync: {report['layer_role_sync']['status']}")
         print(f"[sim] flow-sequence: {seq}")
         for warning in report["common_spec_audit"]["warnings"]:
             print(f"[sim][warn] common-layer-spec: {warning}")
+        for warning in report["layer_role_sync"]["warnings"]:
+            print(f"[sim][warn] layer-role-sync: {warning}")
         if report["governance_entrypoint"]["missing_ports"]:
             print(
                 "[sim][fail] governance-missing-ports: "

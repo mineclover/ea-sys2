@@ -1,18 +1,19 @@
 # EA-Sys2
 
-EA System - Kernel, Decision, Flow, Governance & Infrastructure packages.
+EA System packages centered on kernel-driven formal modeling.
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| `ea-kernel` | Lightweight kernel metamodel (KerML-inspired), zero dependency |
+| `ea-kernel` | Canonical kernel contract and rule model (KerML-inspired core) |
 | `ea-kernel-contract` | Python contract snapshot consumer SDK |
 | `ea-kernel-contract-ts` | TypeScript contract snapshot consumer SDK (`@ea-sys2/kernel-contract-sdk`) |
-| `ea-decision` | Decision layer - Design Thinking & Intent Management |
-| `ea-flow` | Execution Flows & Automation |
-| `ea-governance` | Governance integration - Unifies Kernel, Decision, Flow |
-| `ea-infra` | Infrastructure - Resource Indexing & Vector Store |
+| `ea-infra` | Data management and persistence contracts |
+| `ea-governance` | Management plane for layer model registration/version/validation/activation |
+| `ea-decision` | Decision-flow meta-meta modeling layer |
+| `ea-needs` | Use-case and needs modeling layer |
+| `ea-flow` | Concrete step/action data-flow modeling and 6x6 contract ownership |
 
 ## Frontend
 

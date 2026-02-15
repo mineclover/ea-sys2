@@ -88,3 +88,66 @@ def test_validate_kernel_model_records_validation_transaction(tmp_path):
     assert txs
     events = container.get_transaction_events(txs[0].id)
     assert any(event["event_type"] == "kernel_model_validated" for event in events)
+
+
+def test_model_registration_records_decision_trace_and_exploration(tmp_path):
+    container = GovernanceContainer(tmp_path, KERNEL_SCHEMA)
+    decision_id = "dec-model-001"
+
+    register = container.register_kernel_model(
+        _profile_toml(name="DecisionTraceModel"),
+        owner="kernel-team",
+        created_by="tester",
+        actor="tester",
+        decision_id=decision_id,
+        evidence_refs=["ev://specs/model-adr"],
+        return_transaction=True,
+    )
+    assert register["transaction_id"]
+    assert register["decision_trace"]["decision_id"] == decision_id
+    assert register["decision_trace"]["warnings"] == []
+
+    validate = container.validate_kernel_model(
+        "DecisionTraceModel",
+        "1.0",
+        actor="qa",
+        decision_id=decision_id,
+        evidence_refs=[],
+        return_transaction=True,
+    )
+    assert isinstance(validate, dict)
+    assert validate["transaction_id"]
+    assert validate["decision_trace"]["decision_id"] == decision_id
+    assert "missing_evidence_refs" in validate["decision_trace"]["warnings"]
+
+    activate = container.activate_kernel_model(
+        "DecisionTraceModel",
+        "1.0",
+        actor="release",
+        decision_id=decision_id,
+        evidence_refs=["ev://release/checklist"],
+        return_transaction=True,
+    )
+    assert isinstance(activate, dict)
+    assert activate["transaction_id"]
+    assert activate["decision_trace"]["decision_id"] == decision_id
+
+    trace = container.get_model_decision_trace(decision_id)
+    assert trace is not None
+    assert trace["kind"] == "decision_trace_contract"
+    assert trace["contract_version"] == "1.0"
+    assert trace["decision_id"] == decision_id
+    assert len(trace["operations"]) == 3
+    assert "missing_evidence_refs" in trace["warnings"]
+
+    exploration = container.explore_model_decision_trace(decision_id)
+    assert exploration is not None
+    assert exploration["decision_id"] == decision_id
+    assert "missing_evidence_refs" in exploration["evidence"]["warnings"]
+    assert "validate" in exploration["evidence"]["missing_evidence_operations"]
+    assert exploration["impact"]["total_operations"] == 3
+    assert "DecisionTraceModel" in exploration["impact"]["models"]
+    assert any(
+        row["event_type"] == "kernel_model_registered"
+        for row in exploration["history"]
+    )

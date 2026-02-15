@@ -22,6 +22,8 @@ Snapshot files:
   - condition-level diagnostics
 - Feedback target canonicalization/resolution
   - `entity_type:*`, `relation_type:*`, `rule:*`, `layer_constraint:*`
+- Decision-trace contract typings for governance model APIs
+  - `DecisionTraceContract`, `DecisionTraceExploration`
 - Governance layer catalog utilities based on
   `kernel_governance_reference_v1.snapshot.json`
   - expected managed layers: `infra`, `decision`, `needs`, `kernel`, `flow`

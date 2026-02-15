@@ -1,9 +1,9 @@
 # EA System Layer: Needs
-# Role: define and collect use-cases, constraints, and prioritized needs.
+# Role: 요구 모델 정의
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.0"
+version = "0.4.1"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -72,7 +72,7 @@ description = "Policy or guard constrains execution."
 name = "NeedsLayer"
 layer = "Needs"
 category = "Composite"
-description = "Needs modeling boundary."
+description = "Needs modeling boundary and runtime chain middle stage."
 
 [[elements]]
 name = "NeedsCatalogService"
@@ -156,7 +156,7 @@ description = "Refines raw needs into consistent normalized records."
 name = "PublishNeedSetAction"
 layer = "Needs"
 category = "Executable"
-description = "Publishes prioritized needs for kernel/flow consumption."
+description = "Publishes prioritized needs for kernel-stage handoff."
 
 [[elements]]
 name = "NeedsFeedbackEvent"
@@ -270,8 +270,8 @@ priority = 70
 notes = "Needs version goal constrains publication behavior."
 
 [[rules]]
-source = "NeedsCatalogService"
-target = "PrioritizedNeedSet"
-relation = "depends_on"
+source = "PublishNeedSetAction"
+target = "KernelModelPort"
+relation = "coordinates"
 priority = 70
-notes = "Catalog service depends on prioritized needs state."
+notes = "Runtime chain handoff: needs publication routes to kernel model port."

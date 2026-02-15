@@ -43,8 +43,8 @@ def test_transaction_lifecycle_success(mock_kernel):
     report = topic.finalize_plan("Plan", "Summary", topic.options[0].id, "Rationale")
     report.add_action("create_rule", "rule:test", "desc", payload={"id": "r1"})
 
-    # 3. Execute
-    success = service.execute_report(report)
+    # 3. Interpret
+    success = service.interpret_report(report)
 
     # 4. Verification
     assert success is True
@@ -83,8 +83,8 @@ def test_transaction_lifecycle_rollback(mock_kernel):
     report.add_action("create_rule", "rule:test", "desc", payload={"id": "r1"})
     report.add_action("fail_trigger", "target:fail", "desc")  # This triggers failure
 
-    # 3. Execute
-    success = service.execute_report(report)
+    # 3. Interpret
+    success = service.interpret_report(report)
 
     # 4. Verification
     assert success is False

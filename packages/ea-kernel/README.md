@@ -1,10 +1,11 @@
-# EA Kernel (Layer 3: Realistic System Definition)
+# EA Kernel (Kernel Layer: Canonical Model Definition)
 
 **"The Reality"**
 
 ## Role
-`ea-kernel` defines the **Realistic System**—the business processes and structural entities as they essentially exist in the real world. It provides the "Ontology" or "Physics" of the domain.
-This is distinct from the *Data System* (Layer 4), which is merely an implementation of this reality.
+`ea-kernel` defines the canonical domain ontology and validity rules.
+Within EA-SYS model ordering (`infra > decision > needs > kernel > flow`), kernel
+stabilizes core semantics that downstream flow execution must honor.
 
 ## Key Responsibilities
 - **Reality Modeling**: Defining "What Is" (Entities) and "How it Happens in Reality" (Business Processes).
@@ -18,4 +19,5 @@ This is distinct from the *Data System* (Layer 4), which is merely an implementa
 - **`TopologyGraph`**: A graph-based projection of the kernel for visualization.
 
 ## Relationship
-`ea-kernel` provides the anchor points for `ea-flow` (actions) and `ea-decision` (intent), ensuring that all behavioral and strategic changes are structurally valid.
+`ea-kernel` provides anchor points for `ea-flow` actions and receives formalized
+inputs from decision/needs layers through governance-managed model operations.

@@ -1,9 +1,9 @@
 # EA System Layer: Decision
-# Role: meta-meta model for decision-flow structure, vocabulary, and traceability.
+# Role: 의사결정 메타-메타 모델 정의
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.0"
+version = "0.4.1"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -72,7 +72,7 @@ description = "Policy or guard constrains execution."
 name = "DecisionLayer"
 layer = "Decision"
 category = "Composite"
-description = "Decision meta-meta modeling boundary."
+description = "Decision meta-meta modeling boundary and runtime entry chain start."
 
 [[elements]]
 name = "DecisionMetaModelRegistry"
@@ -222,7 +222,7 @@ description = "Step that closes evaluation into an outcome record."
 name = "PublishDecisionModelAction"
 layer = "Decision"
 category = "Executable"
-description = "Action that publishes decision-flow model instances for downstream use."
+description = "Action that publishes decision-flow model instances for needs-stage handoff."
 
 [[elements]]
 name = "DecisionRequestedEvent"
@@ -472,7 +472,7 @@ source = "FinalizeDecisionStep"
 target = "PublishDecisionModelAction"
 relation = "next"
 priority = 75
-notes = "Decision flow: finalization before publication."
+notes = "Decision flow: finalization before publication/handoff to needs stage."
 
 [[rules]]
 source = "DecisionRequestedEvent"
@@ -570,7 +570,7 @@ source = "PublishDecisionModelAction"
 target = "DecisionOutcomeRecord"
 relation = "produces"
 priority = 75
-notes = "Publish action produces published decision outcome version."
+notes = "Publish action produces decision outcome package for needs-stage consumption."
 
 [[rules]]
 source = "DecisionCriteriaModel"

@@ -3,6 +3,11 @@
 This convention standardizes how layer-specific contract packages (infra, decision,
 needs, kernel, flow) are produced and consumed in both Python and TypeScript.
 
+Scope note:
+- This document defines SDK-level snapshot overlay/composition rules.
+- It does **not** define TOML profile composition for `ea-sys`.
+- `ea-sys` layer profiles remain independently validated artifacts.
+
 ## Managed Layers
 
 - `infra`

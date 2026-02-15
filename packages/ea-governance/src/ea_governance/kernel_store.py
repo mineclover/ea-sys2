@@ -42,7 +42,7 @@ class GovernanceKernelStore:
             model_id=_rule_model_id(asset.id),
             payload=self._rule_asset_payload(asset),
         )
-        return asset.id
+        return str(asset.id)
 
     def get_rule_asset(self, rule_id: str) -> dict[str, Any] | None:
         payload = self._layer_store.get_payload(_rule_model_id(rule_id))
@@ -58,7 +58,7 @@ class GovernanceKernelStore:
             model_id=_corpus_version_model_id(version.version_id),
             payload=self._corpus_version_payload(version),
         )
-        return version.version_id
+        return str(version.version_id)
 
     def get_corpus_version(self, version_id: str) -> dict[str, Any] | None:
         payload = self._layer_store.get_payload(_corpus_version_model_id(version_id))

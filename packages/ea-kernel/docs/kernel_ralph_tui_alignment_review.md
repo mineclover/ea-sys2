@@ -1,4 +1,9 @@
-# Kernel Model Alignment Review (Ralph TUI)
+# Kernel Model Alignment Review (Ralph TUI, Legacy)
+
+> Legacy note:
+> This document is retained for historical traceability only.
+> Canonical EA-SYS layer modeling/reference now lives under
+> `packages/ea-kernel/examples/ea-sys` and related `ea-sys` docs.
 
 검토 일자: 2026-02-13
 

@@ -3,10 +3,12 @@
 The **Coordination Truth** layer of the EA System.
 
 ## Role
-`ea-governance` serves as the central orchestrator and control tower. It integrates structure, intelligence, and action into a unified management framework.
+`ea-governance` is the management-plane entrypoint for layer model control.
+It does not define each layer's meta/meta-meta semantics, but manages registration,
+versioning, validation, activation, transaction history, and cross-layer routing.
 
 ## Key Responsibilities
-- **Orchestration**: Coordinating `ea-decision` (brain), `ea-flow` (body), and `ea-kernel` (physics) through a unified API.
+- **Orchestration**: Coordinating `ea-infra`, `ea-decision`, `ea-needs`, `ea-kernel`, and `ea-flow` through a unified API.
 - **Transaction Management**: Ensuring that changes spanning multiple layers are atomic and consistent.
 - **Layer Data Management**: Owning DB-backed persistence adapters (e.g., `ea-needs` catalog storage).
 - **Change History**: Recording DB-backed layer changes as transaction events for traceability.
@@ -19,7 +21,13 @@ The **Coordination Truth** layer of the EA System.
 - **`ExecutionService`**: Bridges Use Cases to their corresponding kernel impact.
 
 ## Architecture
-`ea-governance` manages the other layers without owning their internal logic, ensuring a high degree of modularity and maintainability.
+`ea-governance` manages other layers without owning their internal modeling logic,
+preserving independent layer responsibility.
+
+- Main model order: `infra > decision > needs > kernel > flow`
+- Runtime model entrypoint chain: `decision > needs > kernel > flow`
+- `infra`: row data design responsibility
+- `governance`: system entrypoint design responsibility
 
 ## Needs Governance APIs
 - `create_needs_catalog`

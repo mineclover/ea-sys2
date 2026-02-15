@@ -1,9 +1,9 @@
 # EA System Layer: Infra
-# Role: data management contracts and persistence capabilities.
+# Role: row 데이터 설계
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.0"
+version = "0.4.1"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -72,13 +72,13 @@ description = "Policy or guard constrains execution."
 name = "InfraLayer"
 layer = "Infra"
 category = "Composite"
-description = "Infrastructure data-management boundary."
+description = "Infrastructure row-data design boundary."
 
 [[elements]]
 name = "DataPlatformService"
 layer = "Infra"
 category = "ActiveStructure"
-description = "Primary service that controls persistence contracts and data access."
+description = "Primary service that controls row-data contracts and physical data access."
 
 [[elements]]
 name = "StorageLifecycleService"
@@ -90,13 +90,13 @@ description = "Handles schema lifecycle, migration, and retention routines."
 name = "ProfileStoragePort"
 layer = "Infra"
 category = "Interface"
-description = "Persistence port used by governance for profile/model storage."
+description = "Row-data storage port used by governance for profile/model persistence."
 
 [[elements]]
 name = "EventStoragePort"
 layer = "Infra"
 category = "Interface"
-description = "Persistence port for immutable event/audit writes."
+description = "Row-data append port for immutable event/audit writes."
 
 [[elements]]
 name = "InfraModelPort"
@@ -138,25 +138,25 @@ description = "6x6 contract port for flow-layer model interface."
 name = "LayerVersionStore"
 layer = "Infra"
 category = "PassiveStructure"
-description = "Version-indexed storage for layer model payloads."
+description = "Row-oriented version table for layer model payloads."
 
 [[elements]]
 name = "ValidationRunStore"
 layer = "Infra"
 category = "PassiveStructure"
-description = "Validation run snapshots and diagnostics."
+description = "Row-oriented validation run table with diagnostics payloads."
 
 [[elements]]
 name = "EvidenceStore"
 layer = "Infra"
 category = "PassiveStructure"
-description = "Execution evidence and feedback archives."
+description = "Row-oriented evidence/audit table for execution feedback."
 
 [[elements]]
 name = "StoragePolicy"
 layer = "Infra"
 category = "Governance"
-description = "Storage and retention policy constraints."
+description = "Row lifecycle, retention, and partition policy constraints."
 
 [[rules]]
 source = "@Composite"
@@ -198,49 +198,49 @@ source = "DataPlatformService"
 target = "StorageLifecycleService"
 relation = "coordinates"
 priority = 70
-notes = "Primary data platform coordinates storage lifecycle operations."
+notes = "Primary data platform coordinates row schema lifecycle operations."
 
 [[rules]]
 source = "DataPlatformService"
 target = "LayerVersionStore"
 relation = "depends_on"
 priority = 70
-notes = "Platform service depends on model version storage."
+notes = "Platform service depends on version-row storage."
 
 [[rules]]
 source = "DataPlatformService"
 target = "ValidationRunStore"
 relation = "depends_on"
 priority = 70
-notes = "Platform service depends on validation run storage."
+notes = "Platform service depends on validation-row storage."
 
 [[rules]]
 source = "DataPlatformService"
 target = "EvidenceStore"
 relation = "depends_on"
 priority = 70
-notes = "Platform service depends on evidence storage."
+notes = "Platform service depends on evidence-row storage."
 
 [[rules]]
 source = "StorageLifecycleService"
 target = "LayerVersionStore"
 relation = "produces"
 priority = 70
-notes = "Lifecycle operations produce updated version state."
+notes = "Lifecycle operations produce updated version rows."
 
 [[rules]]
 source = "StorageLifecycleService"
 target = "ValidationRunStore"
 relation = "produces"
 priority = 70
-notes = "Lifecycle operations persist validation snapshots."
+notes = "Lifecycle operations persist validation run rows."
 
 [[rules]]
 source = "StorageLifecycleService"
 target = "EvidenceStore"
 relation = "produces"
 priority = 70
-notes = "Lifecycle operations produce retention/audit evidence."
+notes = "Lifecycle operations produce retention/audit evidence rows."
 
 [[rules]]
 source = "StoragePolicy"

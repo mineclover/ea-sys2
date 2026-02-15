@@ -1,12 +1,16 @@
+# System Port Configuration (Runtime Reference)
 
-# System Port Configuration
+This document provides optional runtime port defaults for local development.
+Canonical model architecture and layer contracts are defined in:
 
-This document outlines the standard ports used by the `ea-system` services and their integration strategy.
+- `packages/ea-kernel/examples/ea-sys/README.md`
+- `packages/ea-kernel/docs/system_spec_layers.md`
 
-## 1. Governance Kernel (Core System)
+## 1. Governance API (Management Plane Entry)
+
 - **Port**: `9000`
 - **Service**: `ea-kernel.api.server`
-- **Purpose**: Provides the Governance Lifecycle API (Phase 5), including Rule Management, Judgment Execution, and Diagram Visualization.
+- **Purpose**: `/models/*` governance-facing model operations and kernel governance APIs.
 - **Config**: `EA_KERNEL_PORT=9000`, `EA_KERNEL_DATA_DIR`
 - **Launch Command**:
   ```bash
@@ -15,27 +19,24 @@ This document outlines the standard ports used by the `ea-system` services and t
   python3 -m ea_kernel.api.server
   ```
 
-## 2. Metamodel Service (Legacy/Internal)
-- **Port**: `8000`
-- **Service**: `ea-metamodel`
-- **Purpose**: Legacy system or internal metamodel management. Do NOT use for Governance Blueprint visualization.
-- **Note**: Currently running but not actively integrated into the Governance loop.
+## 2. Visualization Frontend (Optional)
 
-## 3. Visualization Frontend (Viz Tool)
 - **Port**: `5173` (Vite Dev Server)
 - **Service**: `web-kernel-viz`
-- **Purpose**: Interactive visualization of the Governance Kernel.
-- **Integration**: Configured via `.env` to consume data from `http://localhost:9000`.
+- **Purpose**: Visualizing governance/kernel topology and state.
+- **Integration**: `VITE_API_URL=http://localhost:9000`
 
-## 4. Main Application (Frontend)
-- **Port**: `3000` (Next.js)
-- **Service**: `apps/frontend`
-- **Purpose**: The primary user-facing application for the system.
+## 3. Legacy/Optional Services
 
----
+- `8000` (`ea-metamodel`) is treated as legacy/internal compatibility.
+- It is not part of the EA-SYS canonical governance entrypoint contract.
 
-## Integration Strategy
+## Integration Notes
 
-1. **Unify on Port 9000**: All governance-related API calls (rules, diagrams, judgments) should target `http://localhost:9000`.
-2. **Frontend Config**: `web-kernel-viz` uses `VITE_API_URL=http://localhost:9000` to fetch dynamic diagrams.
-3. **Deprecate Port 8000**: Evaluate if `ea-metamodel` functionality can be fully migrated to `ea-kernel`. If so, shut down service on 8000.
+1. Route governance-facing API calls to `http://localhost:9000`.
+2. Keep port conventions separate from layer model order:
+   - model order: `infra > decision > needs > kernel > flow`
+   - runtime model entrypoint chain: `decision > needs > kernel > flow`
+3. Interpret supporting roles as:
+   - `infra`: row data design
+   - `governance`: system entrypoint design

@@ -168,3 +168,73 @@ class LayerContractConvention:
     rules_file: str
     vectors_file: str
     feedback_id_prefix: str
+
+
+@dataclass(frozen=True)
+class DecisionTraceOperation:
+    """One model operation linked to a governance decision."""
+
+    id: str
+    operation: str
+    model_name: str
+    version: str
+    status: str
+    actor: str
+    transaction_id: str
+    evidence_refs: tuple[str, ...]
+    warnings: tuple[str, ...]
+    detail: JsonObject
+    created_at: str
+
+
+@dataclass(frozen=True)
+class DecisionTraceImpact:
+    """Impact entry emitted by a decision-linked model operation."""
+
+    operation: str
+    model_name: str
+    version: str
+    status: str
+    transaction_id: str
+    actor: str
+    created_at: str
+    detail: JsonObject | None = None
+
+
+@dataclass(frozen=True)
+class DecisionTraceHistoryEvent:
+    """Timeline event for decision trace exploration."""
+
+    transaction_id: str
+    event_type: str
+    message: str
+    created_at: str
+    payload: JsonObject | None = None
+    event_id: int | None = None
+
+
+@dataclass(frozen=True)
+class DecisionTraceContract:
+    """DecisionTraceContract v1 payload shape for /models decision governance."""
+
+    kind: str
+    contract_version: str
+    decision_id: str
+    created_at: str
+    updated_at: str
+    evidence_refs: tuple[str, ...]
+    warnings: tuple[str, ...]
+    operations: tuple[DecisionTraceOperation, ...]
+    impact: tuple[DecisionTraceImpact, ...]
+    history: tuple[DecisionTraceHistoryEvent, ...]
+
+
+@dataclass(frozen=True)
+class DecisionTraceExploration:
+    """Exploration projection (evidence/impact/history) for a decision trace."""
+
+    decision_id: str
+    contract_version: str
+    evidence: JsonObject
+    impact: JsonObject
+    history: tuple[DecisionTraceHistoryEvent, ...]

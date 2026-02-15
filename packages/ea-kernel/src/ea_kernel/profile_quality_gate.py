@@ -15,30 +15,36 @@ Usage:
 
 from __future__ import annotations
 
-from ea_kernel.profile_types import KernelProfile, QualityReport
-from ea_kernel.types import KernelSchema, KernelValidityRule
+from ea_kernel.profile_types import KernelProfile, ProfileRule, QualityReport, SchemaPort
 
 
 def check_profile_quality(
     profile: KernelProfile,
-    kernel: KernelSchema,
+    schema: SchemaPort | None = None,
 ) -> QualityReport:
     """Run quality checks on a built profile.
 
-    Checks:
+    Checks (always):
     - Dead rules: rules that never win for any matching element pair
     - Conflicting rules: same priority, same pattern, opposite validity
     - Missing fallbacks: relations without deny-by-default rules
     - Invalid patterns: @Category/#Layer/ElementName that don't resolve
-    - Invalid kernel refs: kernel_type/kernel_relation not in kernel
+
+    Checks (when schema provided):
+    - Invalid kernel refs: kernel_type/kernel_relation not in schema
     - Coverage: fraction of kernel types/relations used
     """
     dead = _find_dead_rules(profile)
     conflicts = _find_conflicting_rules(profile)
     missing_fb = _find_missing_fallbacks(profile)
     invalid_pats = _find_invalid_patterns(profile)
-    invalid_refs = _find_invalid_kernel_refs(profile, kernel)
-    coverage = _compute_coverage(profile, kernel)
+
+    if schema is not None:
+        invalid_refs = _find_invalid_kernel_refs(profile, schema)
+        coverage = _compute_coverage(profile, schema)
+    else:
+        invalid_refs = []
+        coverage = 0.0
 
     passed = (
         not dead
@@ -112,7 +118,7 @@ def _find_conflicting_rules(
     return conflicts
 
 
-def _patterns_overlap(a: KernelValidityRule, b: KernelValidityRule) -> bool:
+def _patterns_overlap(a: ProfileRule, b: ProfileRule) -> bool:
     """Check if two rules' patterns can match the same elements."""
     return (
         _single_pattern_overlap(a.source_pattern, b.source_pattern)
@@ -165,19 +171,19 @@ def _find_invalid_patterns(profile: KernelProfile) -> list[str]:
 
 def _find_invalid_kernel_refs(
     profile: KernelProfile,
-    kernel: KernelSchema,
+    schema: SchemaPort,
 ) -> list[str]:
     """Find kernel type/relation references that don't exist."""
-    kernel_entities = {e.name for e in kernel.entities}
-    kernel_relations = {r.name for r in kernel.relations}
+    schema_entities = {e.name for e in schema.entities}
+    schema_relations = {r.name for r in schema.relations}
     invalid: list[str] = []
 
     for elem in profile.elements:
-        if elem.kernel_type not in kernel_entities:
+        if elem.kernel_type not in schema_entities:
             invalid.append(f"element:{elem.name}→{elem.kernel_type}")
 
     for rel in profile.relations:
-        if rel.kernel_relation not in kernel_relations:
+        if rel.kernel_relation not in schema_relations:
             invalid.append(f"relation:{rel.name}→{rel.kernel_relation}")
 
     return invalid
@@ -185,18 +191,18 @@ def _find_invalid_kernel_refs(
 
 def _compute_coverage(
     profile: KernelProfile,
-    kernel: KernelSchema,
+    schema: SchemaPort,
 ) -> float:
     """Compute kernel type/relation usage coverage (0.0–1.0)."""
-    concrete_types = {e.name for e in kernel.entities if not e.is_abstract}
-    kernel_relations = {r.name for r in kernel.relations}
+    concrete_types = {e.name for e in schema.entities if not e.is_abstract}
+    schema_relations = {r.name for r in schema.relations}
 
     used_types = {e.kernel_type for e in profile.elements}
     used_rels = {r.kernel_relation for r in profile.relations}
 
-    total = len(concrete_types) + len(kernel_relations)
+    total = len(concrete_types) + len(schema_relations)
     if total == 0:
         return 0.0
 
-    used = len(used_types & concrete_types) + len(used_rels & kernel_relations)
+    used = len(used_types & concrete_types) + len(used_rels & schema_relations)
     return used / total

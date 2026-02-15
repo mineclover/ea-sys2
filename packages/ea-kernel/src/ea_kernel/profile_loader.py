@@ -38,16 +38,12 @@ import tomllib
 from pathlib import Path
 
 from ea_kernel.profile_builder import ProfileBuilder
-from ea_kernel.profile_types import KernelProfile
-from ea_kernel.types import KernelConditionType, KernelRuleCondition, KernelSchema
-
-_CONDITION_MAP: dict[str, KernelConditionType] = {
-    "LAYER_ORDER": KernelConditionType.LAYER_ORDER,
-    "SAME_LAYER": KernelConditionType.SAME_LAYER,
-    "SAME_BRANCH": KernelConditionType.SAME_ENTITY_BRANCH,
-    "ANCESTOR_OF": KernelConditionType.ANCESTOR_OF,
-    "SAME_CATEGORY": KernelConditionType.SAME_CATEGORY,
-}
+from ea_kernel.profile_types import (
+    ConditionRegistry,
+    KernelProfile,
+    RuleCondition,
+    SchemaPort,
+)
 
 
 class ProfileLoadError(Exception):
@@ -56,21 +52,26 @@ class ProfileLoadError(Exception):
 
 def load_profile(
     path: Path,
-    kernel: KernelSchema | None = None,
+    kernel: SchemaPort | None = None,
+    condition_registry: ConditionRegistry | None = None,
 ) -> KernelProfile:
     """Load a profile from a TOML file."""
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError as err:
         raise ProfileLoadError(f"Profile file not found: {path}") from err
-    return load_profile_from_content(content, kernel)
+    return load_profile_from_content(content, kernel, condition_registry)
 
 
 def load_profile_from_content(
     content: str,
-    kernel: KernelSchema | None = None,
+    kernel: SchemaPort | None = None,
+    condition_registry: ConditionRegistry | None = None,
 ) -> KernelProfile:
     """Load a profile from a TOML string."""
+    if condition_registry is None:
+        condition_registry = ConditionRegistry.kernel_default()
+
     try:
         doc = tomllib.loads(content)
     except tomllib.TOMLDecodeError as err:
@@ -152,14 +153,14 @@ def load_profile_from_content(
         rule_id = rule.get("id")
 
         conditions_raw = rule.get("conditions", [])
-        conditions: tuple[KernelRuleCondition, ...] = ()
+        conditions: tuple[RuleCondition, ...] = ()
         if conditions_raw:
-            parsed: list[KernelRuleCondition] = []
+            parsed: list[RuleCondition] = []
             for c in conditions_raw:
-                ct = _CONDITION_MAP.get(c)
+                ct = condition_registry.resolve(c)
                 if ct is None:
                     raise ProfileLoadError(f"Unknown condition: {c!r}")
-                parsed.append(KernelRuleCondition(ct))
+                parsed.append(RuleCondition(ct))
             conditions = tuple(parsed)
 
         if valid:

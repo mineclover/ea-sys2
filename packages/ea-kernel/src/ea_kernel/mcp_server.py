@@ -156,6 +156,86 @@ def kernel_get_entity_names() -> str:
     return json.dumps(get_entity_names(), indent=2)
 
 
+@_typed_tool()
+def profile_reachable(
+    profile_name: str,
+    element: str,
+    max_depth: int = 3,
+    relation: str | None = None,
+) -> str:
+    """Find all elements reachable from a profile element via valid rules.
+
+    Expands validity rule patterns into concrete edges, then performs
+    BFS reachability. Useful for experience discovery traversal.
+
+    Args:
+        profile_name: Profile name (e.g. 'ArchiMate', 'TOGAF').
+        element: Source element name to start from.
+        max_depth: Maximum traversal depth (default 3).
+        relation: Optional relation name filter.
+    """
+    from ea_kernel.kernel_service import profile_reachable as _reachable
+
+    return json.dumps(
+        _reachable(profile_name, element, max_depth=max_depth, relation=relation),
+        indent=2,
+    )
+
+
+@_typed_tool()
+def profile_paths(
+    profile_name: str,
+    source: str,
+    target: str,
+    max_depth: int = 5,
+    relation: str | None = None,
+) -> str:
+    """Find all paths between two profile elements via valid rules.
+
+    Returns each path as a sequence of edges with source, target,
+    relation, and rule_id.
+
+    Args:
+        profile_name: Profile name.
+        source: Source element name.
+        target: Target element name.
+        max_depth: Maximum path length (default 5).
+        relation: Optional relation name filter.
+    """
+    from ea_kernel.kernel_service import profile_paths as _paths
+
+    return json.dumps(
+        _paths(profile_name, source, target, max_depth=max_depth, relation=relation),
+        indent=2,
+    )
+
+
+@_typed_tool()
+def profile_impact(
+    profile_name: str,
+    element: str,
+    direction: str = "both",
+    max_depth: int = 3,
+) -> str:
+    """Impact analysis for a profile element — find all affected elements.
+
+    Shows which elements are connected and through which paths,
+    in both outgoing and incoming directions.
+
+    Args:
+        profile_name: Profile name.
+        element: Element to analyze.
+        direction: 'outgoing', 'incoming', or 'both' (default).
+        max_depth: Maximum traversal depth (default 3).
+    """
+    from ea_kernel.kernel_service import profile_impact as _impact
+
+    return json.dumps(
+        _impact(profile_name, element, direction=direction, max_depth=max_depth),
+        indent=2,
+    )
+
+
 def run_stdio() -> None:
     """Start the MCP server with stdio transport."""
     mcp.run(transport="stdio")

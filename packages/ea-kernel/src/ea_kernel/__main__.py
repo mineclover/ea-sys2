@@ -9,6 +9,9 @@ Usage:
     python -m ea_kernel show rules [--group] [--relation]  — list/filter rules
     python -m ea_kernel show profile <name>   — describe a profile
     python -m ea_kernel show rule <id>        — describe a single rule
+    python -m ea_kernel show reachable <profile> <element>  — reachable elements
+    python -m ea_kernel show paths <profile> <src> <tgt>    — find paths
+    python -m ea_kernel show impact <profile> <element>     — impact analysis
     python -m ea_kernel judge <src> <tgt> <rel>  — evidence-based judgment
     python -m ea_kernel model register <toml> [--db-path ...]  — register model
     python -m ea_kernel model validate <name> <version>        — validate model
@@ -156,6 +159,12 @@ def _cmd_show(args: argparse.Namespace) -> int:
         return _show_profile(args)
     elif target == "rule":
         return _show_rule(args)
+    elif target == "reachable":
+        return _show_reachable(args)
+    elif target == "paths":
+        return _show_paths(args)
+    elif target == "impact":
+        return _show_impact(args)
     else:
         print(f"Unknown show target: {target}", file=sys.stderr)
         return 1
@@ -339,6 +348,88 @@ def _show_rule(args: argparse.Namespace) -> int:
     if meta["established_version"]:
         print(f"  Since:      {meta['established_version']}")
 
+    return 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Profile graph commands
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _show_reachable(args: argparse.Namespace) -> int:
+    """show reachable <profile> <element> — reachable elements."""
+    from ea_kernel.kernel_service import profile_reachable
+
+    data = profile_reachable(
+        args.profile_name,
+        args.element,
+        max_depth=args.depth,
+        relation=getattr(args, "relation", None),
+    )
+    if "error" in data:
+        print(f"Error: {data['error']}", file=sys.stderr)
+        return 1
+
+    print(f"Reachable from {data['source']} in {data['profile']} "
+          f"(depth={data['max_depth']}, count={data['count']})")
+    for name in data["reachable"]:
+        print(f"  {name}")
+    return 0
+
+
+def _show_paths(args: argparse.Namespace) -> int:
+    """show paths <profile> <source> <target> — find paths."""
+    from ea_kernel.kernel_service import profile_paths
+
+    data = profile_paths(
+        args.profile_name,
+        args.source,
+        args.target,
+        max_depth=args.depth,
+        relation=getattr(args, "relation", None),
+    )
+    if "error" in data:
+        print(f"Error: {data['error']}", file=sys.stderr)
+        return 1
+
+    print(f"Paths: {data['source']} -> {data['target']} in {data['profile']} "
+          f"(count={data['count']})")
+    for i, p in enumerate(data["paths"], 1):
+        edges = p["edges"]
+        chain = " -> ".join(e["source"] for e in edges)
+        chain += f" -> {edges[-1]['target']}" if edges else ""
+        relations = [e["relation"] for e in edges]
+        print(f"\n  [{i}] length={p['length']}")
+        print(f"      {chain}")
+        print(f"      via: {' > '.join(relations)}")
+    return 0
+
+
+def _show_impact(args: argparse.Namespace) -> int:
+    """show impact <profile> <element> — impact analysis."""
+    from ea_kernel.kernel_service import profile_impact
+
+    data = profile_impact(
+        args.profile_name,
+        args.element,
+        direction=args.direction,
+        max_depth=args.depth,
+    )
+    if "error" in data:
+        print(f"Error: {data['error']}", file=sys.stderr)
+        return 1
+
+    print(f"Impact of {data['element']} in {data['profile']} "
+          f"(direction={data['direction']}, affected={data['affected_count']})")
+    for name, paths in data["impact"].items():
+        print(f"\n  {name} ({len(paths)} path(s)):")
+        for p in paths[:3]:
+            edges = p["edges"]
+            chain = " -> ".join(e["source"] for e in edges)
+            chain += f" -> {edges[-1]['target']}" if edges else ""
+            print(f"    {chain}")
+        if len(paths) > 3:
+            print(f"    ... and {len(paths) - 3} more")
     return 0
 
 
@@ -606,6 +697,25 @@ def main() -> int:
 
     rule_p = show_sub.add_parser("rule", help="Describe a single rule")
     rule_p.add_argument("rule_id", help="Rule ID")
+
+    reachable_p = show_sub.add_parser("reachable", help="Reachable elements from a profile element")
+    reachable_p.add_argument("profile_name", help="Profile name")
+    reachable_p.add_argument("element", help="Source element name")
+    reachable_p.add_argument("--depth", type=int, default=3, help="Max traversal depth")
+    reachable_p.add_argument("--relation", help="Filter by relation name")
+
+    paths_p = show_sub.add_parser("paths", help="Find paths between profile elements")
+    paths_p.add_argument("profile_name", help="Profile name")
+    paths_p.add_argument("source", help="Source element name")
+    paths_p.add_argument("target", help="Target element name")
+    paths_p.add_argument("--depth", type=int, default=5, help="Max path depth")
+    paths_p.add_argument("--relation", help="Filter by relation name")
+
+    impact_p = show_sub.add_parser("impact", help="Impact analysis for a profile element")
+    impact_p.add_argument("profile_name", help="Profile name")
+    impact_p.add_argument("element", help="Element to analyze")
+    impact_p.add_argument("--direction", choices=("outgoing", "incoming", "both"), default="both", help="Analysis direction")
+    impact_p.add_argument("--depth", type=int, default=3, help="Max traversal depth")
 
     # MCP server
     sub.add_parser("mcp", help="Run MCP server (stdio transport)")

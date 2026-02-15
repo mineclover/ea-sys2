@@ -287,6 +287,143 @@ def judge(source: str, target: str, relation: str) -> dict[str, Any]:
     }
 
 
+# ── UC6: Profile graph traversal ──────────────────────────────
+
+
+def _load_profile(name: str) -> Any:
+    from ea_kernel.profile_registry import ProfileRegistry
+    registry = ProfileRegistry()
+    registry.bootstrap()
+    return registry.get(name)
+
+
+def profile_reachable(
+    profile_name: str,
+    element: str,
+    *,
+    max_depth: int = 3,
+    relation: str | None = None,
+) -> dict[str, Any]:
+    """UC6: Reachable elements from a profile element."""
+    from ea_kernel.profile_graph import ProfileTopologyGraph
+
+    profile = _load_profile(profile_name)
+    if profile is None:
+        return {"error": f"Profile not found: {profile_name}"}
+
+    graph = ProfileTopologyGraph(profile)
+    if element not in graph.nodes:
+        return {
+            "error": f"Element not found: {element}",
+            "available_elements": list(graph.nodes),
+        }
+
+    rel_filter = frozenset([relation]) if relation else None
+    reached = graph.reachable(element, max_depth=max_depth, relation_filter=rel_filter)
+    return {
+        "profile": profile_name,
+        "source": element,
+        "max_depth": max_depth,
+        "relation_filter": relation,
+        "reachable": list(reached),
+        "count": len(reached),
+    }
+
+
+def profile_paths(
+    profile_name: str,
+    source: str,
+    target: str,
+    *,
+    max_depth: int = 5,
+    relation: str | None = None,
+) -> dict[str, Any]:
+    """UC6: Find paths between two profile elements."""
+    from ea_kernel.profile_graph import ProfileTopologyGraph
+
+    profile = _load_profile(profile_name)
+    if profile is None:
+        return {"error": f"Profile not found: {profile_name}"}
+
+    graph = ProfileTopologyGraph(profile)
+    missing = [n for n in (source, target) if n not in graph.nodes]
+    if missing:
+        return {
+            "error": f"Element(s) not found: {', '.join(missing)}",
+            "available_elements": list(graph.nodes),
+        }
+
+    rel_filter = frozenset([relation]) if relation else None
+    paths = graph.find_paths(source, target, max_depth=max_depth, relation_filter=rel_filter)
+    return {
+        "profile": profile_name,
+        "source": source,
+        "target": target,
+        "max_depth": max_depth,
+        "relation_filter": relation,
+        "paths": [
+            {
+                "length": len(p.edges),
+                "edges": [
+                    {
+                        "source": e.source,
+                        "target": e.target,
+                        "relation": e.relation,
+                        "rule_id": e.rule_id,
+                    }
+                    for e in p.edges
+                ],
+            }
+            for p in paths
+        ],
+        "count": len(paths),
+    }
+
+
+def profile_impact(
+    profile_name: str,
+    element: str,
+    *,
+    direction: str = "both",
+    max_depth: int = 3,
+) -> dict[str, Any]:
+    """UC6: Impact analysis for a profile element."""
+    from ea_kernel.profile_graph import ProfileTopologyGraph
+
+    profile = _load_profile(profile_name)
+    if profile is None:
+        return {"error": f"Profile not found: {profile_name}"}
+
+    graph = ProfileTopologyGraph(profile)
+    if element not in graph.nodes:
+        return {
+            "error": f"Element not found: {element}",
+            "available_elements": list(graph.nodes),
+        }
+
+    impact = graph.impact_analysis(element, direction=direction, max_depth=max_depth)
+    return {
+        "profile": profile_name,
+        "element": element,
+        "direction": direction,
+        "max_depth": max_depth,
+        "impact": {
+            name: [
+                {
+                    "length": len(p.edges),
+                    "edges": [
+                        {"source": e.source, "target": e.target, "relation": e.relation}
+                        for e in p.edges
+                    ],
+                }
+                for p in paths
+            ]
+            for name, paths in impact.items()
+        },
+        "affected_count": len(impact),
+    }
+
+
 # ── Helper ───────────────────────────────────────────────────
 
 

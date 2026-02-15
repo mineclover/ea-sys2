@@ -20,6 +20,10 @@ Event = "event"
 Assessment = "expression"
 Governance = "feature"
 Goal = "state"
+Context = "state"
+Page = "structure"
+
+# ── Relations ──────────────────────────────────────────────
 
 [[relations]]
 name = "contains"
@@ -67,6 +71,13 @@ description = "Event-driven execution trigger."
 name = "constrains"
 kernel_relation = "association"
 description = "Policy or guard constrains execution."
+
+[[relations]]
+name = "available_in"
+kernel_relation = "association"
+description = "Context provides access to an experience or element."
+
+# ── Elements: Implementation ───────────────────────────────
 
 [[elements]]
 name = "KernelLayer"
@@ -182,6 +193,88 @@ layer = "Kernel"
 category = "Event"
 description = "Raised when a new kernel spec snapshot is published."
 
+# ── Elements: Context (환경 조건) ──────────────────────────
+
+[[elements]]
+name = "ModelAuthorContext"
+layer = "Kernel"
+category = "Context"
+description = "User context for authoring and evolving kernel models."
+
+[[elements]]
+name = "ModelExplorerContext"
+layer = "Kernel"
+category = "Context"
+description = "User context for exploring kernel topology, rules, and relations."
+
+[[elements]]
+name = "ModelValidatorContext"
+layer = "Kernel"
+category = "Context"
+description = "User context for validating model integrity and contract compliance."
+
+# ── Elements: Experience (경험 경계) ───────────────────────
+
+[[elements]]
+name = "KernelModelingExperience"
+layer = "Kernel"
+category = "Composite"
+description = "Experience boundary for kernel model authoring journey."
+
+[[elements]]
+name = "KernelExplorationExperience"
+layer = "Kernel"
+category = "Composite"
+description = "Experience boundary for kernel topology and rule exploration journey."
+
+[[elements]]
+name = "KernelValidationExperience"
+layer = "Kernel"
+category = "Composite"
+description = "Experience boundary for model validation journey."
+
+# ── Elements: Page (사용자 진입 뷰) ────────────────────────
+
+[[elements]]
+name = "KernelTopologyPage"
+layer = "Kernel"
+category = "Page"
+description = "Graph view of kernel elements, relations, and traversal paths."
+
+[[elements]]
+name = "KernelRuleBrowserPage"
+layer = "Kernel"
+category = "Page"
+description = "Rule search, detail view, and coverage analysis."
+
+[[elements]]
+name = "KernelProfileEditorPage"
+layer = "Kernel"
+category = "Page"
+description = "Profile TOML editing, preview, and validation trigger."
+
+# ── Elements: Endpoint (API 진입점) ────────────────────────
+
+[[elements]]
+name = "KernelQueryEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API endpoint for querying kernel graph and topology."
+
+[[elements]]
+name = "KernelValidateEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API endpoint for validating model payloads against kernel contracts."
+
+[[elements]]
+name = "KernelProfileEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API endpoint for kernel profile CRUD and version management."
+
+# ── Rules: Pattern — Implementation ────────────────────────
+
 [[rules]]
 source = "@Composite"
 target = "@ActiveStructure"
@@ -237,6 +330,52 @@ target = "@Interface"
 relation = "registers"
 priority = 60
 notes = "Kernel services register kernel interfaces."
+
+# ── Rules: Pattern — Experience Discovery ──────────────────
+
+[[rules]]
+source = "@Composite"
+target = "@Composite"
+relation = "contains"
+priority = 60
+notes = "Experience nesting and layer-to-experience containment."
+
+[[rules]]
+source = "@Composite"
+target = "@Page"
+relation = "contains"
+priority = 60
+notes = "Experiences contain user-facing pages."
+
+[[rules]]
+source = "@Composite"
+target = "@Context"
+relation = "contains"
+priority = 60
+notes = "Layer boundary contains context definitions."
+
+[[rules]]
+source = "@Context"
+target = "@Composite"
+relation = "available_in"
+priority = 60
+notes = "Contexts provide access to experiences."
+
+[[rules]]
+source = "@Page"
+target = "@Interface"
+relation = "coordinates"
+priority = 60
+notes = "Pages coordinate with API endpoints."
+
+[[rules]]
+source = "@Page"
+target = "@Page"
+relation = "next"
+priority = 60
+notes = "Page-to-page navigation sequence."
+
+# ── Rules: Explicit — Implementation ───────────────────────
 
 [[rules]]
 source = "KernelContractService"
@@ -363,3 +502,160 @@ target = "PublishKernelContractAction"
 relation = "constrains"
 priority = 70
 notes = "Consistency goal constrains publication behavior."
+
+# ── Rules: Explicit — Context → Experience ─────────────────
+
+[[rules]]
+source = "ModelAuthorContext"
+target = "KernelModelingExperience"
+relation = "available_in"
+priority = 70
+notes = "Model authors access the modeling experience."
+
+[[rules]]
+source = "ModelExplorerContext"
+target = "KernelExplorationExperience"
+relation = "available_in"
+priority = 70
+notes = "Explorers access the topology exploration experience."
+
+[[rules]]
+source = "ModelExplorerContext"
+target = "KernelValidationExperience"
+relation = "available_in"
+priority = 70
+notes = "Explorers can also access validation for read-only inspection."
+
+[[rules]]
+source = "ModelValidatorContext"
+target = "KernelValidationExperience"
+relation = "available_in"
+priority = 70
+notes = "Validators access the validation experience."
+
+# ── Rules: Explicit — Experience Composition ───────────────
+
+[[rules]]
+source = "KernelModelingExperience"
+target = "KernelProfileEditorPage"
+relation = "contains"
+priority = 70
+notes = "Modeling experience contains the profile editor page."
+
+[[rules]]
+source = "KernelModelingExperience"
+target = "KernelProfileEndpoint"
+relation = "contains"
+priority = 70
+notes = "Modeling experience contains the profile API."
+
+[[rules]]
+source = "KernelExplorationExperience"
+target = "KernelTopologyPage"
+relation = "contains"
+priority = 70
+notes = "Exploration experience contains the topology view."
+
+[[rules]]
+source = "KernelExplorationExperience"
+target = "KernelRuleBrowserPage"
+relation = "contains"
+priority = 70
+notes = "Exploration experience contains the rule browser."
+
+[[rules]]
+source = "KernelExplorationExperience"
+target = "KernelQueryEndpoint"
+relation = "contains"
+priority = 70
+notes = "Exploration experience contains the query API."
+
+[[rules]]
+source = "KernelValidationExperience"
+target = "KernelValidateEndpoint"
+relation = "contains"
+priority = 70
+notes = "Validation experience contains the validation API."
+
+# ── Rules: Explicit — Page ↔ Endpoint ──────────────────────
+
+[[rules]]
+source = "KernelTopologyPage"
+target = "KernelQueryEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Topology page calls the query endpoint for graph data."
+
+[[rules]]
+source = "KernelRuleBrowserPage"
+target = "KernelQueryEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Rule browser calls the query endpoint for rule search."
+
+[[rules]]
+source = "KernelProfileEditorPage"
+target = "KernelProfileEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Profile editor calls the profile endpoint for CRUD."
+
+[[rules]]
+source = "KernelProfileEditorPage"
+target = "KernelValidateEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Profile editor calls the validate endpoint for live validation."
+
+# ── Rules: Explicit — Page Navigation ──────────────────────
+
+[[rules]]
+source = "KernelTopologyPage"
+target = "KernelRuleBrowserPage"
+relation = "next"
+priority = 70
+notes = "From topology view, navigate to rule details."
+
+[[rules]]
+source = "KernelRuleBrowserPage"
+target = "KernelProfileEditorPage"
+relation = "next"
+priority = 70
+notes = "From rule browser, navigate to profile editor."
+
+# ── Rules: Explicit — Endpoint → Service Bridge ────────────
+
+[[rules]]
+source = "KernelQueryEndpoint"
+target = "KernelContractService"
+relation = "coordinates"
+priority = 70
+notes = "Query endpoint delegates to contract service for graph data."
+
+[[rules]]
+source = "KernelQueryEndpoint"
+target = "KernelProfileRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Query endpoint delegates to registry for profile lookup."
+
+[[rules]]
+source = "KernelValidateEndpoint"
+target = "KernelValidationService"
+relation = "coordinates"
+priority = 70
+notes = "Validate endpoint delegates to validation service."
+
+[[rules]]
+source = "KernelProfileEndpoint"
+target = "KernelProfileRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Profile endpoint delegates to registry for storage."
+
+[[rules]]
+source = "KernelProfileEndpoint"
+target = "KernelContractService"
+relation = "coordinates"
+priority = 70
+notes = "Profile endpoint delegates to contract service for contract sync."

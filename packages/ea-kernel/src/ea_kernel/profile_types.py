@@ -3,16 +3,141 @@
 Contains both core profile data types (KernelProfile, ProfileElement, etc.)
 and framework interface types (PatternType, QualityReport, etc.).
 
-Only depends on ea_kernel.types — usable by all profile modules.
+Kernel-agnostic: no dependency on ea_kernel.types. Other layers can import
+these types without depending on ea-kernel core types.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
-from ea_kernel.types import I18nString, KernelValidityRule
+# Kernel-agnostic type alias (same definition as ea_kernel.types.I18nString)
+I18nString = str | dict[str, str]
+
+
+# ── Schema Port ────────────────────────────────────────────────
+
+@runtime_checkable
+class SchemaPort(Protocol):
+    """Minimal schema interface for profile validation.
+
+    KernelSchema satisfies this naturally (duck typing).
+    Entities must have `.name: str` and `.is_abstract: bool`.
+    Relations must have `.name: str`.
+    """
+
+    @property
+    def entities(self) -> Sequence[Any]: ...
+
+    @property
+    def relations(self) -> Sequence[Any]: ...
+
+
+# ── Condition Registry ─────────────────────────────────────────
+
+class ConditionRegistry:
+    """Configurable condition vocabulary for profile rules.
+
+    Each layer can register its own TOML key → condition_type mappings.
+    The kernel default registry provides the standard kernel conditions.
+    """
+
+    __slots__ = ("_map",)
+
+    def __init__(self) -> None:
+        self._map: dict[str, str] = {}
+
+    def register(self, toml_key: str, condition_type: str) -> None:
+        """Register a TOML condition key → condition_type mapping."""
+        self._map[toml_key] = condition_type
+
+    def resolve(self, toml_key: str) -> str | None:
+        """Resolve a TOML condition key to its condition_type."""
+        return self._map.get(toml_key)
+
+    @classmethod
+    def kernel_default(cls) -> ConditionRegistry:
+        """Pre-configured with kernel condition types."""
+        reg = cls()
+        reg._map = {
+            "LAYER_ORDER": "layer_order",
+            "SAME_LAYER": "same_layer",
+            "SAME_BRANCH": "same_branch",
+            "ANCESTOR_OF": "ancestor_of",
+            "SAME_CATEGORY": "same_category",
+        }
+        return reg
+
+
+# ── Kernel-Agnostic Rule Types ─────────────────────────────────
+
+@dataclass(frozen=True, eq=False)
+class RuleCondition:
+    """Generic rule condition (kernel-agnostic).
+
+    condition_type is an opaque string; each layer defines its own
+    condition vocabulary (e.g., kernel uses "same_layer", "layer_order").
+
+    Cross-type equality: RuleCondition and any subclass (e.g.,
+    KernelRuleCondition) with the same field values are considered equal.
+    """
+    condition_type: str
+    parameters: tuple[tuple[str, str], ...] = ()
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RuleCondition):
+            return NotImplemented
+        return (str(self.condition_type), self.parameters) == (
+            str(other.condition_type), other.parameters,
+        )
+
+    def __hash__(self) -> int:
+        return hash((str(self.condition_type), self.parameters))
+
+
+@dataclass(frozen=True, eq=False)
+class ProfileRule:
+    """Generic validity rule for any layer's profile (kernel-agnostic).
+
+    This is the base rule type used by the profile framework. Layer-specific
+    rule types (e.g., KernelValidityRule) extend this with narrower type
+    annotations while maintaining structural compatibility.
+
+    Cross-type equality: ProfileRule and any subclass (e.g.,
+    KernelValidityRule) with the same field values are considered equal.
+    """
+    id: str
+    source_pattern: str
+    target_pattern: str
+    relationship_name: str
+    valid: bool = True
+    priority: int = 0
+    conditions: tuple[RuleCondition, ...] = ()
+    description: I18nString = ""
+    notes: str = ""
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ProfileRule):
+            return NotImplemented
+        return (
+            self.id, self.source_pattern, self.target_pattern,
+            self.relationship_name, self.valid, self.priority,
+            self.conditions, self.description, self.notes,
+        ) == (
+            other.id, other.source_pattern, other.target_pattern,
+            other.relationship_name, other.valid, other.priority,
+            other.conditions, other.description, other.notes,
+        )
+
+    def __hash__(self) -> int:
+        return hash((
+            self.id, self.source_pattern, self.target_pattern,
+            self.relationship_name, self.valid, self.priority,
+            self.conditions, self.description, self.notes,
+        ))
 
 # ── Core Profile Types ──────────────────────────────────────────
 
@@ -53,7 +178,7 @@ class KernelProfile:
     kernel_version: str  # required kernel version
     elements: tuple[ProfileElement, ...]
     relations: tuple[ProfileRelation, ...]
-    validity_rules: tuple[KernelValidityRule, ...] = ()
+    validity_rules: tuple[ProfileRule, ...] = ()
     metadata: ProfileMetadata | None = None
 
     def get_element(self, name: str) -> ProfileElement | None:
@@ -104,6 +229,28 @@ class PatternType(StrEnum):
     CATEGORY = "category"       # "@CategoryName"
     LAYER = "layer"             # "#LayerName"
     EXACT = "exact"             # "ElementName"
+
+
+def classify_pattern(pattern: str) -> PatternType:
+    """Classify a validity rule pattern string."""
+    if pattern == "*":
+        return PatternType.WILDCARD
+    if pattern.startswith("@"):
+        return PatternType.CATEGORY
+    if pattern.startswith("#"):
+        return PatternType.LAYER
+    return PatternType.EXACT
+
+
+def match_pattern(element: ProfileElement, pattern: str) -> bool:
+    """Check if an element matches a validity rule pattern."""
+    if pattern == "*":
+        return True
+    if pattern.startswith("@"):
+        return element.category == pattern[1:]
+    if pattern.startswith("#"):
+        return element.layer == pattern[1:]
+    return element.name == pattern
 
 
 class ValidationCategory(StrEnum):

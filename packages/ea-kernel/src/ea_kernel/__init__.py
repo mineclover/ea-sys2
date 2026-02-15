@@ -96,6 +96,7 @@ from ea_kernel.profile_types import (
     BackupError,
     BackupFileEntry,
     BackupSnapshot,
+    ConditionRegistry,
     DiffChangeType,
     DriftEntry,
     ElementChange,
@@ -109,6 +110,8 @@ from ea_kernel.profile_types import (
     ProfileOrigin,
     ProfileRegistryError,
     ProfileRelation,
+    # Kernel-agnostic rule types
+    ProfileRule,
     ProfileStoreError,
     ProfileTag,
     ProfileVersion,
@@ -116,7 +119,11 @@ from ea_kernel.profile_types import (
     RegistryAuditReport,
     RelationChange,
     RuleChange,
+    RuleCondition,
+    SchemaPort,
     ValidationCategory,
+    classify_pattern,
+    match_pattern,
 )
 from ea_kernel.promotion_engine import (
     DeprecationCandidate,
@@ -218,17 +225,24 @@ __all__ = [
     "ProfileElement",
     "ProfileMetadata",
     "ProfileRelation",
+    # Kernel-agnostic rule types
+    "ProfileRule",
+    "RuleCondition",
     # Profile Framework
+    "ConditionRegistry",
     "PatternType",
     "ProfileBuildError",
     "ProfileBuilder",
     "ProfileLoadError",
     "QualityReport",
+    "SchemaPort",
     "ValidationCategory",
     "check_profile_quality",
+    "classify_pattern",
     "create_standard_tests",
     "load_profile",
     "load_profile_from_content",
+    "match_pattern",
     # Profile Lifecycle
     "DiffChangeType",
     "ElementChange",

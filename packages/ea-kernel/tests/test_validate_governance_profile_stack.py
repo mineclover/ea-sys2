@@ -28,9 +28,9 @@ def _load_validate_module():
 @pytest.mark.parametrize(
     ("profile_id", "filename", "expected"),
     [
-        ("meta", "00-governance-meta-model.toml", (23, 9, 51)),
-        ("ea_sys", "10-governance.toml", (61, 9, 156)),
-        ("external", "20-external-governance.toml", (22, 9, 54)),
+        ("meta", "00-governance-meta-model.toml", (23, 10, 52)),
+        ("ea_sys", "10-governance.toml", (61, 10, 157)),
+        ("external", "20-external-governance.toml", (22, 10, 55)),
     ],
 )
 def test_validate_profile_success(profile_id, filename, expected):

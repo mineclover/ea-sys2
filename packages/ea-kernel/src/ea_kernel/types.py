@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from ea_kernel.profile_types import ProfileRule, RuleCondition
+
 # Multi-language string: either a simple string or a mapping of language codes to strings
 I18nString = str | dict[str, str]
 
@@ -36,22 +38,21 @@ class KernelConditionType(StrEnum):
 
 
 @dataclass(frozen=True)
-class KernelRuleCondition:
-    condition_type: KernelConditionType
-    parameters: tuple[tuple[str, str], ...] = ()
+class KernelRuleCondition(RuleCondition):
+    """Kernel-specific rule condition.
+
+    Inherits from RuleCondition (kernel-agnostic). condition_type accepts
+    KernelConditionType values (StrEnum, hence valid str).
+    """
 
 
 @dataclass(frozen=True)
-class KernelValidityRule:
-    id: str
-    source_pattern: str
-    target_pattern: str
-    relationship_name: str
-    valid: bool = True
-    priority: int = 0
-    conditions: tuple[KernelRuleCondition, ...] = ()
-    description: I18nString = ""
-    notes: str = ""
+class KernelValidityRule(ProfileRule):
+    """Kernel-specific validity rule.
+
+    Inherits from ProfileRule (kernel-agnostic). conditions accepts
+    KernelRuleCondition instances (which are RuleCondition subclasses).
+    """
 
 
 @dataclass(frozen=True)
@@ -391,7 +392,7 @@ class KernelSchema:
         )
 
     def _check_condition(
-        self, condition: KernelRuleCondition, source: str, target: str,
+        self, condition: RuleCondition, source: str, target: str,
     ) -> tuple[bool, str]:
         """Evaluate a single condition. Returns (passed, message)."""
         ct = condition.condition_type

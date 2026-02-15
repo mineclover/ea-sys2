@@ -20,6 +20,8 @@ Event = "event"
 Assessment = "expression"
 Governance = "feature"
 Goal = "state"
+Context = "state"
+Page = "structure"
 
 [[relations]]
 name = "contains"
@@ -67,6 +69,11 @@ description = "Event trigger relation."
 name = "constrains"
 kernel_relation = "association"
 description = "Policy constraint relation."
+
+[[relations]]
+name = "available_in"
+kernel_relation = "association"
+description = "Context provides access to an experience or element."
 
 [[elements]]
 name = "ExternalGovernanceLayer"

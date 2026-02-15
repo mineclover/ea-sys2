@@ -14,11 +14,8 @@ from ea_kernel.profile_types import (
     ProfileElement,
     ProfileMetadata,
     ProfileRelation,
-)
-from ea_kernel.types import (
-    KernelConditionType,
-    KernelRuleCondition,
-    KernelValidityRule,
+    ProfileRule,
+    RuleCondition,
 )
 
 
@@ -127,10 +124,10 @@ def compute_content_hash(profile: KernelProfile) -> str:
 
 # ── Internal helpers ─────────────────────────────────────────────
 
-def _rule_to_dict(rule: KernelValidityRule) -> dict[str, Any]:
+def _rule_to_dict(rule: ProfileRule) -> dict[str, Any]:
     conditions = [
         {
-            "condition_type": c.condition_type.value,
+            "condition_type": str(c.condition_type),
             "parameters": [list(p) for p in c.parameters],
         }
         for c in rule.conditions
@@ -147,15 +144,15 @@ def _rule_to_dict(rule: KernelValidityRule) -> dict[str, Any]:
     }
 
 
-def _dict_to_rule(d: dict[str, Any]) -> KernelValidityRule:
+def _dict_to_rule(d: dict[str, Any]) -> ProfileRule:
     conditions = tuple(
-        KernelRuleCondition(
-            condition_type=KernelConditionType(c["condition_type"]),
+        RuleCondition(
+            condition_type=c["condition_type"],
             parameters=tuple(tuple(p) for p in c.get("parameters", [])),
         )
         for c in d.get("conditions", [])
     )
-    return KernelValidityRule(
+    return ProfileRule(
         id=d["id"],
         source_pattern=d["source_pattern"],
         target_pattern=d["target_pattern"],

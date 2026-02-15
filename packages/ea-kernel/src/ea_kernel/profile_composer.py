@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileRelation
-from ea_kernel.types import KernelValidityRule
+from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileRelation, ProfileRule
 
 
 def extend(
@@ -13,8 +12,8 @@ def extend(
     version: str,
     add_elements: tuple[ProfileElement, ...] = (),
     add_relations: tuple[ProfileRelation, ...] = (),
-    add_rules: tuple[KernelValidityRule, ...] = (),
-    override_rules: tuple[KernelValidityRule, ...] = (),
+    add_rules: tuple[ProfileRule, ...] = (),
+    override_rules: tuple[ProfileRule, ...] = (),
 ) -> KernelProfile:
     """Create a new profile extending a base profile.
 
@@ -30,7 +29,7 @@ def extend(
     # Merge rules: override matching IDs, then add new
     override_ids = {r.id for r in override_rules}
     override_map = {r.id: r for r in override_rules}
-    merged_rules: list[KernelValidityRule] = []
+    merged_rules: list[ProfileRule] = []
     for rule in base.validity_rules:
         if rule.id in override_ids:
             merged_rules.append(override_map[rule.id])

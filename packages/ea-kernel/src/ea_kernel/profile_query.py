@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from ea_kernel.profile_types import KernelProfile, ProfileElement
-from ea_kernel.types import KernelValidityRule
+from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileRule
 
 
 class ElementQuery:
@@ -55,7 +54,7 @@ class ElementQuery:
 class RuleQuery:
     """Chainable rule filter."""
 
-    def __init__(self, rules: tuple[KernelValidityRule, ...]) -> None:
+    def __init__(self, rules: tuple[ProfileRule, ...]) -> None:
         self._rules = rules
 
     def for_relation(self, relation: str) -> RuleQuery:
@@ -88,10 +87,10 @@ class RuleQuery:
     def count(self) -> int:
         return len(self._rules)
 
-    def first(self) -> KernelValidityRule | None:
+    def first(self) -> ProfileRule | None:
         return self._rules[0] if self._rules else None
 
-    def all(self) -> tuple[KernelValidityRule, ...]:
+    def all(self) -> tuple[ProfileRule, ...]:
         return self._rules
 
     def ids(self) -> tuple[str, ...]:

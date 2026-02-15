@@ -21,12 +21,12 @@ def _load_validate_module():
 @pytest.mark.parametrize(
     ("layer", "filename", "expected"),
     [
-        ("infra", "00-infra.toml", (15, 9, 23)),
-        ("governance", "10-governance.toml", (61, 9, 156)),
-        ("decision", "20-decision.toml", (28, 9, 61)),
-        ("needs", "30-needs.toml", (16, 9, 25)),
-        ("kernel", "40-kernel.toml", (19, 9, 35)),
-        ("flow", "50-flow.toml", (26, 9, 59)),
+        ("infra", "00-infra.toml", (15, 10, 24)),
+        ("governance", "10-governance.toml", (61, 10, 157)),
+        ("decision", "20-decision.toml", (28, 10, 62)),
+        ("needs", "30-needs.toml", (16, 10, 26)),
+        ("kernel", "40-kernel.toml", (31, 10, 63)),
+        ("flow", "50-flow.toml", (26, 10, 60)),
     ],
 )
 def test_validate_layer_success(layer, filename, expected):

@@ -11,36 +11,28 @@ Reduces profile boilerplate from ~500 lines to ~80 lines by providing:
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from ea_kernel.profile_types import (
+    I18nString,
     KernelProfile,
     PatternType,
     ProfileBuildError,
     ProfileElement,
     ProfileMetadata,
     ProfileRelation,
-)
-from ea_kernel.types import (
-    I18nString,
-    KernelConditionType,
-    KernelRuleCondition,
-    KernelSchema,
-    KernelValidityRule,
-    RuleCorpusEntry,
-    RuleMetadata,
+    ProfileRule,
+    RuleCondition,
+    SchemaPort,
+    classify_pattern,
 )
 
-
-def _classify_pattern(pattern: str) -> PatternType:
-    """Classify a validity rule pattern string."""
-    if pattern == "*":
-        return PatternType.WILDCARD
-    if pattern.startswith("@"):
-        return PatternType.CATEGORY
-    if pattern.startswith("#"):
-        return PatternType.LAYER
-    return PatternType.EXACT
+if TYPE_CHECKING:
+    from ea_kernel.types import (
+        KernelSchema,
+        RuleCorpusEntry,
+        RuleMetadata,
+    )
 
 
 class ProfileBuilder:
@@ -76,7 +68,7 @@ class ProfileBuilder:
         self._cat_map: dict[str, str] = {}
         self._elements: list[ProfileElement] = []
         self._relations: list[ProfileRelation] = []
-        self._rules: list[KernelValidityRule] = []
+        self._rules: list[ProfileRule] = []
         self._rule_metadata: dict[str, RuleMetadata] = {}
         self._rule_counter = 0
 
@@ -242,7 +234,7 @@ class ProfileBuilder:
         *,
         produce_relation: str = "produces",
         consume_relation: str = "consumes",
-        kernel: KernelSchema | None = None,
+        kernel: SchemaPort | None = None,
     ) -> ProfileBuilder:
         """Validate Hosted Flow Pattern at build time.
 
@@ -288,8 +280,10 @@ class ProfileBuilder:
                 f"hosted_flow: consume relation '{consume_relation}' not defined"
             )
 
-        # 3. Kernel-level structural validation (if kernel provided)
-        if kernel is not None and host_ktype and step_ktype and data_ktype:
+        # 3. Kernel-level structural validation (if schema supports it)
+        if (kernel is not None
+                and hasattr(kernel, "validate_relationship")
+                and host_ktype and step_ktype and data_ktype):
             # ownership: host → step
             own_result = kernel.validate_relationship(host_ktype, step_ktype, "ownership")
             if not own_result.valid:
@@ -334,13 +328,13 @@ class ProfileBuilder:
         *,
         priority: int = 40,
         notes: str = "",
-        conditions: tuple[KernelRuleCondition, ...] = (),
+        conditions: tuple[RuleCondition, ...] = (),
         rule_id: str | None = None,
         metadata: RuleMetadata | None = None,
     ) -> ProfileBuilder:
         """Add an allow rule."""
         rid = rule_id or self._next_rule_id("allow")
-        self._rules.append(KernelValidityRule(
+        self._rules.append(ProfileRule(
             id=rid,
             source_pattern=source,
             target_pattern=target,
@@ -367,7 +361,7 @@ class ProfileBuilder:
     ) -> ProfileBuilder:
         """Add a deny rule."""
         rid = rule_id or self._next_rule_id("deny")
-        self._rules.append(KernelValidityRule(
+        self._rules.append(ProfileRule(
             id=rid,
             source_pattern=source,
             target_pattern=target,
@@ -395,7 +389,7 @@ class ProfileBuilder:
             "*", "*", relation,
             priority=priority,
             notes=notes,
-            conditions=(KernelRuleCondition(KernelConditionType.SAME_CATEGORY),),
+            conditions=(RuleCondition("same_category"),),
             rule_id=rule_id,
         )
 
@@ -412,7 +406,7 @@ class ProfileBuilder:
             "*", "*", relation,
             priority=priority,
             notes=notes,
-            conditions=(KernelRuleCondition(KernelConditionType.SAME_LAYER),),
+            conditions=(RuleCondition("same_layer"),),
             rule_id=rule_id,
         )
 
@@ -440,7 +434,7 @@ class ProfileBuilder:
 
     def build(
         self,
-        kernel: KernelSchema | None = None,
+        kernel: SchemaPort | None = None,
         *,
         auto_fallback: bool = True,
         validate: bool = True,
@@ -448,7 +442,7 @@ class ProfileBuilder:
         """Build the KernelProfile with validation and auto-fallback.
 
         Args:
-            kernel: Optional kernel schema for kernel-level reference validation
+            kernel: Optional schema for kernel-level reference validation
             auto_fallback: Auto-generate deny-by-default fallback rules (default True)
             validate: Run build-time validation (default True)
 
@@ -483,7 +477,7 @@ class ProfileBuilder:
 
     def build_with_corpus(
         self,
-        kernel: KernelSchema | None = None,
+        kernel: SchemaPort | None = None,
         *,
         auto_fallback: bool = True,
         validate: bool = True,
@@ -495,21 +489,22 @@ class ProfileBuilder:
         and inferred metadata otherwise.
         """
         from ea_kernel.rule_corpus import RuleCorpus
+        from ea_kernel.types import RuleCorpusEntry as _RCE
 
         profile = self.build(kernel, auto_fallback=auto_fallback, validate=validate)
 
-        entries: list[RuleCorpusEntry] = []
+        entries: list[_RCE] = []
         for rule in profile.validity_rules:
             meta = self._rule_metadata.get(rule.id)
             if meta is None:
                 meta = RuleCorpus.infer_metadata(rule)
-            entries.append(RuleCorpusEntry(rule=rule, metadata=meta))
+            entries.append(_RCE(rule=rule, metadata=meta))
 
         return profile, tuple(entries)
 
     # ── Internal validation ───────────────────────────────────────
 
-    def _validate(self, kernel: KernelSchema | None) -> None:
+    def _validate(self, kernel: SchemaPort | None) -> None:
         """Run all build-time validations. Raises ProfileBuildError on failure."""
         errors: list[str] = []
 
@@ -555,7 +550,7 @@ class ProfileBuilder:
 
         for rule in self._rules:
             for pattern in (rule.source_pattern, rule.target_pattern):
-                ptype = _classify_pattern(pattern)
+                ptype = classify_pattern(pattern)
                 if ptype == PatternType.CATEGORY:
                     cat = pattern[1:]
                     if cat not in categories:
@@ -600,8 +595,8 @@ class ProfileBuilder:
             raise ProfileBuildError(errors)
 
     def _add_fallbacks(
-        self, rules: list[KernelValidityRule],
-    ) -> list[KernelValidityRule]:
+        self, rules: list[ProfileRule],
+    ) -> list[ProfileRule]:
         """Add deny-by-default fallback rules for relations missing them."""
         existing_fallback_rels = set()
         for rule in rules:
@@ -611,7 +606,7 @@ class ProfileBuilder:
         prefix = f"{self._prefix}-" if self._prefix else ""
         for rel in self._relations:
             if rel.name not in existing_fallback_rels:
-                rules.append(KernelValidityRule(
+                rules.append(ProfileRule(
                     id=f"{prefix}fallback-{rel.name.replace('_', '-')}",
                     source_pattern="*",
                     target_pattern="*",

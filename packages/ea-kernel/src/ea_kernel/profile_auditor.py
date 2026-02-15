@@ -19,24 +19,25 @@ from ea_kernel.profile_types import (
     KernelProfile,
     QualityReport,
     RegistryAuditReport,
+    SchemaPort,
 )
-from ea_kernel.types import KernelSchema
 
 if TYPE_CHECKING:
     from ea_kernel.profile_registry import ProfileRegistry
 
 
 class ProfileAuditor:
-    """Audits profiles against a kernel schema."""
+    """Audits profiles against a schema."""
 
-    __slots__ = ("_kernel",)
+    __slots__ = ("_schema",)
 
-    def __init__(self, kernel: KernelSchema) -> None:
-        self._kernel = kernel
+    def __init__(self, schema: SchemaPort) -> None:
+        self._schema = schema
 
     @property
-    def kernel(self) -> KernelSchema:
-        return self._kernel
+    def kernel(self) -> SchemaPort:
+        """Schema used for auditing. Kept as 'kernel' for backward compatibility."""
+        return self._schema
 
     # ── Single profile audit ───────────────────────────────────
 
@@ -47,7 +48,7 @@ class ProfileAuditor:
         to severity-tagged AuditFinding entries, plus direction
         consistency checks.
         """
-        qr = check_profile_quality(profile, self._kernel)
+        qr = check_profile_quality(profile, self._schema)
         findings = _quality_to_findings(qr)
         findings.extend(_check_direction_consistency(profile))
 
@@ -83,17 +84,17 @@ class ProfileAuditor:
     def detect_drift(
         self,
         profile: KernelProfile,
-        new_kernel: KernelSchema,
+        new_kernel: SchemaPort,
     ) -> tuple[DriftEntry, ...]:
         """Detect profile breakages when migrating to a new kernel.
 
         Compares the profile's kernel references against both
-        the current kernel (self._kernel) and the new kernel.
+        the current kernel (self._schema) and the new kernel.
         Reports references that were valid but are now broken.
         """
-        old_entities = {e.name for e in self._kernel.entities}
+        old_entities = {e.name for e in self._schema.entities}
         new_entities = {e.name for e in new_kernel.entities}
-        old_relations = {r.name for r in self._kernel.relations}
+        old_relations = {r.name for r in self._schema.relations}
         new_relations = {r.name for r in new_kernel.relations}
 
         entries: list[DriftEntry] = []
@@ -126,35 +127,29 @@ class ProfileAuditor:
                     element_or_rule=f"relation:{rel.name}",
                 ))
 
-        # Check validity rule patterns against new kernel's pattern_matches
+        # Check validity rule patterns — exact-name patterns that no longer
+        # resolve in the new kernel (entity was removed).
         for rule in profile.validity_rules:
             if rule.source_pattern == "*" or rule.target_pattern == "*":
                 continue
-            # Check if patterns still resolve in new kernel
-            src_old = new_kernel._pattern_matches.get(rule.source_pattern, frozenset())
-            tgt_old = new_kernel._pattern_matches.get(rule.target_pattern, frozenset())
-            if not src_old and rule.source_pattern in (
-                e.name for e in self._kernel.entities
+            for pattern, label in (
+                (rule.source_pattern, "source"),
+                (rule.target_pattern, "target"),
             ):
-                entries.append(DriftEntry(
-                    category="rule_pattern_broken",
-                    message=(
-                        f"Rule '{rule.id}' source pattern '{rule.source_pattern}' "
-                        f"no longer resolves in new kernel"
-                    ),
-                    element_or_rule=f"rule:{rule.id}",
-                ))
-            if not tgt_old and rule.target_pattern in (
-                e.name for e in self._kernel.entities
-            ):
-                entries.append(DriftEntry(
-                    category="rule_pattern_broken",
-                    message=(
-                        f"Rule '{rule.id}' target pattern '{rule.target_pattern}' "
-                        f"no longer resolves in new kernel"
-                    ),
-                    element_or_rule=f"rule:{rule.id}",
-                ))
+                # Only check exact-name patterns (not @Category/#Layer)
+                if pattern.startswith("@") or pattern.startswith("#"):
+                    continue
+                was_valid = pattern in old_entities
+                now_valid = pattern in new_entities
+                if was_valid and not now_valid:
+                    entries.append(DriftEntry(
+                        category="rule_pattern_broken",
+                        message=(
+                            f"Rule '{rule.id}' {label} pattern '{pattern}' "
+                            f"no longer resolves in new kernel"
+                        ),
+                        element_or_rule=f"rule:{rule.id}",
+                    ))
 
         return tuple(entries)
 

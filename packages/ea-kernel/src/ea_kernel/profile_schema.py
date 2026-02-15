@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from ea_kernel.profile_types import KernelProfile, ProfileElement
-from ea_kernel.types import KernelSchema, KernelValidityRule
+from ea_kernel.profile_types import KernelProfile, ProfileElement, ProfileRule, SchemaPort
 
 
 class ProfileSchema:
@@ -12,7 +11,7 @@ class ProfileSchema:
     def __init__(self, profile: KernelProfile) -> None:
         self._profile = profile
         # Pre-compute indexes
-        self._rules_by_rel: dict[str, list[KernelValidityRule]] = {}
+        self._rules_by_rel: dict[str, list[ProfileRule]] = {}
         for r in profile.validity_rules:
             self._rules_by_rel.setdefault(r.relationship_name, []).append(r)
 
@@ -50,30 +49,30 @@ class ProfileSchema:
 
     # ── Coverage ──────────────────────────────────────────────────
 
-    def element_coverage(self, kernel: KernelSchema) -> float:
-        """Fraction of kernel entity types used by this profile."""
-        kernel_types = {e.name for e in kernel.entities}
-        if not kernel_types:
+    def element_coverage(self, schema: SchemaPort) -> float:
+        """Fraction of schema entity types used by this profile."""
+        schema_types = {e.name for e in schema.entities}
+        if not schema_types:
             return 0.0
         used = {e.kernel_type for e in self._profile.elements}
-        return len(used & kernel_types) / len(kernel_types)
+        return len(used & schema_types) / len(schema_types)
 
-    def relation_coverage(self, kernel: KernelSchema) -> float:
-        """Fraction of kernel relation types used by this profile."""
-        kernel_rels = {r.name for r in kernel.relations}
-        if not kernel_rels:
+    def relation_coverage(self, schema: SchemaPort) -> float:
+        """Fraction of schema relation types used by this profile."""
+        schema_rels = {r.name for r in schema.relations}
+        if not schema_rels:
             return 0.0
         used = {r.kernel_relation for r in self._profile.relations}
-        return len(used & kernel_rels) / len(kernel_rels)
+        return len(used & schema_rels) / len(schema_rels)
 
     # ── Rule navigation ───────────────────────────────────────────
 
-    def rules_for_relation(self, relation_name: str) -> tuple[KernelValidityRule, ...]:
+    def rules_for_relation(self, relation_name: str) -> tuple[ProfileRule, ...]:
         return tuple(self._rules_by_rel.get(relation_name, []))
 
-    def rules_between(self, source: str, target: str) -> tuple[KernelValidityRule, ...]:
+    def rules_between(self, source: str, target: str) -> tuple[ProfileRule, ...]:
         """Rules matching a specific source→target pair (pattern-aware)."""
-        result: list[KernelValidityRule] = []
+        result: list[ProfileRule] = []
         for rule in self._profile.validity_rules:
             if self._matches(source, rule.source_pattern) and \
                self._matches(target, rule.target_pattern):
@@ -82,9 +81,9 @@ class ProfileSchema:
 
     def effective_rule(self, source_element: str,
                        target_element: str,
-                       relation: str) -> KernelValidityRule | None:
+                       relation: str) -> ProfileRule | None:
         """Find the highest-priority matching rule for a specific triple."""
-        candidates: list[KernelValidityRule] = []
+        candidates: list[ProfileRule] = []
         for rule in self._rules_by_rel.get(relation, []):
             if self._matches(source_element, rule.source_pattern) and \
                self._matches(target_element, rule.target_pattern):

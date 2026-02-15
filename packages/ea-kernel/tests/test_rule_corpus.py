@@ -601,8 +601,7 @@ class TestGroupQuery:
 
     def test_group_summary_covers_all_groups(self, corpus):
         summary = corpus.group_summary()
-        # All 14 groups should be present (each has at least one rule + fallback)
-        assert len(summary) == 14
+        assert len(summary) == len(RuleGroup)
         for group in RuleGroup:
             assert group in summary
             assert summary[group] > 0

@@ -13,6 +13,7 @@ from ea_kernel.types import (
     KernelValidityRule,
     Layer,
     LayerConstraint,
+    RuleGroup,
 )
 
 SCRATCHPAD = Path(__file__).parent / "_scratch"
@@ -57,7 +58,7 @@ class TestLoaderBasic:
     def test_fallback_count(self):
         rules, _ = load_kernel_rules()
         fallbacks = [r for r in rules if r.id.startswith("fallback-")]
-        assert len(fallbacks) == 14
+        assert len(fallbacks) == len(RuleGroup)
 
     def test_fallback_properties(self):
         rules, _ = load_kernel_rules()

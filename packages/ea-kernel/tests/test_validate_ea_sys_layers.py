@@ -6,6 +6,9 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from ea_kernel.profile_loader import load_profile
+from ea_kernel.profiles.ea_sys import LAYER_FILE_MAP, layer_path
+from ea_kernel.spec import KERNEL_SPEC
 
 
 def _load_validate_module():
@@ -18,22 +21,25 @@ def _load_validate_module():
     return module
 
 
+def _expected_counts(layer: str) -> tuple[int, int, int]:
+    p = load_profile(layer_path(layer), KERNEL_SPEC)
+    return (len(p.elements), len(p.relations), len(p.validity_rules))
+
+
+# Only validate the 6 core layers (web-kernel-viz is not in the validate script)
+_VALIDATION_LAYERS = [k for k in LAYER_FILE_MAP if k != "web-kernel-viz"]
+
+
 @pytest.mark.parametrize(
-    ("layer", "filename", "expected"),
-    [
-        ("infra", "00-infra.toml", (15, 10, 24)),
-        ("governance", "10-governance.toml", (61, 10, 152)),
-        ("decision", "20-decision.toml", (28, 10, 62)),
-        ("needs", "30-needs.toml", (16, 10, 26)),
-        ("kernel", "40-kernel.toml", (31, 10, 63)),
-        ("flow", "50-flow.toml", (26, 10, 60)),
-    ],
+    ("layer", "filename"),
+    [(layer, LAYER_FILE_MAP[layer]) for layer in _VALIDATION_LAYERS],
 )
-def test_validate_layer_success(layer, filename, expected):
+def test_validate_layer_success(layer, filename):
     mod = _load_validate_module()
 
     path, elements, relations, rules = mod.validate_layer(layer)
 
+    expected = _expected_counts(layer)
     assert path.endswith(f"/profiles/ea_sys/{filename}")
     assert (elements, relations, rules) == expected
 

@@ -19,7 +19,12 @@ from ea_kernel.profile_types import (
     ProfileStoreError,
     RegistryAuditReport,
 )
+from ea_kernel.profiles.ea_sys import LAYER_ORDER
+from ea_kernel.profiles.governance_profile_stack import PROFILE_FILE_MAP as GOV_STACK_MAP
 from ea_kernel.types import KernelSchema, KernelValidityRule
+
+_BUILTIN_NAMES = {"ArchiMate", "BPMN", "SysML", "TOGAF", "Zachman"}
+_EXPECTED_BOOTSTRAP_COUNT = len(_BUILTIN_NAMES) + len(LAYER_ORDER) + len(GOV_STACK_MAP)
 
 # ── Fixtures ───────────────────────────────────────────────────
 
@@ -120,9 +125,8 @@ class TestAuditRegistry:
         registry.bootstrap()
         report = auditor.audit_registry(registry)
         assert isinstance(report, RegistryAuditReport)
-        # 5 framework + 7 EA-sys layer + 2 governance stack = 14
-        assert report.total_profiles == 14
-        assert report.passed_profiles == 14
+        assert report.total_profiles == _EXPECTED_BOOTSTRAP_COUNT
+        assert report.passed_profiles == _EXPECTED_BOOTSTRAP_COUNT
 
     def test_empty_registry(self, auditor):
         registry = ProfileRegistry()

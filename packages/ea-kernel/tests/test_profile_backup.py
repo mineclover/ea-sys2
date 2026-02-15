@@ -70,7 +70,7 @@ class TestBackup:
         assert snap.author == "test"
         assert snap.description == "initial"
         assert snap.parent_id is None
-        assert len(snap.files) == 7
+        assert len(snap.files) == len(MANAGED_FILES)
         assert len(snap.id) == 32  # uuid4 hex
         assert len(snap.content_hash) == 64  # sha256
 
@@ -176,7 +176,7 @@ class TestRestore:
         # Restore to a fresh directory
         target = tmp_path / "fresh"
         changed = store.restore(snap.id, base_dir=target)
-        assert len(changed) == 7
+        assert len(changed) == len(MANAGED_FILES)
         for _, rel_path in MANAGED_FILES:
             assert (target / rel_path).exists()
 
@@ -190,7 +190,7 @@ class TestQuery:
         assert fetched is not None
         assert fetched.id == snap.id
         assert fetched.version == "v1"
-        assert len(fetched.files) == 7
+        assert len(fetched.files) == len(MANAGED_FILES)
 
     def test_get_none(self, store: BackupStore) -> None:
         assert store.get("nonexistent") is None
@@ -244,7 +244,7 @@ class TestQuery:
     def test_download(self, store: BackupStore, toml_dir: Path) -> None:
         snap = store.backup(version="v1", base_dir=toml_dir)
         contents = store.download(snap.id)
-        assert len(contents) == 7
+        assert len(contents) == len(MANAGED_FILES)
         assert "kernel_schema" in contents
         assert "archimate" in contents
         assert len(contents["kernel_schema"]) > 0

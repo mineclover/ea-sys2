@@ -7,6 +7,10 @@ from pathlib import Path
 
 import pytest
 
+from ea_kernel.profiles.ea_sys import LAYER_ORDER
+
+_LAYER_COUNT = len(LAYER_ORDER)
+
 
 def _load_module():
     script_path = (
@@ -37,12 +41,12 @@ def test_build_and_verify_reference_snapshot(tmp_path: Path):
 
     assert snapshot_path.exists()
     assert payload["reference_version"] == "1.0.0"
-    assert len(payload["model_registry"]) == 7
+    assert len(payload["model_registry"]) == _LAYER_COUNT
     assert payload["active_models"] == ["EASystemLayerModel.kernel"]
-    assert payload["db_contract"]["profiles.db"]["row_counts"]["model_registry"] == 7
-    assert payload["db_contract"]["profiles.db"]["row_counts"]["validation_runs"] == 8
+    assert payload["db_contract"]["profiles.db"]["row_counts"]["model_registry"] == _LAYER_COUNT
+    assert payload["db_contract"]["profiles.db"]["row_counts"]["validation_runs"] == _LAYER_COUNT + 1
     seed_profiles = payload["seed_profiles"]
-    assert len(seed_profiles) == 7
+    assert len(seed_profiles) == _LAYER_COUNT
 
     base_rule_count = len(module.KERNEL_SPEC.validity_rules)
     by_layer = {row["layer"]: row for row in seed_profiles}

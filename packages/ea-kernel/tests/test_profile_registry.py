@@ -12,6 +12,11 @@ from ea_kernel.profile_types import (
     ProfileRegistryError,
     ProfileRelation,
 )
+from ea_kernel.profiles.ea_sys import LAYER_ORDER
+from ea_kernel.profiles.governance_profile_stack import PROFILE_FILE_MAP as GOV_STACK_MAP
+
+_BUILTIN_NAMES = {"ArchiMate", "BPMN", "SysML", "TOGAF", "Zachman"}
+_EXPECTED_BOOTSTRAP_COUNT = len(_BUILTIN_NAMES) + len(LAYER_ORDER) + len(GOV_STACK_MAP)
 
 
 def _make_profile(name: str = "Test") -> KernelProfile:
@@ -90,21 +95,17 @@ class TestOriginTracking:
 
 
 class TestBootstrap:
-    # bootstrap loads 5 framework (BUILTIN) + 7 EA-sys layer (TOML) + 2 governance stack (TOML) = 14
-    _EXPECTED_BOOTSTRAP_COUNT = 14
-    _BUILTIN_NAMES = {"ArchiMate", "BPMN", "SysML", "TOGAF", "Zachman"}
-
     def test_bootstrap_loads_all(self):
         reg = ProfileRegistry()
         reg.bootstrap()
         names = reg.list_names()
-        assert len(names) == self._EXPECTED_BOOTSTRAP_COUNT
+        assert len(names) == _EXPECTED_BOOTSTRAP_COUNT
 
     def test_bootstrap_origin_is_correct(self):
         reg = ProfileRegistry()
         reg.bootstrap()
         for name in reg.list_names():
-            if name in self._BUILTIN_NAMES:
+            if name in _BUILTIN_NAMES:
                 assert reg.origin(name) == ProfileOrigin.BUILTIN, f"{name} should be BUILTIN"
             else:
                 assert reg.origin(name) == ProfileOrigin.TOML, f"{name} should be TOML"
@@ -113,7 +114,7 @@ class TestBootstrap:
         reg = ProfileRegistry()
         reg.bootstrap()
         reg.bootstrap()  # should not raise
-        assert len(reg.list_names()) == self._EXPECTED_BOOTSTRAP_COUNT
+        assert len(reg.list_names()) == _EXPECTED_BOOTSTRAP_COUNT
 
     def test_bootstrap_does_not_overwrite(self):
         reg = ProfileRegistry()
@@ -212,10 +213,9 @@ class TestLoadFromStore:
 
         reg = ProfileRegistry(store=store)
         reg.bootstrap_all()
-        # 14 bootstrap + 1 custom from store
         assert reg.get("Custom") is not None
         assert reg.origin("Custom") == ProfileOrigin.STORE
-        assert len(reg.list_names()) == 15
+        assert len(reg.list_names()) == _EXPECTED_BOOTSTRAP_COUNT + 1
         store.close()
 
     def test_bootstrap_all_process_restart(self):
@@ -231,6 +231,6 @@ class TestLoadFromStore:
         # Process 2 (new registry, same store)
         reg2 = ProfileRegistry(store=store)
         reg2.bootstrap_all()
-        assert len(reg2.list_names()) == 15  # 14 bootstrap + 1 custom
+        assert len(reg2.list_names()) == _EXPECTED_BOOTSTRAP_COUNT + 1
         assert reg2.get("Custom") is not None
         store.close()

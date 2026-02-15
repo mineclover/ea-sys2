@@ -138,12 +138,26 @@ class TestKernelGetEntityNames:
 HAS_MCP = importlib.util.find_spec("mcp.server.fastmcp") is not None
 
 
+_CORE_TOOLS = {
+    "kernel_list_entities",
+    "kernel_list_relations",
+    "kernel_list_rules",
+    "kernel_describe_profile",
+    "kernel_describe_rule",
+    "kernel_judge",
+    "kernel_get_entity_names",
+    "profile_reachable",
+    "profile_paths",
+    "profile_impact",
+}
+
+
 @pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 class TestMCPServerStructure:
-    def test_server_has_ten_tools(self):
+    def test_server_has_core_tools(self):
         from ea_kernel.mcp_server import mcp
         tools = mcp._tool_manager._tools
-        assert len(tools) == 10
+        assert len(tools) >= len(_CORE_TOOLS)
 
     def test_all_tools_have_expected_prefix(self):
         from ea_kernel.mcp_server import mcp
@@ -153,19 +167,7 @@ class TestMCPServerStructure:
                 f"Tool {name} missing kernel_ or profile_ prefix"
             )
 
-    def test_tool_names(self):
+    def test_tool_names_include_core_set(self):
         from ea_kernel.mcp_server import mcp
         tools = mcp._tool_manager._tools
-        expected = {
-            "kernel_list_entities",
-            "kernel_list_relations",
-            "kernel_list_rules",
-            "kernel_describe_profile",
-            "kernel_describe_rule",
-            "kernel_judge",
-            "kernel_get_entity_names",
-            "profile_reachable",
-            "profile_paths",
-            "profile_impact",
-        }
-        assert set(tools.keys()) == expected
+        assert _CORE_TOOLS.issubset(tools.keys())

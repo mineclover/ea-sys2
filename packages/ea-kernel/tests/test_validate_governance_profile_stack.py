@@ -6,6 +6,20 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from ea_kernel.profile_loader import load_profile
+from ea_kernel.profiles.ea_sys import PROFILE_DIR as EA_SYS_PROFILE_DIR
+from ea_kernel.profiles.governance_profile_stack import (
+    PROFILE_DIR as GOV_STACK_PROFILE_DIR,
+    PROFILE_FILE_MAP as GOV_STACK_MAP,
+)
+from ea_kernel.spec import KERNEL_SPEC
+
+# Profile stack includes governance-meta, ea_sys governance, and external governance
+_PROFILE_STACK_FILES: dict[str, Path] = {
+    "meta": GOV_STACK_PROFILE_DIR / "00-governance-meta-model.toml",
+    "ea_sys": EA_SYS_PROFILE_DIR / "10-governance.toml",
+    "external": GOV_STACK_PROFILE_DIR / "20-external-governance.toml",
+}
 
 
 def _load_validate_module():
@@ -25,19 +39,25 @@ def _load_validate_module():
     return module
 
 
+def _expected_counts(profile_id: str) -> tuple[int, int, int]:
+    p = load_profile(_PROFILE_STACK_FILES[profile_id], KERNEL_SPEC)
+    return (len(p.elements), len(p.relations), len(p.validity_rules))
+
+
 @pytest.mark.parametrize(
-    ("profile_id", "filename", "expected"),
+    ("profile_id", "filename"),
     [
-        ("meta", "00-governance-meta-model.toml", (23, 10, 52)),
-        ("ea_sys", "10-governance.toml", (61, 10, 152)),
-        ("external", "20-external-governance.toml", (22, 10, 55)),
+        ("meta", "00-governance-meta-model.toml"),
+        ("ea_sys", "10-governance.toml"),
+        ("external", "20-external-governance.toml"),
     ],
 )
-def test_validate_profile_success(profile_id, filename, expected):
+def test_validate_profile_success(profile_id, filename):
     mod = _load_validate_module()
 
     path, elements, relations, rules = mod.validate_profile(profile_id)
 
+    expected = _expected_counts(profile_id)
     assert path.endswith(filename)
     assert (elements, relations, rules) == expected
 

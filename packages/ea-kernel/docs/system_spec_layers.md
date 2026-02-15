@@ -80,3 +80,33 @@
 - Sequence integrity: `next` 체인이 단절되지 않는지
 
 즉, 실행 엔진 테스트 이전에 모델 자체의 정합성을 정적 시뮬레이션으로 확인한다.
+
+## 5. Kernel 레이어 상세
+
+### 5.1 Kernel이 관리하는 3개 자산
+
+| 자산 | 파일 | 역할 |
+|:-----|:-----|:-----|
+| **Schema** | `specs/kernel_schema.toml` | 커널 메타모델 구조 정의: 20 attributes, 15 entities, 14 relations. 엔티티 상속 트리와 릴레이션 역할 구조의 단일 진실 원천(SSOT) |
+| **Rules** | `specs/kernel_rules.toml` | 유효성 규칙: 67 explicit + 14 fallback = 81 total. priority 체계(1/40-50/60/70/80-90)와 조건 시스템(LAYER_ORDER, SAME_BRANCH)으로 관계 허용/금지 판단 |
+| **Profiles** | `profiles/ea_sys/*.toml` | 도메인 매핑: 스키마의 추상 타입을 도메인 요소로 구체화. 카테고리 매핑 + 도메인 관계 + 도메인 규칙 3단계 |
+
+### 5.2 6x6 포트 구조에서 Kernel의 역할
+
+Kernel은 다른 5개 레이어를 **도메인 제약 관점**으로 정의한다:
+
+- **Infra**: 커널 아티팩트(spec/rule/profile/audit)의 영속화 계약. 무엇을 어떤 형태로 저장하는가
+- **Governance**: 커널 모델의 등록/승인/변경 추적 게이트. 모델 진화가 어떤 절차를 거치는가
+- **Decision**: 의사결정 결과가 커널 제약으로 변환되는 경로. 결정이 어떻게 도메인 규칙이 되는가
+- **Needs**: 요구사항이 커널 도메인 요소로 매핑되는 경로. 요구가 어떻게 모델로 표현되는가
+- **Flow**: 커널 계약이 실행 단계에서 소비/검증되는 경로. 모델이 런타임에 어떻게 사용되는가
+
+각 레이어에 대해 `*ModelPort` 인터페이스 요소를 두고, 해당 포트 아래 4-5개 교차 요소 + 관련 규칙을 배치.
+
+### 5.3 40-kernel.toml 프로파일 구성
+
+| 구간 | 내용 |
+|:-----|:-----|
+| **내부 구현 요소** | KernelLayer(경계), 4개 서비스(Contract/RuleCompiler/Validation/ProfileRegistry), 3개 아티팩트(CapabilityModel/RuleSet/SpecSnapshot), Goal/Step/Action/Event, Context/Experience/Page/Endpoint |
+| **6x6 교차 요소** | 5개 레이어 × 4-5개 요소 = 21개. 각 레이어의 `*ModelPort` 아래 배치 |
+| **규칙 3단계** | Pattern 규칙(priority 60, 카테고리 기반) → Explicit 규칙(priority 70, 이름 기반) → Cross-layer 규칙(priority 65/72, 포트-요소 간 구조+행위) |

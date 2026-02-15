@@ -98,6 +98,7 @@ def load_kernel_schema(
             owns_key=e.get("owns_key"),
             plays=tuple(e.get("plays", [])),
             description=e.get("description", ""),
+            display_name=e.get("display_name", ""),
         ))
 
     # Parse relations
@@ -118,6 +119,7 @@ def load_kernel_schema(
             owns=tuple(r.get("owns", [])),
             owns_key=r.get("owns_key"),
             description=r.get("description", ""),
+            display_name=r.get("display_name", ""),
         ))
 
     # Self-verification
@@ -233,3 +235,76 @@ def load_kernel_schema_from_package() -> KernelSchema:
     """Convenience wrapper to return just the KernelSchema object."""
     _, schema, _, _, _, _, _ = load_kernel_schema()
     return schema
+
+
+def _to_i18n(current: str | dict[str, str], lang: str, value: str) -> dict[str, str]:
+    """Merge a new lang value into an I18nString, returning a dict."""
+    if isinstance(current, str):
+        result: dict[str, str] = {"en": current} if current else {}
+    else:
+        result = dict(current)
+    result[lang] = value
+    return result
+
+
+def load_schema_i18n(
+    schema: KernelSchema,
+    lang: str,
+    patch_path: Path | None = None,
+) -> KernelSchema:
+    """Load a locale patch and merge translations into a KernelSchema.
+
+    Patch file format (TOML):
+        [entities.<name>]
+        display_name = "..."
+        description = "..."
+
+        [relations.<name>]
+        display_name = "..."
+        description = "..."
+    """
+    from dataclasses import replace
+
+    if lang == "en":
+        return schema
+
+    path = patch_path or (SPECS_DIR / f"kernel_schema.{lang}.toml")
+    if not path.exists():
+        return schema
+
+    try:
+        doc = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return schema
+
+    entity_patches = doc.get("entities", {})
+    new_entities = []
+    for e in schema.entities:
+        patch = entity_patches.get(e.name)
+        if not isinstance(patch, dict):
+            new_entities.append(e)
+            continue
+        new_desc = e.description
+        if "description" in patch:
+            new_desc = _to_i18n(e.description, lang, patch["description"])
+        new_dn = e.display_name
+        if "display_name" in patch:
+            new_dn = _to_i18n(e.display_name, lang, patch["display_name"])
+        new_entities.append(replace(e, description=new_desc, display_name=new_dn))
+
+    relation_patches = doc.get("relations", {})
+    new_relations = []
+    for r in schema.relations:
+        patch = relation_patches.get(r.name)
+        if not isinstance(patch, dict):
+            new_relations.append(r)
+            continue
+        new_desc = r.description
+        if "description" in patch:
+            new_desc = _to_i18n(r.description, lang, patch["description"])
+        new_dn = r.display_name
+        if "display_name" in patch:
+            new_dn = _to_i18n(r.display_name, lang, patch["display_name"])
+        new_relations.append(replace(r, description=new_desc, display_name=new_dn))
+
+    return replace(schema, entities=tuple(new_entities), relations=tuple(new_relations))

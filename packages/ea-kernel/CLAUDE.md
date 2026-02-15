@@ -12,6 +12,67 @@
 
 핵심 원칙: **행위는 구조와 별개가 아니라, 관계의 자격(qualification)**
 
+## Kernel Schema
+
+정규 스키마: `src/ea_kernel/specs/kernel_schema.toml` (20 attributes / 15 entities / 14 relations)
+
+### 엔티티 상속 트리
+
+```
+element (root, abstract — uid/name/description/qualified_name/layer)
+└── namespace (abstract — visibility, containment 능력)
+    ├── metatype (abstract — is_abstract, KerML Type 대응)
+    │   ├── feature (multiplicity/ordering/derived/composite/readonly)
+    │   │   ├── port (접근/상호작용 지점)
+    │   │   ├── step (L4 — succession 참여 행위 단위)
+    │   │   │   └── action (L4 — 실행 가능 step)
+    │   │   ├── event (L4 — 상태 변화 발생)
+    │   │   └── expression (L4 — 평가 가능 값 계산)
+    │   ├── classifier (abstract — 인스턴스화 가능)
+    │   │   ├── structure (능동 — UML Class)
+    │   │   ├── item (수동 — 데이터 객체)
+    │   │   └── datatype (값 타입, 정체성 없음)
+    │   └── state (L4 — 생명주기 상황 분류)
+    └── package (구체 이름 공간 컨테이너)
+```
+
+### 릴레이션 분류
+
+| 계층 | 관계 | 역할 |
+|:-----|:-----|:-----|
+| L2 구조 | membership | 이름 공간 소속 (container ↔ member) |
+| | ownership | 구성적 소유, 생명주기 결합 (owner ↔ owned) |
+| | specialization | metatype 상속 (supertype ↔ subtype) |
+| | feature_typing | feature 타입 지정 (typed_feature ↔ typing) |
+| | association | metatype 수준 구조적 연결 (source_end ↔ target_end) |
+| | connector | feature 수준 링크, L3의 base (source ↔ target) |
+| | redefinition | feature 완전 교체 (original ↔ redefining) |
+| | subsetting | feature 값 범위 축소 (subsetted ↔ subsetting_feature) |
+| L3 행위 | flow | 데이터/객체 흐름 (← connector) |
+| | succession | 시간적 선후관계 (← connector) |
+| | interaction | 메시지 교환 (← connector) |
+| | triggering | 이벤트 → 행위 인과 (독립) |
+| | guarding | 조건 가드 (독립) |
+| | transition | 상태 전이 (독립) |
+
+### 핵심 설계 결정
+
+1. **feature가 metatype 하위인 이유**: KerML에서 "Feature is a Type". 피처 자체가 타입이므로 specialization에 참여할 수 있고, 자신의 값에 대한 타입을 정의할 수 있다. metatype의 분류 능력을 그대로 상속.
+
+2. **L3 행위 관계가 connector를 상속하는 이유**: flow/succession/interaction은 본질적으로 "두 feature를 잇는 링크"에 시간/데이터/메시지 의미론을 추가한 것. connector의 source/target 역할 구조를 재사용하여 중복 방지. "행위는 관계의 자격(qualification)"이라는 원칙의 구현.
+
+3. **state가 metatype 직접 하위인 이유**: state는 생명주기 내 상황을 분류하는 타입(specialization 참여 가능)이지만, classifier처럼 인스턴스를 직접 생성하지 않는다. transition/guarding을 통한 행위 모델링이 목적이므로 classifier의 인스턴스화 의미론은 배제.
+
+### Validity Rule 구조
+
+정규 규칙: `src/ea_kernel/specs/kernel_rules.toml`
+
+- **67 explicit rules** + **14 fallback deny-by-default** (각 relation당 1개) = **81 total**
+- **2 layer constraints** (L4↔L4 association/connector 제한)
+- Priority 체계: `1` (fallback deny) → `40-50` (metatype-level allow) → `60` (structural pattern) → `70` (behavioral pattern) → `80-90` (explicit prohibition, override)
+- 조건 시스템: `LAYER_ORDER` (source layer ≤ target layer), `SAME_BRANCH` (동일 상속 분기)
+- 각 규칙에 metadata 포함: domain, tags, category, confidence, source, rationale
+
 ## Profile Design Principles
 
 → `src/ea_kernel/docs/profile_design.md` 참조

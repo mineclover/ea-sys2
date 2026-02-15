@@ -12,8 +12,23 @@ total_relations = 14
 
 # ═══════════════════════════════════════════════════════════════════
 # Attributes — 20 value-typed fields
+#
+# 4가지 용도 그룹:
+#   식별자 (uid, name, description, qualified_name)
+#     — 모든 element/relation의 고유 식별과 인간 가독 명칭
+#   구조 플래그 (is_abstract, is_composite, is_derived, is_readonly)
+#     — 메타타입/피처의 구조적 성격 표시. is_abstract는 인스턴스화 불가,
+#       is_composite는 소유권 의미론, is_derived는 계산 파생,
+#       is_readonly는 변경 불가 제약
+#   다중성/순서 (multiplicity_lower/upper, is_ordered, is_unique)
+#     — feature 값의 카디널리티와 컬렉션 의미론 제어
+#   행위 제어 (visibility, direction, guard_expr, ordering, layer, kind,
+#              execution_mode, join_mode)
+#     — 접근 제어, 데이터 흐름 방향, 조건 가드, 실행 의미론 등
+#       L3 행위 관계에서 주로 사용
 # ═══════════════════════════════════════════════════════════════════
 
+# ── 식별자 ──
 [[attributes]]
 name = "uid"
 value_type = "string"
@@ -30,6 +45,7 @@ value_type = "string"
 name = "qualified_name"
 value_type = "string"
 
+# ── 구조 플래그 ──
 [[attributes]]
 name = "is_abstract"
 value_type = "boolean"
@@ -46,6 +62,7 @@ value_type = "boolean"
 name = "is_readonly"
 value_type = "boolean"
 
+# ── 다중성/순서 ──
 [[attributes]]
 name = "is_ordered"
 value_type = "boolean"
@@ -62,6 +79,7 @@ value_type = "integer"
 name = "multiplicity_upper"
 value_type = "integer"
 
+# ── 행위 제어 ──
 [[attributes]]
 name = "visibility"
 value_type = "string"
@@ -96,6 +114,28 @@ value_type = "string"
 
 # ═══════════════════════════════════════════════════════════════════
 # L1 Structure — entities (10)
+#
+# 상속 트리: element → namespace → metatype → {feature, classifier}
+#
+#   element (root, abstract)
+#   └── namespace (abstract, 이름 공간 소유)
+#       ├── metatype (abstract, KerML Type 대응 — 인스턴스 분류 능력)
+#       │   ├── feature (KerML "Feature is a Type": 피처 자체가 타입이므로
+#       │   │            metatype 하위. 다중성·순서·파생 속성 보유)
+#       │   │   └── port (feature의 접근/상호작용 지점)
+#       │   └── classifier (abstract, 인스턴스화 가능한 metatype)
+#       │       ├── structure (능동 분류자 — UML Class 대응)
+#       │       ├── item (수동 분류자 — 데이터 객체)
+#       │       └── datatype (값 타입, 정체성 없음)
+#       └── package (구체 이름 공간 — 요소 그룹핑 컨테이너)
+#
+# 설계 근거:
+# - element는 uid/name/description을 가진 범용 루트
+# - namespace는 containment(membership/ownership) 능력을 부여
+# - metatype은 KerML Type — specialization과 feature_typing 참여
+# - feature가 metatype 하위인 이유: KerML에서 Feature는 그 자체로 Type.
+#   피처 값의 타입을 정의할 수 있고, specialization에도 참여 가능
+# - classifier는 metatype 중 인스턴스화가 가능한 것들의 공통 추상
 # ═══════════════════════════════════════════════════════════════════
 
 [[entities]]
@@ -189,6 +229,21 @@ description = "Concrete namespace container — groups elements"
 
 # ═══════════════════════════════════════════════════════════════════
 # L4 Concrete — entities (5)
+#
+# "행위는 구조의 qualification" 원칙:
+#   L4 행위 요소는 L1 구조 요소의 자식으로, 구조에 행위적 자격을 부여한다.
+#
+#   step, action, event, expression → feature 하위
+#     이들은 값/타입을 가진 feature이면서 동시에 행위 의미론을 갖는다.
+#     step은 succession에 참여하는 행위 단위, action은 step의 실행 가능 구체화,
+#     event는 상태 변화 발생, expression은 평가 가능한 값 계산.
+#
+#   state → metatype 직접 하위 (classifier가 아님)
+#     state는 생명주기 내 상황을 분류하는 타입이지만,
+#     인스턴스를 직접 생성하는 classifier가 아니라
+#     transition/guarding 참여를 통한 행위 모델링이 목적.
+#     metatype 직접 하위로 두어 specialization 계층은 유지하되
+#     classifier의 인스턴스화 의미론은 배제.
 # ═══════════════════════════════════════════════════════════════════
 
 [[entities]]
@@ -238,6 +293,31 @@ description = "Behavioral state — classifies situations within a lifecycle"
 
 # ═══════════════════════════════════════════════════════════════════
 # L2 Relationship — relations (8)
+#
+# 8개 구조적 관계, 크게 4가지 역할:
+#
+# (1) 포함 관계: membership, ownership
+#     - membership: 이름 공간에 요소가 '속하는' 논리적 소속
+#     - ownership: 구성적(compositional) 소유. is_composite 속성으로
+#       전체-부분 의미론 표현. ownership은 membership보다 강한 생명주기 결합
+#
+# (2) 타입 관계: specialization, feature_typing
+#     - specialization: metatype 간 상속. 하위 타입이 상위 타입의 feature를 계승
+#     - feature_typing: feature가 어떤 metatype에 의해 타입이 지정되는지 명시
+#
+# (3) 연결 관계: association, connector
+#     - association: metatype 수준의 구조적 연결 (UML Association).
+#       source_end/target_end는 metatype. name과 is_derived 소유
+#     - connector: feature 수준의 링크 (인스턴스 간 연결).
+#       source/target는 feature. L3 행위 관계의 기반(parent) 역할
+#     - 차이: association은 타입 간 정적 구조, connector는 피처 간 동적 링크
+#
+# (4) 재정의 관계: redefinition, subsetting
+#     - redefinition: specialization 컨텍스트에서 피처를 완전히 재정의
+#       (original 피처를 redefining 피처로 대체)
+#     - subsetting: 피처 값이 다른 피처 값의 부분집합임을 선언
+#       (원본을 대체하지 않고 범위만 축소)
+#     - 차이: redefinition은 교체(replacement), subsetting은 제한(restriction)
 # ═══════════════════════════════════════════════════════════════════
 
 [[relations]]
@@ -364,6 +444,25 @@ player = "feature"
 
 # ═══════════════════════════════════════════════════════════════════
 # L3 Behavioral — relations (6)
+#
+# "행위는 관계의 자격(qualification)" — L3 관계는 L2 구조 관계에
+# 행위적 의미론을 부여한다.
+#
+# connector 상속 그룹: flow, succession, interaction (parent = "connector")
+#   - connector는 feature 간 링크. L3는 이 링크에 시간/데이터/메시지 의미를 추가
+#   - flow: 데이터/객체 흐름. direction(in/out)과 ordering으로 방향·순서 표현
+#   - succession: 시간적 선후관계. guard_expr/execution_mode/join_mode로
+#     조건 분기, 병렬/순차 실행, 합류 의미론 표현
+#   - interaction: 피처 간 메시지 교환. kind로 동기/비동기 등 교환 유형 구분
+#   → 세 관계가 connector를 상속하는 이유: 행위적 연결도 본질적으로
+#     "두 feature를 잇는 링크"이며, connector의 source/target 역할을 재사용.
+#     별도 관계로 만들면 동일한 참여 구조가 중복됨
+#
+# 독립 관계: triggering, guarding, transition
+#   - triggering: 이벤트 → 행위 응답 연결. connector와 무관한 인과 관계
+#   - guarding: 조건 표현식이 행위 요소를 가드. 조건-대상의 이항 관계
+#   - transition: 상태 간 전이. source_state → target_state, guard_expr 조건부
+#   → 이들은 feature 간 링크가 아니므로 connector를 상속하지 않음
 # ═══════════════════════════════════════════════════════════════════
 
 [[relations]]

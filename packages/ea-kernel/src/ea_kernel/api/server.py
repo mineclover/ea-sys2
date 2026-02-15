@@ -56,6 +56,9 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def _typed_post(*args: Any, **kwargs: Any) -> Callable[[endpoint_fn], endpoint_fn]:
         return app.post(*args, **kwargs)
 
+    def _typed_put(*args: Any, **kwargs: Any) -> Callable[[endpoint_fn], endpoint_fn]:
+        return app.put(*args, **kwargs)
+
     def _model_api_error(
         *,
         status_code: int,
@@ -161,6 +164,32 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         on_exists: str | None = "validate"  # validate | error
         decision_id: str | None = None
         evidence_refs: list[str] | None = None
+
+    class UpdateTranslationRequest(BaseModel):
+        value: str
+
+    class CreateNeedsCatalogRequest(BaseModel):
+        name: str
+        description: str = ""
+
+    class AddStakeholderRequest(BaseModel):
+        name: str
+        role: str
+        context: str = ""
+
+    class ExpressNeedRequest(BaseModel):
+        stakeholder_id: str
+        action: str
+        subject: str
+        target: str | None = None
+        justifications: list[dict[str, str]] | None = None
+        priority: str | None = None
+        kernel_refs: list[str] | None = None
+        tags: list[str] | None = None
+        use_case_id: str | None = None
+        cause_types: list[str] | None = None
+        purpose: str = ""
+        complexity: str = "procedural"
 
     class ModelValidateRequest(BaseModel):
         model_name: str
@@ -687,6 +716,46 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             raise HTTPException(status_code=400, detail=result["error"])
         return result
 
+    # --- I18n API ---
+
+    @_typed_get("/i18n/audit")
+    def i18n_audit(lang: str = "ko") -> dict[str, Any]:
+        """I18n translation audit report."""
+        from ea_kernel.kernel_service import audit_i18n
+        return audit_i18n(lang)
+
+    @_typed_get("/i18n/translations")
+    def i18n_list_translations(lang: str = "ko", kind: str | None = None) -> dict[str, Any]:
+        """List translations for a language."""
+        from ea_kernel.kernel_service import list_translations
+        return list_translations(lang, kind)
+
+    @_typed_get("/i18n/translations/{kind}/{name}/{lang}/{field}")
+    def i18n_get_translation(kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
+        """Get a single translation entry."""
+        from ea_kernel.kernel_service import get_translation
+        result = get_translation(kind, name, lang, field)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_put("/i18n/translations/{kind}/{name}/{lang}/{field}")
+    def i18n_update_translation(
+        kind: str, name: str, lang: str, field: str, req: UpdateTranslationRequest,
+    ) -> dict[str, Any]:
+        """Update a translation entry."""
+        from ea_kernel.kernel_service import update_translation
+        result = update_translation(kind, name, lang, field, req.value)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_get("/i18n/translations/{kind}/{name}/{lang}/{field}/history")
+    def i18n_translation_history(kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
+        """Get translation change history."""
+        from ea_kernel.kernel_service import translation_history
+        return translation_history(kind, name, lang, field)
+
     # --- Profile Graph Traversal (Profile Topology API) ---
 
     @_typed_get("/profiles")
@@ -701,23 +770,23 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         ]
 
     @_typed_get("/profiles/{name}")
-    def get_profile(name: str) -> dict[str, Any]:
+    def get_profile(name: str, lang: str | None = None) -> dict[str, Any]:
         """Get profile metadata."""
         from ea_kernel.kernel_service import describe_profile
-        result = describe_profile(name)
+        result = describe_profile(name, lang=lang)
         if result is None:
             raise HTTPException(status_code=404, detail=f"Profile not found: {name}")
         return result
 
     @_typed_get("/profiles/{name}/topology")
-    def get_profile_topology(name: str, cross_layer: bool = False) -> dict[str, Any]:
+    def get_profile_topology(name: str, cross_layer: bool = False, lang: str | None = None) -> dict[str, Any]:
         """Get full profile topology graph (nodes + edges).
 
         When *cross_layer* is true, only edges connecting elements from
         different domain layers are returned.
         """
         from ea_kernel.kernel_service import profile_topology
-        result = profile_topology(name, cross_layer=cross_layer)
+        result = profile_topology(name, cross_layer=cross_layer, lang=lang)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result
@@ -734,6 +803,20 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             raise HTTPException(status_code=400, detail="Missing required query param: element")
         from ea_kernel.kernel_service import profile_reachable
         result = profile_reachable(name, element, max_depth=max_depth, relation=relation)
+        if "error" in result:
+            status = 404 if "not found" in result["error"].lower() else 400
+            raise HTTPException(status_code=status, detail=result["error"])
+        return result
+
+    class ElementScopeRequest(BaseModel):
+        elements: list[str]
+        max_depth: int = 4
+
+    @_typed_post("/profiles/{name}/element-scope")
+    def post_profile_element_scope(name: str, req: ElementScopeRequest) -> dict[str, Any]:
+        """Compute union of reachable sets from multiple seed elements."""
+        from ea_kernel.kernel_service import profile_element_scope
+        result = profile_element_scope(name, req.elements, max_depth=req.max_depth)
         if "error" in result:
             status = 404 if "not found" in result["error"].lower() else 400
             raise HTTPException(status_code=status, detail=result["error"])
@@ -822,6 +905,256 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             raise HTTPException(status_code=500, detail="Invalid flow spec type")
 
         return spec
+
+    # --- Needs API ---
+
+    @_typed_get("/needs/catalogs")
+    def list_needs_catalogs() -> list[dict[str, Any]]:
+        """List all needs catalogs with summary info."""
+        container = _get_governance_container()
+        try:
+            catalogs = container.list_needs_catalogs()
+        except Exception as err:
+            logger.exception("Unhandled /needs/catalogs error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+        result = []
+        for cat in catalogs:
+            result.append({
+                "id": cat.id,
+                "name": cat.name,
+                "description": cat.description,
+                "needs_count": len(cat.needs),
+                "stakeholder_count": len(cat.stakeholders),
+                "use_case_count": len(cat.use_cases),
+                "updated_at": cat.updated_at,
+            })
+        return result
+
+    @_typed_post("/needs/catalogs")
+    def create_needs_catalog(req: CreateNeedsCatalogRequest) -> dict[str, Any]:
+        """Create a new needs catalog."""
+        container = _get_governance_container()
+        try:
+            result = container.create_needs_catalog(
+                req.name, req.description, actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled POST /needs/catalogs error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_get("/needs/catalogs/{catalog_id}")
+    def get_needs_catalog(catalog_id: str) -> dict[str, Any]:
+        """Get full catalog detail."""
+        container = _get_governance_container()
+        try:
+            cat = container.get_needs_catalog(catalog_id)
+        except Exception as err:
+            logger.exception("Unhandled /needs/catalogs/{catalog_id} error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+        if cat is None:
+            raise _model_api_error(
+                status_code=404, detail=f"Catalog not found: {catalog_id}", category="not_found",
+            )
+        return json.loads(cat.to_json())
+
+    @_typed_get("/needs/catalogs/{catalog_id}/needs")
+    def list_catalog_needs(
+        catalog_id: str,
+        status: str | None = None,
+        priority: str | None = None,
+        stakeholder_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List needs in a catalog with optional filters."""
+        container = _get_governance_container()
+        try:
+            cat = container.get_needs_catalog(catalog_id)
+        except Exception as err:
+            logger.exception("Unhandled /needs/catalogs/{catalog_id}/needs error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+        if cat is None:
+            raise _model_api_error(
+                status_code=404, detail=f"Catalog not found: {catalog_id}", category="not_found",
+            )
+        needs = cat.needs
+        if status:
+            needs = [n for n in needs if n.status.value.lower() == status.lower()]
+        if priority:
+            needs = [n for n in needs if n.priority.value.lower() == priority.lower()]
+        if stakeholder_id:
+            needs = [n for n in needs if n.statement.stakeholder_id == stakeholder_id]
+        result = []
+        for n in needs:
+            result.append({
+                "id": n.id,
+                "lineage_id": n.lineage_id,
+                "version": n.version,
+                "status": n.status.value,
+                "priority": n.priority.value,
+                "stakeholder_id": n.statement.stakeholder_id,
+                "action": n.statement.desire.action,
+                "subject": n.statement.desire.subject,
+                "target": n.statement.desire.target,
+                "kernel_refs": list(n.statement.kernel_refs),
+                "tags": list(n.statement.tags),
+                "updated_at": n.updated_at,
+            })
+        return result
+
+    @_typed_get("/needs/catalogs/{catalog_id}/needs/{need_id}")
+    def get_catalog_need(catalog_id: str, need_id: str) -> dict[str, Any]:
+        """Get a single need with full detail."""
+        container = _get_governance_container()
+        try:
+            cat = container.get_needs_catalog(catalog_id)
+        except Exception as err:
+            logger.exception("Unhandled /needs/catalogs/{catalog_id}/needs/{need_id} error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+        if cat is None:
+            raise _model_api_error(
+                status_code=404, detail=f"Catalog not found: {catalog_id}", category="not_found",
+            )
+        need = cat.get_need(need_id)
+        if need is None:
+            raise _model_api_error(
+                status_code=404, detail=f"Need not found: {need_id}", category="not_found",
+            )
+        process_units = cat.process_units_for_need(need_id)
+        return {
+            "id": need.id,
+            "lineage_id": need.lineage_id,
+            "version": need.version,
+            "status": need.status.value,
+            "priority": need.priority.value,
+            "stakeholder_id": need.statement.stakeholder_id,
+            "action": need.statement.desire.action,
+            "subject": need.statement.desire.subject,
+            "target": need.statement.desire.target,
+            "justifications": [
+                {"type": j.type.value if hasattr(j.type, "value") else str(j.type), "description": j.description}
+                for j in need.statement.justifications
+            ],
+            "kernel_refs": list(need.statement.kernel_refs),
+            "tags": list(need.statement.tags),
+            "purpose": need.statement.purpose,
+            "cause_types": [ct.value if hasattr(ct, "value") else str(ct) for ct in need.statement.cause_types],
+            "complexity": need.statement.complexity.value if hasattr(need.statement.complexity, "value") else str(need.statement.complexity),
+            "use_case_id": need.statement.use_case_id,
+            "created_at": need.created_at,
+            "updated_at": need.updated_at,
+            "process_units": [
+                {
+                    "id": pu.id,
+                    "stage": pu.stage.value if hasattr(pu.stage, "value") else str(pu.stage),
+                    "label": pu.label,
+                    "description": pu.description,
+                    "sequence": pu.sequence,
+                }
+                for pu in process_units
+            ],
+        }
+
+    @_typed_post("/needs/catalogs/{catalog_id}/stakeholders")
+    def add_needs_stakeholder(catalog_id: str, req: AddStakeholderRequest) -> dict[str, Any]:
+        """Add a stakeholder to a catalog."""
+        container = _get_governance_container()
+        try:
+            result = container.add_needs_stakeholder(
+                catalog_id, name=req.name, role=req.role, context=req.context, actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled POST /needs/catalogs/{catalog_id}/stakeholders error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_post("/needs/catalogs/{catalog_id}/needs")
+    def express_need(catalog_id: str, req: ExpressNeedRequest) -> dict[str, Any]:
+        """Express a new need in a catalog."""
+        container = _get_governance_container()
+        try:
+            result = container.express_need_in_catalog(
+                catalog_id,
+                stakeholder_id=req.stakeholder_id,
+                action=req.action,
+                subject=req.subject,
+                target=req.target,
+                justifications=req.justifications,
+                priority=req.priority,
+                kernel_refs=req.kernel_refs,
+                tags=req.tags,
+                use_case_id=req.use_case_id,
+                cause_types=req.cause_types,
+                purpose=req.purpose,
+                complexity=req.complexity,
+                actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled POST /needs/catalogs/{catalog_id}/needs error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_get("/needs/catalogs/{catalog_id}/history")
+    def get_needs_catalog_history(catalog_id: str) -> list[dict[str, Any]]:
+        """Get transaction history for a catalog."""
+        container = _get_governance_container()
+        try:
+            history = container.get_needs_catalog_history(catalog_id)
+            return history
+        except Exception as err:
+            logger.exception("Unhandled /needs/catalogs/{catalog_id}/history error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_get("/needs/by-kernel-ref/{ref}")
+    def needs_by_kernel_ref(ref: str) -> dict[str, Any]:
+        """Find needs across all catalogs that reference a kernel element."""
+        container = _get_governance_container()
+        try:
+            catalogs = container.list_needs_catalogs()
+        except Exception as err:
+            logger.exception("Unhandled /needs/by-kernel-ref/{ref} error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+        matches = []
+        for cat in catalogs:
+            for need in cat.needs_by_kernel_ref(ref):
+                matches.append({
+                    "catalog_id": cat.id,
+                    "catalog_name": cat.name,
+                    "need_id": need.id,
+                    "action": need.statement.desire.action,
+                    "subject": need.statement.desire.subject,
+                    "status": need.status.value,
+                })
+        return {"kernel_ref": ref, "matches": matches}
 
     # --- System Self-Exploration (Phase 9 Extension) ---
     @_typed_get("/system/self-model")

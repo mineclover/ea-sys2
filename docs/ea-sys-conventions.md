@@ -1,0 +1,565 @@
+# ea-sys 공통 구현 컨벤션
+
+> 본 문서는 모든 ea-* 패키지(kernel, needs, decision, flow, governance, infra)가 따르는 구현 표준이다.
+> ea-kernel에서 검증된 패턴을 정규화한 것이며, 새 레이어 구현 시 이 문서를 권위 출처(source of truth)로 참조한다.
+
+---
+
+## 1. 타입 시스템
+
+### 1.1 Frozen Dataclass
+
+모든 도메인 타입은 `@dataclass(frozen=True)`로 정의한다. 불변성은 해시 안전, 동시성 안전, 디버그 추적 용이를 보장한다.
+
+```python
+@dataclass(frozen=True)
+class LayerEntity:
+    name: str
+    layer: str
+    parent: str | None = None
+```
+
+안티패턴:
+
+```python
+# ❌ frozen 누락 — 의도치 않은 변경 허용
+@dataclass
+class MutableEntity:
+    name: str
+```
+
+### 1.2 Collection은 tuple
+
+가변 컬렉션(`list`)은 frozen dataclass의 불변 보장을 깨뜨린다. 모든 컬렉션 필드는 `tuple`을 사용한다.
+
+```python
+@dataclass(frozen=True)
+class KernelEntity:
+    name: str
+    owns: tuple[str, ...] = ()          # ✅ tuple
+    plays: tuple[str, ...] = ()         # ✅ tuple
+```
+
+안티패턴:
+
+```python
+# ❌ list 사용, mutable default
+@dataclass(frozen=True)
+class BadEntity:
+    items: list[str] = []
+```
+
+### 1.3 __post_init__ 인덱싱 캐시
+
+frozen dataclass에서 O(1) 조회가 필요할 때, `__post_init__`에서 `object.__setattr__`로 캐시 dict를 구축한다. 캐시 필드는 `init=False, repr=False, compare=False`로 선언하여 생성자/비교/출력에서 제외한다.
+
+```python
+@dataclass(frozen=True)
+class KernelSchema:
+    entities: tuple[KernelEntity, ...]
+    relations: tuple[KernelRelation, ...]
+    _entity_by_name: dict[str, KernelEntity] = field(
+        default_factory=dict, init=False, repr=False, compare=False,
+    )
+
+    def __post_init__(self) -> None:
+        entity_idx: dict[str, KernelEntity] = {}
+        for e in self.entities:
+            entity_idx[e.name] = e
+        object.__setattr__(self, '_entity_by_name', entity_idx)
+```
+
+### 1.4 I18nString
+
+다국어 지원이 필요한 문자열 필드는 `I18nString` 타입 별칭을 사용한다.
+
+```python
+I18nString = str | dict[str, str]
+
+@dataclass(frozen=True)
+class KernelEntity:
+    description: I18nString = ""
+    display_name: I18nString = ""
+```
+
+- 단일 언어: `str` 그대로
+- 다국어: `{"en": "Element", "ko": "요소"}`
+
+### 1.5 StrEnum
+
+상태, 분류, 조건 타입 등 유한 값 집합은 `StrEnum`으로 정의한다. 문자열 직렬화가 자동으로 보장된다.
+
+```python
+from enum import StrEnum
+
+class Layer(StrEnum):
+    L1 = "L1"
+    L2 = "L2"
+    L3 = "L3"
+    L4 = "L4"
+
+class RuleLifecycleState(StrEnum):
+    DRAFT = "draft"
+    REVIEW = "review"
+    APPROVED = "approved"
+    DEPRECATED = "deprecated"
+```
+
+---
+
+## 2. Design-First Pipeline
+
+### 2.1 5단계 개요
+
+모든 레이어가 동일한 "TOML 선언 → 런타임 판정" 파이프라인을 따른다.
+
+```
+Stage 1: 선언 (TOML)         — specs/ 디렉토리에 스키마/규칙 선언
+  ↓ loader.py
+Stage 2: 파싱 (Builder)       — TOML → 불변 타입 변환
+  ↓ build() + _validate()
+Stage 3: 패턴 컴파일          — @Category/#Layer → 구체 규칙 확장
+  ↓
+Stage 4: 자산 거버넌스         — DRAFT → REVIEW → APPROVED → DEPRECATED
+  ↓
+Stage 5: 카탈로그 합성         — 충돌 해소, 폴백 통합, 커버리지 검증
+```
+
+### 2.2 TOML 스펙 구조 (`specs/` 디렉토리)
+
+각 레이어는 `specs/` 디렉토리에 정규 TOML 스펙을 보관한다.
+
+```
+src/{package}/specs/
+├── {layer}_schema.toml           # 정규 스키마 (엔티티/관계/속성)
+├── {layer}_schema.{lang}.toml    # i18n 패치
+└── {layer}_rules.toml            # 유효성 규칙 (해당 시)
+```
+
+### 2.3 Self-Verification (TOML meta 카운트 검증)
+
+모든 스펙 TOML은 `[meta]` 섹션에 집계 메타데이터를 포함한다. 로더가 파싱 후 실제 카운트와 비교하여 불일치 시 `LoadError`를 발생시킨다.
+
+```toml
+[meta]
+kernel_version = "0.7.0"
+total_attributes = 20
+total_entities = 15
+total_relations = 14
+```
+
+```python
+# schema_loader.py — self-verification 패턴
+expected_attrs = meta.get("total_attributes")
+if expected_attrs is not None and len(attributes) != expected_attrs:
+    raise SchemaLoadError(
+        f"Expected {expected_attrs} attributes, got {len(attributes)}"
+    )
+```
+
+### 2.4 Schema Loader 패턴
+
+스키마 로더는 순수 파싱 함수로 구현한다. 예외는 커스텀 `LoadError`로 래핑한다.
+
+```python
+class SchemaLoadError(Exception):
+    """Raised when a schema TOML file cannot be parsed or validated."""
+
+def load_layer_schema(path: Path | None = None) -> LayerSchema:
+    path = path or (SPECS_DIR / "layer_schema.toml")
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError as err:
+        raise SchemaLoadError(f"Schema file not found: {path}") from err
+    doc = tomllib.loads(raw.decode())
+    # ... parse + self-verify + return typed schema
+```
+
+---
+
+## 3. 서비스 레이어
+
+### 3.1 순수 함수 + dict[str, Any] 반환
+
+서비스 함수는 순수 함수(부작용 없음)로 구현하며, JSON 직렬화 가능한 `dict[str, Any]`를 반환한다. CLI, MCP, API 등 어떤 소비자도 동일하게 사용할 수 있다.
+
+```python
+def list_entities(*, lang: str | None = None) -> dict[str, Any]:
+    """UC1: List all kernel entities grouped by layer."""
+    spec = _get_localized_spec(lang)
+    # ... build result dict
+    return {"total": len(spec.entities), "layers": layers}
+```
+
+### 3.2 Keyword-only 인자
+
+서비스 함수의 모든 인자는 keyword-only(`*` 이후)로 선언한다. 위치 인자 오용을 방지한다.
+
+```python
+def list_entities(*, lang: str | None = None) -> dict[str, Any]: ...
+def describe_rule(*, rule_id: str, lang: str | None = None) -> dict[str, Any]: ...
+def judge(*, source: str, target: str, relationship: str) -> dict[str, Any]: ...
+```
+
+### 3.3 에러 딕셔너리 (서비스 레벨)
+
+서비스 레벨에서는 예외를 발생시키지 않고, 에러 정보를 딕셔너리로 반환한다. 소비자(CLI/MCP/API)가 에러 처리를 자유롭게 결정할 수 있다.
+
+```python
+def describe_rule(*, rule_id: str) -> dict[str, Any]:
+    rule = corpus.get(rule_id)
+    if rule is None:
+        return {"error": f"Unknown rule: {rule_id}", "valid_rules": [...]}
+    return {"id": rule.id, "description": rule.description, ...}
+```
+
+### 3.4 Lazy Init 헬퍼 (`_get_*` 패턴)
+
+무거운 초기화(스펙 로딩, 코퍼스 빌드)는 모듈 레벨 `_get_*` 함수로 지연 로딩한다. 순환 import를 회피하고 필요할 때만 초기화한다.
+
+```python
+def _get_schema() -> LayerSchema:
+    from my_layer.spec import LAYER_SCHEMA
+    return LAYER_SCHEMA
+
+def _get_corpus() -> RuleCorpus:
+    from my_layer.rule_corpus import RuleCorpus
+    from my_layer.spec import LAYER_SCHEMA
+    return RuleCorpus.from_spec(LAYER_SCHEMA)
+```
+
+---
+
+## 4. 에러 처리 전략
+
+### 4.1 3계층: Parse(예외) → Validate(결과객체) → Service(에러딕셔너리)
+
+| 계층 | 전략 | 예시 |
+|------|------|------|
+| TOML 파싱 | 커스텀 예외 즉시 발생 | `SchemaLoadError`, `ProfileLoadError` |
+| 빌드/검증 | 에러 리스트 수집 → 일괄 발생 | `ProfileBuildError(errors: list[str])` |
+| 서비스 | 에러 딕셔너리 반환 | `{"error": "...", "context": [...]}` |
+
+### 4.2 에러 수집 후 일괄 발생 (fail-late)
+
+빌드/검증 단계에서는 첫 에러에서 멈추지 않고 모든 에러를 수집한 뒤 일괄 보고한다.
+
+```python
+errors: list[str] = []
+for rule in rules:
+    if not is_valid(rule):
+        errors.append(f"Invalid rule: {rule.id}")
+if errors:
+    raise ProfileBuildError(errors)
+```
+
+### 4.3 unknown 필드는 warnings.warn
+
+TOML 파싱 시 알 수 없는 필드는 예외가 아니라 `warnings.warn`으로 경고만 발생시킨다. 전방 호환성을 보장한다.
+
+---
+
+## 5. Store 패턴
+
+### 5.1 ABC 인터페이스 정의
+
+각 저장소는 ABC로 인터페이스를 먼저 정의한다. 구현체(SQLite, InMemory)는 이를 상속한다.
+
+```python
+from abc import ABC, abstractmethod
+
+class I18nStore(ABC):
+    @abstractmethod
+    def upsert(self, entry: TranslationEntry) -> TranslationEntry: ...
+    @abstractmethod
+    def get(self, kind: str, name: str, lang: str, field: str) -> TranslationEntry | None: ...
+    @abstractmethod
+    def list_translations(self, lang: str) -> tuple[TranslationEntry, ...]: ...
+```
+
+### 5.2 SQLite 구현 (contextmanager, __slots__, _init_schema)
+
+SQLite 구현체는 다음 패턴을 따른다:
+- `__slots__`로 메모리 절약
+- `_init_schema()`로 테이블 자동 생성
+- `@contextmanager`로 연결 관리
+
+```python
+class SQLiteI18nStore(I18nStore):
+    __slots__ = ("_db_path",)
+
+    def __init__(self, db_path: str | Path) -> None:
+        self._db_path = Path(db_path)
+        self._init_schema()
+
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        conn = sqlite3.connect(str(self._db_path))
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    def _init_schema(self) -> None:
+        with self._connection() as conn:
+            conn.executescript("""
+                CREATE TABLE IF NOT EXISTS translations (...)
+            """)
+```
+
+### 5.3 InMemory 구현 (테스트용)
+
+테스트용 인메모리 구현체는 dict 기반으로 동일 ABC를 구현한다. 프로덕션 코드와 테스트가 동일 인터페이스로 동작함을 보장한다.
+
+---
+
+## 6. Lifecycle / State Machine
+
+### 6.1 StrEnum 상태 + VALID_TRANSITIONS dict
+
+상태 머신의 상태는 `StrEnum`, 유효 전이는 `dict[State, tuple[State, ...]]`로 선언한다.
+
+```python
+class RuleLifecycleState(StrEnum):
+    DRAFT = "draft"
+    REVIEW = "review"
+    APPROVED = "approved"
+    DEPRECATED = "deprecated"
+
+VALID_TRANSITIONS: dict[RuleLifecycleState, tuple[RuleLifecycleState, ...]] = {
+    RuleLifecycleState.DRAFT: (RuleLifecycleState.REVIEW,),
+    RuleLifecycleState.REVIEW: (RuleLifecycleState.APPROVED, RuleLifecycleState.DRAFT),
+    RuleLifecycleState.APPROVED: (RuleLifecycleState.DEPRECATED,),
+    RuleLifecycleState.DEPRECATED: (),
+}
+
+def is_valid_transition(from_state: RuleLifecycleState, to_state: RuleLifecycleState) -> bool:
+    return to_state in VALID_TRANSITIONS.get(from_state, ())
+```
+
+### 6.2 불변 전이 (새 인스턴스 반환)
+
+상태 전이는 기존 인스턴스를 변경하지 않고 새 인스턴스를 반환한다 (frozen dataclass 원칙).
+
+```python
+def transition(self, to: RuleLifecycleState, actor: str) -> RuleLifecycle:
+    if not is_valid_transition(self.current, to):
+        raise ValueError(f"Invalid transition: {self.current} → {to}")
+    entry = LifecycleEntry(from_state=self.current, to_state=to, actor=actor, ...)
+    return RuleLifecycle(current=to, history=(*self.history, entry))
+```
+
+### 6.3 이력 추적 (state_history tuple)
+
+모든 전이 이력은 `tuple`로 누적하여 불변 감사 추적(audit trail)을 제공한다.
+
+---
+
+## 7. Event Bus
+
+### 7.1 Subscribe in __init__
+
+이벤트 구독은 컨트롤러의 `__init__`에서 수행한다. 구독/핸들러 관계를 생성 시점에 확정한다.
+
+```python
+class LifecycleController:
+    def __init__(self, event_bus: LifecycleEventPort, ...) -> None:
+        self.bus = event_bus
+        self._subscribe_events()
+
+    def _subscribe_events(self) -> None:
+        self.bus.subscribe(TriggerEventType.RULE_SUBMITTED, self.on_rule_submitted)
+        self.bus.subscribe(TriggerEventType.RULE_APPROVED, self.on_rule_approved)
+        self.bus.subscribe(TriggerEventType.CORPUS_UPDATED, self.on_corpus_updated)
+```
+
+### 7.2 핸들러 메서드 (`on_*` 네이밍)
+
+이벤트 핸들러는 `on_{event_name}` 네이밍 컨벤션을 따른다.
+
+```python
+def on_rule_submitted(self, event: LifecycleEvent) -> None:
+    """Handle RULE_SUBMITTED: notify reviewers."""
+    ...
+
+def on_rule_approved(self, event: LifecycleEvent) -> None:
+    """Handle RULE_APPROVED: update corpus."""
+    ...
+```
+
+---
+
+## 8. 테스트 컨벤션
+
+### 8.1 클래스 기반 그루핑 (TestXxx)
+
+관련 테스트를 `TestXxx` 클래스로 그루핑한다. 각 클래스는 하나의 기능/유스케이스를 다룬다.
+
+```python
+class TestListEntities:
+    """UC1: list_entities()."""
+
+    def test_returns_total_and_layers(self):
+        result = list_entities()
+        assert "total" in result
+        assert "layers" in result
+
+    def test_total_matches_sum_of_layers(self):
+        result = list_entities()
+        total_from_layers = sum(layer["count"] for layer in result["layers"])
+        assert result["total"] == total_from_layers
+```
+
+### 8.2 팩토리 함수 (`_make_*` 패턴)
+
+테스트 데이터 생성은 모듈 레벨 `_make_*` 팩토리 함수를 사용한다. 기본값을 제공하되 개별 필드 오버라이드를 허용한다.
+
+```python
+def _make_entry(
+    kind: str = "entity",
+    name: str = "element",
+    lang: str = "ko",
+    field: str = "display_name",
+    value: str = "요소",
+    en_source: str = "Element",
+) -> TranslationEntry:
+    return TranslationEntry(
+        target_kind=kind, target_name=name, lang=lang,
+        field=field, value=value, en_source=en_source,
+        version=1, created_by="test", created_at="", updated_at="",
+    )
+```
+
+### 8.3 tempfile.TemporaryDirectory (Store 테스트)
+
+SQLite Store 테스트는 `tempfile.TemporaryDirectory`로 격리된 DB를 사용한다.
+
+```python
+import tempfile
+
+class TestSQLiteStore:
+    def test_persistence(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = SQLiteThingStore(Path(tmpdir) / "thing.db")
+            store.upsert(entry)
+            got = store.get(...)
+            assert got is not None
+```
+
+### 8.4 Self-verification 테스트 (TOML meta 카운트)
+
+TOML 스펙의 `[meta]` 카운트가 실제 파싱 결과와 일치하는지 검증하는 테스트를 포함한다.
+
+```python
+class TestLoadKernelSchema:
+    def test_self_verification_counts(self):
+        version, schema, attributes, *_ = load_kernel_schema()
+        assert len(attributes) == 20
+        assert len(schema.entities) == 15
+        assert len(schema.relations) == 14
+```
+
+---
+
+## 9. Import 규율
+
+### 9.1 절대 경로 only
+
+모든 import는 절대 경로를 사용한다. 상대 경로 import 금지.
+
+```python
+# ✅
+from ea_kernel.types import KernelEntity, KernelSchema
+from ea_profile.builder import ProfileBuilder
+
+# ❌
+from .types import KernelEntity
+from ..profile.builder import ProfileBuilder
+```
+
+### 9.2 Lazy import (순환 회피)
+
+순환 의존 위험이 있거나 무거운 모듈은 함수 내부에서 지연 import한다.
+
+```python
+def _get_corpus() -> RuleCorpus:
+    from ea_kernel.rule_corpus import RuleCorpus
+    from ea_kernel.spec import KERNEL_SPEC
+    return RuleCorpus.from_kernel_spec(KERNEL_SPEC)
+```
+
+### 9.3 TYPE_CHECKING 블록
+
+타입 힌트에만 필요한 import는 `TYPE_CHECKING` 블록에 넣어 런타임 순환을 방지한다.
+
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ea_kernel.rule_corpus import RuleCorpus
+    from ea_kernel.evidence_analyzer import AnalysisReport
+```
+
+### 9.4 Import 순서
+
+```python
+from __future__ import annotations          # 1. __future__
+
+import sqlite3                              # 2. stdlib
+import tomllib
+from abc import ABC, abstractmethod
+from pathlib import Path
+
+import pytest                               # 3. 3rd-party (있을 경우)
+
+from ea_kernel.types import KernelSchema    # 4. local (절대 경로)
+from ea_profile.builder import ProfileBuilder
+
+if TYPE_CHECKING:                           # 5. TYPE_CHECKING
+    from ea_kernel.rule_corpus import RuleCorpus
+```
+
+---
+
+## 10. 파일/모듈 규칙
+
+### 10.1 Flat 구조
+
+패키지 내부는 flat 구조를 유지한다. 하위 디렉토리/서브패키지를 만들지 않는다.
+
+```
+src/ea_kernel/
+├── types.py
+├── schema_loader.py
+├── kernel_service.py
+└── ...                    # 모두 같은 레벨
+```
+
+### 10.2 파일 크기
+
+| 기준 | 줄 수 |
+|------|------|
+| 목표 | 700줄 |
+| 경고 | 1000줄 |
+| 강제 분할 | 1500줄 |
+
+Schema data 파일(순수 데이터 선언)은 예외.
+
+### 10.3 Python 3.11+ 타입 문법
+
+현대 타입 문법을 사용한다:
+
+```python
+# ✅ Python 3.11+
+list[str]
+dict[str, Any]
+str | None
+tuple[str, ...]
+
+# ❌ Legacy
+List[str]
+Dict[str, Any]
+Optional[str]
+Tuple[str, ...]
+```

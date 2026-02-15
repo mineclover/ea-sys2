@@ -4,6 +4,7 @@ import type {
     ProfileDescription,
     ProfileTopologyResponse,
     ReachableResponse,
+    ElementScopeResponse,
     PathsResponse,
     ImpactResponse,
     KernelEntitiesResponse,
@@ -16,6 +17,11 @@ import type {
     ModelState,
     PromotionProposal,
     SimulationResult,
+    NeedsCatalogSummary,
+    NeedSummary,
+    NeedDetail,
+    NeedsCatalogDetail,
+    NeedsByKernelRefResult,
 } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
@@ -54,10 +60,11 @@ export function fetchProfileDescription(name: string): Promise<ProfileDescriptio
 
 export function fetchProfileTopology(
     name: string,
-    opts?: { cross_layer?: boolean },
+    opts?: { cross_layer?: boolean; lang?: string },
 ): Promise<ProfileTopologyResponse> {
     const params = new URLSearchParams();
     if (opts?.cross_layer) params.set('cross_layer', 'true');
+    if (opts?.lang) params.set('lang', opts.lang);
     const qs = params.toString();
     return fetchJson(`/profiles/${encodeURIComponent(name)}/topology${qs ? `?${qs}` : ''}`);
 }
@@ -71,6 +78,16 @@ export function fetchReachable(
     if (opts?.max_depth != null) params.set('max_depth', String(opts.max_depth));
     if (opts?.relation) params.set('relation', opts.relation);
     return fetchJson(`/profiles/${encodeURIComponent(name)}/reachable?${params}`);
+}
+
+export function fetchElementScope(
+    name: string,
+    elements: string[],
+    opts?: { max_depth?: number },
+): Promise<ElementScopeResponse> {
+    const body: Record<string, unknown> = { elements };
+    if (opts?.max_depth != null) body.max_depth = opts.max_depth;
+    return postJson(`/profiles/${encodeURIComponent(name)}/element-scope`, body);
 }
 
 export function fetchPaths(
@@ -176,4 +193,56 @@ export function simulatePromotion(
 
 export function fetchDecisionTrace(decisionId: string): Promise<Record<string, unknown>> {
     return fetchJson(`/models/decisions/${encodeURIComponent(decisionId)}`);
+}
+
+// --- Needs ---
+
+export function fetchNeedsCatalogs(): Promise<NeedsCatalogSummary[]> {
+    return fetchJson('/needs/catalogs');
+}
+
+export function createNeedsCatalog(name: string, description = ''): Promise<{ catalog_id: string; transaction_id: string }> {
+    return postJson('/needs/catalogs', { name, description });
+}
+
+export function fetchNeedsCatalogDetail(catalogId: string): Promise<NeedsCatalogDetail> {
+    return fetchJson(`/needs/catalogs/${encodeURIComponent(catalogId)}`);
+}
+
+export function fetchCatalogNeeds(
+    catalogId: string,
+    opts?: { status?: string; priority?: string; stakeholder_id?: string },
+): Promise<NeedSummary[]> {
+    const params = new URLSearchParams();
+    if (opts?.status) params.set('status', opts.status);
+    if (opts?.priority) params.set('priority', opts.priority);
+    if (opts?.stakeholder_id) params.set('stakeholder_id', opts.stakeholder_id);
+    const qs = params.toString();
+    return fetchJson(`/needs/catalogs/${encodeURIComponent(catalogId)}/needs${qs ? `?${qs}` : ''}`);
+}
+
+export function fetchNeedDetail(catalogId: string, needId: string): Promise<NeedDetail> {
+    return fetchJson(`/needs/catalogs/${encodeURIComponent(catalogId)}/needs/${encodeURIComponent(needId)}`);
+}
+
+export function addStakeholder(
+    catalogId: string,
+    data: { name: string; role: string; context?: string },
+): Promise<Record<string, string>> {
+    return postJson(`/needs/catalogs/${encodeURIComponent(catalogId)}/stakeholders`, data);
+}
+
+export function expressNeed(
+    catalogId: string,
+    data: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+    return postJson(`/needs/catalogs/${encodeURIComponent(catalogId)}/needs`, data);
+}
+
+export function fetchCatalogHistory(catalogId: string): Promise<Record<string, unknown>[]> {
+    return fetchJson(`/needs/catalogs/${encodeURIComponent(catalogId)}/history`);
+}
+
+export function fetchNeedsByKernelRef(ref: string): Promise<NeedsByKernelRefResult> {
+    return fetchJson(`/needs/by-kernel-ref/${encodeURIComponent(ref)}`);
 }

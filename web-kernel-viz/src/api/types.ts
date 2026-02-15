@@ -26,7 +26,8 @@ export interface TopologyNode {
     layer: string;
     category: string;
     kernel_type: string;
-    description: string;
+    description: I18nString;
+    display_name?: I18nString;
 }
 
 export interface TopologyEdge {
@@ -52,6 +53,13 @@ export interface ReachableResponse {
     max_depth: number;
     relation_filter: string | null;
     reachable: string[];
+    count: number;
+}
+
+export interface ElementScopeResponse {
+    profile: string;
+    seeds: string[];
+    scope: string[];
     count: number;
 }
 
@@ -214,6 +222,73 @@ export interface PromotionProposal {
     change_type: string;
     rationale: string;
     status: string;
+}
+
+// --- Needs ---
+
+export interface NeedsCatalogSummary {
+    id: string;
+    name: string;
+    description: string;
+    needs_count: number;
+    stakeholder_count: number;
+    use_case_count: number;
+    updated_at: string;
+}
+
+export interface NeedSummary {
+    id: string;
+    lineage_id: string;
+    version: number;
+    status: string;
+    priority: string;
+    stakeholder_id: string;
+    action: string;
+    subject: string;
+    target: string | null;
+    kernel_refs: string[];
+    tags: string[];
+    updated_at: string;
+}
+
+export interface NeedDetail extends NeedSummary {
+    justifications: { type: string; description: string }[];
+    purpose: string;
+    cause_types: string[];
+    complexity: string;
+    use_case_id: string | null;
+    created_at: string;
+    process_units: {
+        id: string;
+        stage: string;
+        label: string;
+        description: string;
+        sequence: number;
+    }[];
+}
+
+export interface NeedsCatalogDetail {
+    id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+    stakeholders: { id: string; name: string; role: string; context: string }[];
+    needs: unknown[];
+    use_cases: { id: string; title: string; actor: string; situation: string; purpose: string }[];
+    relations: { id: string; source_id: string; target_id: string; type: string; description: string }[];
+}
+
+export interface NeedsByKernelRefResult {
+    kernel_ref: string;
+    matches: {
+        catalog_id: string;
+        catalog_name: string;
+        need_id: string;
+        action: string;
+        subject: string;
+        status: string;
+    }[];
 }
 
 export interface SimulationResult {

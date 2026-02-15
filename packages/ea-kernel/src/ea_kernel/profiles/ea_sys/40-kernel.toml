@@ -659,3 +659,492 @@ target = "KernelContractService"
 relation = "coordinates"
 priority = 70
 notes = "Profile endpoint delegates to contract service for contract sync."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer: Kernel 관점에서 본 다른 5개 레이어
+# ══════════════════════════════════════════════════════════════
+
+# ── Kernel → Infra: 커널 아티팩트 영속화 인터페이스 ──────────
+
+[[elements]]
+name = "KernelSpecStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Kernel view of Infra: row storage for versioned kernel spec snapshots."
+
+[[elements]]
+name = "KernelRuleStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Kernel view of Infra: row storage for compiled rule set artifacts."
+
+[[elements]]
+name = "KernelProfileStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Kernel view of Infra: row storage for profile definitions and serialized TOML."
+
+[[elements]]
+name = "KernelAuditLog"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Kernel view of Infra: append-only audit log for validation runs and contract changes."
+
+# ── Kernel → Governance: 커널 모델 거버넌스 참여 ─────────────
+
+[[elements]]
+name = "KernelModelRegistration"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel view of Governance: registration step for kernel model definitions."
+
+[[elements]]
+name = "KernelVersionGate"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel view of Governance: version activation gate for kernel spec changes."
+
+[[elements]]
+name = "KernelCompatibilityCheck"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel view of Governance: cross-layer compatibility validation of kernel contracts."
+
+[[elements]]
+name = "KernelApprovalPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Kernel view of Governance: approval policy governing kernel model promotion and deprecation."
+
+[[elements]]
+name = "KernelChangeRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Kernel view of Governance: change history record for kernel model evolution tracking."
+
+# ── Kernel → Decision: 의사결정 구조의 커널 해석 ─────────────
+
+[[elements]]
+name = "DecisionConstraintInput"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Kernel view of Decision: decision outcome records consumed as domain constraint inputs."
+
+[[elements]]
+name = "DecisionRuleMapping"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Kernel view of Decision: mapping table from decision criteria to kernel validation rules."
+
+[[elements]]
+name = "DecisionTraceReference"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Kernel view of Decision: trace reference linking kernel validation results back to originating decisions."
+
+[[elements]]
+name = "DecisionFeedbackChannel"
+layer = "Decision"
+category = "Interface"
+description = "Kernel view of Decision: feedback port for reporting kernel constraint violations to decision layer."
+
+# ── Kernel → Needs: 요구사항의 커널 도메인 매핑 ──────────────
+
+[[elements]]
+name = "NeedsDomainMapping"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Kernel view of Needs: mapping from needs catalog entries to kernel domain elements."
+
+[[elements]]
+name = "RequirementConstraintBridge"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Kernel view of Needs: bridge records translating functional/non-functional requirements into kernel constraints."
+
+[[elements]]
+name = "NeedsCoverageReport"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Kernel view of Needs: coverage report verifying all prioritized needs are represented in kernel model."
+
+[[elements]]
+name = "NeedsChangeNotification"
+layer = "Needs"
+category = "Event"
+description = "Kernel view of Needs: event raised when needs change requires kernel model re-validation."
+
+# ── Kernel → Flow: 커널 계약의 실행 인터페이스 ───────────────
+
+[[elements]]
+name = "FlowContractSnapshot"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Kernel view of Flow: published kernel contract snapshot consumed by flow execution stages."
+
+[[elements]]
+name = "FlowValidationHook"
+layer = "Flow"
+category = "Interface"
+description = "Kernel view of Flow: hook interface for flow to invoke kernel validation during execution."
+
+[[elements]]
+name = "FlowExecutionFeedback"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Kernel view of Flow: execution result records flowing back from flow to kernel for model refinement."
+
+[[elements]]
+name = "FlowConstraintViolationEvent"
+layer = "Flow"
+category = "Event"
+description = "Kernel view of Flow: event raised when flow execution violates kernel contract constraints."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Kernel ↔ Infra
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "InfraModelPort"
+target = "KernelSpecStore"
+relation = "contains"
+priority = 65
+notes = "Kernel-Infra: infra model port exposes spec storage."
+
+[[rules]]
+source = "InfraModelPort"
+target = "KernelRuleStore"
+relation = "contains"
+priority = 65
+notes = "Kernel-Infra: infra model port exposes rule storage."
+
+[[rules]]
+source = "InfraModelPort"
+target = "KernelProfileStore"
+relation = "contains"
+priority = 65
+notes = "Kernel-Infra: infra model port exposes profile storage."
+
+[[rules]]
+source = "InfraModelPort"
+target = "KernelAuditLog"
+relation = "contains"
+priority = 65
+notes = "Kernel-Infra: infra model port exposes audit log."
+
+[[rules]]
+source = "KernelProfileRegistry"
+target = "KernelProfileStore"
+relation = "depends_on"
+priority = 72
+notes = "Kernel-Infra: profile registry reads/writes through profile store."
+
+[[rules]]
+source = "KernelRuleCompiler"
+target = "KernelRuleStore"
+relation = "produces"
+priority = 72
+notes = "Kernel-Infra: rule compiler persists compiled rule sets."
+
+[[rules]]
+source = "KernelValidationService"
+target = "KernelSpecStore"
+relation = "depends_on"
+priority = 72
+notes = "Kernel-Infra: validation service reads active spec from store."
+
+[[rules]]
+source = "KernelValidationService"
+target = "KernelAuditLog"
+relation = "produces"
+priority = 72
+notes = "Kernel-Infra: validation service writes audit entries for each run."
+
+[[rules]]
+source = "PublishKernelContractAction"
+target = "KernelSpecStore"
+relation = "produces"
+priority = 72
+notes = "Kernel-Infra: publication writes versioned spec snapshot to store."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Kernel ↔ Governance
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "KernelModelRegistration"
+relation = "contains"
+priority = 65
+notes = "Kernel-Gov: governance port exposes kernel model registration."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "KernelVersionGate"
+relation = "contains"
+priority = 65
+notes = "Kernel-Gov: governance port exposes kernel version gate."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "KernelCompatibilityCheck"
+relation = "contains"
+priority = 65
+notes = "Kernel-Gov: governance port exposes compatibility check."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "KernelApprovalPolicy"
+relation = "contains"
+priority = 65
+notes = "Kernel-Gov: governance port exposes kernel approval policy."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "KernelChangeRecord"
+relation = "contains"
+priority = 65
+notes = "Kernel-Gov: governance port exposes change records."
+
+[[rules]]
+source = "KernelApprovalPolicy"
+target = "KernelContractService"
+relation = "constrains"
+priority = 72
+notes = "Kernel-Gov: approval policy constrains contract publication decisions."
+
+[[rules]]
+source = "KernelApprovalPolicy"
+target = "PublishKernelContractAction"
+relation = "constrains"
+priority = 72
+notes = "Kernel-Gov: approval policy gates publication action."
+
+[[rules]]
+source = "KernelModelRegistration"
+target = "KernelProfileRegistry"
+relation = "coordinates"
+priority = 72
+notes = "Kernel-Gov: governance registration triggers profile registry update."
+
+[[rules]]
+source = "KernelVersionGate"
+target = "KernelSpecSnapshot"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Gov: version gate consumes candidate spec snapshot."
+
+[[rules]]
+source = "KernelCompatibilityCheck"
+target = "KernelRuleSet"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Gov: compatibility check consumes rule set for cross-layer validation."
+
+[[rules]]
+source = "KernelContractService"
+target = "KernelChangeRecord"
+relation = "produces"
+priority = 72
+notes = "Kernel-Gov: contract service produces change records for governance tracking."
+
+[[rules]]
+source = "KernelSpecPublishedEvent"
+target = "KernelModelRegistration"
+relation = "triggers"
+priority = 72
+notes = "Kernel-Gov: spec publication triggers governance registration update."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Kernel ↔ Decision
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionConstraintInput"
+relation = "contains"
+priority = 65
+notes = "Kernel-Decision: decision port exposes constraint inputs."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionRuleMapping"
+relation = "contains"
+priority = 65
+notes = "Kernel-Decision: decision port exposes rule mappings."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionTraceReference"
+relation = "contains"
+priority = 65
+notes = "Kernel-Decision: decision port exposes trace references."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionFeedbackChannel"
+relation = "contains"
+priority = 65
+notes = "Kernel-Decision: decision port exposes feedback channel."
+
+[[rules]]
+source = "DecisionConstraintInput"
+target = "KernelRuleCompiler"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Decision: rule compiler consumes decision outcomes as constraint inputs."
+
+[[rules]]
+source = "DecisionRuleMapping"
+target = "KernelValidationService"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Decision: validation service uses rule mapping for decision-aware validation."
+
+[[rules]]
+source = "KernelValidationService"
+target = "DecisionTraceReference"
+relation = "produces"
+priority = 72
+notes = "Kernel-Decision: validation results include trace references to originating decisions."
+
+[[rules]]
+source = "KernelValidationService"
+target = "DecisionFeedbackChannel"
+relation = "coordinates"
+priority = 72
+notes = "Kernel-Decision: validation failures route feedback through decision channel."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Kernel ↔ Needs
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsDomainMapping"
+relation = "contains"
+priority = 65
+notes = "Kernel-Needs: needs port exposes domain mapping."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "RequirementConstraintBridge"
+relation = "contains"
+priority = 65
+notes = "Kernel-Needs: needs port exposes requirement-constraint bridge."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsCoverageReport"
+relation = "contains"
+priority = 65
+notes = "Kernel-Needs: needs port exposes coverage report."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsChangeNotification"
+relation = "contains"
+priority = 65
+notes = "Kernel-Needs: needs port exposes change notification."
+
+[[rules]]
+source = "NeedsDomainMapping"
+target = "KernelRuleCompiler"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Needs: rule compiler consumes needs-domain mapping for constraint generation."
+
+[[rules]]
+source = "RequirementConstraintBridge"
+target = "KernelValidationService"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Needs: validation service uses requirement bridge for needs-aware checks."
+
+[[rules]]
+source = "KernelValidationService"
+target = "NeedsCoverageReport"
+relation = "produces"
+priority = 72
+notes = "Kernel-Needs: validation produces coverage report verifying needs fulfillment."
+
+[[rules]]
+source = "NeedsChangeNotification"
+target = "ContractReviewStep"
+relation = "triggers"
+priority = 72
+notes = "Kernel-Needs: needs change triggers kernel contract re-review."
+
+# ══════════════════════════════════════════════════════════════
+# 6x6 Cross-Layer Rules: Kernel ↔ Flow
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowContractSnapshot"
+relation = "contains"
+priority = 65
+notes = "Kernel-Flow: flow port exposes contract snapshot."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowValidationHook"
+relation = "contains"
+priority = 65
+notes = "Kernel-Flow: flow port exposes validation hook."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowExecutionFeedback"
+relation = "contains"
+priority = 65
+notes = "Kernel-Flow: flow port exposes execution feedback."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowConstraintViolationEvent"
+relation = "contains"
+priority = 65
+notes = "Kernel-Flow: flow port exposes constraint violation event."
+
+[[rules]]
+source = "PublishKernelContractAction"
+target = "FlowContractSnapshot"
+relation = "produces"
+priority = 72
+notes = "Kernel-Flow: publication produces contract snapshot for flow consumption."
+
+[[rules]]
+source = "FlowValidationHook"
+target = "KernelValidationService"
+relation = "coordinates"
+priority = 72
+notes = "Kernel-Flow: flow validation hook delegates to kernel validation service."
+
+[[rules]]
+source = "FlowExecutionFeedback"
+target = "KernelRuleCompiler"
+relation = "consumes"
+priority = 72
+notes = "Kernel-Flow: rule compiler consumes flow feedback for rule refinement."
+
+[[rules]]
+source = "FlowConstraintViolationEvent"
+target = "ContractReviewStep"
+relation = "triggers"
+priority = 72
+notes = "Kernel-Flow: flow constraint violation triggers kernel contract re-review."
+
+[[rules]]
+source = "KernelConsistencyGoal"
+target = "FlowContractSnapshot"
+relation = "constrains"
+priority = 72
+notes = "Kernel-Flow: consistency goal constrains contract snapshot integrity."
+
+[[rules]]
+source = "KernelConsistencyGoal"
+target = "NeedsCoverageReport"
+relation = "constrains"
+priority = 72
+notes = "Kernel-Needs: consistency goal constrains coverage report completeness."

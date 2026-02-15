@@ -45,12 +45,26 @@ def _get_metadata_map() -> dict[str, RuleMetadata]:
     return metadata_map
 
 
+def _get_localized_spec(lang: str | None = None) -> KernelSchema:
+    """Return KERNEL_SPEC with optional i18n patch applied."""
+    spec = _get_spec()
+    if lang and lang != "en":
+        from ea_kernel.schema_loader import load_schema_i18n
+        spec = load_schema_i18n(spec, lang)
+    return spec
+
+
+def _serialize_i18n(value: str | dict[str, str]) -> str | dict[str, str]:
+    """Pass through I18nString as-is for JSON serialization."""
+    return value
+
+
 # ── UC1: Entity/Relation exploration ──────────────────────────
 
 
-def list_entities() -> dict[str, Any]:
+def list_entities(*, lang: str | None = None) -> dict[str, Any]:
     """UC1: List all kernel entities grouped by layer with hierarchy tree."""
-    spec = _get_spec()
+    spec = _get_localized_spec(lang)
     layers: list[dict[str, Any]] = []
     for layer in Layer:
         entities_in = spec.entities_in_layer(layer)
@@ -62,7 +76,8 @@ def list_entities() -> dict[str, Any]:
                     "name": e.name,
                     "parent": e.parent,
                     "is_abstract": e.is_abstract,
-                    "description": e.description,
+                    "description": _serialize_i18n(e.description),
+                    "display_name": _serialize_i18n(e.display_name) if e.display_name else None,
                 }
                 for e in entities_in
             ],
@@ -74,9 +89,9 @@ def list_entities() -> dict[str, Any]:
     }
 
 
-def list_relations() -> dict[str, Any]:
+def list_relations(*, lang: str | None = None) -> dict[str, Any]:
     """UC1: List all kernel relations grouped by layer with roles."""
-    spec = _get_spec()
+    spec = _get_localized_spec(lang)
     layers: list[dict[str, Any]] = []
     for layer in (Layer.L2, Layer.L3):
         relations_in = spec.relations_in_layer(layer)
@@ -91,7 +106,8 @@ def list_relations() -> dict[str, Any]:
                         {"name": role.name, "player": role.player}
                         for role in spec.effective_roles(r.name)
                     ],
-                    "description": r.description,
+                    "description": _serialize_i18n(r.description),
+                    "display_name": _serialize_i18n(r.display_name) if r.display_name else None,
                 }
                 for r in relations_in
             ],
@@ -297,8 +313,13 @@ def _load_profile(name: str) -> Any:
     return registry.get(name)
 
 
-def profile_topology(profile_name: str) -> dict[str, Any]:
-    """UC6: Full topology graph (nodes + edges) for a profile."""
+def profile_topology(profile_name: str, *, cross_layer: bool = False) -> dict[str, Any]:
+    """UC6: Full topology graph (nodes + edges) for a profile.
+
+    When *cross_layer* is True only edges that connect elements from
+    **different** domain layers are returned and nodes are pruned to those
+    participating in at least one such edge.
+    """
     from ea_kernel.profile_graph import ProfileTopologyGraph
 
     profile = _load_profile(profile_name)
@@ -307,21 +328,13 @@ def profile_topology(profile_name: str) -> dict[str, Any]:
 
     graph = ProfileTopologyGraph(profile)
 
-    nodes = [
-        {
-            "name": elem.name,
-            "layer": elem.layer,
-            "category": elem.category,
-            "kernel_type": elem.kernel_type,
-            "description": elem.description,
-        }
-        for elem in profile.elements
-    ]
+    # Build layer lookup: element name → domain layer
+    layer_of: dict[str, str] = {elem.name: elem.layer for elem in profile.elements}
 
-    edges: list[dict[str, Any]] = []
+    all_edges: list[dict[str, Any]] = []
     for src in graph.nodes:
         for edge in graph.outgoing(src):
-            edges.append({
+            all_edges.append({
                 "source": edge.source,
                 "target": edge.target,
                 "relation": edge.relation,
@@ -329,13 +342,48 @@ def profile_topology(profile_name: str) -> dict[str, Any]:
                 "priority": edge.priority,
             })
 
+    if cross_layer:
+        all_edges = [
+            e for e in all_edges
+            if layer_of.get(e["source"], "") != layer_of.get(e["target"], "")
+        ]
+        connected = {e["source"] for e in all_edges} | {e["target"] for e in all_edges}
+        nodes = [
+            {
+                "name": elem.name,
+                "layer": elem.layer,
+                "category": elem.category,
+                "kernel_type": elem.kernel_type,
+                "description": elem.description,
+            }
+            for elem in profile.elements
+            if elem.name in connected
+        ]
+    else:
+        nodes = [
+            {
+                "name": elem.name,
+                "layer": elem.layer,
+                "category": elem.category,
+                "kernel_type": elem.kernel_type,
+                "description": elem.description,
+            }
+            for elem in profile.elements
+        ]
+
+    # Relation distribution for the (possibly filtered) edge set
+    rel_dist: dict[str, int] = {}
+    for e in all_edges:
+        rel_dist[e["relation"]] = rel_dist.get(e["relation"], 0) + 1
+
     return {
         "profile": profile_name,
+        "cross_layer": cross_layer,
         "nodes": nodes,
-        "edges": edges,
+        "edges": all_edges,
         "node_count": len(nodes),
-        "edge_count": len(edges),
-        "relation_distribution": graph.relation_distribution(),
+        "edge_count": len(all_edges),
+        "relation_distribution": rel_dist,
     }
 
 

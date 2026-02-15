@@ -652,16 +652,16 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     # --- Kernel Schema Exploration API ---
 
     @_typed_get("/kernel/entities")
-    def get_kernel_entities() -> dict[str, Any]:
+    def get_kernel_entities(lang: str | None = None) -> dict[str, Any]:
         """List all kernel entities grouped by layer."""
         from ea_kernel.kernel_service import list_entities
-        return list_entities()
+        return list_entities(lang=lang)
 
     @_typed_get("/kernel/relations")
-    def get_kernel_relations() -> dict[str, Any]:
+    def get_kernel_relations(lang: str | None = None) -> dict[str, Any]:
         """List all kernel relations grouped by layer."""
         from ea_kernel.kernel_service import list_relations
-        return list_relations()
+        return list_relations(lang=lang)
 
     @_typed_get("/kernel/rules")
     def get_kernel_rules(group: str | None = None, relation: str | None = None) -> dict[str, Any]:
@@ -710,10 +710,14 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         return result
 
     @_typed_get("/profiles/{name}/topology")
-    def get_profile_topology(name: str) -> dict[str, Any]:
-        """Get full profile topology graph (nodes + edges)."""
+    def get_profile_topology(name: str, cross_layer: bool = False) -> dict[str, Any]:
+        """Get full profile topology graph (nodes + edges).
+
+        When *cross_layer* is true, only edges connecting elements from
+        different domain layers are returned.
+        """
         from ea_kernel.kernel_service import profile_topology
-        result = profile_topology(name)
+        result = profile_topology(name, cross_layer=cross_layer)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result

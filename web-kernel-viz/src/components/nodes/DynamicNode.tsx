@@ -67,10 +67,15 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
 
     // Applying custom styles if present
     const customStyle = data.style || {};
-    const borderColor = selected ? config.color : (customStyle.borderColor || '#e2e8f0');
+    const highlighted = !!(data as Record<string, unknown>).highlighted;
+    const borderColor = selected ? config.color : highlighted ? config.color : (customStyle.borderColor || '#e2e8f0');
     const borderRadius = customStyle.shape === 'circle' ? '50%' :
         customStyle.shape === 'rounded' ? 20 :
             DESIGN_SYSTEM.node.borderRadius;
+
+    const glowShadow = highlighted
+        ? `0 0 12px 4px ${config.color}60, 0 0 0 2px ${config.color}`
+        : undefined;
 
     return (
         <div style={{
@@ -78,7 +83,7 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
             minHeight: customStyle.height,
             borderRadius: borderRadius,
             background: customStyle.backgroundColor || '#fff',
-            boxShadow: selected ? `0 0 0 2px ${config.color}, 0 4px 6px -1px rgba(0, 0, 0, 0.1)` : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: glowShadow || (selected ? `0 0 0 2px ${config.color}, 0 4px 6px -1px rgba(0, 0, 0, 0.1)` : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)'),
             border: `1px solid ${borderColor}`,
             borderWidth: customStyle.borderWidth || 1,
             transition: 'all 0.2s ease',

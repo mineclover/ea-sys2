@@ -71,9 +71,10 @@ export const CustomEdge = ({
     }
 
     const diagramStyle = (data?.style as DiagramStyle) || {};
+    const highlighted = !!(data as Record<string, unknown> | undefined)?.highlighted;
     const connectorType = diagramStyle.connector || 'solid';
-    const strokeColor = diagramStyle.strokeColor || '#555';
-    const strokeWidth = diagramStyle.strokeWidth || 1.5;
+    const strokeColor = highlighted ? '#3b82f6' : (diagramStyle.strokeColor || '#555');
+    const strokeWidth = highlighted ? 2.5 : (diagramStyle.strokeWidth || 1.5);
 
     let strokeDasharray: string | undefined = undefined;
 

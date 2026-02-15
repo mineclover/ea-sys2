@@ -1,16 +1,21 @@
 
 import { useState, useCallback } from 'react';
 
-export type Section = 'explorer' | 'governance';
+export type Section = 'explorer' | 'needs' | 'governance';
 
 export type ExplorerView = 'kernel-schema' | 'profile-graph' | 'rules';
+export type NeedsView = 'catalog';
 export type GovernanceView = 'rule-lifecycle' | 'models' | 'decisions' | 'simulation';
-export type SubView = ExplorerView | GovernanceView;
+export type SubView = ExplorerView | NeedsView | GovernanceView;
 
 const EXPLORER_VIEWS: { key: ExplorerView; label: string }[] = [
     { key: 'kernel-schema', label: 'Kernel Schema' },
     { key: 'profile-graph', label: 'Profile Graph' },
     { key: 'rules', label: 'Rules' },
+];
+
+const NEEDS_VIEWS: { key: NeedsView; label: string }[] = [
+    { key: 'catalog', label: 'Needs Catalog' },
 ];
 
 const GOVERNANCE_VIEWS: { key: GovernanceView; label: string }[] = [
@@ -20,12 +25,16 @@ const GOVERNANCE_VIEWS: { key: GovernanceView; label: string }[] = [
     { key: 'simulation', label: 'Simulation' },
 ];
 
+export type Lang = 'en' | 'ko';
+
 interface TopNavProps {
     section: Section;
     subView: SubView;
     onNavigate: (section: Section, subView: SubView) => void;
     onToggleSidePanel: () => void;
     sidePanelOpen: boolean;
+    lang: Lang;
+    onToggleLang: () => void;
     // Profile selector (shown when profile-graph is active)
     profiles?: { name: string; version: string }[];
     selectedProfile?: string;
@@ -79,11 +88,23 @@ function CopyBtn({ value, title }: { value: string; title?: string }) {
     );
 }
 
+const langBtnStyle = (active: boolean) => ({
+    padding: '3px 8px',
+    fontSize: 11,
+    fontWeight: (active ? 700 : 400) as number,
+    border: `1px solid ${active ? '#3b82f6' : '#e2e8f0'}`,
+    borderRadius: 4,
+    background: active ? '#eff6ff' : '#fff',
+    color: active ? '#3b82f6' : '#94a3b8',
+    cursor: 'pointer' as const,
+});
+
 export default function TopNav({
     section, subView, onNavigate, onToggleSidePanel, sidePanelOpen,
+    lang, onToggleLang,
     profiles, selectedProfile, onSelectProfile,
 }: TopNavProps) {
-    const views = section === 'explorer' ? EXPLORER_VIEWS : GOVERNANCE_VIEWS;
+    const views = section === 'explorer' ? EXPLORER_VIEWS : section === 'needs' ? NEEDS_VIEWS : GOVERNANCE_VIEWS;
     const showProfileSelector = subView === 'profile-graph' && profiles && profiles.length > 0;
 
     return (
@@ -113,15 +134,29 @@ export default function TopNav({
                     Explorer
                 </button>
                 <button
+                    onClick={() => onNavigate('needs', 'catalog')}
+                    style={sectionBtnStyle(section === 'needs')}
+                >
+                    Needs
+                </button>
+                <button
                     onClick={() => onNavigate('governance', 'rule-lifecycle')}
                     style={sectionBtnStyle(section === 'governance')}
                 >
                     Governance
                 </button>
 
-                {/* Profile selector — right-aligned when profile-graph is active */}
+                {/* Language toggle + Profile selector — right-aligned */}
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', gap: 2 }}>
+                        <button onClick={lang === 'en' ? undefined : onToggleLang} style={langBtnStyle(lang === 'en')}>EN</button>
+                        <button onClick={lang === 'ko' ? undefined : onToggleLang} style={langBtnStyle(lang === 'ko')}>KO</button>
+                    </div>
+                </div>
+
+                {/* Profile selector (shown when profile-graph is active) */}
                 {showProfileSelector && (
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
                             Profile
                         </span>

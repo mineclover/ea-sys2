@@ -16,6 +16,7 @@ members = [
     "ea-kernel-contract",
     "ea-kernel-self",
     "ea-needs",
+    "ea-profile",
     "ea-sys2",
 ]
 
@@ -379,6 +380,7 @@ dependencies = [
     { name = "ea-flow" },
     { name = "ea-kernel" },
     { name = "ea-needs" },
+    { name = "ea-profile" },
 ]
 
 [package.optional-dependencies]
@@ -393,6 +395,7 @@ requires-dist = [
     { name = "ea-flow", editable = "packages/ea-flow" },
     { name = "ea-kernel", editable = "packages/ea-kernel" },
     { name = "ea-needs", editable = "packages/ea-needs" },
+    { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]
@@ -420,6 +423,9 @@ provides-extras = ["dev"]
 name = "ea-kernel"
 version = "2.5.0"
 source = { editable = "packages/ea-kernel" }
+dependencies = [
+    { name = "ea-profile" },
+]
 
 [package.optional-dependencies]
 api = [
@@ -441,6 +447,7 @@ typedb = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.12.0" },
     { name = "pydantic", marker = "extra == 'api'", specifier = ">=2.10.0" },
@@ -498,6 +505,7 @@ version = "0.1.0"
 source = { editable = "packages/ea-needs" }
 dependencies = [
     { name = "ea-kernel" },
+    { name = "ea-profile" },
 ]
 
 [package.optional-dependencies]
@@ -509,6 +517,25 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ea-kernel", editable = "packages/ea-kernel" },
+    { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
+name = "ea-profile"
+version = "0.1.0"
+source = { editable = "packages/ea-profile" }
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]
@@ -527,6 +554,7 @@ dependencies = [
     { name = "ea-kernel-contract" },
     { name = "ea-kernel-self" },
     { name = "ea-needs" },
+    { name = "ea-profile" },
 ]
 
 [package.optional-dependencies]
@@ -560,6 +588,7 @@ requires-dist = [
     { name = "ea-kernel-contract", editable = "packages/ea-kernel-contract" },
     { name = "ea-kernel-self", editable = "packages/ea-kernel-self" },
     { name = "ea-needs", editable = "packages/ea-needs" },
+    { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },

@@ -28,7 +28,10 @@ src/ea_needs/
 ├── __init__.py          # 패키지 docstring + __version__
 ├── types.py             # N1: frozen vocabulary (Stakeholder, Desire, Justification, NeedStatement, enums)
 ├── catalog.py           # N2: NeedCatalog aggregate root + Need mutable wrapper + NeedRelation
+├── needs_schema.py      # N2.5: NeedsSchema (SchemaPort 만족) + NEEDS_SCHEMA 싱글턴
+├── condition_registry.py # N2.5: needs_condition_registry() — kernel defaults + needs 4개 조건
 ├── kernel_bridge.py     # N3: lazy kernel import (유일한 ea_kernel 참조점)
+├── profile_bridge.py    # N3: load_needs_profile/load_needs_profile_from_content
 └── repository.py        # N3: 파일 기반 영속화 (JSON)
 ```
 
@@ -67,11 +70,16 @@ from ea_needs.catalog import NeedCatalog, Need
 types.py: 독립 (enums, Stakeholder, Desire, Justification, NeedStatement)
   ← catalog.py (모든 types import)
   ← repository.py (NeedCatalog)
-kernel_bridge.py: ea_kernel.definition lazy import (유일한 Kernel 참조점)
+needs_schema.py: 독립 (NeedsSchema, NeedsEntity, NeedsRelation, NEEDS_SCHEMA)
+condition_registry.py: ea_kernel.profile_types lazy import (ConditionRegistry)
+kernel_bridge.py: ea_kernel.definition lazy import (유일한 Kernel core 참조점)
+profile_bridge.py: needs_schema + condition_registry ← ea_kernel.profile_loader lazy import
 ```
 
 types.py는 순수 어휘(N1)이므로 프로세스(N2)나 통합(N3) 모듈을 절대 import하지 않는다.
-kernel_bridge.py만 ea_kernel을 lazy import한다. 나머지 모듈은 Kernel 타입을 알지 못하며, string ID 기반 간접 참조만 사용한다.
+needs_schema.py는 독립 어휘(N2.5)이며 ea_kernel에 의존하지 않는다.
+kernel_bridge.py, condition_registry.py, profile_bridge.py만 ea_kernel을 lazy import한다.
+나머지 모듈은 Kernel 타입을 알지 못하며, string ID 기반 간접 참조만 사용한다.
 
 ### Test Convention
 

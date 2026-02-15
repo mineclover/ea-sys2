@@ -590,6 +590,10 @@ class NeedCatalog:
     def needs_by_use_case(self, use_case_id: str) -> list[Need]:
         return [n for n in self.needs if n.use_case_id == use_case_id]
 
+    def needs_by_kernel_ref(self, kernel_ref: str) -> list[Need]:
+        """Find needs whose kernel_refs include the given reference."""
+        return [n for n in self.needs if kernel_ref in n.statement.kernel_refs]
+
     def get_relations_for(self, need_id: str) -> list[NeedRelation]:
         return [r for r in self.relations if r.source_id == need_id or r.target_id == need_id]
 

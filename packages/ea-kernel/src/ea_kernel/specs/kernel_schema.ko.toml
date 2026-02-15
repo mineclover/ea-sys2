@@ -1,0 +1,195 @@
+# Kernel Schema — Korean (ko) i18n Patch
+#
+# display_name: 한국어 표시명
+# description: 한국어 설명
+# _en_*: 번역 시점 영문 원본 (stale 감지용)
+
+# ═══════════════════════════════════════════════════════════════════
+# L1 Structure — entities (10)
+# ═══════════════════════════════════════════════════════════════════
+
+[entities.element]
+_en_display_name = "Element"
+_en_description = "Root of all kernel elements"
+display_name = "요소"
+description = "모든 커널 요소의 루트"
+
+[entities.namespace]
+_en_display_name = "Namespace"
+_en_description = "Element that can contain other named elements"
+display_name = "이름공간"
+description = "다른 명명된 요소를 포함할 수 있는 요소"
+
+[entities.metatype]
+_en_display_name = "Metatype"
+_en_description = "Classifies instances — KerML Type equivalent"
+display_name = "메타타입"
+description = "인스턴스를 분류 — KerML Type 동등"
+
+[entities.feature]
+_en_display_name = "Feature"
+_en_description = "Typed characteristic of a metatype — KerML Feature (is also a Type)"
+display_name = "피처"
+description = "메타타입의 타입 지정된 특성 — KerML Feature (그 자체가 Type)"
+
+[entities.port]
+_en_display_name = "Port"
+_en_description = "Access or interaction point exposed by a structure"
+display_name = "포트"
+description = "구조체가 노출하는 접근/상호작용 지점"
+
+[entities.classifier]
+_en_display_name = "Classifier"
+_en_description = "Metatype that can be instantiated"
+display_name = "분류자"
+description = "인스턴스화 가능한 메타타입"
+
+[entities.structure]
+_en_display_name = "Structure"
+_en_description = "Active structured classifier — equivalent to UML Class"
+display_name = "구조체"
+description = "능동 구조 분류자 — UML Class 동등"
+
+[entities.item]
+_en_display_name = "Item"
+_en_description = "Passive classifier with identity — data-bearing object"
+display_name = "아이템"
+description = "정체성을 가진 수동 분류자 — 데이터 객체"
+
+[entities.datatype]
+_en_display_name = "Datatype"
+_en_description = "Value type without identity"
+display_name = "데이터타입"
+description = "정체성 없는 값 타입"
+
+[entities.package]
+_en_display_name = "Package"
+_en_description = "Concrete namespace container — groups elements"
+display_name = "패키지"
+description = "구체 이름공간 컨테이너 — 요소 그룹핑"
+
+# ═══════════════════════════════════════════════════════════════════
+# L4 Concrete — entities (5)
+# ═══════════════════════════════════════════════════════════════════
+
+[entities.step]
+_en_display_name = "Step"
+_en_description = "Unit of behavior — a feature that participates in successions"
+display_name = "스텝"
+description = "행위 단위 — succession에 참여하는 피처"
+
+[entities.action]
+_en_display_name = "Action"
+_en_description = "Executable step — concrete unit of computation"
+display_name = "액션"
+description = "실행 가능한 스텝 — 구체 계산 단위"
+
+[entities.event]
+_en_display_name = "Event"
+_en_description = "State change occurrence that triggers behavior"
+display_name = "이벤트"
+description = "행위를 트리거하는 상태 변화 발생"
+
+[entities.expression]
+_en_display_name = "Expression"
+_en_description = "Evaluatable value computation — composable via ownership"
+display_name = "표현식"
+description = "평가 가능한 값 계산 — ownership을 통해 합성 가능"
+
+[entities.state]
+_en_display_name = "State"
+_en_description = "Behavioral state — classifies situations within a lifecycle"
+display_name = "상태"
+description = "행위적 상태 — 생명주기 내 상황 분류"
+
+# ═══════════════════════════════════════════════════════════════════
+# L2 Relationship — relations (8)
+# ═══════════════════════════════════════════════════════════════════
+
+[relations.membership]
+_en_display_name = "Membership"
+_en_description = "Element belongs to a namespace"
+display_name = "소속"
+description = "요소가 이름공간에 속함"
+
+[relations.ownership]
+_en_display_name = "Ownership"
+_en_description = "Compositional ownership of elements"
+display_name = "소유"
+description = "요소의 구성적 소유 — 생명주기 결합"
+
+[relations.specialization]
+_en_display_name = "Specialization"
+_en_description = "Subtype relationship — inheritance of features"
+display_name = "특수화"
+description = "하위 타입 관계 — 피처 상속"
+
+[relations.feature_typing]
+_en_display_name = "Feature Typing"
+_en_description = "Feature is typed by a metatype"
+display_name = "피처 타이핑"
+description = "피처가 메타타입에 의해 타입 지정됨"
+
+[relations.association]
+_en_display_name = "Association"
+_en_description = "Structural connection between metatypes"
+display_name = "연관"
+description = "메타타입 간 구조적 연결"
+
+[relations.connector]
+_en_display_name = "Connector"
+_en_description = "Link between features — base for behavioral qualification"
+display_name = "커넥터"
+description = "피처 간 링크 — 행위적 자격 부여의 기반"
+
+[relations.redefinition]
+_en_display_name = "Redefinition"
+_en_description = "Feature redefines another feature in a specialization context"
+display_name = "재정의"
+description = "특수화 컨텍스트에서 피처를 완전 교체"
+
+[relations.subsetting]
+_en_display_name = "Subsetting"
+_en_description = "Feature values are a subset of another feature's values"
+display_name = "하위집합"
+description = "피처 값이 다른 피처 값의 부분집합"
+
+# ═══════════════════════════════════════════════════════════════════
+# L3 Behavioral — relations (6)
+# ═══════════════════════════════════════════════════════════════════
+
+[relations.flow]
+_en_display_name = "Flow"
+_en_description = "Data/object flow along a connector — behavioral Connector"
+display_name = "흐름"
+description = "커넥터를 따른 데이터/객체 흐름"
+
+[relations.succession]
+_en_display_name = "Succession"
+_en_description = "Temporal ordering with execution semantics"
+display_name = "계승"
+description = "실행 의미론을 가진 시간적 순서"
+
+[relations.interaction]
+_en_display_name = "Interaction"
+_en_description = "Message exchange between features"
+display_name = "상호작용"
+description = "피처 간 메시지 교환"
+
+[relations.triggering]
+_en_display_name = "Triggering"
+_en_description = "Event triggers a behavioral response"
+display_name = "트리거링"
+description = "이벤트가 행위적 응답을 촉발"
+
+[relations.guarding]
+_en_display_name = "Guarding"
+_en_description = "Condition guards a behavioral element"
+display_name = "가드"
+description = "조건이 행위 요소를 보호"
+
+[relations.transition]
+_en_display_name = "Transition"
+_en_description = "State transition — guard condition 충족 시 source에서 target 상태로 전이"
+display_name = "전이"
+description = "가드 조건 충족 시 소스에서 타겟 상태로 전이"

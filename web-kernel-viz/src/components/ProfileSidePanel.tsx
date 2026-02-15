@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { fetchProfileDescription, fetchProfileTopology } from '@/api/client';
 import type { ProfileDescription, ProfileTopologyResponse } from '@/api/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
 
 interface ProfileSidePanelProps {
     profileName: string;
@@ -11,6 +10,13 @@ interface ProfileSidePanelProps {
     onToggleLayer: (layer: string) => void;
     crossLayerOnly: boolean;
     onToggleCrossLayer: () => void;
+    goalScope: string | null;
+    onSelectGoalScope: (goal: string | null) => void;
+    scopeCount: { visible: number; total: number } | null;
+    needScope: string | null;
+    onSelectNeedScope: (needId: string | null) => void;
+    needScopeCount: { visible: number; total: number } | null;
+    needOptions: { id: string; label: string }[];
 }
 
 const LAYER_COLORS: Record<string, string> = {
@@ -28,6 +34,13 @@ export default function ProfileSidePanel({
     onToggleLayer,
     crossLayerOnly,
     onToggleCrossLayer,
+    goalScope,
+    onSelectGoalScope,
+    scopeCount,
+    needScope,
+    onSelectNeedScope,
+    needScopeCount,
+    needOptions,
 }: ProfileSidePanelProps) {
     const [desc, setDesc] = useState<ProfileDescription | null>(null);
     const [topo, setTopo] = useState<ProfileTopologyResponse | null>(null);
@@ -122,6 +135,66 @@ export default function ProfileSidePanel({
                             lineHeight: 1.6,
                         }}
                     />
+                </div>
+            )}
+
+            {/* Goal Scope */}
+            {topo && (() => {
+                const goals = topo.nodes.filter((n) => n.category === 'Goal');
+                if (goals.length === 0) return null;
+                return (
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Goal Scope</div>
+                        <select
+                            value={goalScope ?? ''}
+                            onChange={(e) => onSelectGoalScope(e.target.value || null)}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                fontSize: 11, padding: '5px 6px',
+                                border: '1px solid #e2e8f0', borderRadius: 4,
+                                background: goalScope ? '#eff6ff' : '#fff',
+                                color: '#1e293b', cursor: 'pointer',
+                            }}
+                        >
+                            <option value="">All (no scope)</option>
+                            {goals.map((g) => (
+                                <option key={g.name} value={g.name}>{g.name}</option>
+                            ))}
+                        </select>
+                        {scopeCount && (
+                            <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                                Showing {scopeCount.visible} of {scopeCount.total} elements
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+            {/* Need Scope */}
+            {needOptions.length > 0 && (
+                <div style={sectionStyle}>
+                    <div style={labelStyle}>Need Scope</div>
+                    <select
+                        value={needScope ?? ''}
+                        onChange={(e) => onSelectNeedScope(e.target.value || null)}
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            fontSize: 11, padding: '5px 6px',
+                            border: '1px solid #e2e8f0', borderRadius: 4,
+                            background: needScope ? '#f0fdf4' : '#fff',
+                            color: '#1e293b', cursor: 'pointer',
+                        }}
+                    >
+                        <option value="">All (no scope)</option>
+                        {needOptions.map((n) => (
+                            <option key={n.id} value={n.id}>{n.label}</option>
+                        ))}
+                    </select>
+                    {needScopeCount && (
+                        <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                            Showing {needScopeCount.visible} of {needScopeCount.total} elements
+                        </div>
+                    )}
                 </div>
             )}
 

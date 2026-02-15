@@ -11,7 +11,7 @@ export interface HandleConfig {
 
 export type DynamicNodeData = {
     label: string;
-    subLabel?: string;
+    description?: string;
     handles?: {
         top?: HandleConfig[];
         right?: HandleConfig[];
@@ -114,31 +114,32 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
 
             {/* Body */}
             <div style={{
-                padding: '10px 16px',
+                padding: '8px 12px',
                 minHeight: 40,
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: data.subLabel ? 2 : 0,
+                gap: data.description ? 4 : 0,
             }}>
                 <span style={{
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 600,
                     color: '#1e293b',
-                    textAlign: 'center',
-                    lineHeight: 1.4,
+                    lineHeight: 1.3,
                 }}>
                     {data.label}
                 </span>
-                {data.subLabel && (
+                {data.description && (
                     <span style={{
                         fontSize: 10,
-                        color: '#94a3b8',
-                        textAlign: 'center',
-                        lineHeight: 1.2,
+                        color: '#64748b',
+                        lineHeight: 1.4,
+                        maxWidth: 200,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
                     }}>
-                        {data.subLabel}
+                        {data.description}
                     </span>
                 )}
             </div>

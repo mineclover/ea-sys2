@@ -109,6 +109,7 @@ function buildElements(
     entities: KernelEntitiesResponse,
     relations: KernelRelationsResponse,
     lookup: SchemaLookup,
+    lang: string,
 ) {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -116,12 +117,13 @@ function buildElements(
     for (const layer of entities.layers) {
         const layerKey = shortLayer(layer.name);
         for (const entity of layer.entities) {
-            const koName = i18nText(entity.display_name, 'ko');
+            const title = (lang === 'ko' ? i18nText(entity.display_name, 'ko') : undefined) || entity.name;
+            const desc = i18nText(entity.description, lang);
             nodes.push({
                 id: entity.name,
                 type: 'dynamic',
                 position: { x: 0, y: 0 },
-                data: { label: entity.name, subLabel: koName, layer: layerKey },
+                data: { label: title, description: desc, layer: layerKey },
             });
 
             if (entity.parent) {
@@ -152,7 +154,7 @@ function buildElements(
             let current: KernelRelationItem | undefined = relation;
 
             while ((!roles || roles.length === 0) && current?.parent) {
-                const parentName = current.parent;
+                const parentName: string = current.parent;
                 current = undefined;
                 for (const rl of relations.layers) {
                     current = rl.relations.find((r) => r.name === parentName);
@@ -199,15 +201,14 @@ type InfoData =
 
 const labelStyle = { fontSize: 10, fontWeight: 700 as const, color: '#94a3b8', textTransform: 'uppercase' as const };
 
-function InfoPanel({ info, onClose }: { info: InfoData; onClose: () => void }) {
+function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onClose: () => void }) {
     const isEntity = info.kind === 'entity';
     const item = isEntity ? info.entity : info.relation;
     const name = item.name;
     const layer = item.layerName;
     const parent = item.parent;
-    const koName = i18nText(item.display_name, 'ko');
-    const enDesc = i18nText(item.description, 'en');
-    const koDesc = i18nText(item.description, 'ko');
+    const displayName = i18nText(item.display_name, lang);
+    const desc = i18nText(item.description, lang);
 
     return (
         <Panel position="bottom-right">
@@ -229,21 +230,18 @@ function InfoPanel({ info, onClose }: { info: InfoData; onClose: () => void }) {
                     }}>&times;</button>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 2 }}>
-                    {name}
-                    {koName && <span style={{ fontWeight: 400, color: '#64748b', marginLeft: 6 }}>{koName}</span>}
+                    {displayName || name}
+                    {displayName && displayName !== name && (
+                        <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: 6, fontSize: 11 }}>{name}</span>
+                    )}
                 </div>
                 <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>
                     {layer}{parent ? ` · extends ${parent}` : ''}
                     {isEntity && info.entity.is_abstract ? ' · abstract' : ''}
                 </div>
-                {enDesc && (
+                {desc && (
                     <div style={{ fontSize: 11, color: '#475569', marginTop: 6, lineHeight: 1.5 }}>
-                        {enDesc}
-                    </div>
-                )}
-                {koDesc && koDesc !== enDesc && (
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, lineHeight: 1.5 }}>
-                        {koDesc}
+                        {desc}
                     </div>
                 )}
                 {!isEntity && info.relation.roles && info.relation.roles.length > 0 && (
@@ -263,12 +261,17 @@ function InfoPanel({ info, onClose }: { info: InfoData; onClose: () => void }) {
 
 // --- Main component ---
 
-const LayoutFlow = () => {
+interface LayoutFlowProps {
+    lang: string;
+}
+
+const LayoutFlow = ({ lang }: LayoutFlowProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView } = useReactFlow();
     const [error, setError] = useState<string | null>(null);
     const [lookup, setLookup] = useState<SchemaLookup | null>(null);
+    const [rawData, setRawData] = useState<{ ent: KernelEntitiesResponse; rel: KernelRelationsResponse } | null>(null);
     const [info, setInfo] = useState<InfoData | null>(null);
 
     const onLayout = useCallback(
@@ -284,17 +287,28 @@ const LayoutFlow = () => {
         [nodes, edges, setNodes, setEdges, fitView],
     );
 
+    // Fetch data once (with ko to get both languages)
     useEffect(() => {
         Promise.all([fetchKernelEntities({ lang: 'ko' }), fetchKernelRelations({ lang: 'ko' })])
             .then(([ent, rel]) => {
                 const lk = buildLookup(ent, rel);
                 setLookup(lk);
-                const { nodes: n, edges: e } = buildElements(ent, rel, lk);
+                setRawData({ ent, rel });
+                const { nodes: n, edges: e } = buildElements(ent, rel, lk, lang);
                 setNodes(n);
                 setEdges(e);
             })
             .catch((err) => setError(String(err)));
-    }, [setNodes, setEdges]);
+    }, [setNodes, setEdges]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Rebuild nodes when lang changes
+    useEffect(() => {
+        if (!rawData || !lookup) return;
+        const { nodes: n, edges: e } = buildElements(rawData.ent, rawData.rel, lookup, lang);
+        setNodes(n);
+        setEdges(e);
+        window.requestAnimationFrame(() => fitView());
+    }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (nodes.length > 0) {
@@ -355,16 +369,16 @@ const LayoutFlow = () => {
                     <button onClick={() => onLayout('TB')} style={{ marginRight: 10 }}>Vertical Layout</button>
                     <button onClick={() => onLayout('LR')}>Horizontal Layout</button>
                 </Panel>
-                {info && <InfoPanel info={info} onClose={() => setInfo(null)} />}
+                {info && <InfoPanel info={info} lang={lang} onClose={() => setInfo(null)} />}
             </ReactFlow>
         </div>
     );
 };
 
-export default function FlowGraph() {
+export default function FlowGraph({ lang = 'en' }: { lang?: string }) {
     return (
         <ReactFlowProvider>
-            <LayoutFlow />
+            <LayoutFlow lang={lang} />
         </ReactFlowProvider>
     );
 }

@@ -23,7 +23,14 @@ import { DynamicNode } from './nodes';
 import { routeEdges } from '@/utils/routing';
 import TraversalPanel from './TraversalPanel';
 import { fetchProfileTopology, fetchReachable } from '@/api/client';
-import type { ProfileTopologyResponse, TopologyNode } from '@/api/types';
+import type { ProfileTopologyResponse, TopologyNode, I18nString } from '@/api/types';
+
+/** Extract a specific language from an I18nString, falling back to the raw value. */
+function i18nText(value: I18nString | null | undefined, lang: string): string | undefined {
+    if (value == null) return undefined;
+    if (typeof value === 'string') return value;
+    return value[lang] ?? value['en'];
+}
 
 const nodeTypes = {
     dynamic: DynamicNode,
@@ -36,14 +43,18 @@ function buildElements(
     topo: ProfileTopologyResponse,
     visibleLayers: Set<string>,
     crossLayerOnly: boolean,
+    lang: string,
+    scopeElements?: Set<string>,
 ) {
     // Build layer lookup
     const layerOf = new Map(topo.nodes.map((n) => [n.name, n.layer]));
 
-    // Filter edges: visible layers + optional cross-layer filter
-    const visibleNodeNames = new Set(
-        topo.nodes.filter((n) => visibleLayers.has(n.layer)).map((n) => n.name),
-    );
+    // Filter edges: visible layers + optional scope filter
+    let filteredNodes = topo.nodes.filter((n) => visibleLayers.has(n.layer));
+    if (scopeElements) {
+        filteredNodes = filteredNodes.filter((n) => scopeElements.has(n.name));
+    }
+    const visibleNodeNames = new Set(filteredNodes.map((n) => n.name));
 
     let filteredEdges = topo.edges.filter(
         (e) => visibleNodeNames.has(e.source) && visibleNodeNames.has(e.target),
@@ -65,7 +76,11 @@ function buildElements(
                 id: n.name,
                 type: 'dynamic',
                 position: { x: 0, y: 0 },
-                data: { label: n.name, layer: n.layer },
+                data: {
+                    label: (lang === 'ko' ? i18nText(n.display_name, 'ko') : undefined) || n.name,
+                    description: i18nText(n.description, lang),
+                    layer: n.layer,
+                },
             }));
 
         const edges: Edge[] = filteredEdges.map((e, i) => ({
@@ -90,7 +105,7 @@ function buildElements(
             id: n.name,
             type: 'dynamic',
             position: { x: 0, y: 0 },
-            data: { label: n.name, layer: n.layer },
+            data: { label: n.name, subLabel: i18nText(n.display_name, 'ko'), layer: n.layer },
         }));
 
     const edges: Edge[] = filteredEdges.map((e, i) => ({
@@ -113,15 +128,24 @@ interface LayoutProfileFlowProps {
     profileName: string;
     visibleLayers: Set<string>;
     crossLayerOnly: boolean;
+    lang: string;
+    scopeElements?: Set<string>;
     onShowDetail?: (title: string, content: ReactNode) => void;
 }
 
-function NodeDetailContent({ node }: { node: TopologyNode }) {
+function NodeDetailContent({ node, lang }: { node: TopologyNode; lang: string }) {
+    const displayName = i18nText(node.display_name, lang);
+    const desc = i18nText(node.description, lang);
     return (
         <div style={{ fontSize: 12, lineHeight: 1.8 }}>
             <div style={{ marginBottom: 10 }}>
                 <div style={detailLabelStyle}>Name</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{node.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
+                    {displayName || node.name}
+                    {displayName && displayName !== node.name && (
+                        <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: 6, fontSize: 12 }}>{node.name}</span>
+                    )}
+                </div>
             </div>
             <div style={{ marginBottom: 10 }}>
                 <div style={detailLabelStyle}>Layer</div>
@@ -135,10 +159,10 @@ function NodeDetailContent({ node }: { node: TopologyNode }) {
                 <div style={detailLabelStyle}>Kernel Type</div>
                 <div>{node.kernel_type}</div>
             </div>
-            {node.description && (
+            {desc && (
                 <div style={{ marginBottom: 10 }}>
                     <div style={detailLabelStyle}>Description</div>
-                    <div style={{ color: '#64748b' }}>{node.description}</div>
+                    <div style={{ color: '#64748b' }}>{desc}</div>
                 </div>
             )}
         </div>
@@ -150,7 +174,7 @@ const detailLabelStyle = {
     textTransform: 'uppercase' as const, marginBottom: 2,
 };
 
-const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, onShowDetail }: LayoutProfileFlowProps) => {
+const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, scopeElements, onShowDetail }: LayoutProfileFlowProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView } = useReactFlow();
@@ -165,24 +189,24 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, onShowD
         setSelectedNode(null);
         setReachableSet(new Set());
 
-        fetchProfileTopology(profileName)
+        fetchProfileTopology(profileName, { lang: 'ko' })
             .then((topo) => {
                 setRawTopo(topo);
-                const { nodes: n, edges: e } = buildElements(topo, visibleLayers, crossLayerOnly);
+                const { nodes: n, edges: e } = buildElements(topo, visibleLayers, crossLayerOnly, lang, scopeElements);
                 setNodes(n);
                 setEdges(e);
             })
             .catch((err) => setError(String(err)));
-    }, [profileName, setNodes, setEdges]); // visibleLayers/crossLayerOnly handled separately
+    }, [profileName, setNodes, setEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Re-layout when visibleLayers or crossLayerOnly changes
+    // Re-layout when visibleLayers, crossLayerOnly, lang, or scopeElements changes
     useEffect(() => {
         if (!rawTopo) return;
-        const { nodes: n, edges: e } = buildElements(rawTopo, visibleLayers, crossLayerOnly);
+        const { nodes: n, edges: e } = buildElements(rawTopo, visibleLayers, crossLayerOnly, lang, scopeElements);
         setNodes(n);
         setEdges(e);
         window.requestAnimationFrame(() => fitView());
-    }, [visibleLayers, crossLayerOnly, rawTopo, setNodes, setEdges, fitView]);
+    }, [visibleLayers, crossLayerOnly, lang, scopeElements, rawTopo, setNodes, setEdges, fitView]);
 
     // Fit view on initial load
     useEffect(() => {
@@ -227,7 +251,7 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, onShowD
                     onShowDetail(
                         node.id,
                         <div>
-                            <NodeDetailContent node={topoNode} />
+                            <NodeDetailContent node={topoNode} lang={lang} />
                             <div style={{ marginTop: 16 }}>
                                 <div style={detailLabelStyle}>
                                     Connections ({reachEdges.length})
@@ -261,7 +285,7 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, onShowD
                 })
                 .catch(() => setReachableSet(new Set([node.id])));
         },
-        [profileName, onShowDetail, rawTopo],
+        [profileName, lang, onShowDetail, rawTopo],
     );
 
     const onClear = useCallback(() => {
@@ -324,10 +348,12 @@ interface ProfileGraphProps {
     profileName: string;
     visibleLayers?: Set<string>;
     crossLayerOnly?: boolean;
+    lang?: string;
+    scopeElements?: Set<string>;
     onShowDetail?: (title: string, content: ReactNode) => void;
 }
 
-export default function ProfileGraph({ profileName, visibleLayers, crossLayerOnly, onShowDetail }: ProfileGraphProps) {
+export default function ProfileGraph({ profileName, visibleLayers, crossLayerOnly, lang = 'en', scopeElements, onShowDetail }: ProfileGraphProps) {
     // Default: all layers visible
     const layers = visibleLayers || new Set(['Infra', 'Governance', 'Decision', 'Needs', 'Kernel', 'Flow']);
     return (
@@ -336,6 +362,8 @@ export default function ProfileGraph({ profileName, visibleLayers, crossLayerOnl
                 profileName={profileName}
                 visibleLayers={layers}
                 crossLayerOnly={crossLayerOnly ?? false}
+                lang={lang}
+                scopeElements={scopeElements}
                 onShowDetail={onShowDetail}
             />
         </ReactFlowProvider>

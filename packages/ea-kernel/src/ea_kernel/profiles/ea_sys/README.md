@@ -55,3 +55,17 @@ Simulation includes:
 - governance entrypoint contract check
 - governance model API contract check (`/models/*` endpoint/record flow)
 - 6x6 delegated contract check (`ea-flow` owns matrix/coordination, other layers keep port declarations)
+
+## Governance Meta-Meta Profile Stack
+
+거버넌스 레이어는 아래 스택으로 분리해 운영한다.
+
+- Meta-Meta model: `packages/ea-kernel/src/ea_kernel/profiles/governance_profile_stack/00-governance-meta-model.toml`
+- ea-sys internal profile: `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/10-governance.toml`
+- external integration profile example: `packages/ea-kernel/src/ea_kernel/profiles/governance_profile_stack/20-external-governance.toml`
+
+검증:
+
+```bash
+PYTHONPATH=packages/ea-kernel/src uv run python packages/ea-kernel/examples/validate_governance_profile_stack.py --simulate
+```

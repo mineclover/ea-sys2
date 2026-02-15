@@ -135,6 +135,30 @@ category = "Governance"
 description = "Policy constraints for data/ownership boundary enforcement."
 
 [[elements]]
+name = "GovernanceTransparencyGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures governance decisions are observable and explainable."
+
+[[elements]]
+name = "GovernanceConsistencyGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures contract/routing behavior remains consistent across layers."
+
+[[elements]]
+name = "GovernanceTraceabilityGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures decision and transaction lifecycle can be traced end-to-end."
+
+[[elements]]
+name = "GovernanceEvolvabilityGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures governance contracts can evolve without breaking consumers."
+
+[[elements]]
 name = "GovernanceEntryPort"
 layer = "Governance"
 category = "Interface"
@@ -486,6 +510,13 @@ target = "@Executable"
 relation = "triggers"
 priority = 60
 notes = "Events may trigger governance actions directly."
+
+[[rules]]
+source = "GovernanceLayer"
+target = "@Goal"
+relation = "contains"
+priority = 70
+notes = "Governance boundary contains purpose goals."
 
 [[rules]]
 source = "LayerModelRegistry"
@@ -864,6 +895,90 @@ target = "ModelApiErrorRecord"
 relation = "constrains"
 priority = 78
 notes = "Boundary policy constrains API error payload fields to avoid cross-scope data leakage."
+
+[[rules]]
+source = "GovernanceTransparencyGoal"
+target = "ModelDecisionTraceResponseRecord"
+relation = "constrains"
+priority = 79
+notes = "Transparency goal requires clear trace response contract."
+
+[[rules]]
+source = "GovernanceTransparencyGoal"
+target = "ModelDecisionTraceExploreResponseRecord"
+relation = "constrains"
+priority = 79
+notes = "Transparency goal requires explainable exploration response contract."
+
+[[rules]]
+source = "GovernanceTransparencyGoal"
+target = "ModelApiErrorRecord"
+relation = "constrains"
+priority = 79
+notes = "Transparency goal requires deterministic error contract."
+
+[[rules]]
+source = "GovernanceConsistencyGoal"
+target = "GovernanceEntryPort"
+relation = "constrains"
+priority = 79
+notes = "Consistency goal requires stable governance entry contract."
+
+[[rules]]
+source = "GovernanceConsistencyGoal"
+target = "ModelDecisionTraceEndpoint"
+relation = "constrains"
+priority = 79
+notes = "Consistency goal requires deterministic decision trace endpoint behavior."
+
+[[rules]]
+source = "GovernanceConsistencyGoal"
+target = "GovernanceModelPort"
+relation = "constrains"
+priority = 79
+notes = "Consistency goal requires stable governance model port contract."
+
+[[rules]]
+source = "GovernanceTraceabilityGoal"
+target = "ModelTransactionRecord"
+relation = "constrains"
+priority = 79
+notes = "Traceability goal requires transaction history contract."
+
+[[rules]]
+source = "GovernanceTraceabilityGoal"
+target = "ModelDecisionTraceResponseRecord"
+relation = "constrains"
+priority = 79
+notes = "Traceability goal requires decision trace response contract."
+
+[[rules]]
+source = "GovernanceTraceabilityGoal"
+target = "ModelEvidenceWarningRecord"
+relation = "constrains"
+priority = 79
+notes = "Traceability goal requires explicit evidence warning contract."
+
+[[rules]]
+source = "GovernanceEvolvabilityGoal"
+target = "VersionLifecycleManager"
+relation = "constrains"
+priority = 79
+notes = "Evolvability goal requires version lifecycle coordination."
+
+[[rules]]
+source = "GovernanceEvolvabilityGoal"
+target = "BoundaryPolicy"
+relation = "constrains"
+priority = 79
+notes = "Evolvability goal requires policy-governed boundary evolution."
+
+[[rules]]
+source = "GovernanceEvolvabilityGoal"
+target = "ModelDecisionTraceEndpoint"
+relation = "constrains"
+priority = 79
+notes = "Evolvability goal requires migration-safe endpoint evolution."
 
 [[rules]]
 source = "ModelRegisterEndpoint"

@@ -22,7 +22,7 @@ def _load_validate_module():
     ("layer", "filename", "expected"),
     [
         ("infra", "00-infra.toml", (15, 9, 23)),
-        ("governance", "10-governance.toml", (57, 9, 143)),
+        ("governance", "10-governance.toml", (61, 9, 156)),
         ("decision", "20-decision.toml", (28, 9, 61)),
         ("needs", "30-needs.toml", (16, 9, 25)),
         ("kernel", "40-kernel.toml", (19, 9, 35)),
@@ -34,7 +34,7 @@ def test_validate_layer_success(layer, filename, expected):
 
     path, elements, relations, rules = mod.validate_layer(layer)
 
-    assert path.endswith(f"/ea-sys/{filename}")
+    assert path.endswith(f"/profiles/ea_sys/{filename}")
     assert (elements, relations, rules) == expected
 
 

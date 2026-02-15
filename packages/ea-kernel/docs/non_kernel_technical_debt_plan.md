@@ -18,7 +18,7 @@
 참고 근거:
 - `packages/ea-flow/CLAUDE.md`의 잔여 한계 섹션
 - `packages/ea-decision/CLAUDE.md`의 잔여 한계 섹션
-- `packages/ea-kernel/examples/ea-sys/README.md`의 레이어 기준선
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/README.md`의 레이어 기준선
 
 ## 1.1 진행 결과 (2026-02-14)
 

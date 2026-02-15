@@ -1,0 +1,501 @@
+# Governance Profile Stack: Meta-Meta Model
+# Role: 내부/외부 시스템이 공통으로 따르는 거버넌스 계약 어휘를 정의한다
+
+[profile]
+name = "GovernanceMetaModel"
+version = "1.0.0"
+kernel_version = "2.5.0"
+id_prefix = "govmeta"
+standard = "Governance Meta-Meta Model"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Governance boundary containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry registration contract."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Orchestration contract between governance components."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Dependency contract."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Produces governance artifact."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Consumes governance artifact."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence contract."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-triggered contract."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy constraint contract."
+
+[[elements]]
+name = "GovernanceMetaBoundary"
+layer = "Governance"
+category = "Composite"
+description = "Meta boundary that defines governance contract vocabulary."
+
+[[elements]]
+name = "GovernanceEntryPortContract"
+layer = "Governance"
+category = "Interface"
+description = "System entrypoint contract for governance APIs."
+
+[[elements]]
+name = "ModelEndpointContract"
+layer = "Governance"
+category = "Interface"
+description = "Generic endpoint contract for model governance operations."
+
+[[elements]]
+name = "LayerModelPortContract"
+layer = "Governance"
+category = "Interface"
+description = "Abstract layer model port contract."
+
+[[elements]]
+name = "GovernanceCoordinatorContract"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Coordinator contract for governance execution."
+
+[[elements]]
+name = "GovernancePolicyContract"
+layer = "Governance"
+category = "Governance"
+description = "Policy contract for access/scope/control."
+
+[[elements]]
+name = "TransparencyGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures governance decisions are explainable and observable."
+
+[[elements]]
+name = "ConsistencyGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures consistent contracts and routing rules across systems."
+
+[[elements]]
+name = "TraceabilityGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures decision lifecycle and evidence can be traced end-to-end."
+
+[[elements]]
+name = "EvolvabilityGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures governance contracts can evolve without breaking consumers."
+
+[[elements]]
+name = "GovernanceStepContract"
+layer = "Governance"
+category = "Behavior"
+description = "Behavior-step contract in governance workflows."
+
+[[elements]]
+name = "GovernanceActionContract"
+layer = "Governance"
+category = "Executable"
+description = "Executable action contract in governance workflows."
+
+[[elements]]
+name = "RequestRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Request payload contract."
+
+[[elements]]
+name = "ResponseRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response payload contract."
+
+[[elements]]
+name = "ApiErrorRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Error payload contract."
+
+[[elements]]
+name = "TransactionRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Transaction trace payload contract."
+
+[[elements]]
+name = "DecisionTraceRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Decision trace payload contract."
+
+[[elements]]
+name = "DecisionContextRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Context payload contract used as decision input."
+
+[[elements]]
+name = "DecisionEvidenceRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Evidence payload contract used as decision input."
+
+[[elements]]
+name = "DecisionOutcomeRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Outcome payload contract produced by decision operations."
+
+[[elements]]
+name = "EvidenceWarningRecordContract"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Evidence warning payload contract."
+
+[[elements]]
+name = "GovernanceEventContract"
+layer = "Governance"
+category = "Event"
+description = "Governance event contract."
+
+[[elements]]
+name = "FeedbackLoopContract"
+layer = "Governance"
+category = "Behavior"
+description = "Feedback-loop behavior contract for iterative governance correction."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@Interface"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains all interface contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains coordinator contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@Governance"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains policy contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains record contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@Behavior"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains process-step contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@Executable"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains executable contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@Event"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains event contracts."
+
+[[rules]]
+source = "GovernanceMetaBoundary"
+target = "@Goal"
+relation = "contains"
+priority = 90
+notes = "Meta boundary contains governance purpose goals."
+
+[[rules]]
+source = "GovernanceCoordinatorContract"
+target = "GovernanceEntryPortContract"
+relation = "registers"
+priority = 80
+notes = "Coordinator registers governance entrypoint contract."
+
+[[rules]]
+source = "GovernanceEntryPortContract"
+target = "ModelEndpointContract"
+relation = "coordinates"
+priority = 80
+notes = "Entrypoint coordinates endpoint contracts."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "LayerModelPortContract"
+relation = "coordinates"
+priority = 80
+notes = "Endpoints coordinate layer model ports."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "GovernanceCoordinatorContract"
+relation = "coordinates"
+priority = 80
+notes = "Endpoints coordinate governance services."
+
+[[rules]]
+source = "GovernancePolicyContract"
+target = "ModelEndpointContract"
+relation = "constrains"
+priority = 80
+notes = "Policies constrain endpoint contracts."
+
+[[rules]]
+source = "TransparencyGoal"
+target = "ResponseRecordContract"
+relation = "constrains"
+priority = 85
+notes = "Transparency requires readable response contracts."
+
+[[rules]]
+source = "TransparencyGoal"
+target = "ApiErrorRecordContract"
+relation = "constrains"
+priority = 85
+notes = "Transparency requires deterministic error contracts."
+
+[[rules]]
+source = "TransparencyGoal"
+target = "DecisionTraceRecordContract"
+relation = "constrains"
+priority = 85
+notes = "Transparency requires explicit decision trace contracts."
+
+[[rules]]
+source = "ConsistencyGoal"
+target = "ModelEndpointContract"
+relation = "constrains"
+priority = 85
+notes = "Consistency requires stable endpoint contracts."
+
+[[rules]]
+source = "ConsistencyGoal"
+target = "LayerModelPortContract"
+relation = "constrains"
+priority = 85
+notes = "Consistency requires stable layer model port contracts."
+
+[[rules]]
+source = "ConsistencyGoal"
+target = "GovernanceCoordinatorContract"
+relation = "constrains"
+priority = 85
+notes = "Consistency requires deterministic coordination behavior."
+
+[[rules]]
+source = "TraceabilityGoal"
+target = "TransactionRecordContract"
+relation = "constrains"
+priority = 85
+notes = "Traceability requires transaction records."
+
+[[rules]]
+source = "TraceabilityGoal"
+target = "DecisionTraceRecordContract"
+relation = "constrains"
+priority = 85
+notes = "Traceability requires decision trace records."
+
+[[rules]]
+source = "TraceabilityGoal"
+target = "EvidenceWarningRecordContract"
+relation = "constrains"
+priority = 85
+notes = "Traceability requires explicit evidence warning records."
+
+[[rules]]
+source = "EvolvabilityGoal"
+target = "GovernancePolicyContract"
+relation = "constrains"
+priority = 85
+notes = "Evolvability requires policy-driven contract change management."
+
+[[rules]]
+source = "EvolvabilityGoal"
+target = "GovernanceStepContract"
+relation = "constrains"
+priority = 85
+notes = "Evolvability requires stepwise migration-compatible workflows."
+
+[[rules]]
+source = "GovernancePolicyContract"
+target = "ResponseRecordContract"
+relation = "constrains"
+priority = 80
+notes = "Policies constrain response payload scope."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "RequestRecordContract"
+relation = "consumes"
+priority = 80
+notes = "Endpoints consume request records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "DecisionContextRecordContract"
+relation = "consumes"
+priority = 80
+notes = "Endpoints consume decision context records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "DecisionEvidenceRecordContract"
+relation = "consumes"
+priority = 80
+notes = "Endpoints consume decision evidence records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "ResponseRecordContract"
+relation = "produces"
+priority = 80
+notes = "Endpoints produce response records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "DecisionOutcomeRecordContract"
+relation = "produces"
+priority = 80
+notes = "Endpoints produce decision outcome records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "ApiErrorRecordContract"
+relation = "produces"
+priority = 80
+notes = "Endpoints produce API errors."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "TransactionRecordContract"
+relation = "produces"
+priority = 80
+notes = "Endpoints produce transaction records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "DecisionTraceRecordContract"
+relation = "produces"
+priority = 80
+notes = "Endpoints can produce decision trace records."
+
+[[rules]]
+source = "ModelEndpointContract"
+target = "EvidenceWarningRecordContract"
+relation = "produces"
+priority = 80
+notes = "Endpoints can produce evidence warning records."
+
+[[rules]]
+source = "GovernanceEventContract"
+target = "GovernanceStepContract"
+relation = "triggers"
+priority = 70
+notes = "Events trigger governance steps."
+
+[[rules]]
+source = "GovernanceStepContract"
+target = "DecisionContextRecordContract"
+relation = "consumes"
+priority = 70
+notes = "Governance steps consume decision context."
+
+[[rules]]
+source = "GovernanceStepContract"
+target = "DecisionEvidenceRecordContract"
+relation = "consumes"
+priority = 70
+notes = "Governance steps consume decision evidence."
+
+[[rules]]
+source = "GovernanceStepContract"
+target = "GovernanceActionContract"
+relation = "next"
+priority = 70
+notes = "Governance steps flow into executable actions."
+
+[[rules]]
+source = "GovernanceActionContract"
+target = "DecisionOutcomeRecordContract"
+relation = "produces"
+priority = 70
+notes = "Governance actions produce decision outcomes."
+
+[[rules]]
+source = "GovernanceActionContract"
+target = "EvidenceWarningRecordContract"
+relation = "produces"
+priority = 70
+notes = "Governance actions produce evidence warnings when needed."
+
+[[rules]]
+source = "GovernanceStepContract"
+target = "FeedbackLoopContract"
+relation = "next"
+priority = 70
+notes = "Governance steps can transition into feedback loop control."
+
+[[rules]]
+source = "FeedbackLoopContract"
+target = "DecisionTraceRecordContract"
+relation = "produces"
+priority = 70
+notes = "Feedback loop produces updated decision trace records."

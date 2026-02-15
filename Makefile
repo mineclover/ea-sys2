@@ -1,4 +1,4 @@
-.PHONY: install dev test test-kernel test-kernel-contract test-kernel-self test-needs test-decision test-flow test-governance test-infra test-kernel-governance-db test-kernel-governance-reference test-kernel-contract-snapshot review-kernel-alignment review-kernel-self-alignment run-kernel-self-check run-kernel-self-check-strict gate-kernel-self check-kernel-governance-drift rehearse-kernel-governance-recovery build-kernel-governance-reference verify-kernel-governance-reference build-kernel-contract-snapshots verify-kernel-contract-snapshots sync-kernel-contract-ts-sdk verify-kernel-contract-ts-sdk build-kernel-contract-ts-sdk gate-kernel-governance-db gate-kernel-governance-reference lint-kernel-governance typecheck-kernel-governance gate-kernel-stability lint format typecheck web-dev web-build
+.PHONY: install dev test test-kernel test-kernel-contract test-kernel-self test-needs test-decision test-flow test-governance test-infra test-kernel-governance-db test-kernel-governance-reference test-kernel-contract-snapshot test-governance-profile-stack review-kernel-alignment review-kernel-self-alignment run-kernel-self-check run-kernel-self-check-strict gate-kernel-self check-kernel-governance-drift rehearse-kernel-governance-recovery build-kernel-governance-reference verify-kernel-governance-reference build-kernel-contract-snapshots verify-kernel-contract-snapshots sync-kernel-contract-ts-sdk verify-kernel-contract-ts-sdk build-kernel-contract-ts-sdk gate-kernel-governance-db gate-kernel-governance-reference lint-kernel-governance typecheck-kernel-governance gate-kernel-stability lint format typecheck web-dev web-build
 
 # Installation
 install:
@@ -54,6 +54,10 @@ test-kernel-contract-snapshot:
 	uv run pytest \
 		packages/ea-kernel/tests/test_kernel_contract_snapshot.py \
 		-q
+
+test-governance-profile-stack:
+	uv run python packages/ea-kernel/examples/validate_governance_profile_stack.py --simulate
+	uv run pytest packages/ea-kernel/tests/test_validate_governance_profile_stack.py -q
 
 review-kernel-alignment:
 	uv run python packages/ea-kernel/src/ea_kernel/scripts/review_ralph_tui_kernel_alignment.py \

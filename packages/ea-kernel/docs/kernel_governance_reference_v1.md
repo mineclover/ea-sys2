@@ -19,12 +19,12 @@
 ## 레퍼런스 데이터셋 구성
 
 시드 입력:
-- `packages/ea-kernel/examples/ea-sys/00-infra.toml`
-- `packages/ea-kernel/examples/ea-sys/10-governance.toml`
-- `packages/ea-kernel/examples/ea-sys/20-decision.toml`
-- `packages/ea-kernel/examples/ea-sys/30-needs.toml`
-- `packages/ea-kernel/examples/ea-sys/40-kernel.toml`
-- `packages/ea-kernel/examples/ea-sys/50-flow.toml`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/00-infra.toml`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/10-governance.toml`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/20-decision.toml`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/30-needs.toml`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/40-kernel.toml`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/50-flow.toml`
 
 시드 규칙:
 1. 각 레이어는 독립 모델명으로 등록한다: `EASystemLayerModel.<layer>`

@@ -113,7 +113,7 @@
 
 `ea-sys` 기준으로 `/models/*` 엔드포인트를 TOML 모델로 명시한다.
 
-- 파일: `packages/ea-kernel/examples/ea-sys/10-governance.toml`
+- 파일: `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/10-governance.toml`
 - 엔트리포인트: `GovernanceEntryPort`
 - 엔드포인트 요소:
   - `ModelRegisterEndpoint`

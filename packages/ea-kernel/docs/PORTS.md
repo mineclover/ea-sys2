@@ -3,7 +3,7 @@
 This document provides optional runtime port defaults for local development.
 Canonical model architecture and layer contracts are defined in:
 
-- `packages/ea-kernel/examples/ea-sys/README.md`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/README.md`
 - `packages/ea-kernel/docs/system_spec_layers.md`
 
 ## 1. Governance API (Management Plane Entry)
@@ -40,3 +40,7 @@ Canonical model architecture and layer contracts are defined in:
 3. Interpret supporting roles as:
    - `infra`: row data design
    - `governance`: system entrypoint design
+4. Governance profile modeling is separated as:
+   - meta-meta contract: `packages/ea-kernel/src/ea_kernel/profiles/governance_profile_stack/00-governance-meta-model.toml`
+   - ea-sys internal profile: `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/10-governance.toml`
+   - external integration profile: `packages/ea-kernel/src/ea_kernel/profiles/governance_profile_stack/20-external-governance.toml`

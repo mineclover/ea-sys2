@@ -24,17 +24,11 @@ from ea_kernel.profile_rule_compiler import (
 )
 from ea_kernel.profile_serializer import compute_content_hash
 from ea_kernel.profile_types import KernelProfile
+from ea_kernel.profiles.ea_sys import LAYER_FILE_MAP, LAYER_ORDER
+from ea_kernel.profiles.ea_sys import PROFILE_DIR as LAYER_DIR
 from ea_kernel.spec import KERNEL_SPEC
 
-LAYER_FILE_MAP: dict[str, str] = {
-    "infra": "00-infra.toml",
-    "governance": "10-governance.toml",
-    "decision": "20-decision.toml",
-    "needs": "30-needs.toml",
-    "kernel": "40-kernel.toml",
-    "flow": "50-flow.toml",
-}
-LAYERS_IN_ORDER: tuple[str, ...] = ("infra", "governance", "decision", "needs", "kernel", "flow")
+LAYERS_IN_ORDER: tuple[str, ...] = LAYER_ORDER
 
 DB_TABLES: dict[str, tuple[str, ...]] = {
     "rules.db": ("schema_version", "rule_assets", "rule_asset_history"),
@@ -53,7 +47,6 @@ DB_TABLES: dict[str, tuple[str, ...]] = {
 REFERENCE_VERSION = "1.0.0"
 SCRIPT_NAME = "kernel_governance_reference_snapshot.py"
 PACKAGE_ROOT = Path(__file__).resolve().parents[3]
-LAYER_DIR = PACKAGE_ROOT / "examples" / "ea-sys"
 DEFAULT_SNAPSHOT_PATH = (
     PACKAGE_ROOT
     / "docs"

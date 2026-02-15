@@ -3,7 +3,7 @@
 This path is kept for backward compatibility.
 Canonical system-level layer models now live in:
 
-- `packages/ea-kernel/examples/ea-sys`
+- `packages/ea-kernel/src/ea_kernel/profiles/ea_sys`
 
 This directory stores standalone-valid layer profiles.
 Each file is an independently valid `ea-kernel` profile.

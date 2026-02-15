@@ -1,0 +1,516 @@
+# Governance Profile Stack: External Integration Profile
+# Role: 외부 시스템 연동용 거버넌스 계약을 정의한다
+
+[profile]
+name = "ExternalIntegrationGovernanceModel"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "extgov"
+standard = "Governance External Integration"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership relation."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration relation."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Dependency relation."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Produces records/events."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Consumes records/events."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequencing relation."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event trigger relation."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy constraint relation."
+
+[[elements]]
+name = "ExternalGovernanceLayer"
+layer = "Governance"
+category = "Composite"
+description = "External integration governance boundary."
+
+[[elements]]
+name = "ExternalRegistryService"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Registers external endpoints and model ports."
+
+[[elements]]
+name = "PartnerGovernanceEntryPort"
+layer = "Governance"
+category = "Interface"
+description = "Single entrypoint for partner-facing governance APIs."
+
+[[elements]]
+name = "ExternalModelRegisterEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Partner endpoint for model registration."
+
+[[elements]]
+name = "ExternalDecisionTraceEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Partner endpoint for decision trace query/exploration."
+
+[[elements]]
+name = "ExternalLayerModelPort"
+layer = "Governance"
+category = "Interface"
+description = "Port contract for external model adapters."
+
+[[elements]]
+name = "ExternalBoundaryPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Boundary policy for partner data exposure and tenancy."
+
+[[elements]]
+name = "ExternalTransparencyGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures external governance responses are observable and explainable."
+
+[[elements]]
+name = "ExternalConsistencyGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures partner routing and adapter contracts remain consistent."
+
+[[elements]]
+name = "ExternalTraceabilityGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures external decision/transaction lifecycle is traceable."
+
+[[elements]]
+name = "ExternalEvolvabilityGoal"
+layer = "Governance"
+category = "Goal"
+description = "Ensures partner governance contracts evolve safely."
+
+[[elements]]
+name = "ExternalValidationStep"
+layer = "Governance"
+category = "Behavior"
+description = "Validation step for external payload compatibility."
+
+[[elements]]
+name = "ExternalPersistAction"
+layer = "Governance"
+category = "Executable"
+description = "Persist action for accepted partner operations."
+
+[[elements]]
+name = "ExternalRegisterRequestRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Request payload for external register endpoint."
+
+[[elements]]
+name = "ExternalRegisterResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response payload for external register endpoint."
+
+[[elements]]
+name = "ExternalDecisionTraceQueryRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Query payload for external decision trace endpoint."
+
+[[elements]]
+name = "ExternalDecisionTraceResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Response payload for external decision trace endpoint."
+
+[[elements]]
+name = "ExternalDecisionTraceExploreResponseRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Exploration payload (evidence, impact, history) for external decision trace endpoint."
+
+[[elements]]
+name = "ExternalApiErrorRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Error payload for external governance APIs."
+
+[[elements]]
+name = "ExternalTransactionRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Transaction trace payload for external operations."
+
+[[elements]]
+name = "ExternalEvidenceWarningRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Evidence warning payload for decision trace operations."
+
+[[elements]]
+name = "ExternalValidationEvent"
+layer = "Governance"
+category = "Event"
+description = "Validation event emitted by external compatibility checks."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@Interface"
+relation = "contains"
+priority = 80
+notes = "Boundary contains interface contracts."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 80
+notes = "Boundary contains active governance services."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@Governance"
+relation = "contains"
+priority = 80
+notes = "Boundary contains governance policies."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@PassiveStructure"
+relation = "contains"
+priority = 80
+notes = "Boundary contains passive records."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@Behavior"
+relation = "contains"
+priority = 80
+notes = "Boundary contains behavior steps."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@Executable"
+relation = "contains"
+priority = 80
+notes = "Boundary contains executable actions."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@Event"
+relation = "contains"
+priority = 80
+notes = "Boundary contains event contracts."
+
+[[rules]]
+source = "ExternalGovernanceLayer"
+target = "@Goal"
+relation = "contains"
+priority = 80
+notes = "Boundary contains governance purpose goals."
+
+[[rules]]
+source = "ExternalRegistryService"
+target = "PartnerGovernanceEntryPort"
+relation = "registers"
+priority = 80
+notes = "Registry service registers partner entrypoint."
+
+[[rules]]
+source = "ExternalRegistryService"
+target = "ExternalLayerModelPort"
+relation = "registers"
+priority = 80
+notes = "Registry service registers external model port."
+
+[[rules]]
+source = "PartnerGovernanceEntryPort"
+target = "ExternalModelRegisterEndpoint"
+relation = "coordinates"
+priority = 82
+notes = "Entrypoint routes external register API."
+
+[[rules]]
+source = "PartnerGovernanceEntryPort"
+target = "ExternalDecisionTraceEndpoint"
+relation = "coordinates"
+priority = 82
+notes = "Entrypoint routes external decision trace APIs."
+
+[[rules]]
+source = "ExternalModelRegisterEndpoint"
+target = "ExternalLayerModelPort"
+relation = "coordinates"
+priority = 82
+notes = "Register endpoint delegates to external model adapter port."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalLayerModelPort"
+relation = "coordinates"
+priority = 82
+notes = "Decision trace endpoint delegates to external model adapter port."
+
+[[rules]]
+source = "ExternalModelRegisterEndpoint"
+target = "ExternalRegistryService"
+relation = "coordinates"
+priority = 82
+notes = "Register endpoint coordinates registry service."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalRegistryService"
+relation = "coordinates"
+priority = 82
+notes = "Decision trace endpoint coordinates registry service."
+
+[[rules]]
+source = "ExternalBoundaryPolicy"
+target = "ExternalModelRegisterEndpoint"
+relation = "constrains"
+priority = 82
+notes = "Boundary policy constrains register endpoint payload scope."
+
+[[rules]]
+source = "ExternalBoundaryPolicy"
+target = "ExternalDecisionTraceEndpoint"
+relation = "constrains"
+priority = 82
+notes = "Boundary policy constrains decision trace endpoint exposure."
+
+[[rules]]
+source = "ExternalBoundaryPolicy"
+target = "ExternalDecisionTraceResponseRecord"
+relation = "constrains"
+priority = 82
+notes = "Boundary policy constrains decision trace response fields."
+
+[[rules]]
+source = "ExternalBoundaryPolicy"
+target = "ExternalDecisionTraceExploreResponseRecord"
+relation = "constrains"
+priority = 82
+notes = "Boundary policy constrains exploration response fields."
+
+[[rules]]
+source = "ExternalTransparencyGoal"
+target = "ExternalDecisionTraceResponseRecord"
+relation = "constrains"
+priority = 83
+notes = "Transparency goal requires explicit decision trace response contract."
+
+[[rules]]
+source = "ExternalTransparencyGoal"
+target = "ExternalDecisionTraceExploreResponseRecord"
+relation = "constrains"
+priority = 83
+notes = "Transparency goal requires explainable exploration response contract."
+
+[[rules]]
+source = "ExternalTransparencyGoal"
+target = "ExternalApiErrorRecord"
+relation = "constrains"
+priority = 83
+notes = "Transparency goal requires deterministic API error contract."
+
+[[rules]]
+source = "ExternalConsistencyGoal"
+target = "PartnerGovernanceEntryPort"
+relation = "constrains"
+priority = 83
+notes = "Consistency goal requires stable partner entrypoint contract."
+
+[[rules]]
+source = "ExternalConsistencyGoal"
+target = "ExternalDecisionTraceEndpoint"
+relation = "constrains"
+priority = 83
+notes = "Consistency goal requires deterministic trace endpoint behavior."
+
+[[rules]]
+source = "ExternalConsistencyGoal"
+target = "ExternalLayerModelPort"
+relation = "constrains"
+priority = 83
+notes = "Consistency goal requires stable external adapter port contract."
+
+[[rules]]
+source = "ExternalTraceabilityGoal"
+target = "ExternalTransactionRecord"
+relation = "constrains"
+priority = 83
+notes = "Traceability goal requires external transaction history contract."
+
+[[rules]]
+source = "ExternalTraceabilityGoal"
+target = "ExternalDecisionTraceResponseRecord"
+relation = "constrains"
+priority = 83
+notes = "Traceability goal requires decision trace response contract."
+
+[[rules]]
+source = "ExternalTraceabilityGoal"
+target = "ExternalEvidenceWarningRecord"
+relation = "constrains"
+priority = 83
+notes = "Traceability goal requires evidence warning contract."
+
+[[rules]]
+source = "ExternalEvolvabilityGoal"
+target = "ExternalBoundaryPolicy"
+relation = "constrains"
+priority = 83
+notes = "Evolvability goal requires policy-driven external contract evolution."
+
+[[rules]]
+source = "ExternalEvolvabilityGoal"
+target = "ExternalDecisionTraceEndpoint"
+relation = "constrains"
+priority = 83
+notes = "Evolvability goal requires migration-safe endpoint evolution."
+
+[[rules]]
+source = "ExternalEvolvabilityGoal"
+target = "ExternalLayerModelPort"
+relation = "constrains"
+priority = 83
+notes = "Evolvability goal requires adapter contract evolution control."
+
+[[rules]]
+source = "ExternalModelRegisterEndpoint"
+target = "ExternalRegisterRequestRecord"
+relation = "consumes"
+priority = 84
+notes = "Register endpoint consumes request payload."
+
+[[rules]]
+source = "ExternalModelRegisterEndpoint"
+target = "ExternalRegisterResponseRecord"
+relation = "produces"
+priority = 84
+notes = "Register endpoint produces response payload."
+
+[[rules]]
+source = "ExternalModelRegisterEndpoint"
+target = "ExternalApiErrorRecord"
+relation = "produces"
+priority = 84
+notes = "Register endpoint produces error payload."
+
+[[rules]]
+source = "ExternalModelRegisterEndpoint"
+target = "ExternalTransactionRecord"
+relation = "produces"
+priority = 84
+notes = "Register endpoint produces transaction payload."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalDecisionTraceQueryRecord"
+relation = "consumes"
+priority = 84
+notes = "Decision trace endpoint consumes trace query payload."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalDecisionTraceResponseRecord"
+relation = "produces"
+priority = 84
+notes = "Decision trace endpoint produces raw trace payload."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalDecisionTraceExploreResponseRecord"
+relation = "produces"
+priority = 84
+notes = "Decision trace endpoint produces exploration payload."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalEvidenceWarningRecord"
+relation = "produces"
+priority = 84
+notes = "Decision trace endpoint produces evidence warning payload."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalApiErrorRecord"
+relation = "produces"
+priority = 84
+notes = "Decision trace endpoint produces error payload."
+
+[[rules]]
+source = "ExternalDecisionTraceEndpoint"
+target = "ExternalTransactionRecord"
+relation = "produces"
+priority = 84
+notes = "Decision trace endpoint produces transaction payload."
+
+[[rules]]
+source = "ExternalValidationEvent"
+target = "ExternalValidationStep"
+relation = "triggers"
+priority = 78
+notes = "Validation event triggers validation step."
+
+[[rules]]
+source = "ExternalValidationStep"
+target = "ExternalPersistAction"
+relation = "next"
+priority = 78
+notes = "Validation success proceeds to persistence."
+
+[[rules]]
+source = "ExternalPersistAction"
+target = "ExternalTransactionRecord"
+relation = "produces"
+priority = 78
+notes = "Persist action records transaction history."

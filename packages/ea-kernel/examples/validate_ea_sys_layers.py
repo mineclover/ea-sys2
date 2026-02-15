@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import sys
-from collections import Counter
-from collections import defaultdict
-from pathlib import Path
 import re
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
 from typing import Any
 
 LAYER_FILE_MAP = {
@@ -98,7 +97,7 @@ EXPECTED_MODEL_API_PRODUCES = (
     ("ModelStateEndpoint", "ModelApiErrorRecord"),
     ("ModelStateEndpoint", "ModelTransactionRecord"),
 )
-LAYER_DIR = Path(__file__).parent / "ea-sys"
+LAYER_DIR = Path(__file__).resolve().parents[1] / "src" / "ea_kernel" / "profiles" / "ea_sys"
 DOCS_DIR = Path(__file__).resolve().parents[1] / "docs"
 SYSTEM_SPEC_LAYERS_PATH = DOCS_DIR / "system_spec_layers.md"
 LAYER_README_PATH = LAYER_DIR / "README.md"

@@ -77,7 +77,7 @@ description = "Layout component renders a page or view."
 name = "WebKernelVizApp"
 layer = "Kernel"
 category = "Composite"
-description = "Top-level application boundary for web-kernel-viz frontend."
+description = "Top-level application boundary. AppStateProvider + BrowserRouter + RootLayout with nested routes."
 
 # ── Elements: Context (사용자 역할) ──────────────────────
 
@@ -145,25 +145,33 @@ description = "Experience boundary for governance monitoring journey (G4+G5)."
 name = "AppShell"
 layer = "Kernel"
 category = "Layout"
-description = "Root layout shell: top nav + side panel + canvas + detail slide-over."
+description = "Root layout (RootLayout): TopNav + <Outlet /> router slot + DetailSlideOver. URL-based page rendering via React Router."
 
 [[elements]]
 name = "TopNavComponent"
 layer = "Kernel"
 category = "Layout"
-description = "Primary navigation bar with section/sub-view selection."
+description = "Primary navigation bar with section/sub-view tabs. RootLayout maps onNavigate to useNavigate() for URL-based routing."
 
 [[elements]]
 name = "SidePanelComponent"
 layer = "Kernel"
 category = "Layout"
-description = "Collapsible left panel for contextual filters and controls."
+description = "Collapsible left panel for contextual filters and controls. Page-local: rendered by ProfileGraphPage only (not in RootLayout)."
 
 [[elements]]
 name = "DetailSlideOverComponent"
 layer = "Kernel"
 category = "Layout"
 description = "Right slide-over panel for inspecting node/rule/judgment details."
+
+# ── Elements: Shared State ───────────────────────────────
+
+[[elements]]
+name = "AppStateContext"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "React Context providing shared state (lang, sidePanelOpen, detail) to all pages via useAppState() hook."
 
 # ── Elements: Page (Explorer) ────────────────────────────
 
@@ -177,7 +185,7 @@ description = "Kernel entity/relation graph visualization (FlowGraph)."
 name = "ProfileGraphPage"
 layer = "Kernel"
 category = "Page"
-description = "Profile topology graph with reachable traversal highlighting."
+description = "Profile topology graph with reachable traversal highlighting. URL param :profileName drives profile selection. Owns SidePanel + local state (visibleLayers, crossLayerOnly)."
 
 [[elements]]
 name = "RulesPage"
@@ -565,11 +573,11 @@ priority = 70
 notes = "App shell contains top nav."
 
 [[rules]]
-source = "AppShell"
+source = "ProfileGraphPage"
 target = "SidePanelComponent"
-relation = "contains"
+relation = "renders"
 priority = 70
-notes = "App shell contains side panel."
+notes = "Profile graph page renders side panel (page-local, not in RootLayout)."
 
 [[rules]]
 source = "AppShell"
@@ -579,18 +587,32 @@ priority = 70
 notes = "App shell contains detail slide-over."
 
 [[rules]]
+source = "WebKernelVizApp"
+target = "AppStateContext"
+relation = "contains"
+priority = 70
+notes = "App boundary contains shared state context (lang, sidePanel, detail)."
+
+[[rules]]
+source = "AppStateContext"
+target = "@Page"
+relation = "coordinates"
+priority = 60
+notes = "Shared state context provides lang/sidePanel/detail to all pages via useAppState()."
+
+[[rules]]
 source = "TopNavComponent"
 target = "ExplorerExperience"
 relation = "coordinates"
 priority = 70
-notes = "Top nav coordinates experience switching."
+notes = "Top nav coordinates experience switching via URL navigation (useNavigate)."
 
 [[rules]]
 source = "TopNavComponent"
 target = "GovernanceExperience"
 relation = "coordinates"
 priority = 70
-notes = "Top nav coordinates experience switching."
+notes = "Top nav coordinates experience switching via URL navigation (useNavigate)."
 
 # ── Explicit: Page → Endpoint ────────────────────────────
 
@@ -602,11 +624,11 @@ priority = 70
 notes = "Kernel schema page fetches entity/relation data."
 
 [[rules]]
-source = "ProfileGraphPage"
+source = "AppShell"
 target = "ProfileListEndpoint"
 relation = "coordinates"
 priority = 70
-notes = "Profile graph page fetches profile list."
+notes = "RootLayout fetches profile list once for TopNav selector."
 
 [[rules]]
 source = "ProfileGraphPage"

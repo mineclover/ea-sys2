@@ -25,6 +25,7 @@ from fastapi import FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from ea_kernel.business_service import BusinessService
 from ea_kernel.governance import GovernanceSystem
 from ea_kernel.governance_types import RuleLifecycleState
 from ea_kernel.model_io import ModelIOManager
@@ -132,6 +133,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     app.state.system = system  # Expose for testing
     app.state.registration = None
     io_manager = ModelIOManager(system)
+    business_svc = BusinessService(data_dir)
 
     # --- Models ---
 
@@ -204,6 +206,27 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         actor: str | None = "api-user"
         decision_id: str | None = None
         evidence_refs: list[str] | None = None
+
+    class CreateBusinessRequest(BaseModel):
+        name: str
+        description: str = ""
+
+    class CreateTagSchemaRequest(BaseModel):
+        tag: str
+        fields: list[dict[str, Any]] = []
+        indexes: list[dict[str, Any]] = []
+        keyPath: str = "id"
+        autoIncrement: bool = True
+        kernel_ref: str | None = None
+        description: str = ""
+
+    class UpdateTagSchemaRequest(BaseModel):
+        fields: list[dict[str, Any]] | None = None
+        indexes: list[dict[str, Any]] | None = None
+        keyPath: str | None = None
+        autoIncrement: bool | None = None
+        kernel_ref: str | None = None
+        description: str | None = None
 
     # --- Endpoints ---
 
@@ -886,6 +909,15 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         from ea_governance.governance_service import governance_dashboard
         return governance_dashboard()
 
+    @_typed_get("/layers/{layer_key}/schema")
+    def get_layer_schema(layer_key: str, lang: str | None = None) -> dict[str, Any]:
+        """Layer M2 schema — raw profile elements, relations, and rules."""
+        from ea_governance.governance_service import layer_schema
+        result = layer_schema(layer_key, lang=lang)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
     # --- Governance Flow Logic (Phase 8 Extension) ---
     @_typed_get("/governance/flow/{anchor_id}")
     def get_flow_logic(anchor_id: str) -> dict[str, Any]:
@@ -1170,6 +1202,120 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             return Response(content=mermaid_src, media_type="text/plain")
         except Exception as err:
             raise HTTPException(status_code=500, detail=f"Failed to project self-model: {err}") from err
+
+    # ========== Business Model & Tag-Schema Registry ==========
+
+    @_typed_post("/business")
+    def create_business(req: CreateBusinessRequest) -> dict[str, Any]:
+        try:
+            return business_svc.create_business(req.name, req.description)
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+
+    @_typed_get("/business")
+    def list_businesses() -> list[dict[str, Any]]:
+        return business_svc.list_businesses()
+
+    @_typed_get("/business/{bid}")
+    def get_business(bid: str) -> dict[str, Any]:
+        try:
+            return business_svc.get_business(bid)
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @app.delete("/business/{bid}")
+    def delete_business(bid: str) -> dict[str, str]:
+        try:
+            business_svc.delete_business(bid)
+            return {"status": "deleted", "bid": bid}
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @_typed_post("/business/{bid}/tags")
+    def create_tag(bid: str, req: CreateTagSchemaRequest) -> dict[str, Any]:
+        try:
+            return business_svc.create_tag(bid, req.model_dump())
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @_typed_get("/business/{bid}/tags")
+    def list_tags(bid: str) -> list[dict[str, Any]]:
+        try:
+            return business_svc.list_tags(bid)
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @_typed_get("/business/{bid}/tags/{tag}")
+    def get_tag(bid: str, tag: str) -> dict[str, Any]:
+        try:
+            return business_svc.get_tag(bid, tag)
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @_typed_put("/business/{bid}/tags/{tag}")
+    def update_tag(bid: str, tag: str, req: UpdateTagSchemaRequest) -> dict[str, Any]:
+        try:
+            data = {k: v for k, v in req.model_dump().items() if v is not None}
+            return business_svc.update_tag(bid, tag, data)
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @app.delete("/business/{bid}/tags/{tag}")
+    def delete_tag(bid: str, tag: str) -> dict[str, str]:
+        try:
+            business_svc.delete_tag(bid, tag)
+            return {"status": "deleted", "bid": bid, "tag": tag}
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @_typed_get("/business/{bid}/indexing-spec")
+    def get_indexing_spec(bid: str) -> dict[str, Any]:
+        try:
+            return business_svc.derive_indexing_spec(bid)
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
 
     return app
 

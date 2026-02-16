@@ -880,43 +880,13 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             raise HTTPException(status_code=status, detail=result["error"])
         return result
 
-    # --- Governance Service API ---
-
-    @_typed_get("/governance/layers")
-    def list_governance_layers() -> dict[str, Any]:
-        """List all managed EA-sys layers and governance stack profiles."""
-        from ea_governance.governance_service import list_managed_layers
-        return list_managed_layers()
-
-    @_typed_get("/governance/layers/summary")
-    def governance_cross_layer_summary() -> dict[str, Any]:
-        """Cross-layer comparison: node/edge counts, top relations."""
-        from ea_governance.governance_service import cross_layer_summary
-        return cross_layer_summary()
-
-    @_typed_get("/governance/layers/{layer_key}")
-    def governance_layer_detail(layer_key: str) -> dict[str, Any]:
-        """Specific layer profile detail + topology metrics."""
-        from ea_governance.governance_service import layer_profile_detail
-        result = layer_profile_detail(layer_key)
-        if "error" in result:
-            raise HTTPException(status_code=404, detail=result["error"])
-        return result
-
-    @_typed_get("/governance/dashboard")
-    def governance_dashboard_endpoint() -> dict[str, Any]:
-        """Overall governance status: layers, schema, frameworks."""
-        from ea_governance.governance_service import governance_dashboard
-        return governance_dashboard()
-
-    @_typed_get("/layers/{layer_key}/schema")
-    def get_layer_schema(layer_key: str, lang: str | None = None) -> dict[str, Any]:
-        """Layer M2 schema — raw profile elements, relations, and rules."""
-        from ea_governance.governance_service import layer_schema
-        result = layer_schema(layer_key, lang=lang)
-        if "error" in result:
-            raise HTTPException(status_code=404, detail=result["error"])
-        return result
+    # --- Governance Service API (plugin from ea-governance) ---
+    try:
+        from ea_governance.api_router import governance_router, layer_schema_router
+        app.include_router(governance_router)
+        app.include_router(layer_schema_router)
+    except ImportError:
+        pass  # ea-governance not installed; governance query endpoints disabled
 
     # --- Governance Flow Logic (Phase 8 Extension) ---
     @_typed_get("/governance/flow/{anchor_id}")

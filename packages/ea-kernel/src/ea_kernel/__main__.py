@@ -12,6 +12,10 @@ Usage:
     python -m ea_kernel show reachable <profile> <element>  — reachable elements
     python -m ea_kernel show paths <profile> <src> <tgt>    — find paths
     python -m ea_kernel show impact <profile> <element>     — impact analysis
+    python -m ea_kernel show versions <profile>            — version history
+    python -m ea_kernel show version-detail <profile> <v>  — version detail
+    python -m ea_kernel show version-diff <profile> <a> <b> — version diff
+    python -m ea_kernel show version-tags <profile>        — version tags
     python -m ea_kernel judge <src> <tgt> <rel>  — evidence-based judgment
     python -m ea_kernel model register <toml> [--db-path ...]  — register model
     python -m ea_kernel model validate <name> <version>        — validate model
@@ -165,6 +169,14 @@ def _cmd_show(args: argparse.Namespace) -> int:
         return _show_paths(args)
     elif target == "impact":
         return _show_impact(args)
+    elif target == "versions":
+        return _show_versions(args)
+    elif target == "version-detail":
+        return _show_version_detail(args)
+    elif target == "version-diff":
+        return _show_version_diff(args)
+    elif target == "version-tags":
+        return _show_version_tags(args)
     else:
         print(f"Unknown show target: {target}", file=sys.stderr)
         return 1
@@ -273,7 +285,7 @@ def _show_profile(args: argparse.Namespace) -> int:
     from ea_kernel.kernel_service import describe_profile
 
     name = args.profile_name
-    data = describe_profile(name)
+    data = describe_profile(name=name)
     if data is None:
         print(f"Profile not found: {name}", file=sys.stderr)
         return 1
@@ -312,7 +324,7 @@ def _show_rule(args: argparse.Namespace) -> int:
     from ea_kernel.kernel_service import describe_rule
 
     rule_id = args.rule_id
-    data = describe_rule(rule_id)
+    data = describe_rule(rule_id=rule_id)
     if data is None:
         print(f"Rule not found: {rule_id}", file=sys.stderr)
         return 1
@@ -361,8 +373,8 @@ def _show_reachable(args: argparse.Namespace) -> int:
     from ea_kernel.kernel_service import profile_reachable
 
     data = profile_reachable(
-        args.profile_name,
-        args.element,
+        profile_name=args.profile_name,
+        element=args.element,
         max_depth=args.depth,
         relation=getattr(args, "relation", None),
     )
@@ -382,9 +394,9 @@ def _show_paths(args: argparse.Namespace) -> int:
     from ea_kernel.kernel_service import profile_paths
 
     data = profile_paths(
-        args.profile_name,
-        args.source,
-        args.target,
+        profile_name=args.profile_name,
+        source=args.source,
+        target=args.target,
         max_depth=args.depth,
         relation=getattr(args, "relation", None),
     )
@@ -410,8 +422,8 @@ def _show_impact(args: argparse.Namespace) -> int:
     from ea_kernel.kernel_service import profile_impact
 
     data = profile_impact(
-        args.profile_name,
-        args.element,
+        profile_name=args.profile_name,
+        element=args.element,
         direction=args.direction,
         max_depth=args.depth,
     )
@@ -434,6 +446,107 @@ def _show_impact(args: argparse.Namespace) -> int:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Profile version commands
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _show_versions(args: argparse.Namespace) -> int:
+    """show versions <profile_name> — version history."""
+    from ea_kernel.kernel_service import profile_version_history
+
+    data = profile_version_history(
+        profile_name=args.profile_name,
+        limit=args.limit,
+    )
+    print(f"Versions: {data['profile_name']} ({data['count']})")
+    for v in data["versions"]:
+        parent = f"  parent={v['parent_id'][:8]}" if v["parent_id"] else ""
+        author = f"  by {v['author']}" if v["author"] else ""
+        desc = f"  — {v['description']}" if v["description"] else ""
+        print(f"  {v['version']}  {v['created_at']}{author}{parent}{desc}")
+    return 0
+
+
+def _show_version_detail(args: argparse.Namespace) -> int:
+    """show version-detail <profile_name> <version> — version detail."""
+    from ea_kernel.kernel_service import profile_version_detail
+
+    data = profile_version_detail(
+        profile_name=args.profile_name,
+        version=args.version,
+    )
+    if "error" in data:
+        print(f"Error: {data['error']}", file=sys.stderr)
+        return 1
+
+    print(f"Version: {data['profile_name']}@{data['version']}")
+    print(f"  ID:           {data['id']}")
+    print(f"  Content hash: {data['content_hash']}")
+    print(f"  Created:      {data['created_at']}")
+    if data["author"]:
+        print(f"  Author:       {data['author']}")
+    if data["parent_id"]:
+        print(f"  Parent:       {data['parent_id']}")
+    if data["origin"]:
+        print(f"  Origin:       {data['origin']}")
+    print(f"  Elements:     {data['element_count']}")
+    print(f"  Relations:    {data['relation_count']}")
+    print(f"  Rules:        {data['rule_count']}")
+    if data["tags"]:
+        tag_names = ", ".join(t["name"] for t in data["tags"])
+        print(f"  Tags:         {tag_names}")
+    return 0
+
+
+def _show_version_diff(args: argparse.Namespace) -> int:
+    """show version-diff <profile_name> <version_a> <version_b> — diff."""
+    from ea_kernel.kernel_service import profile_version_diff
+
+    data = profile_version_diff(
+        profile_name=args.profile_name,
+        version_a=args.version_a,
+        version_b=args.version_b,
+    )
+    if "error" in data:
+        print(f"Error: {data['error']}", file=sys.stderr)
+        return 1
+
+    print(f"Diff: {data['profile_name']} {data['from_version']} -> {data['to_version']}")
+    if data["identical"]:
+        print("  Identical.")
+        return 0
+
+    for label, changes in [
+        ("Elements", data["element_changes"]),
+        ("Relations", data["relation_changes"]),
+        ("Rules", data["rule_changes"]),
+    ]:
+        if not changes:
+            continue
+        print(f"\n  {label}:")
+        for c in changes:
+            name = c.get("name") or c.get("id", "")
+            if c["type"] == "added":
+                print(f"    + {name}")
+            elif c["type"] == "removed":
+                print(f"    - {name}")
+            else:
+                print(f"    ~ {name}  {c['field']}: {c['old_value']} -> {c['new_value']}")
+    return 0
+
+
+def _show_version_tags(args: argparse.Namespace) -> int:
+    """show version-tags <profile_name> — list tags."""
+    from ea_kernel.kernel_service import profile_version_tags
+
+    data = profile_version_tags(profile_name=args.profile_name)
+    print(f"Tags: {data['profile_name']} ({data['count']})")
+    for t in data["tags"]:
+        print(f"  {t['name']}  version_id={t['version_id']}  {t['created_at']}")
+    return 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Judge command
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -442,7 +555,7 @@ def _cmd_judge(args: argparse.Namespace) -> int:
     """judge <source> <target> <relation> — evidence-based judgment."""
     from ea_kernel.kernel_service import judge
 
-    data = judge(args.source, args.target, args.relation)
+    data = judge(source=args.source, target=args.target, relation=args.relation)
 
     if "error" in data:
         print(f"Error: {data['error']}", file=sys.stderr)
@@ -716,6 +829,22 @@ def main() -> int:
     impact_p.add_argument("element", help="Element to analyze")
     impact_p.add_argument("--direction", choices=("outgoing", "incoming", "both"), default="both", help="Analysis direction")
     impact_p.add_argument("--depth", type=int, default=3, help="Max traversal depth")
+
+    versions_p = show_sub.add_parser("versions", help="Profile version history")
+    versions_p.add_argument("profile_name", help="Profile name")
+    versions_p.add_argument("--limit", type=int, default=50, help="Max versions to show")
+
+    ver_detail_p = show_sub.add_parser("version-detail", help="Profile version detail")
+    ver_detail_p.add_argument("profile_name", help="Profile name")
+    ver_detail_p.add_argument("version", help="Version string")
+
+    ver_diff_p = show_sub.add_parser("version-diff", help="Diff between two profile versions")
+    ver_diff_p.add_argument("profile_name", help="Profile name")
+    ver_diff_p.add_argument("version_a", help="Source version")
+    ver_diff_p.add_argument("version_b", help="Target version")
+
+    ver_tags_p = show_sub.add_parser("version-tags", help="Profile version tags")
+    ver_tags_p.add_argument("profile_name", help="Profile name")
 
     # MCP server
     sub.add_parser("mcp", help="Run MCP server (stdio transport)")

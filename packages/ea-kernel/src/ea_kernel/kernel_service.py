@@ -122,7 +122,7 @@ def list_relations(*, lang: str | None = None) -> dict[str, Any]:
 # ── UC2: Profile detail ──────────────────────────────────────
 
 
-def describe_profile(name: str, *, lang: str | None = None) -> dict[str, Any] | None:
+def describe_profile(*, name: str, lang: str | None = None) -> dict[str, Any] | None:
     """UC2: Describe a profile — elements by layer, relations, rule summary."""
     profile = _load_profile(name, lang=lang)
     if profile is None:
@@ -176,7 +176,7 @@ def describe_profile(name: str, *, lang: str | None = None) -> dict[str, Any] | 
 # ── UC3: Rule exploration/filtering ──────────────────────────
 
 
-def list_rules(group: str | None = None, relation: str | None = None) -> dict[str, Any]:
+def list_rules(*, group: str | None = None, relation: str | None = None) -> dict[str, Any]:
     """UC3: List rules with optional filtering by group or relation.
 
     If neither filter is given, returns group-level summary.
@@ -233,7 +233,7 @@ def list_rules(group: str | None = None, relation: str | None = None) -> dict[st
 # ── UC4: Single rule detail ─────────────────────────────────
 
 
-def describe_rule(rule_id: str) -> dict[str, Any] | None:
+def describe_rule(*, rule_id: str) -> dict[str, Any] | None:
     """UC4: Describe a single rule with full metadata."""
     corpus = _get_corpus()
     entry = corpus._by_id.get(rule_id)
@@ -268,7 +268,7 @@ def describe_rule(rule_id: str) -> dict[str, Any] | None:
 # ── UC5: Evidence-based judgment ─────────────────────────────
 
 
-def judge(source: str, target: str, relation: str) -> dict[str, Any]:
+def judge(*, source: str, target: str, relation: str) -> dict[str, Any]:
     """UC5: Evidence-based judgment for a relationship triple."""
     spec = _get_spec()
 
@@ -326,8 +326,8 @@ def _load_profile(name: str, *, lang: str | None = None) -> Any:
 
 
 def profile_topology(
-    profile_name: str,
     *,
+    profile_name: str,
     cross_layer: bool = False,
     lang: str | None = None,
 ) -> dict[str, Any]:
@@ -398,9 +398,9 @@ def profile_topology(
 
 
 def profile_reachable(
+    *,
     profile_name: str,
     element: str,
-    *,
     max_depth: int = 3,
     relation: str | None = None,
 ) -> dict[str, Any]:
@@ -431,9 +431,9 @@ def profile_reachable(
 
 
 def profile_element_scope(
+    *,
     profile_name: str,
     elements: list[str],
-    *,
     max_depth: int = 4,
 ) -> dict[str, Any]:
     """Compute union of reachable sets from multiple seed elements."""
@@ -466,10 +466,10 @@ def profile_element_scope(
 
 
 def profile_paths(
+    *,
     profile_name: str,
     source: str,
     target: str,
-    *,
     max_depth: int = 5,
     relation: str | None = None,
 ) -> dict[str, Any]:
@@ -516,9 +516,9 @@ def profile_paths(
 
 
 def profile_impact(
+    *,
     profile_name: str,
     element: str,
-    *,
     direction: str = "both",
     max_depth: int = 3,
 ) -> dict[str, Any]:
@@ -580,7 +580,7 @@ def _get_i18n_store() -> "I18nStore":
     return SQLiteI18nStore(db_path)
 
 
-def audit_i18n(lang: str = "ko") -> dict[str, Any]:
+def audit_i18n(*, lang: str = "ko") -> dict[str, Any]:
     """TOML 패치 기반 i18n 감사 리포트."""
     from ea_kernel.schema_loader import audit_i18n_patch
     spec = _get_spec()
@@ -608,7 +608,7 @@ def audit_i18n(lang: str = "ko") -> dict[str, Any]:
     }
 
 
-def list_translations(lang: str, kind: str | None = None) -> dict[str, Any]:
+def list_translations(*, lang: str, kind: str | None = None) -> dict[str, Any]:
     """번역 목록 조회."""
     store = _get_i18n_store()
     entries = store.list_translations(lang, kind)
@@ -626,7 +626,7 @@ def list_translations(lang: str, kind: str | None = None) -> dict[str, Any]:
     }
 
 
-def get_translation(kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
+def get_translation(*, kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
     """단일 번역 조회."""
     store = _get_i18n_store()
     entry = store.get(kind, name, lang, field)
@@ -642,7 +642,7 @@ def get_translation(kind: str, name: str, lang: str, field: str) -> dict[str, An
     }
 
 
-def update_translation(kind: str, name: str, lang: str, field: str, value: str) -> dict[str, Any]:
+def update_translation(*, kind: str, name: str, lang: str, field: str, value: str) -> dict[str, Any]:
     """번역 수정."""
     from ea_kernel.i18n_store import TranslationEntry
     store = _get_i18n_store()
@@ -663,7 +663,7 @@ def update_translation(kind: str, name: str, lang: str, field: str, value: str) 
     }
 
 
-def translation_history(kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
+def translation_history(*, kind: str, name: str, lang: str, field: str) -> dict[str, Any]:
     """번역 이력 조회."""
     store = _get_i18n_store()
     entries = store.history(kind, name, lang, field)
@@ -676,5 +676,136 @@ def translation_history(kind: str, name: str, lang: str, field: str) -> dict[str
                 "created_by": e.created_by, "created_at": e.created_at,
             }
             for e in entries
+        ],
+    }
+
+
+# ── Profile Version History Service ──────────────────────────
+
+
+def _get_profile_store() -> "SQLiteProfileStore":
+    from pathlib import Path
+
+    from ea_profile.store import SQLiteProfileStore
+    db_path = Path(__file__).parent / "data" / "profiles.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    store = SQLiteProfileStore(db_path)
+    store.initialize()
+    return store
+
+
+def profile_version_history(
+    *, profile_name: str, limit: int = 50,
+) -> dict[str, Any]:
+    """프로파일 버전 히스토리 조회 — newest first."""
+    store = _get_profile_store()
+    versions = store.list_versions(profile_name, ascending=False)[:limit]
+    return {
+        "profile_name": profile_name,
+        "count": len(versions),
+        "versions": [
+            {
+                "id": v.id,
+                "version": v.version,
+                "content_hash": v.content_hash,
+                "author": v.author,
+                "description": v.description,
+                "created_at": v.created_at,
+                "parent_id": v.parent_id,
+            }
+            for v in versions
+        ],
+    }
+
+
+def profile_version_detail(
+    *, profile_name: str, version: str,
+) -> dict[str, Any]:
+    """단일 버전 상세 — 메타데이터 + 요소/관계/규칙 카운트 + 태그."""
+    store = _get_profile_store()
+    pv = store.get_by_version(profile_name, version)
+    if pv is None:
+        return {"error": f"Version not found: {profile_name}@{version}"}
+
+    tags = store.list_tags(version_id=pv.id)
+    data = pv.data
+    element_count = len(data.get("elements", []))
+    relation_count = len(data.get("relations", []))
+    rule_count = len(data.get("validity_rules", []))
+
+    return {
+        "id": pv.id,
+        "profile_name": pv.profile_name,
+        "version": pv.version,
+        "content_hash": pv.content_hash,
+        "author": pv.author,
+        "description": pv.description,
+        "created_at": pv.created_at,
+        "parent_id": pv.parent_id,
+        "origin": pv.origin,
+        "element_count": element_count,
+        "relation_count": relation_count,
+        "rule_count": rule_count,
+        "tags": [
+            {"name": t.name, "created_at": t.created_at}
+            for t in tags
+        ],
+    }
+
+
+def profile_version_diff(
+    *, profile_name: str, version_a: str, version_b: str,
+) -> dict[str, Any]:
+    """두 버전 간 구조적 diff — elements/relations/rules 변경 목록."""
+    from ea_profile.diff import diff_profiles
+    from ea_profile.serializer import dict_to_profile
+
+    store = _get_profile_store()
+    pv_a = store.get_by_version(profile_name, version_a)
+    if pv_a is None:
+        return {"error": f"Version not found: {profile_name}@{version_a}"}
+    pv_b = store.get_by_version(profile_name, version_b)
+    if pv_b is None:
+        return {"error": f"Version not found: {profile_name}@{version_b}"}
+
+    profile_a = dict_to_profile(pv_a.data)
+    profile_b = dict_to_profile(pv_b.data)
+    diff = diff_profiles(profile_a, profile_b)
+
+    return {
+        "profile_name": profile_name,
+        "from_version": version_a,
+        "to_version": version_b,
+        "identical": diff.identical,
+        "element_changes": [
+            {"type": c.change_type.value, "name": c.element_name, "field": c.field,
+             "old_value": c.old_value, "new_value": c.new_value}
+            for c in diff.element_changes
+        ],
+        "relation_changes": [
+            {"type": c.change_type.value, "name": c.relation_name, "field": c.field,
+             "old_value": c.old_value, "new_value": c.new_value}
+            for c in diff.relation_changes
+        ],
+        "rule_changes": [
+            {"type": c.change_type.value, "id": c.rule_id, "field": c.field,
+             "old_value": c.old_value, "new_value": c.new_value}
+            for c in diff.rule_changes
+        ],
+    }
+
+
+def profile_version_tags(
+    *, profile_name: str,
+) -> dict[str, Any]:
+    """프로파일의 모든 태그 조회."""
+    store = _get_profile_store()
+    tags = store.list_tags(profile_name=profile_name)
+    return {
+        "profile_name": profile_name,
+        "count": len(tags),
+        "tags": [
+            {"name": t.name, "version_id": t.version_id, "created_at": t.created_at}
+            for t in tags
         ],
     }

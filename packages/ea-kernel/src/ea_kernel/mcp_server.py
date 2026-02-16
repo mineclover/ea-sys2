@@ -110,7 +110,7 @@ def kernel_describe_profile(name: str) -> str:
     """
     from ea_kernel.kernel_service import describe_profile
 
-    result = describe_profile(name)
+    result = describe_profile(name=name)
     if result is None:
         return json.dumps({"error": f"Profile not found: {name}"})
     return json.dumps(result, indent=2)
@@ -125,7 +125,7 @@ def kernel_describe_rule(rule_id: str) -> str:
     """
     from ea_kernel.kernel_service import describe_rule
 
-    result = describe_rule(rule_id)
+    result = describe_rule(rule_id=rule_id)
     if result is None:
         return json.dumps({"error": f"Rule not found: {rule_id}"})
     return json.dumps(result, indent=2)
@@ -141,7 +141,7 @@ def kernel_judge(source: str, target: str, relation: str) -> str:
     """
     from ea_kernel.kernel_service import judge
 
-    return json.dumps(judge(source, target, relation), indent=2)
+    return json.dumps(judge(source=source, target=target, relation=relation), indent=2)
 
 
 @_typed_tool()
@@ -177,7 +177,7 @@ def profile_reachable(
     from ea_kernel.kernel_service import profile_reachable as _reachable
 
     return json.dumps(
-        _reachable(profile_name, element, max_depth=max_depth, relation=relation),
+        _reachable(profile_name=profile_name, element=element, max_depth=max_depth, relation=relation),
         indent=2,
     )
 
@@ -205,7 +205,7 @@ def profile_paths(
     from ea_kernel.kernel_service import profile_paths as _paths
 
     return json.dumps(
-        _paths(profile_name, source, target, max_depth=max_depth, relation=relation),
+        _paths(profile_name=profile_name, source=source, target=target, max_depth=max_depth, relation=relation),
         indent=2,
     )
 
@@ -231,9 +231,73 @@ def profile_impact(
     from ea_kernel.kernel_service import profile_impact as _impact
 
     return json.dumps(
-        _impact(profile_name, element, direction=direction, max_depth=max_depth),
+        _impact(profile_name=profile_name, element=element, direction=direction, max_depth=max_depth),
         indent=2,
     )
+
+
+@_typed_tool()
+def profile_version_history(profile_name: str, limit: int = 50) -> str:
+    """List version history for a profile — newest first.
+
+    Returns version metadata (id, version, content_hash, author,
+    description, created_at, parent_id) without full profile data.
+
+    Args:
+        profile_name: Profile name.
+        limit: Maximum number of versions to return (default 50).
+    """
+    from ea_kernel.kernel_service import profile_version_history as _history
+
+    return json.dumps(_history(profile_name=profile_name, limit=limit), indent=2)
+
+
+@_typed_tool()
+def profile_version_detail(profile_name: str, version: str) -> str:
+    """Get detailed info for a specific profile version.
+
+    Returns metadata, element/relation/rule counts, and tags.
+
+    Args:
+        profile_name: Profile name.
+        version: Version string.
+    """
+    from ea_kernel.kernel_service import profile_version_detail as _detail
+
+    return json.dumps(_detail(profile_name=profile_name, version=version), indent=2)
+
+
+@_typed_tool()
+def profile_version_diff(profile_name: str, version_a: str, version_b: str) -> str:
+    """Compute structural diff between two profile versions.
+
+    Returns element/relation/rule changes (added, removed, modified).
+
+    Args:
+        profile_name: Profile name.
+        version_a: Source version string.
+        version_b: Target version string.
+    """
+    from ea_kernel.kernel_service import profile_version_diff as _diff
+
+    return json.dumps(
+        _diff(profile_name=profile_name, version_a=version_a, version_b=version_b),
+        indent=2,
+    )
+
+
+@_typed_tool()
+def profile_version_tags(profile_name: str) -> str:
+    """List all tags for a profile.
+
+    Returns tag names with their version IDs and creation timestamps.
+
+    Args:
+        profile_name: Profile name.
+    """
+    from ea_kernel.kernel_service import profile_version_tags as _tags
+
+    return json.dumps(_tags(profile_name=profile_name), indent=2)
 
 
 def run_stdio() -> None:

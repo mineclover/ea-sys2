@@ -1,10 +1,10 @@
-"""Phase 5 Governance Automation Tests.
+"""Tests for lifecycle_controller — event-driven lifecycle automation.
 
-Tests for:
-- LifecycleController (S1, S5, S6 automation)
-- Event-Driven Workflow
-- Auto-Promotion Logic
-- Notification Routing
+Extracted from test_governance_phase5.py for module-level focus.
+
+Tests:
+- LifecycleController event-driven notifications
+- Auto-promotion workflow
 """
 
 from __future__ import annotations
@@ -42,9 +42,8 @@ def tmp_path(request: pytest.FixtureRequest) -> Path:
 
 @pytest.fixture
 def rule_store(tmp_path: Path) -> RuleAssetStore:
-    db_path = tmp_path / "rules_p5.db"
+    db_path = tmp_path / "rules_controller.db"
     store = SQLiteRuleAssetStore(db_path)
-    # store initialized implicitly or check if needed
     return store
 
 @pytest.fixture
@@ -188,8 +187,7 @@ class TestAutoPromotion:
         from ea_kernel.what_if_simulator import ImpactLevel, SimulationResult, WhatIfSimulator
 
         # Setup Mocks / Engines
-        decision_store = SQLiteDecisionStore(tmp_path / "decisions_p5.db")
-        # decision_store.initialize() # Not needed for SQLiteDecisionStore
+        decision_store = SQLiteDecisionStore(tmp_path / "decisions_controller.db")
 
         promotion_engine = PromotionEngine(rule_store)
         what_if_simulator = WhatIfSimulator(decision_store)

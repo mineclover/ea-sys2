@@ -123,7 +123,7 @@ class TestDescribeProfile:
     """UC2: describe_profile()."""
 
     def test_archimate_profile(self):
-        result = describe_profile("ArchiMate")
+        result = describe_profile(name="ArchiMate")
         assert result is not None
         assert result["name"] == "ArchiMate"
         assert result["element_count"] > 0
@@ -131,11 +131,11 @@ class TestDescribeProfile:
         assert "elements_by_layer" in result
 
     def test_unknown_profile_returns_none(self):
-        result = describe_profile("NonExistent")
+        result = describe_profile(name="NonExistent")
         assert result is None
 
     def test_rule_summary_has_allow_deny(self):
-        result = describe_profile("ArchiMate")
+        result = describe_profile(name="ArchiMate")
         assert result is not None
         summary = result["rule_summary"]
         assert "allow" in summary
@@ -150,14 +150,14 @@ class TestDescribeRule:
         rules = list_rules(group="specialization")
         assert rules["total"] > 0
         rule_id = rules["rules"][0]["id"]
-        result = describe_rule(rule_id)
+        result = describe_rule(rule_id=rule_id)
         assert result is not None
         assert result["id"] == rule_id
         assert "metadata" in result
         assert "group" in result["metadata"]
 
     def test_unknown_rule_returns_none(self):
-        result = describe_rule("nonexistent-rule-id")
+        result = describe_rule(rule_id="nonexistent-rule-id")
         assert result is None
 
 
@@ -165,7 +165,7 @@ class TestJudge:
     """UC5: judge()."""
 
     def test_allow_verdict(self):
-        result = judge("classifier", "feature", "specialization")
+        result = judge(source="classifier", target="feature", relation="specialization")
         assert "verdict" in result
         assert "confidence" in result
         assert "evidence" in result
@@ -173,27 +173,27 @@ class TestJudge:
         assert len(result["evidence"]) > 0
 
     def test_deny_verdict(self):
-        result = judge("feature", "classifier", "specialization")
+        result = judge(source="feature", target="classifier", relation="specialization")
         assert "verdict" in result
         # Should have evidence either way
         assert "evidence" in result
 
     def test_unknown_source(self):
-        result = judge("nonexistent", "feature", "specialization")
+        result = judge(source="nonexistent", target="feature", relation="specialization")
         assert "error" in result
         assert "valid_entities" in result
 
     def test_unknown_target(self):
-        result = judge("classifier", "nonexistent", "specialization")
+        result = judge(source="classifier", target="nonexistent", relation="specialization")
         assert "error" in result
 
     def test_unknown_relation(self):
-        result = judge("classifier", "feature", "nonexistent")
+        result = judge(source="classifier", target="feature", relation="nonexistent")
         assert "error" in result
         assert "valid_relations" in result
 
     def test_conflicts_key_present(self):
-        result = judge("classifier", "feature", "specialization")
+        result = judge(source="classifier", target="feature", relation="specialization")
         assert "conflicts" in result
 
 
@@ -216,14 +216,14 @@ class TestProfileTopology:
     """UC6: profile_topology()."""
 
     def test_topology_returns_nodes_and_edges(self):
-        result = profile_topology("ArchiMate")
+        result = profile_topology(profile_name="ArchiMate")
         assert "nodes" in result
         assert "edges" in result
         assert result["node_count"] > 0
         assert result["edge_count"] > 0
 
     def test_cross_layer_filters_same_layer_edges(self):
-        result = profile_topology("ArchiMate", cross_layer=True)
+        result = profile_topology(profile_name="ArchiMate", cross_layer=True)
         assert result["cross_layer"] is True
         # Build a layer lookup from the returned nodes
         layer_of = {n["name"]: n["layer"] for n in result["nodes"]}
@@ -234,12 +234,12 @@ class TestProfileTopology:
                 assert src_layer != tgt_layer
 
     def test_cross_layer_prunes_nodes(self):
-        full = profile_topology("ArchiMate")
-        cross = profile_topology("ArchiMate", cross_layer=True)
+        full = profile_topology(profile_name="ArchiMate")
+        cross = profile_topology(profile_name="ArchiMate", cross_layer=True)
         assert cross["node_count"] <= full["node_count"]
 
     def test_unknown_profile_returns_error(self):
-        result = profile_topology("NonExistentProfile")
+        result = profile_topology(profile_name="NonExistentProfile")
         assert "error" in result
 
 
@@ -247,7 +247,7 @@ class TestI18nService:
     """I18n service functions."""
 
     def test_audit_i18n_returns_report(self):
-        result = audit_i18n("ko")
+        result = audit_i18n(lang="ko")
         assert "lang" in result
         assert result["lang"] == "ko"
         assert "coverage" in result
@@ -259,12 +259,12 @@ class TestI18nService:
         assert isinstance(result["stale"], list)
 
     def test_audit_i18n_ko_has_full_coverage(self):
-        result = audit_i18n("ko")
+        result = audit_i18n(lang="ko")
         assert result["total_translated"] == result["total_schema_items"]
         assert result["coverage"] == 1.0
 
     def test_audit_i18n_unknown_lang(self):
-        result = audit_i18n("xx")
+        result = audit_i18n(lang="xx")
         assert result["lang"] == "xx"
         assert result["coverage"] == 0.0
         assert result["total_translated"] == 0

@@ -92,27 +92,42 @@ element (root, abstract — uid/name/description/qualified_name/layer)
 
 ```
 src/ea_kernel/
-├── types.py              # L1-L4 커널 타입 + Rule Corpus + Graph/Instance/AI 타입
-├── definition.py         # 커널 정의/규칙
-├── spec.py               # 스펙 정의
-├── spec_loader.py        # 스펙 로더 + 메타데이터 파싱
-├── schema_loader.py      # TOML 스키마 파서 (specs/ → KernelSchema)
-├── rule_corpus.py        # 규칙 코퍼스 — 메타데이터·쿼리·증거 기반 판단
+├── types.py                # L1-L4 커널 타입 + Rule Corpus + Graph/Instance/AI 타입
+├── definition.py           # 커널 정의/규칙
+├── spec.py                 # 스펙 정의 (KERNEL_SPEC 싱글턴)
+├── spec_loader.py          # 스펙 로더 + 메타데이터 파싱
+├── schema_loader.py        # TOML 스키마 파서 (specs/ → KernelSchema)
+├── rule_corpus.py          # 규칙 코퍼스 — 메타데이터·쿼리·증거 기반 판단
 ├── profile_rule_compiler.py # @Category/#Layer → 구체 규칙 확장 (커널 런타임용)
-├── profile_graph.py      # 프로파일 기반 토폴로지 그래프
-├── graph_view.py         # 토폴로지 그래프 탐색 + 경로 열거 (Phase 2)
-├── instance_validator.py # M0 인스턴스 적합성 검증 (Phase 3)
-├── decision_ledger.py    # 의사결정 기록 + 패턴 탐지 (Phase 3)
-├── ai_interface.py       # AI 에이전트 의사결정 인터페이스 (Phase 4)
-├── kernel_service.py     # 서비스 계층 — 7개 온보딩 함수 (UC1-UC5)
-├── mcp_server.py         # MCP 서버 — 7개 도구 + instructions
-├── governance.py         # 거버넌스 관리
-├── governance_types.py   # 거버넌스 타입 (RuleAsset, 수명주기)
-├── lifecycle_controller.py # 수명주기 컨트롤러
-├── i18n_store.py         # i18n 번역 저장소
-├── localizer.py          # 프로파일 로컬라이저
-├── rule_verifier.py      # 규칙 검증
-└── test_harness.py       # 테스트 하네스
+├── profile_graph.py        # 프로파일 기반 토폴로지 그래프
+├── graph_view.py           # 토폴로지 그래프 탐색 + 경로 열거
+├── instance_validator.py   # M0 인스턴스 적합성 검증
+├── decision_ledger.py      # 의사결정 기록 + 패턴 탐지
+├── ai_interface.py         # AI 에이전트 의사결정 인터페이스
+├── kernel_service.py       # 서비스 계층 — UC1-UC6 순수 함수
+├── mcp_server.py           # MCP 서버 — 12개 도구 + instructions
+├── __main__.py             # CLI 진입점 (audit/verify/show/judge/model/mcp)
+├── governance.py           # GovernanceSystem 퍼사드 (6개 컴포넌트 조합)
+├── governance_types.py     # 거버넌스 타입 (RuleAsset, RuleLifecycleState, 수명주기)
+├── lifecycle_controller.py # 수명주기 컨트롤러 (이벤트 구독 + on_* 핸들러)
+├── lifecycle_events.py     # 이벤트 버스 (InMemory 구현)
+├── notification_service.py # ABC + Mock — 알림 인터페이스
+├── evidence_analyzer.py    # S4 Analysis — 증거 패턴 추출 + 결정 분석
+├── judgment_service.py     # S2 Judgment — 거버넌스 인식 판정 서비스
+├── impact_evaluator.py     # S6 Propagation — 규칙 변경 영향도 평가
+├── what_if_simulator.py    # S5 Evolution — 규칙 변경 시뮬레이션
+├── promotion_engine.py     # S5 Evolution — 규칙 승격 기준 + 워크플로
+├── i18n_store.py           # i18n 번역 저장소 (ABC + InMemory + SQLite)
+├── rule_asset_store.py     # 규칙 자산 수명주기 영속화 (ABC + InMemory + SQLite)
+├── decision_store.py       # 의사결정 기록 영속화 (ABC + InMemory + SQLite)
+├── corpus_version_store.py # 규칙 코퍼스 버전 관리 (ABC + InMemory + SQLite)
+├── model_registration.py   # 모델 등록/검증/활성화 서비스
+├── model_io.py             # 모델 직렬화/역직렬화
+├── localizer.py            # 프로파일 로컬라이저
+├── rule_verifier.py        # 규칙 검증
+├── multi_tenancy.py        # 멀티테넌트 컨텍스트 관리
+├── diagram_exporter.py     # 시각화 내보내기 유틸리티
+└── test_harness.py         # 테스트 하네스
 ```
 
 ### Re-export shim 모듈 (ea_profile → ea_kernel 호환)
@@ -228,6 +243,25 @@ types.py ← definition.py, spec.py
          ← kernel_service.py (types + 위 모듈 lazy import)
 
 kernel_service.py ← mcp_server.py (도구 함수 내부에서 lazy import)
+                  ← __main__.py (CLI 디스패치)
+
+[Governance Lifecycle (S1-S6)]
+governance_types.py ← governance.py (GovernanceSystem 퍼사드)
+lifecycle_events.py ← lifecycle_controller.py (이벤트 구독)
+notification_service.py ← lifecycle_controller.py (알림 발행)
+
+rule_corpus.py ← judgment_service.py (S2 거버넌스 인식 판정)
+               ← evidence_analyzer.py (S4 증거 분석)
+               ← what_if_simulator.py (S5 시뮬레이션)
+               ← promotion_engine.py (S5 승격)
+               ← impact_evaluator.py (S6 영향 평가)
+
+[Store (ABC + InMemory + SQLite)]
+i18n_store.py: 독립
+rule_asset_store.py: governance_types
+decision_store.py: governance_types
+corpus_version_store.py: governance_types
+model_registration.py: types + spec + model_io
 
 [Kernel ← ea_profile]
 types.py + rule_corpus.py ← profile_builder.py (shim: build_with_corpus에서 lazy import)
@@ -269,3 +303,42 @@ rule_corpus.py ← rule_verifier.py
 - @Category/#Layer → 커널 엔티티명으로 확장
 - 확장된 규칙에 __c{seq} 접미사 ID 부여
 - ProfileRuleCompilationStats로 확장 통계 추적
+
+### 6-Phase Governance Lifecycle
+커널 내부 거버넌스가 6단계로 규칙 자산을 관리한다:
+- **S1 Authoring** (governance.py) — 규칙 등록/제출
+- **S2 Judgment** (judgment_service.py) — 거버넌스 인식 판정 (승인된 규칙만 판정 참여)
+- **S3 Recording** (decision_ledger.py, decision_store.py) — 판정 기록 영속화
+- **S4 Analysis** (evidence_analyzer.py) — 증거 패턴 추출 + 의사결정 분석
+- **S5 Evolution** (what_if_simulator.py, promotion_engine.py) — 시뮬레이션 + 승격 워크플로
+- **S6 Propagation** (impact_evaluator.py) — 규칙 변경 영향도 전파 평가
+
+### Store 3중 구현 (§5 완전 준수)
+4개 스토어 모듈이 동일 패턴을 따른다:
+- ABC 인터페이스 → InMemory 구현 (테스트) → SQLite 구현 (프로덕션)
+- 대상: i18n_store, rule_asset_store, decision_store, corpus_version_store
+
+#### 커널 vs 거버넌스 스토어 역할 경계
+커널 스토어 4개는 **커널 도메인 데이터의 영속화**를 담당한다. ea-governance의 LayerStore/NeedsStore/KernelStore와 역할이 겹치지 않는다:
+
+| 스토어 | 소유자 | 책임 |
+|--------|--------|------|
+| `i18n_store` | kernel | 커널 스키마 i18n 번역 CRUD + 이력 |
+| `rule_asset_store` | kernel | 규칙 자산 수명주기 (DRAFT→REVIEW→APPROVED→DEPRECATED) |
+| `decision_store` | kernel | 판정 기록(JudgmentReport + evidence summary) 영속화 |
+| `corpus_version_store` | kernel | 규칙 코퍼스 버전 스냅샷 |
+| `LayerStore` | governance | 6개 레이어 모델 등록/버전/활성 상태 관리 |
+| `KernelStore` | governance | 커널 메타데이터 (스키마 버전, 프로파일 목록) 관리 |
+| `NeedsStore` | governance | 요구사항 영속화 + 상태 전이 이력 |
+
+원칙: **커널 스토어는 규칙·판정·번역 등 도메인 영속화**, **거버넌스 스토어는 레이어 간 조율·등록·진화 이력 관리**. 동일 데이터를 이중 저장하지 않는다.
+
+### Event Bus 패턴
+- lifecycle_events.py: InMemoryLifecycleEventBus (LifecycleEventPort 구현)
+- lifecycle_controller.py: `__init__`에서 이벤트 구독, `on_*` 핸들러 메서드
+- 이벤트: RULE_SUBMITTED → RULE_APPROVED → CORPUS_UPDATED
+
+### What-If Simulation
+- 규칙 변경 전 정적 시뮬레이션으로 영향도 사전 평가
+- what_if_simulator.py: 가상 규칙 추가/수정/삭제 후 판정 결과 비교
+- impact_evaluator.py: 변경된 규칙이 기존 판정에 미치는 영향 범위 산출

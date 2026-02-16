@@ -30,14 +30,13 @@ src/ea_decision/
 ├── lifecycle.py         # N2: DecisionLifecycle 상태 머신 (frozen, 전이→새 인스턴스)
 ├── evidence.py          # N1+N2: 구조화 증거 (EvidenceType, Evidence, EvidenceCollection)
 ├── evaluation.py        # N2: 평가 프레임워크 (EvaluationDimension, OptionScore, EvaluationResult)
+├── decision_schema.py   # D2.5: DecisionSchema (SchemaPort) + DECISION_SCHEMA 싱글턴
+├── condition_registry.py # D2.5: decision_condition_registry() — kernel defaults + 5개 조건
+├── profile_bridge.py    # D3: load_decision_profile() / load_decision_profile_from_content()
 ├── kernel_bridge.py     # N3: Kernel 연동 (lazy import, 유일한 ea_kernel 참조점)
 ├── process.py           # N2: DesignThinkingProcess 오케스트레이터
 ├── registry.py          # N3: DecisionRegistry (패턴 등록/조회)
-├── repository.py        # N3: DecisionRepository (파일 기반 영속화)
-├── design_thinking.py   # ⚠️ shim → topic.py + types.py re-export (하위 호환)
-├── structure.py         # ⚠️ shim → types.py re-export (하위 호환)
-├── ontology.py          # ⚠️ shim → types.py re-export (하위 호환, TopicOption as ChoiceOption)
-└── pattern_schema.py    # ⚠️ shim → pattern.py re-export (하위 호환)
+└── repository.py        # N3: DecisionRepository (파일 기반 영속화)
 ```
 
 N1 타입 전부 `frozen=True`. N2 Aggregate(Topic)만 mutable 허용. DecisionLifecycle: frozen, 전이마다 새 인스턴스 반환(Kernel RuleLifecycle 패턴).
@@ -77,16 +76,14 @@ types.py ← process.py (Intent, ChoiceOption, Choice, DecisionResult)
 pattern.py ← topic.py (DecisionComplexity, DecisionPattern)
            ← registry.py (DecisionPattern)
 topic.py ← repository.py (Topic)
+decision_schema.py: 독립 (DecisionSchema, DecisionEntity, DecisionRelation, DECISION_SCHEMA)
+condition_registry.py: ea_profile.types lazy import (ConditionRegistry)
+profile_bridge.py: decision_schema + condition_registry ← ea_profile.loader lazy import
 kernel_bridge.py: ea_kernel.types lazy import (유일한 Kernel 참조점)
-design_thinking.py: shim → topic.py + types.py
-structure.py: shim → types.py
-ontology.py: shim → types.py
-pattern_schema.py: shim → pattern.py
 ```
 
 types.py는 순수 어휘(N1)이므로 프로세스(N2)나 통합(N3) 모듈을 절대 import하지 않는다. 이는 Kernel의 types.py가 service/mcp 모듈을 모르는 것과 동일한 원칙이다.
 kernel_bridge.py만 ea_kernel.types를 lazy import한다. 나머지 모듈은 Kernel 타입을 알지 못하며, string ID 기반 간접 참조만 사용한다.
-design_thinking.py, structure.py, ontology.py, pattern_schema.py는 하위 호환 shim이다. 내부 코드와 ea-governance는 새 경로를 사용한다.
 
 ### Test Convention
 

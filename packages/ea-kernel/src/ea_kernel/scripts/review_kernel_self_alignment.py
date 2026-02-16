@@ -84,8 +84,8 @@ EVIDENCE_RULES: dict[str, tuple[EvidenceRule, ...]] = {
     "KernelProfileLoader": (
         EvidenceRule(
             file="profile_loader.py",
-            pattern=r"def load_profile\(",
-            description="Profile loader function exists.",
+            pattern=r"(def load_profile\(|from ea_profile\.loader import)",
+            description="Profile loader function exists (direct or re-export).",
         ),
     ),
     "KernelProfileRegistry": (

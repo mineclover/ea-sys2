@@ -1,5 +1,8 @@
 # ea-needs — Coding Conventions & Module Rules
 
+> **공통 구현 컨벤션**: `docs/ea-sys-conventions.md` 참조.
+> 본 문서는 니즈 레이어 고유 사항(N1/N2/N3 추상화, NeedStatement 불변성, 상태 전이, 프로세스 유닛)만 기술한다.
+
 니즈 레이어. 이해관계자의 순수한 니즈를 의사결정(ea-decision) 이전에 구조적으로 표현. ea-kernel에 단방향 의존.
 
 ## Design Philosophy
@@ -30,6 +33,7 @@ src/ea_needs/
 ├── catalog.py           # N2: NeedCatalog aggregate root + Need mutable wrapper + NeedRelation
 ├── needs_schema.py      # N2.5: NeedsSchema (SchemaPort 만족) + NEEDS_SCHEMA 싱글턴
 ├── condition_registry.py # N2.5: needs_condition_registry() — kernel defaults + needs 4개 조건
+├── needs_service.py     # N2.5: 순수 함수 쿼리 서비스 (list_stakeholders, describe_need, catalog_summary 등)
 ├── kernel_bridge.py     # N3: lazy kernel import (유일한 ea_kernel 참조점)
 ├── profile_bridge.py    # N3: load_needs_profile/load_needs_profile_from_content
 └── repository.py        # N3: 파일 기반 영속화 (JSON)
@@ -47,28 +51,31 @@ DRAFT → EXPRESSED → ACKNOWLEDGED → ADDRESSED
 
 ## Import Convention
 
-**절대 경로 중심**.
+공통 import 규율은 `docs/ea-sys-conventions.md` §9 참조. ea-needs 고유 예시:
 
 ```python
+# N1 Vocabulary
 from ea_needs.types import Stakeholder, Desire, Justification, NeedStatement
+
+# N2 Catalog
 from ea_needs.catalog import NeedCatalog, Need
+
+# N3 Integration (kernel bridge — lazy import 내부)
+from ea_needs.kernel_bridge import map_need_to_kernel
 ```
 
-## Typing Convention
+## Typing / File Size
 
-- Python 3.11+ 현대 문법: `list[]`, `dict[]`, `str | None`
+공통: `docs/ea-sys-conventions.md` §1.5, §10.2, §10.3 참조.
 
 ## Module Rules
-
-### File Size
-
-목표 700줄, 경고 1000줄, 강제분할 1500줄.
 
 ### Dependency Direction
 
 ```
 types.py: 독립 (enums, Stakeholder, Desire, Justification, NeedStatement)
   ← catalog.py (모든 types import)
+  ← needs_service.py (types + catalog)
   ← repository.py (NeedCatalog)
 needs_schema.py: 독립 (NeedsSchema, NeedsEntity, NeedsRelation, NEEDS_SCHEMA)
 condition_registry.py: ea_kernel.profile_types lazy import (ConditionRegistry)
@@ -83,5 +90,48 @@ kernel_bridge.py, condition_registry.py, profile_bridge.py만 ea_kernel을 lazy 
 
 ### Test Convention
 
-- 절대 경로 import
-- self-contained 테스트 파일
+공통: `docs/ea-sys-conventions.md` §8 참조. needs 전용:
+- NeedCatalog 테스트는 self-contained (외부 파일 의존 없음)
+- 상태 전이 테스트는 유효/무효 경로 모두 검증
+
+## Needs-Specific Patterns
+
+공통 컨벤션(`docs/ea-sys-conventions.md`)에 더해 니즈만 적용하는 패턴:
+
+### N1/N2 분리: Frozen NeedStatement vs Mutable Need
+- §1.1 의도적 확장. NeedStatement은 `frozen=True`, Need는 mutable (status/priority 상태 전이 + 의사결정 증거 상속)
+- Need가 NeedStatement을 참조하되 상태 변경은 Need 레벨에서만 발생
+
+### Frozen Dataclass 내 list 사용 (§1.2 편차)
+- NeedStatement/UseCase가 `list[str]` 사용. 공통 컨벤션 §1.2는 `tuple` 권장
+- 차후 tuple 마이그레이션 가능한 기술 부채
+
+### Aggregate Root 패턴 (NeedCatalog)
+- DDD aggregate 경량 적용. 모든 변경은 카탈로그 메서드를 통해야 함
+- 외부에서 Need/NeedStatement을 직접 변경 금지
+
+### Lineage 기반 버전 관리
+- lineage_id + version으로 Need 이력 추적
+- `revise_need()`로 신규 버전 생성 (기존 불변 유지)
+
+### Decision Evidence 상속
+- `inherit_decision_evidence()`로 needs→decision 역방향 추적성 확보
+- 의사결정 근거가 어떤 Need에서 비롯되었는지 추적
+
+### 프로세스 유닛 모델링
+- IDENTIFY → QUERY → MODEL_DETAIL 3단계
+- 니즈 수집 프로세스의 정형화된 워크플로
+
+### needs_service.py (kernel_service.py 패턴 준수)
+- 순수 함수, `dict[str, Any]` 반환, keyword-only 인자
+- §3.1~§3.4 공통 서비스 패턴 그대로 적용
+- NeedCatalog을 인자로 받아 쿼리 전용 서비스 제공 (list_stakeholders, list_needs, describe_need, need_lineage, catalog_summary 등)
+
+### specs 디렉토리 (차후 작업)
+- 스키마가 Python 인라인 (needs_schema.py). TOML 외부화 차후 예정
+- §2.2 specs/ 디렉토리 구조는 차후 마이그레이션 시 적용
+
+### Repository 패턴 (단순 JSON → 자체 스토어 예정)
+- 현재: ABC 없이 단순 JSON 파일 기반 영속화
+- 크로스 레이어 이력 관리는 ea_governance.needs_store가 담당
+- 차후: 자체 특화 스토어 구현 예정 (§5.4). 메타-메타 기반 프로파일 버전 관리 + 도메인 영속화를 needs 레이어가 직접 소유

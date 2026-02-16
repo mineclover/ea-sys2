@@ -23,7 +23,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
-dependencies = []
+dependencies = [
+    "ea-profile>=0.1.0",
+]
 
 [project.optional-dependencies]
 dev = [

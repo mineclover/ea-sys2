@@ -208,3 +208,104 @@ def governance_dashboard() -> dict[str, Any]:
         "schema": schema_info,
         "frameworks": frameworks,
     }
+
+
+# ── GS5: Layer M2 schema (raw profile data for graph viz) ────────
+
+
+def _serialize_i18n(value: object) -> str | dict[str, str]:
+    """Pass through I18nString as-is for JSON serialization."""
+    if isinstance(value, dict):
+        return value
+    return str(value) if value else ""
+
+
+def _load_and_localize(profile_name: str, lang: str | None) -> object | None:
+    """Load profile from registry with optional i18n localization."""
+    registry = _get_registry()
+    profile = registry.get(profile_name)
+    if profile is None or not lang or lang == "en":
+        return profile
+
+    from pathlib import Path
+
+    import ea_kernel
+    from ea_kernel.localizer import ProfileLocalizer
+
+    search_path = Path(ea_kernel.__file__).parent / "profiles" / "ea_sys"
+    localizer = ProfileLocalizer(patch_dir=search_path)
+    return localizer.localize(profile, lang, search_path=search_path)
+
+
+def layer_schema(layer_key: str, *, lang: str | None = None) -> dict[str, Any]:
+    """Return raw M2 profile data for a layer — elements, relations, and rules.
+
+    Unlike layer_profile_detail() which returns topology (expanded M1 edges),
+    this returns the profile definition itself — the metamodel (M2).
+    """
+    if layer_key not in _EA_SYS_PROFILE_MAP:
+        return {
+            "error": f"Unknown layer key: {layer_key}",
+            "valid_keys": list(_EA_SYS_PROFILE_MAP.keys()),
+        }
+
+    reg_name = _EA_SYS_PROFILE_MAP[layer_key]
+    profile = _load_and_localize(reg_name, lang)
+    if profile is None:
+        return {"error": f"Profile not loaded: {reg_name}"}
+
+    # Elements grouped by domain layer
+    elements_by_layer: list[dict[str, Any]] = []
+    for layer in profile.domain_layers():
+        elems = profile.elements_in_layer(layer)
+        elements_by_layer.append({
+            "layer": layer,
+            "count": len(elems),
+            "elements": [
+                {
+                    "name": e.name,
+                    "kernel_type": e.kernel_type,
+                    "category": e.category,
+                    "description": _serialize_i18n(e.description),
+                    "display_name": _serialize_i18n(e.display_name) if e.display_name else None,
+                }
+                for e in elems
+            ],
+        })
+
+    # Relations
+    relations = [
+        {
+            "name": r.name,
+            "kernel_relation": r.kernel_relation,
+            "description": _serialize_i18n(r.description),
+            "display_name": _serialize_i18n(r.display_name) if r.display_name else None,
+            "direction": getattr(r, "direction", None),
+        }
+        for r in profile.relations
+    ]
+
+    # Validity rules (raw profile rules — M2 definitions)
+    rules = [
+        {
+            "source": r.source_pattern,
+            "target": r.target_pattern,
+            "relation": r.relationship_name,
+            "valid": r.valid,
+            "priority": r.priority,
+            "notes": r.notes or "",
+        }
+        for r in profile.validity_rules
+    ]
+
+    return {
+        "layer_key": layer_key,
+        "profile_name": reg_name,
+        "version": profile.version,
+        "element_count": len(profile.elements),
+        "relation_count": len(profile.relations),
+        "rule_count": len(profile.validity_rules),
+        "elements_by_layer": elements_by_layer,
+        "relations": relations,
+        "rules": rules,
+    }

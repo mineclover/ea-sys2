@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from ea_needs.catalog import NeedCatalog
 
@@ -13,9 +12,8 @@ from ea_governance.layer_store import GovernanceLayerStore
 class GovernanceNeedsStore:
     """Needs catalog store implemented via layer-scoped governance store."""
 
-    def __init__(self, db_path: str | Path):
-        self._layer_store = GovernanceLayerStore(db_path=db_path, layer="needs")
-        self.db_path = self._layer_store.db_path
+    def __init__(self, layer_store: GovernanceLayerStore):
+        self._layer_store = layer_store
 
     def save_catalog(self, catalog: NeedCatalog) -> str:
         payload = json.loads(catalog.to_json())

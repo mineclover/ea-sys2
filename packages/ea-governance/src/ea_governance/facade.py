@@ -20,7 +20,7 @@ from ea_governance.execution_service import ExecutionService
 from ea_governance.kernel_model_ops import KernelModelOps
 from ea_governance.kernel_rule_ops import KernelRuleOps
 from ea_governance.kernel_store import GovernanceKernelStore
-from ea_governance.layer_store import ALLOWED_LAYERS, GovernanceLayerStore
+from ea_governance.layer_store import ALLOWED_LAYERS, GovernanceLayerStore, SQLiteGovernanceLayerStore
 from ea_governance.needs_ops import NeedsOps
 from ea_governance.needs_store import GovernanceNeedsStore
 
@@ -65,13 +65,13 @@ class GovernanceContainer:
         # 2.5 Initialize layer-scoped stores (one DB file per layer)
         layers_dir = data_dir / "layers"
         self.layer_stores: dict[str, GovernanceLayerStore] = {
-            layer: GovernanceLayerStore(layers_dir / f"{layer}.db", layer=layer)
+            layer: SQLiteGovernanceLayerStore(layers_dir / f"{layer}.db", layer=layer)
             for layer in ALLOWED_LAYERS
         }
 
         # 3. Governance-owned DB adapters
-        self.kernel_store = GovernanceKernelStore(self.layer_stores["kernel"].db_path)
-        self.needs_store = GovernanceNeedsStore(self.layer_stores["needs"].db_path)
+        self.kernel_store = GovernanceKernelStore(self.layer_stores["kernel"])
+        self.needs_store = GovernanceNeedsStore(self.layer_stores["needs"])
 
         # 4. Reference for direct access if needed
         self.runtime = self.execution_service.runtime

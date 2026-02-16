@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ea_governance.facade import GovernanceContainer, KernelSchema
+from ea_governance.layer_store import SQLiteGovernanceLayerStore
 from ea_governance.needs_store import GovernanceNeedsStore
 from ea_needs.catalog import NeedCatalog
 from ea_needs.types import NeedPriority
@@ -28,7 +29,8 @@ def _build_catalog() -> NeedCatalog:
 
 
 def test_governance_needs_store_save_get_list(tmp_path: Path):
-    store = GovernanceNeedsStore(tmp_path / "layers" / "needs.db")
+    layer_store = SQLiteGovernanceLayerStore(tmp_path / "layers" / "needs.db", layer="needs")
+    store = GovernanceNeedsStore(layer_store)
 
     catalog = _build_catalog()
     catalog_id = store.save_catalog(catalog)

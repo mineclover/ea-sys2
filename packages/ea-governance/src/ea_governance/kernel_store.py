@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -33,9 +32,8 @@ def _judgment_model_id(decision_id: str) -> str:
 class GovernanceKernelStore:
     """Kernel snapshot store implemented via layer-scoped governance store."""
 
-    def __init__(self, db_path: str | Path):
-        self._layer_store = GovernanceLayerStore(db_path=db_path, layer="kernel")
-        self.db_path = self._layer_store.db_path
+    def __init__(self, layer_store: GovernanceLayerStore):
+        self._layer_store = layer_store
 
     def save_rule_asset(self, asset: RuleAsset) -> str:
         self._layer_store.save_payload(

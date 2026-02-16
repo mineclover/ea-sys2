@@ -12,6 +12,14 @@ function resolveNav(pathname: string): { section: Section; subView: SubView; isD
     if (pathname === '/') {
         return { section: 'explorer', subView: '' as SubView, isDashboard: true };
     }
+    if (pathname.startsWith('/schema')) {
+        const sub = pathname.split('/')[2] || 'kernel';
+        return { section: 'schema', subView: sub as SubView, isDashboard: false };
+    }
+    if (pathname.startsWith('/status')) {
+        const sub = pathname.split('/')[2] || 'entities';
+        return { section: 'status', subView: sub as SubView, isDashboard: false };
+    }
     if (pathname.startsWith('/governance')) {
         const sub = pathname.split('/')[2] || 'rule-lifecycle';
         return { section: 'governance', subView: sub as SubView, isDashboard: false };
@@ -27,6 +35,8 @@ function resolveNav(pathname: string): { section: Section; subView: SubView; isD
 
 /** Map a (section, subView) to a URL path. */
 function toPath(section: Section, subView: SubView, profileName?: string): string {
+    if (section === 'schema') return `/schema/${subView}`;
+    if (section === 'status') return `/status/${subView}`;
     if (section === 'governance') return `/governance/${subView}`;
     if (section === 'needs') return `/needs/${subView}`;
     if (subView === 'profile-graph') return `/explorer/profile/${profileName || ''}`;

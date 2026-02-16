@@ -1,12 +1,14 @@
 
 import { useState, useCallback } from 'react';
 
-export type Section = 'explorer' | 'needs' | 'governance';
+export type Section = 'explorer' | 'needs' | 'governance' | 'status' | 'schema';
 
 export type ExplorerView = 'kernel-schema' | 'profile-graph' | 'rules';
 export type NeedsView = 'catalog';
 export type GovernanceView = 'rule-lifecycle' | 'models' | 'decisions' | 'simulation';
-export type SubView = ExplorerView | NeedsView | GovernanceView;
+export type StatusView = 'entities' | 'relations' | 'rules' | 'layers' | 'frameworks' | 'kernel';
+export type SchemaView = 'infra' | 'decision' | 'needs' | 'kernel' | 'flow' | 'governance';
+export type SubView = ExplorerView | NeedsView | GovernanceView | StatusView | SchemaView;
 
 const EXPLORER_VIEWS: { key: ExplorerView; label: string }[] = [
     { key: 'kernel-schema', label: 'Kernel Schema' },
@@ -23,6 +25,24 @@ const GOVERNANCE_VIEWS: { key: GovernanceView; label: string }[] = [
     { key: 'models', label: 'Models' },
     { key: 'decisions', label: 'Decisions' },
     { key: 'simulation', label: 'Simulation' },
+];
+
+const STATUS_VIEWS: { key: StatusView; label: string }[] = [
+    { key: 'entities', label: 'Entities' },
+    { key: 'relations', label: 'Relations' },
+    { key: 'rules', label: 'Rules' },
+    { key: 'layers', label: 'Layers' },
+    { key: 'frameworks', label: 'Frameworks' },
+    { key: 'kernel', label: 'Kernel Schema' },
+];
+
+const SCHEMA_VIEWS: { key: SchemaView; label: string }[] = [
+    { key: 'infra', label: 'Infra' },
+    { key: 'decision', label: 'Decision' },
+    { key: 'needs', label: 'Needs' },
+    { key: 'kernel', label: 'Kernel' },
+    { key: 'flow', label: 'Flow' },
+    { key: 'governance', label: 'Governance' },
 ];
 
 export type Lang = 'en' | 'ko';
@@ -106,7 +126,7 @@ export default function TopNav({
     profiles, selectedProfile, onSelectProfile,
 }: TopNavProps) {
     const isDashboard = !subView;
-    const views = section === 'explorer' ? EXPLORER_VIEWS : section === 'needs' ? NEEDS_VIEWS : GOVERNANCE_VIEWS;
+    const views = section === 'explorer' ? EXPLORER_VIEWS : section === 'needs' ? NEEDS_VIEWS : section === 'status' ? STATUS_VIEWS : section === 'schema' ? SCHEMA_VIEWS : GOVERNANCE_VIEWS;
     const showProfileSelector = subView === 'profile-graph' && profiles && profiles.length > 0;
 
     return (
@@ -155,6 +175,18 @@ export default function TopNav({
                     style={sectionBtnStyle(!isDashboard && section === 'governance')}
                 >
                     Governance
+                </button>
+                <button
+                    onClick={() => onNavigate('schema', 'kernel')}
+                    style={sectionBtnStyle(!isDashboard && section === 'schema')}
+                >
+                    Schema
+                </button>
+                <button
+                    onClick={() => onNavigate('status', 'entities')}
+                    style={sectionBtnStyle(!isDashboard && section === 'status')}
+                >
+                    Status
                 </button>
 
                 {/* Language toggle + Profile selector — right-aligned */}

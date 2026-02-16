@@ -348,6 +348,51 @@ export interface NeedsByKernelRefResult {
     }[];
 }
 
+// --- Layer Schema (M2 profile data) ---
+
+export interface LayerSchemaElement {
+    name: string;
+    kernel_type: string;
+    category: string;
+    description: I18nString;
+    display_name: I18nString | null;
+}
+
+export interface LayerSchemaElementGroup {
+    layer: string;
+    count: number;
+    elements: LayerSchemaElement[];
+}
+
+export interface LayerSchemaRelation {
+    name: string;
+    kernel_relation: string;
+    description: I18nString;
+    display_name: I18nString | null;
+    direction: string | null;
+}
+
+export interface LayerSchemaRule {
+    source: string;
+    target: string;
+    relation: string;
+    valid: boolean;
+    priority: number;
+    notes: string;
+}
+
+export interface LayerSchemaResponse {
+    layer_key: string;
+    profile_name: string;
+    version: string;
+    element_count: number;
+    relation_count: number;
+    rule_count: number;
+    elements_by_layer: LayerSchemaElementGroup[];
+    relations: LayerSchemaRelation[];
+    rules: LayerSchemaRule[];
+}
+
 export interface SimulationResult {
     simulation_id: string;
     impact_level: string;

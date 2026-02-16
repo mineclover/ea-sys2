@@ -19,6 +19,7 @@ import type {
     ModelState,
     PromotionProposal,
     SimulationResult,
+    LayerSchemaResponse,
     NeedsCatalogSummary,
     NeedSummary,
     NeedDetail,
@@ -164,6 +165,16 @@ export function fetchGovernanceDashboard(): Promise<GovernanceDashboardResponse>
 
 export function fetchCrossLayerSummary(): Promise<CrossLayerSummaryResponse> {
     return fetchJson('/governance/layers/summary');
+}
+
+export function fetchLayerSchema(
+    layerKey: string,
+    opts?: { lang?: string },
+): Promise<LayerSchemaResponse> {
+    const params = new URLSearchParams();
+    if (opts?.lang) params.set('lang', opts.lang);
+    const qs = params.toString();
+    return fetchJson(`/layers/${encodeURIComponent(layerKey)}/schema${qs ? `?${qs}` : ''}`);
 }
 
 // --- Governance ---

@@ -6,6 +6,8 @@ import { DashboardPage } from '@/pages/dashboard';
 import { KernelSchemaPage, ProfileGraphPage, RulesPage } from '@/pages/explorer';
 import { RuleLifecyclePage, ModelsPage, DecisionsPage, SimulationPage } from '@/pages/governance';
 import { NeedsCatalogPage } from '@/pages/needs';
+import { EntitiesPage, RelationsPage, RulesPage as StatusRulesPage, LayersPage, FrameworksPage, KernelSchemaPage as StatusKernelPage } from '@/pages/status';
+import { SchemaPage } from '@/pages/schema';
 
 export default function App() {
     return (
@@ -28,6 +30,19 @@ export default function App() {
                             <Route path="models" element={<ModelsPage />} />
                             <Route path="decisions" element={<DecisionsPage />} />
                             <Route path="simulation" element={<SimulationPage />} />
+                        </Route>
+                        <Route path="schema">
+                            <Route path=":layerKey" element={<SchemaPage />} />
+                            <Route index element={<Navigate to="/schema/kernel" replace />} />
+                        </Route>
+                        <Route path="status">
+                            <Route path="entities" element={<EntitiesPage />} />
+                            <Route path="relations" element={<RelationsPage />} />
+                            <Route path="rules" element={<StatusRulesPage />} />
+                            <Route path="layers" element={<LayersPage />} />
+                            <Route path="frameworks" element={<FrameworksPage />} />
+                            <Route path="kernel" element={<StatusKernelPage />} />
+                            <Route index element={<Navigate to="/status/entities" replace />} />
                         </Route>
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>

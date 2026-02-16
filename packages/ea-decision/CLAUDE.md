@@ -1,5 +1,8 @@
 # ea-decision — Coding Conventions & Module Rules
 
+> **공통 구현 컨벤션**: `docs/ea-sys-conventions.md` 참조.
+> 본 문서는 의사결정 레이어 고유 사항(N1/N2/N3 추상화, Design Thinking 프로세스, Pattern/Lifecycle 불변성)만 기술한다.
+
 의사결정 레이어. Design Thinking 기반 Intent→Choice→Decision 프로세스. ea-kernel에 단방향 의존.
 
 ## Design Philosophy
@@ -36,7 +39,11 @@ src/ea_decision/
 ├── kernel_bridge.py     # N3: Kernel 연동 (lazy import, 유일한 ea_kernel 참조점)
 ├── process.py           # N2: DesignThinkingProcess 오케스트레이터
 ├── registry.py          # N3: DecisionRegistry (패턴 등록/조회)
-└── repository.py        # N3: DecisionRepository (파일 기반 영속화)
+├── repository.py        # N3: DecisionRepository (파일 기반 영속화)
+├── topic_store.py       # S3: TopicStore (ABC → InMemory → SQLite) — 의사결정 스냅샷 영속화
+├── decision_analyzer.py # S4: DecisionAnalyzer — 패턴 효과성·평가 일관성 분석
+├── decision_simulator.py # S5: DecisionSimulator — 패턴 변경 What-If 시뮬레이션
+└── pattern_promotion.py # S5: PatternPromotionEngine — 패턴 승격/폐기 워크플로
 ```
 
 N1 타입 전부 `frozen=True`. N2 Aggregate(Topic)만 mutable 허용. DecisionLifecycle: frozen, 전이마다 새 인스턴스 반환(Kernel RuleLifecycle 패턴).
@@ -80,10 +87,26 @@ decision_schema.py: 독립 (DecisionSchema, DecisionEntity, DecisionRelation, DE
 condition_registry.py: ea_profile.types lazy import (ConditionRegistry)
 profile_bridge.py: decision_schema + condition_registry ← ea_profile.loader lazy import
 kernel_bridge.py: ea_kernel.types lazy import (유일한 Kernel 참조점)
+
+[S3/S4/S5 Governance Lifecycle]
+topic_store.py: 독립 (자체 도메인 타입 정의)
+  ← decision_analyzer.py (TopicStore — TYPE_CHECKING import)
+  ← decision_simulator.py (TopicStore — TYPE_CHECKING import)
+decision_analyzer.py ← pattern_promotion.py (DecisionAnalysisReport, PatternEffectiveness — TYPE_CHECKING import)
 ```
 
 types.py는 순수 어휘(N1)이므로 프로세스(N2)나 통합(N3) 모듈을 절대 import하지 않는다. 이는 Kernel의 types.py가 service/mcp 모듈을 모르는 것과 동일한 원칙이다.
 kernel_bridge.py만 ea_kernel.types를 lazy import한다. 나머지 모듈은 Kernel 타입을 알지 못하며, string ID 기반 간접 참조만 사용한다.
+
+### 6-Phase Governance Lifecycle (S3/S4/S5)
+
+Kernel의 6-phase governance lifecycle 패턴을 Decision 도메인 어휘로 번역:
+- **S3 Recording** (topic_store.py) — 완료된 의사결정 스냅샷 영속화 (ABC → InMemory → SQLite 3-tier)
+- **S4 Analysis** (decision_analyzer.py) — 패턴 효과성, 평가 일관성, 처리량 분석
+- **S5 Evolution** (decision_simulator.py, pattern_promotion.py) — What-If 시뮬레이션 + 패턴 승격/폐기 워크플로
+
+Store 패턴은 ea-kernel/decision_store.py와 동일: `__slots__`, `@contextmanager _connection()`, `_init_schema()`.
+Promotion 패턴은 ea-kernel/promotion_engine.py와 동일: in-memory proposal store, vote/approve/reject/apply 워크플로.
 
 ### Test Convention
 

@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ReactFlow,
     MiniMap,
@@ -21,7 +21,7 @@ import { CustomMarkers } from './markers';
 import { getLayoutedElements } from '@/utils/layout';
 import { DynamicNode } from './nodes';
 import { routeEdges } from '@/utils/routing';
-import { fetchKernelEntities, fetchKernelRelations } from '@/api/client';
+import { useKernelEntities, useKernelRelations } from '@/api/hooks';
 import type {
     KernelEntitiesResponse,
     KernelRelationsResponse,
@@ -137,7 +137,7 @@ function buildElements(
                         style: {
                             connector: 'solid',
                             endMarker: 'directed',
-                            strokeColor: '#ccc',
+                            strokeColor: 'var(--border)',
                             strokeWidth: 1,
                         },
                     },
@@ -177,7 +177,7 @@ function buildElements(
                     target,
                     type: 'custom',
                     data: {
-                        style: { ...style, strokeColor: '#555' },
+                        style: { ...style, strokeColor: 'var(--text-secondary)' },
                     },
                     markerEnd: getMarkerUrl(style.endMarker),
                     markerStart: getMarkerUrl(style.startMarker),
@@ -199,7 +199,7 @@ type InfoData =
 
 // --- Inline info panel ---
 
-const labelStyle = { fontSize: 10, fontWeight: 700 as const, color: '#94a3b8', textTransform: 'uppercase' as const };
+const labelStyle = { fontSize: 10, fontWeight: 700 as const, color: 'var(--text-muted)', textTransform: 'uppercase' as const };
 
 function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onClose: () => void }) {
     const isEntity = info.kind === 'entity';
@@ -213,11 +213,11 @@ function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onCl
     return (
         <Panel position="bottom-right">
             <div style={{
-                background: '#fff',
-                border: '1px solid #e2e8f0',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
                 borderRadius: 8,
                 padding: '12px 16px',
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                boxShadow: `0 4px 6px -1px var(--shadow-lg)`,
                 minWidth: 220,
                 maxWidth: 320,
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -226,30 +226,30 @@ function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onCl
                     <div style={labelStyle}>{isEntity ? 'Entity' : 'Relation'}</div>
                     <button onClick={onClose} style={{
                         background: 'none', border: 'none', cursor: 'pointer',
-                        color: '#94a3b8', fontSize: 14, lineHeight: 1, padding: 0,
+                        color: 'var(--text-muted)', fontSize: 14, lineHeight: 1, padding: 0,
                     }}>&times;</button>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
                     {displayName || name}
                     {displayName && displayName !== name && (
-                        <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: 6, fontSize: 11 }}>{name}</span>
+                        <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6, fontSize: 11 }}>{name}</span>
                     )}
                 </div>
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
                     {layer}{parent ? ` · extends ${parent}` : ''}
                     {isEntity && info.entity.is_abstract ? ' · abstract' : ''}
                 </div>
                 {desc && (
-                    <div style={{ fontSize: 11, color: '#475569', marginTop: 6, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-primary)', marginTop: 6, lineHeight: 1.5 }}>
                         {desc}
                     </div>
                 )}
                 {!isEntity && info.relation.roles && info.relation.roles.length > 0 && (
                     <div style={{ marginTop: 6 }}>
                         {info.relation.roles.map((r, i) => (
-                            <div key={i} style={{ fontSize: 11, color: '#475569' }}>
+                            <div key={i} style={{ fontSize: 11, color: 'var(--text-primary)' }}>
                                 <strong>{r.name}</strong>
-                                <span style={{ color: '#94a3b8', marginLeft: 6 }}>{r.player}</span>
+                                <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>{r.player}</span>
                             </div>
                         ))}
                     </div>
@@ -269,10 +269,15 @@ const LayoutFlow = ({ lang }: LayoutFlowProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView } = useReactFlow();
-    const [error, setError] = useState<string | null>(null);
-    const [lookup, setLookup] = useState<SchemaLookup | null>(null);
-    const [rawData, setRawData] = useState<{ ent: KernelEntitiesResponse; rel: KernelRelationsResponse } | null>(null);
     const [info, setInfo] = useState<InfoData | null>(null);
+
+    const { data: entData, isError: entError } = useKernelEntities({ lang });
+    const { data: relData, isError: relError } = useKernelRelations({ lang });
+
+    const lookup = useMemo(() => {
+        if (!entData || !relData) return null;
+        return buildLookup(entData, relData);
+    }, [entData, relData]);
 
     const onLayout = useCallback(
         (direction: string) => {
@@ -287,28 +292,14 @@ const LayoutFlow = ({ lang }: LayoutFlowProps) => {
         [nodes, edges, setNodes, setEdges, fitView],
     );
 
-    // Fetch data once (with ko to get both languages)
+    // Build ReactFlow elements when API data or lang changes
     useEffect(() => {
-        Promise.all([fetchKernelEntities({ lang: 'ko' }), fetchKernelRelations({ lang: 'ko' })])
-            .then(([ent, rel]) => {
-                const lk = buildLookup(ent, rel);
-                setLookup(lk);
-                setRawData({ ent, rel });
-                const { nodes: n, edges: e } = buildElements(ent, rel, lk, lang);
-                setNodes(n);
-                setEdges(e);
-            })
-            .catch(() => setError('unavailable'));
-    }, [setNodes, setEdges]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Rebuild nodes when lang changes
-    useEffect(() => {
-        if (!rawData || !lookup) return;
-        const { nodes: n, edges: e } = buildElements(rawData.ent, rawData.rel, lookup, lang);
+        if (!entData || !relData || !lookup) return;
+        const { nodes: n, edges: e } = buildElements(entData, relData, lookup, lang);
         setNodes(n);
         setEdges(e);
         window.requestAnimationFrame(() => fitView());
-    }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [entData, relData, lookup, lang, setNodes, setEdges, fitView]);
 
     useEffect(() => {
         if (nodes.length > 0) {
@@ -339,12 +330,12 @@ const LayoutFlow = ({ lang }: LayoutFlowProps) => {
 
     const onPaneClick = useCallback(() => setInfo(null), []);
 
-    if (error === 'unavailable') {
+    if (entError || relError) {
         return (
             <div style={{ padding: 40, fontFamily: 'system-ui' }}>
                 <div style={{
-                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#f8fafc', fontSize: 12, color: '#64748b',
+                    padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 8,
+                    background: 'var(--bg-secondary)', fontSize: 12, color: 'var(--text-secondary)',
                 }}>
                     Unable to load kernel schema — API server may be unavailable.
                 </div>

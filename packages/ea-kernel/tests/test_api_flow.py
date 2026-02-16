@@ -30,3 +30,18 @@ def test_get_flow_logic_404(client):
     # Test invalid anchor
     response = client.get("/governance/flow/nonexistent")
     assert response.status_code == 404
+
+
+def test_i18n_profile_audit_api(client):
+    response = client.get("/i18n/audit/profiles/EASystem-Kernel?lang=ko")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["scope"] == "m1"
+    assert data["profile"] == "EASystem-Kernel"
+    assert data["lang"] == "ko"
+    assert isinstance(data["missing"], list)
+
+
+def test_i18n_profile_audit_404(client):
+    response = client.get("/i18n/audit/profiles/NonExistentProfile?lang=ko")
+    assert response.status_code == 404

@@ -36,7 +36,11 @@ src/ea_needs/
 ├── needs_service.py     # N2.5: 순수 함수 쿼리 서비스 (list_stakeholders, describe_need, catalog_summary 등)
 ├── kernel_bridge.py     # N3: lazy kernel import (유일한 ea_kernel 참조점)
 ├── profile_bridge.py    # N3: load_needs_profile/load_needs_profile_from_content
-└── repository.py        # N3: 파일 기반 영속화 (JSON)
+├── repository.py        # N3: 파일 기반 영속화 (JSON)
+├── needs_store.py       # S3: NeedStore (ABC → InMemory → SQLite) — 니즈 스냅샷 영속화
+├── needs_analyzer.py    # S4: NeedsAnalyzer — 이해관계자 커버리지·우선순위 분포 분석
+├── needs_simulator.py   # S5: NeedsSimulator — 이해관계자/니즈 변경 What-If 시뮬레이션
+└── needs_promotion.py   # S5: NeedPromotionEngine — 니즈 승격/폐기 워크플로
 ```
 
 N1 타입 전부 `frozen=True`. N2 Need만 mutable (status/priority 상태 전이). NeedStatement은 frozen.
@@ -88,6 +92,14 @@ needs_schema.py는 독립 어휘(N2.5)이며 ea_kernel에 의존하지 않는다
 kernel_bridge.py, condition_registry.py, profile_bridge.py만 ea_kernel을 lazy import한다.
 나머지 모듈은 Kernel 타입을 알지 못하며, string ID 기반 간접 참조만 사용한다.
 
+```
+[S3/S4/S5 Governance Lifecycle]
+needs_store.py: 독립 (자체 도메인 타입 정의)
+  ← needs_analyzer.py (NeedStore — TYPE_CHECKING import)
+  ← needs_simulator.py (NeedStore — TYPE_CHECKING import)
+needs_analyzer.py ← needs_promotion.py (NeedsAnalysisReport, StakeholderCoverage — TYPE_CHECKING import)
+```
+
 ### Test Convention
 
 공통: `docs/ea-sys-conventions.md` §8 참조. needs 전용:
@@ -131,7 +143,17 @@ kernel_bridge.py, condition_registry.py, profile_bridge.py만 ea_kernel을 lazy 
 - 스키마가 Python 인라인 (needs_schema.py). TOML 외부화 차후 예정
 - §2.2 specs/ 디렉토리 구조는 차후 마이그레이션 시 적용
 
-### Repository 패턴 (단순 JSON → 자체 스토어 예정)
-- 현재: ABC 없이 단순 JSON 파일 기반 영속화
+### Repository 패턴 (2-tier)
+- `repository.py`: 단순 JSON 파일 기반 영속화 (N3 Integration)
+- `needs_store.py`: S3 Recording — ABC → InMemory → SQLite 3-tier 스토어 (도메인 영속화를 needs 레이어가 직접 소유)
 - 크로스 레이어 이력 관리는 ea_governance.needs_store가 담당
-- 차후: 자체 특화 스토어 구현 예정 (§5.4). 메타-메타 기반 프로파일 버전 관리 + 도메인 영속화를 needs 레이어가 직접 소유
+
+### 6-Phase Governance Lifecycle (S3/S4/S5)
+
+Kernel의 6-phase governance lifecycle 패턴을 Needs 도메인 어휘로 번역:
+- **S3 Recording** (needs_store.py) — 니즈 스냅샷 영속화 (ABC → InMemory → SQLite 3-tier)
+- **S4 Analysis** (needs_analyzer.py) — 이해관계자 커버리지, 우선순위 분포, 해결 처리량 분석
+- **S5 Evolution** (needs_simulator.py, needs_promotion.py) — What-If 시뮬레이션 + 니즈 승격/폐기 워크플로
+
+Store 패턴은 ea-kernel/decision_store.py와 동일: `__slots__`, `@contextmanager _connection()`, `_init_schema()`.
+Promotion 패턴은 ea-kernel/promotion_engine.py와 동일: in-memory proposal store, vote/approve/reject/apply 워크플로.

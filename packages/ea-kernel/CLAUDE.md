@@ -190,6 +190,7 @@ src/ea_kernel/profiles/
 │   ├── 40-kernel.toml
 │   ├── 50-flow.toml
 │   ├── 60-web-kernel-viz.toml
+│   ├── 80-development.toml   # 개발 토폴로지 자기기술 (~45 elements)
 │   ├── easystem-infra.ko.patch.toml
 │   ├── easystem-governance.ko.patch.toml
 │   ├── easystem-decision.ko.patch.toml

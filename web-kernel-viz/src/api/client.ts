@@ -19,12 +19,25 @@ import type {
     ModelState,
     PromotionProposal,
     SimulationResult,
+    BusinessFlowTopologyResponse,
     LayerSchemaResponse,
+    LayerStackResponse,
     NeedsCatalogSummary,
     NeedSummary,
     NeedDetail,
     NeedsCatalogDetail,
     NeedsByKernelRefResult,
+    ModelRegistrationResult,
+    ModelValidationResult,
+    ModelActivationResult,
+    BusinessModelSummary,
+    TagSchemaSummary,
+    I18nAuditResult,
+    I18nProfileAuditResult,
+    I18nTranslationsResult,
+    ProfileVersionEntry,
+    ProfileVersionsResponse,
+    ProfileDiffResponse,
 } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
@@ -51,14 +64,42 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     return res.json();
 }
 
+async function putJson<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${API_URL}${path}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`API ${res.status}: ${detail}`);
+    }
+    return res.json();
+}
+
+async function fetchJsonWithMethod<T>(path: string, method: string): Promise<T> {
+    const res = await fetch(`${API_URL}${path}`, { method });
+    if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`API ${res.status}: ${detail}`);
+    }
+    return res.json();
+}
+
 // --- Profile ---
 
 export function fetchProfiles(): Promise<ProfileListItem[]> {
     return fetchJson('/profiles');
 }
 
-export function fetchProfileDescription(name: string): Promise<ProfileDescription> {
-    return fetchJson(`/profiles/${encodeURIComponent(name)}`);
+export function fetchProfileDescription(
+    name: string,
+    opts?: { lang?: string },
+): Promise<ProfileDescription> {
+    const params = new URLSearchParams();
+    if (opts?.lang) params.set('lang', opts.lang);
+    const qs = params.toString();
+    return fetchJson(`/profiles/${encodeURIComponent(name)}${qs ? `?${qs}` : ''}`);
 }
 
 export function fetchProfileTopology(
@@ -177,6 +218,28 @@ export function fetchLayerSchema(
     return fetchJson(`/layers/${encodeURIComponent(layerKey)}/schema${qs ? `?${qs}` : ''}`);
 }
 
+export function fetchLayerStack(
+    layerKey: string,
+    opts?: { lang?: string; m0_limit?: number },
+): Promise<LayerStackResponse> {
+    const params = new URLSearchParams();
+    if (opts?.lang) params.set('lang', opts.lang);
+    if (opts?.m0_limit != null) params.set('m0_limit', String(opts.m0_limit));
+    const qs = params.toString();
+    return fetchJson(`/layers/${encodeURIComponent(layerKey)}/stack${qs ? `?${qs}` : ''}`);
+}
+
+// --- Business Flow ---
+
+export function fetchBusinessFlowTopology(
+    opts?: { lang?: string },
+): Promise<BusinessFlowTopologyResponse> {
+    const params = new URLSearchParams();
+    if (opts?.lang) params.set('lang', opts.lang);
+    const qs = params.toString();
+    return fetchJson(`/governance/business-flow${qs ? `?${qs}` : ''}`);
+}
+
 // --- Governance ---
 
 export function fetchGovernanceRules(state?: string): Promise<GovernanceRuleItem[]> {
@@ -268,4 +331,151 @@ export function fetchCatalogHistory(catalogId: string): Promise<Record<string, u
 
 export function fetchNeedsByKernelRef(ref: string): Promise<NeedsByKernelRefResult> {
     return fetchJson(`/needs/by-kernel-ref/${encodeURIComponent(ref)}`);
+}
+
+// --- Model Registration ---
+
+export function registerModel(body: {
+    profile_toml: string;
+    owner?: string;
+    model_name?: string;
+    activate?: boolean;
+    on_exists?: string;
+}): Promise<ModelRegistrationResult> {
+    return postJson('/models/register', body);
+}
+
+export function validateModel(body: {
+    model_name: string;
+    version: string;
+}): Promise<ModelValidationResult> {
+    return postJson('/models/validate', body);
+}
+
+export function activateModel(body: {
+    model_name: string;
+    version: string;
+}): Promise<ModelActivationResult> {
+    return postJson('/models/activate', body);
+}
+
+// --- Decision Explore ---
+
+export function exploreDecision(decisionId: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/models/decisions/${encodeURIComponent(decisionId)}/explore`);
+}
+
+// --- Business Models ---
+
+export function fetchBusinessModels(): Promise<BusinessModelSummary[]> {
+    return fetchJson('/business');
+}
+
+export function fetchBusinessModel(bid: string): Promise<BusinessModelSummary> {
+    return fetchJson(`/business/${encodeURIComponent(bid)}`);
+}
+
+export function createBusiness(name: string, description?: string): Promise<Record<string, unknown>> {
+    return postJson('/business', { name, description: description || '' });
+}
+
+export function deleteBusiness(bid: string): Promise<{ status: string }> {
+    return fetchJsonWithMethod(`/business/${encodeURIComponent(bid)}`, 'DELETE');
+}
+
+export function fetchBusinessTags(bid: string): Promise<TagSchemaSummary[]> {
+    return fetchJson(`/business/${encodeURIComponent(bid)}/tags`);
+}
+
+export function fetchBusinessTag(bid: string, tag: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/business/${encodeURIComponent(bid)}/tags/${encodeURIComponent(tag)}`);
+}
+
+export function createBusinessTag(bid: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return postJson(`/business/${encodeURIComponent(bid)}/tags`, data);
+}
+
+export function updateBusinessTag(bid: string, tag: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return putJson(`/business/${encodeURIComponent(bid)}/tags/${encodeURIComponent(tag)}`, data);
+}
+
+export function deleteBusinessTag(bid: string, tag: string): Promise<{ status: string }> {
+    return fetchJsonWithMethod(`/business/${encodeURIComponent(bid)}/tags/${encodeURIComponent(tag)}`, 'DELETE');
+}
+
+export function fetchBusinessIndexingSpec(bid: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/business/${encodeURIComponent(bid)}/indexing-spec`);
+}
+
+export function exportBusiness(bid: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/business/${encodeURIComponent(bid)}/export`);
+}
+
+export function importBusiness(data: { meta: Record<string, unknown>; tags?: Record<string, unknown>[] }): Promise<Record<string, unknown>> {
+    return postJson('/business/import', data);
+}
+
+// --- I18n ---
+
+export function fetchI18nAudit(lang: string): Promise<I18nAuditResult> {
+    return fetchJson(`/i18n/audit?lang=${encodeURIComponent(lang)}`);
+}
+
+export function fetchI18nProfileAudit(name: string, lang: string): Promise<I18nProfileAuditResult> {
+    return fetchJson(`/i18n/audit/profiles/${encodeURIComponent(name)}?lang=${encodeURIComponent(lang)}`);
+}
+
+export function fetchI18nTranslations(lang: string, kind?: string): Promise<I18nTranslationsResult> {
+    const params = new URLSearchParams({ lang });
+    if (kind) params.set('kind', kind);
+    return fetchJson(`/i18n/translations?${params}`);
+}
+
+export function fetchI18nTranslation(kind: string, name: string, lang: string, field: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/i18n/translations/${encodeURIComponent(kind)}/${encodeURIComponent(name)}/${encodeURIComponent(lang)}/${encodeURIComponent(field)}`);
+}
+
+export function updateI18nTranslation(kind: string, name: string, lang: string, field: string, value: string): Promise<Record<string, unknown>> {
+    return putJson(`/i18n/translations/${encodeURIComponent(kind)}/${encodeURIComponent(name)}/${encodeURIComponent(lang)}/${encodeURIComponent(field)}`, { value });
+}
+
+export function fetchTranslationHistory(kind: string, name: string, lang: string, field: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/i18n/translations/${encodeURIComponent(kind)}/${encodeURIComponent(name)}/${encodeURIComponent(lang)}/${encodeURIComponent(field)}/history`);
+}
+
+// --- Flow Logic ---
+
+export function fetchFlowLogic(anchorId: string): Promise<Record<string, unknown>> {
+    return fetchJson(`/governance/flow/${encodeURIComponent(anchorId)}`);
+}
+
+// --- System Self-Model ---
+
+export function fetchSystemSelfModel(): Promise<string> {
+    return fetch(`${API_URL}/system/self-model`).then(res => {
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        return res.text();
+    });
+}
+
+// --- Profile Versions ---
+
+export function fetchProfileVersions(name: string, limit?: number): Promise<ProfileVersionsResponse> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return fetchJson(`/profiles/${encodeURIComponent(name)}/versions${qs ? `?${qs}` : ''}`);
+}
+
+export function fetchProfileVersionDetail(name: string, version: string): Promise<ProfileVersionEntry> {
+    return fetchJson(`/profiles/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}`);
+}
+
+export function fetchProfileVersionDiff(name: string, a: string, b: string): Promise<ProfileDiffResponse> {
+    const params = new URLSearchParams({ a, b });
+    return fetchJson(`/profiles/${encodeURIComponent(name)}/versions/diff?${params}`);
+}
+
+export function fetchProfileTags(name: string): Promise<Record<string, string>> {
+    return fetchJson(`/profiles/${encodeURIComponent(name)}/tags`);
 }

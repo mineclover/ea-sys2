@@ -531,3 +531,18 @@ class KernelModelOps:
                 for run in runs
             ],
         }
+
+    def list_kernel_models(self, *, status: str | None = None) -> list[dict[str, Any]]:
+        models = self._model_registration.list_models(status=status)
+        return [
+            {
+                "model_id": model.model_id,
+                "model_name": model.model_name,
+                "owner": model.owner,
+                "status": model.status,
+                "active_version_id": model.active_version_id,
+                "created_at": model.created_at,
+                "updated_at": model.updated_at,
+            }
+            for model in models
+        ]

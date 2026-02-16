@@ -1,0 +1,732 @@
+# EA System: Development Topology Self-Description
+# Role: 프로젝트 패키지·모듈·의존성을 커널 요소로 모델링
+
+[profile]
+name = "EASystem-Development"
+version = "1.0.0"
+kernel_version = "2.5.0"
+id_prefix = "dev"
+standard = "ea-sys2 Development Topology v1"
+organization = "ea-system"
+
+[categories]
+LayerPackage = "package"
+CoreService = "structure"
+DataAsset = "item"
+InterfacePort = "port"
+PipelineStep = "step"
+
+# ── Relations (10 standard) ──────────────────────────────────
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Package boundary containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural package dependency."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Service produces data asset."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Service consumes data asset."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Pipeline step sequence."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Quality gate constrains pipeline step."
+
+[[relations]]
+name = "available_in"
+kernel_relation = "association"
+description = "Interface exposed in package boundary."
+
+# ══════════════════════════════════════════════════════════════
+# Elements (~50)
+# ══════════════════════════════════════════════════════════════
+
+# ── Foundation (ea-profile) ──────────────────────────────────
+
+[[elements]]
+name = "ProfileFramework"
+layer = "Foundation"
+category = "LayerPackage"
+description = "ea-profile — kernel-agnostic profile framework (zero dep)."
+
+[[elements]]
+name = "ProfileTypes"
+layer = "Foundation"
+category = "CoreService"
+description = "Frozen vocabulary — ProfileElement, ProfileRule, KernelProfile."
+
+[[elements]]
+name = "ProfileBuilder"
+layer = "Foundation"
+category = "CoreService"
+description = "Fluent builder API — profile creation and composition."
+
+[[elements]]
+name = "ProfileLoader"
+layer = "Foundation"
+category = "CoreService"
+description = "TOML → KernelProfile loading + schema validation."
+
+[[elements]]
+name = "ProfileStore"
+layer = "Foundation"
+category = "DataAsset"
+description = "Profile version persistence (ABC→InMemory→SQLite)."
+
+# ── Infrastructure (ea-infra) ────────────────────────────────
+
+[[elements]]
+name = "InfraLayer"
+layer = "Infrastructure"
+category = "LayerPackage"
+description = "ea-infra — row data design, storage/indexing model."
+
+[[elements]]
+name = "ResourceIndexer"
+layer = "Infrastructure"
+category = "CoreService"
+description = "Directory scan, file metadata collection."
+
+[[elements]]
+name = "InfraSchema"
+layer = "Infrastructure"
+category = "DataAsset"
+description = "InfraSchema + INFRA_SCHEMA singleton (17 entities)."
+
+# ── Decision (ea-decision) ───────────────────────────────────
+
+[[elements]]
+name = "DecisionLayer"
+layer = "Decision"
+category = "LayerPackage"
+description = "ea-decision — decision meta-meta model."
+
+[[elements]]
+name = "TopicModel"
+layer = "Decision"
+category = "CoreService"
+description = "Intent→Choice→Decision state transition model."
+
+[[elements]]
+name = "DecisionSchema"
+layer = "Decision"
+category = "DataAsset"
+description = "DecisionSchema + DECISION_SCHEMA singleton (14 entities)."
+
+[[elements]]
+name = "TopicStore"
+layer = "Decision"
+category = "DataAsset"
+description = "Topic persistence (ABC→InMemory→SQLite)."
+
+[[elements]]
+name = "DecisionBridge"
+layer = "Decision"
+category = "InterfacePort"
+description = "profile_bridge — TOML profile loading."
+
+# ── Needs (ea-needs) ─────────────────────────────────────────
+
+[[elements]]
+name = "NeedsLayer"
+layer = "Needs"
+category = "LayerPackage"
+description = "ea-needs — requirements model, stakeholder needs formalization."
+
+[[elements]]
+name = "NeedCatalog"
+layer = "Needs"
+category = "CoreService"
+description = "Aggregate root — stakeholders + needs + relations management."
+
+[[elements]]
+name = "NeedsService"
+layer = "Needs"
+category = "CoreService"
+description = "Pure function queries (list_stakeholders, describe_need, etc.)."
+
+[[elements]]
+name = "NeedsSchema"
+layer = "Needs"
+category = "DataAsset"
+description = "NeedsSchema + NEEDS_SCHEMA singleton (9 entities)."
+
+[[elements]]
+name = "NeedsStore"
+layer = "Needs"
+category = "DataAsset"
+description = "Needs snapshot persistence (ABC→InMemory→SQLite)."
+
+[[elements]]
+name = "NeedsBridge"
+layer = "Needs"
+category = "InterfacePort"
+description = "profile_bridge — TOML profile loading."
+
+# ── Kernel (ea-kernel) ───────────────────────────────────────
+
+[[elements]]
+name = "KernelLayer"
+layer = "Kernel"
+category = "LayerPackage"
+description = "ea-kernel — lightweight kernel metamodel (L1-L4 ontology)."
+
+[[elements]]
+name = "KernelService"
+layer = "Kernel"
+category = "CoreService"
+description = "Service layer — UC1-UC6 pure functions, dict return."
+
+[[elements]]
+name = "RuleCorpus"
+layer = "Kernel"
+category = "CoreService"
+description = "Rule corpus — metadata, query, evidence-based judgment."
+
+[[elements]]
+name = "JudgmentService"
+layer = "Kernel"
+category = "CoreService"
+description = "Governance-aware judgment service (S2)."
+
+[[elements]]
+name = "GovernanceSystem"
+layer = "Kernel"
+category = "CoreService"
+description = "GovernanceSystem facade (6-component composition)."
+
+[[elements]]
+name = "KernelSchema"
+layer = "Kernel"
+category = "DataAsset"
+description = "Kernel schema TOML (15 entities, 14 relations, 81 rules)."
+
+[[elements]]
+name = "DecisionStoreK"
+layer = "Kernel"
+category = "DataAsset"
+description = "Judgment record persistence."
+
+[[elements]]
+name = "RuleAssetStore"
+layer = "Kernel"
+category = "DataAsset"
+description = "Rule asset lifecycle persistence."
+
+[[elements]]
+name = "MCPServer"
+layer = "Kernel"
+category = "InterfacePort"
+description = "MCP server — 15+ tools (stdio transport)."
+
+[[elements]]
+name = "APIServer"
+layer = "Kernel"
+category = "InterfacePort"
+description = "REST API server — 45+ endpoints (FastAPI)."
+
+[[elements]]
+name = "M1Pipeline"
+layer = "Kernel"
+category = "PipelineStep"
+description = "M1 pipeline — schema + conditions + bridge 3-step."
+
+[[elements]]
+name = "S3S5Lifecycle"
+layer = "Kernel"
+category = "PipelineStep"
+description = "S3-S5 lifecycle — store + analyzer + simulator + promotion."
+
+# ── Flow (ea-flow) ───────────────────────────────────────────
+
+[[elements]]
+name = "FlowLayer"
+layer = "Flow"
+category = "LayerPackage"
+description = "ea-flow — execution flow + concrete data schema spec ownership."
+
+[[elements]]
+name = "FlowRuntime"
+layer = "Flow"
+category = "CoreService"
+description = "Execution engine — StepImplementer binding + sequential execution."
+
+[[elements]]
+name = "FlowTopology"
+layer = "Flow"
+category = "CoreService"
+description = "Data-centric process spec (DataFlowEdge, LogicCondition)."
+
+[[elements]]
+name = "SchemaSpec"
+layer = "Flow"
+category = "DataAsset"
+description = "Data schema ABC (JsonSchema2020Spec, DbSchemaSpec)."
+
+[[elements]]
+name = "FlowSchema"
+layer = "Flow"
+category = "DataAsset"
+description = "FlowSchema + FLOW_SCHEMA singleton (21 entities)."
+
+[[elements]]
+name = "ExecutionStore"
+layer = "Flow"
+category = "DataAsset"
+description = "Workflow execution record persistence."
+
+[[elements]]
+name = "FlowBridge"
+layer = "Flow"
+category = "InterfacePort"
+description = "profile_bridge — TOML profile loading."
+
+# ── Management (ea-governance) ───────────────────────────────
+
+[[elements]]
+name = "GovernanceLayer"
+layer = "Management"
+category = "LayerPackage"
+description = "ea-governance — 5-layer management system."
+
+[[elements]]
+name = "GovernanceFacade"
+layer = "Management"
+category = "CoreService"
+description = "GovernanceContainer — single public entry point."
+
+[[elements]]
+name = "GovernanceService"
+layer = "Management"
+category = "CoreService"
+description = "Pure function queries (dashboard, cross_layer_summary, etc.)."
+
+[[elements]]
+name = "LayerStore"
+layer = "Management"
+category = "DataAsset"
+description = "6-layer snapshot persistence (SQLite)."
+
+[[elements]]
+name = "GovernanceRouter"
+layer = "Management"
+category = "InterfacePort"
+description = "FastAPI APIRouter plugin (5 endpoints)."
+
+# ── Visualization (web-kernel-viz) ───────────────────────────
+
+[[elements]]
+name = "VizLayer"
+layer = "Visualization"
+category = "LayerPackage"
+description = "web-kernel-viz — kernel topology visualization (Vite+React)."
+
+[[elements]]
+name = "VizApp"
+layer = "Visualization"
+category = "CoreService"
+description = "React SPA — topology graph + rule browser."
+
+# ══════════════════════════════════════════════════════════════
+# Rules
+# ══════════════════════════════════════════════════════════════
+
+# ── Category-level: Containment ──────────────────────────────
+
+[[rules]]
+id = "dev-contain-01"
+source = "@LayerPackage"
+target = "@CoreService"
+relation = "contains"
+priority = 50
+notes = "Package boundary contains core services."
+
+[[rules]]
+id = "dev-contain-02"
+source = "@LayerPackage"
+target = "@DataAsset"
+relation = "contains"
+priority = 50
+notes = "Package boundary contains data assets."
+
+[[rules]]
+id = "dev-contain-03"
+source = "@LayerPackage"
+target = "@InterfacePort"
+relation = "contains"
+priority = 50
+notes = "Package boundary contains interface ports."
+
+[[rules]]
+id = "dev-contain-04"
+source = "@LayerPackage"
+target = "@PipelineStep"
+relation = "contains"
+priority = 50
+notes = "Package boundary contains pipeline steps."
+
+# ── Category-level: Data Flow ────────────────────────────────
+
+[[rules]]
+id = "dev-flow-01"
+source = "@CoreService"
+target = "@DataAsset"
+relation = "produces"
+priority = 50
+notes = "Services produce data assets."
+
+[[rules]]
+id = "dev-flow-02"
+source = "@CoreService"
+target = "@DataAsset"
+relation = "consumes"
+priority = 50
+notes = "Services consume data assets."
+
+[[rules]]
+id = "dev-flow-03"
+source = "@PipelineStep"
+target = "@DataAsset"
+relation = "produces"
+priority = 50
+notes = "Pipeline steps produce data assets."
+
+[[rules]]
+id = "dev-flow-04"
+source = "@PipelineStep"
+target = "@DataAsset"
+relation = "consumes"
+priority = 50
+notes = "Pipeline steps consume data assets."
+
+# ── Category-level: Coordination & Sequence ──────────────────
+
+[[rules]]
+id = "dev-coord-01"
+source = "@InterfacePort"
+target = "@LayerPackage"
+relation = "available_in"
+priority = 50
+notes = "Interfaces expose package capabilities."
+
+[[rules]]
+id = "dev-coord-02"
+source = "@PipelineStep"
+target = "@PipelineStep"
+relation = "next"
+priority = 50
+notes = "Pipeline steps form sequences."
+
+[[rules]]
+id = "dev-coord-03"
+source = "@CoreService"
+target = "@CoreService"
+relation = "coordinates"
+priority = 50
+notes = "Services coordinate with each other."
+
+# ── Dependency Direction: Allow ──────────────────────────────
+
+[[rules]]
+id = "dev-dep-01"
+source = "KernelLayer"
+target = "ProfileFramework"
+relation = "depends_on"
+priority = 70
+notes = "ea-kernel depends on ea-profile."
+
+[[rules]]
+id = "dev-dep-02"
+source = "InfraLayer"
+target = "ProfileFramework"
+relation = "depends_on"
+priority = 70
+notes = "ea-infra depends on ea-profile."
+
+[[rules]]
+id = "dev-dep-03"
+source = "NeedsLayer"
+target = "KernelLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-needs depends on ea-kernel."
+
+[[rules]]
+id = "dev-dep-04"
+source = "DecisionLayer"
+target = "KernelLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-decision depends on ea-kernel."
+
+[[rules]]
+id = "dev-dep-05"
+source = "DecisionLayer"
+target = "NeedsLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-decision depends on ea-needs."
+
+[[rules]]
+id = "dev-dep-06"
+source = "FlowLayer"
+target = "KernelLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-flow depends on ea-kernel."
+
+[[rules]]
+id = "dev-dep-07"
+source = "FlowLayer"
+target = "DecisionLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-flow depends on ea-decision."
+
+[[rules]]
+id = "dev-dep-08"
+source = "GovernanceLayer"
+target = "KernelLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-governance depends on ea-kernel."
+
+[[rules]]
+id = "dev-dep-09"
+source = "GovernanceLayer"
+target = "DecisionLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-governance depends on ea-decision."
+
+[[rules]]
+id = "dev-dep-10"
+source = "GovernanceLayer"
+target = "FlowLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-governance depends on ea-flow."
+
+[[rules]]
+id = "dev-dep-11"
+source = "GovernanceLayer"
+target = "NeedsLayer"
+relation = "depends_on"
+priority = 70
+notes = "ea-governance depends on ea-needs."
+
+# ── Dependency Direction: Deny (reverse) ─────────────────────
+
+[[rules]]
+id = "dev-deny-01"
+source = "ProfileFramework"
+target = "KernelLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Foundation must not depend on kernel."
+
+[[rules]]
+id = "dev-deny-02"
+source = "ProfileFramework"
+target = "InfraLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Foundation must not depend on infra."
+
+[[rules]]
+id = "dev-deny-03"
+source = "KernelLayer"
+target = "DecisionLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Kernel must not depend on decision."
+
+[[rules]]
+id = "dev-deny-04"
+source = "KernelLayer"
+target = "FlowLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Kernel must not depend on flow."
+
+[[rules]]
+id = "dev-deny-05"
+source = "KernelLayer"
+target = "GovernanceLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Kernel must not depend on governance."
+
+[[rules]]
+id = "dev-deny-06"
+source = "NeedsLayer"
+target = "DecisionLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Needs must not depend on decision."
+
+[[rules]]
+id = "dev-deny-07"
+source = "NeedsLayer"
+target = "FlowLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Needs must not depend on flow."
+
+[[rules]]
+id = "dev-deny-08"
+source = "NeedsLayer"
+target = "GovernanceLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Needs must not depend on governance."
+
+[[rules]]
+id = "dev-deny-09"
+source = "DecisionLayer"
+target = "FlowLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Decision must not depend on flow."
+
+[[rules]]
+id = "dev-deny-10"
+source = "DecisionLayer"
+target = "GovernanceLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Decision must not depend on governance."
+
+[[rules]]
+id = "dev-deny-11"
+source = "FlowLayer"
+target = "GovernanceLayer"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Flow must not depend on governance."
+
+# ── Structure: Deny ──────────────────────────────────────────
+
+[[rules]]
+id = "dev-struct-deny-01"
+source = "@CoreService"
+target = "@InterfacePort"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Services must not know interfaces (inversion of control)."
+
+[[rules]]
+id = "dev-struct-deny-02"
+source = "@DataAsset"
+target = "@CoreService"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Data must not depend on services (reverse dependency)."
+
+# ── Specific: Interface Exposure ─────────────────────────────
+
+[[rules]]
+id = "dev-iface-01"
+source = "MCPServer"
+target = "KernelLayer"
+relation = "available_in"
+priority = 70
+notes = "MCP server exposes kernel capabilities."
+
+[[rules]]
+id = "dev-iface-02"
+source = "APIServer"
+target = "KernelLayer"
+relation = "available_in"
+priority = 70
+notes = "REST API server exposes kernel capabilities."
+
+[[rules]]
+id = "dev-iface-03"
+source = "GovernanceRouter"
+target = "GovernanceLayer"
+relation = "available_in"
+priority = 70
+notes = "Governance router exposes governance capabilities."
+
+# ── Specific: Pipeline Sequence ──────────────────────────────
+
+[[rules]]
+id = "dev-pipe-01"
+source = "M1Pipeline"
+target = "S3S5Lifecycle"
+relation = "next"
+priority = 70
+notes = "M1 bootstrap pipeline precedes S3-S5 lifecycle."
+
+# ── Specific: Service Coordination ───────────────────────────
+
+[[rules]]
+id = "dev-svc-01"
+source = "GovernanceFacade"
+target = "GovernanceService"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates service layer."
+
+[[rules]]
+id = "dev-svc-02"
+source = "KernelService"
+target = "RuleCorpus"
+relation = "coordinates"
+priority = 70
+notes = "Kernel service coordinates rule corpus."
+
+[[rules]]
+id = "dev-svc-03"
+source = "KernelService"
+target = "JudgmentService"
+relation = "coordinates"
+priority = 70
+notes = "Kernel service coordinates judgment service."

@@ -6,11 +6,16 @@ import type { Section, SubView } from '@/components/layout/TopNav';
 import { useAppState } from '@/contexts/AppStateContext';
 import { fetchProfiles } from '@/api/client';
 import type { ProfileListItem } from '@/api/types';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 /** Map a URL pathname to the (section, subView) pair TopNav expects. */
 function resolveNav(pathname: string): { section: Section; subView: SubView; isDashboard: boolean } {
     if (pathname === '/') {
         return { section: 'explorer', subView: '' as SubView, isDashboard: true };
+    }
+    if (pathname.startsWith('/admin')) {
+        const sub = pathname.split('/')[2] || 'business';
+        return { section: 'admin', subView: sub as SubView, isDashboard: false };
     }
     if (pathname.startsWith('/schema')) {
         const sub = pathname.split('/')[2] || 'kernel';
@@ -35,6 +40,7 @@ function resolveNav(pathname: string): { section: Section; subView: SubView; isD
 
 /** Map a (section, subView) to a URL path. */
 function toPath(section: Section, subView: SubView, profileName?: string): string {
+    if (section === 'admin') return `/admin/${subView}`;
     if (section === 'schema') return `/schema/${subView}`;
     if (section === 'status') return `/status/${subView}`;
     if (section === 'governance') return `/governance/${subView}`;
@@ -92,7 +98,43 @@ export default function RootLayout() {
     }, [navigate]);
 
     return (
-        <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
+            background: 'var(--bg-primary)', color: 'var(--text-primary)',
+        }}>
+            {/* Skip to content link for keyboard navigation */}
+            <a
+                href="#main-content"
+                style={{
+                    position: 'absolute', left: '-9999px', top: 'auto',
+                    width: '1px', height: '1px', overflow: 'hidden',
+                }}
+                onFocus={(e) => {
+                    e.currentTarget.style.position = 'fixed';
+                    e.currentTarget.style.left = '16px';
+                    e.currentTarget.style.top = '8px';
+                    e.currentTarget.style.width = 'auto';
+                    e.currentTarget.style.height = 'auto';
+                    e.currentTarget.style.overflow = 'visible';
+                    e.currentTarget.style.zIndex = '9999';
+                    e.currentTarget.style.padding = '8px 16px';
+                    e.currentTarget.style.background = 'var(--accent)';
+                    e.currentTarget.style.color = 'var(--bg-card)';
+                    e.currentTarget.style.borderRadius = '6px';
+                    e.currentTarget.style.fontSize = '14px';
+                    e.currentTarget.style.fontWeight = '600';
+                    e.currentTarget.style.textDecoration = 'none';
+                }}
+                onBlur={(e) => {
+                    e.currentTarget.style.position = 'absolute';
+                    e.currentTarget.style.left = '-9999px';
+                    e.currentTarget.style.width = '1px';
+                    e.currentTarget.style.height = '1px';
+                    e.currentTarget.style.overflow = 'hidden';
+                }}
+            >
+                Skip to content
+            </a>
             <TopNav
                 section={section}
                 subView={subView}
@@ -107,9 +149,11 @@ export default function RootLayout() {
                 onSelectProfile={onSelectProfile}
             />
 
-            <div style={{ marginTop: isDashboard ? 48 : 76, flex: 1, display: 'flex', overflow: 'hidden' }}>
-                <Outlet />
-            </div>
+            <main id="main-content" role="main" style={{ marginTop: isDashboard ? 48 : 76, flex: 1, display: 'flex', overflow: 'hidden' }}>
+                <ErrorBoundary>
+                    <Outlet />
+                </ErrorBoundary>
+            </main>
 
             <DetailSlideOver open={detailOpen} onClose={closeDetail} title={detailTitle}>
                 {detailContent}

@@ -1,8 +1,11 @@
 
-import { useEffect, useState, useCallback } from 'react';
-import { fetchProfiles, fetchProfileTopology } from '@/api/client';
-import type { ProfileListItem, ProfileTopologyResponse, TopologyNode, I18nString } from '@/api/types';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchProfileTopology } from '@/api/client';
+import { useProfiles } from '@/api/hooks';
+import type { TopologyNode, I18nString } from '@/api/types';
 import { useAppState } from '@/contexts/AppStateContext';
+import { ErrorBanner, LoadingSpinner } from '@/components/ui';
 
 function i18n(v: I18nString | null | undefined, lang: string): string {
     if (!v) return '';
@@ -18,73 +21,58 @@ interface ProfileData {
 
 export default function EntitiesView() {
     const { lang } = useAppState();
-    const [data, setData] = useState<ProfileData[] | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-    const load = useCallback(() => {
-        setError(null);
-        setData(null);
-        fetchProfiles()
-            .then((profiles: ProfileListItem[]) =>
-                Promise.all(
-                    profiles.map((p) =>
-                        fetchProfileTopology(p.name, { lang })
-                            .then((topo: ProfileTopologyResponse) => ({
-                                name: p.name,
-                                version: p.version,
-                                nodes: topo.nodes,
-                            }))
-                            .catch(() => null),
-                    ),
-                ),
-            )
-            .then((results) => {
-                const valid = results.filter((r): r is ProfileData => r !== null);
-                if (valid.length === 0) {
-                    setError('unavailable');
-                } else {
-                    setData(valid);
-                }
-            })
-            .catch(() => setError('unavailable'));
-    }, [lang]);
+    const profilesQuery = useProfiles();
 
-    useEffect(() => { load(); }, [load]);
+    const topologyQuery = useQuery({
+        queryKey: ['profiles-topology-nodes', profilesQuery.data?.map((p) => p.name), lang],
+        queryFn: async () => {
+            const profiles = profilesQuery.data!;
+            const results = await Promise.all(
+                profiles.map((p) =>
+                    fetchProfileTopology(p.name, { lang })
+                        .then((topo) => ({
+                            name: p.name,
+                            version: p.version,
+                            nodes: topo.nodes,
+                        }))
+                        .catch(() => null),
+                ),
+            );
+            const valid = results.filter((r): r is ProfileData => r !== null);
+            if (valid.length === 0) throw new Error('No profile topology data available');
+            return valid;
+        },
+        enabled: !!profilesQuery.data && profilesQuery.data.length > 0,
+    });
 
     const toggle = (key: string) =>
         setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
-    if (error === 'unavailable') {
+    if (profilesQuery.isError || topologyQuery.isError) {
         return (
             <div style={{ padding: 40, fontFamily: 'system-ui' }}>
-                <div style={{
-                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#f8fafc', fontSize: 12, color: '#64748b',
-                    display: 'flex', alignItems: 'center', gap: 12,
-                }}>
-                    Unable to load profile elements — API server may be unavailable.
-                    <button onClick={load} style={{
-                        padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                        border: '1px solid #cbd5e1', borderRadius: 4,
-                        background: '#fff', color: '#475569', cursor: 'pointer',
-                    }}>Retry</button>
-                </div>
+                <ErrorBanner
+                    message="Unable to load profile elements — API server may be unavailable."
+                    onRetry={() => { profilesQuery.refetch(); topologyQuery.refetch(); }}
+                />
             </div>
         );
     }
 
-    if (!data) {
-        return <div style={{ padding: 40, fontFamily: 'system-ui', fontSize: 13, color: '#94a3b8' }}>Loading elements from all profiles…</div>;
+    if (profilesQuery.isLoading || topologyQuery.isLoading || !topologyQuery.data) {
+        return <LoadingSpinner message="Loading elements from all profiles..." />;
     }
 
+    const data = topologyQuery.data;
     const totalNodes = data.reduce((s, p) => s + p.nodes.length, 0);
 
     return (
         <div style={{ padding: '24px 32px', fontFamily: 'system-ui, -apple-system, sans-serif', overflowY: 'auto', width: '100%' }}>
             <div style={{ marginBottom: 20 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>Elements — All Profiles</h2>
-                <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Elements — All Profiles</h2>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     Total: {totalNodes} elements across {data.length} profiles
                 </span>
             </div>
@@ -107,14 +95,14 @@ export default function EntitiesView() {
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                                 padding: '10px 14px', fontSize: 13, fontWeight: 600,
-                                border: '1px solid #e2e8f0', borderRadius: 6,
-                                background: '#f8fafc', color: '#334155', cursor: 'pointer',
+                                border: '1px solid var(--border)', borderRadius: 6,
+                                background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer',
                                 textAlign: 'left',
                             }}
                         >
                             <span style={{ fontSize: 10 }}>{open ? '\u25BC' : '\u25B6'}</span>
                             {profile.name}
-                            <span style={{ fontSize: 11, fontWeight: 400, color: '#94a3b8', marginLeft: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 4 }}>
                                 v{profile.version} — {profile.nodes.length} elements
                             </span>
                         </button>
@@ -123,15 +111,15 @@ export default function EntitiesView() {
                                 {layers.map(([layerName, nodes]) => (
                                     <div key={layerName} style={{ marginBottom: 8 }}>
                                         <div style={{
-                                            fontSize: 11, fontWeight: 600, color: '#64748b',
-                                            padding: '4px 8px', background: '#f1f5f9', borderRadius: 4,
+                                            fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
+                                            padding: '4px 8px', background: 'var(--bg-hover)', borderRadius: 4,
                                             display: 'inline-block', marginBottom: 4,
                                         }}>
                                             {layerName} ({nodes.length})
                                         </div>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                                             <thead>
-                                                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                                     <th style={thStyle}>Name</th>
                                                     <th style={thStyle}>Kernel Type</th>
                                                     <th style={thStyle}>Category</th>
@@ -140,11 +128,11 @@ export default function EntitiesView() {
                                             </thead>
                                             <tbody>
                                                 {nodes.map((n) => (
-                                                    <tr key={n.name} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                    <tr key={n.name} style={{ borderBottom: '1px solid var(--bg-hover)' }}>
                                                         <td style={tdStyle}>
                                                             {i18n(n.display_name, lang) || n.name}
                                                             {n.display_name && (
-                                                                <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 4 }}>({n.name})</span>
+                                                                <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({n.name})</span>
                                                             )}
                                                         </td>
                                                         <td style={tdStyle}>
@@ -153,8 +141,8 @@ export default function EntitiesView() {
                                                                 background: '#ede9fe', color: '#6d28d9', borderRadius: 3,
                                                             }}>{n.kernel_type}</span>
                                                         </td>
-                                                        <td style={{ ...tdStyle, color: '#64748b' }}>{n.category || '—'}</td>
-                                                        <td style={{ ...tdStyle, color: '#64748b' }}>{i18n(n.description, lang)}</td>
+                                                        <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{n.category || '—'}</td>
+                                                        <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{i18n(n.description, lang)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -172,9 +160,9 @@ export default function EntitiesView() {
 
 const thStyle: React.CSSProperties = {
     textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 600,
-    color: '#94a3b8', textTransform: 'uppercase',
+    color: 'var(--text-muted)', textTransform: 'uppercase',
 };
 
 const tdStyle: React.CSSProperties = {
-    padding: '6px 8px', fontSize: 12, color: '#1e293b',
+    padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)',
 };

@@ -26,8 +26,8 @@ def _expected_counts(layer: str) -> tuple[int, int, int]:
     return (len(p.elements), len(p.relations), len(p.validity_rules))
 
 
-# Only validate the 6 core layers (web-kernel-viz is not in the validate script)
-_VALIDATION_LAYERS = [k for k in LAYER_FILE_MAP if k != "web-kernel-viz"]
+# Only validate the 6 core layers (web-kernel-viz and development are not in the validate script)
+_VALIDATION_LAYERS = [k for k in LAYER_FILE_MAP if k not in ("web-kernel-viz", "development")]
 
 
 @pytest.mark.parametrize(

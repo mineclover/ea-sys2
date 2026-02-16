@@ -1,13 +1,13 @@
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import {
-    fetchNeedsCatalogs,
-    createNeedsCatalog,
-    fetchCatalogNeeds,
-    fetchNeedDetail,
-    fetchNeedsCatalogDetail,
-} from '@/api/client';
-import type { NeedsCatalogSummary, NeedSummary, NeedDetail } from '@/api/types';
+    useNeedsCatalogs,
+    useCatalogNeeds,
+    useNeedsCatalogDetail,
+} from '@/api/hooks';
+import { fetchNeedDetail } from '@/api/client';
+import type { NeedSummary, NeedDetail } from '@/api/types';
+import { ErrorBanner } from '@/components/ui';
 
 interface NeedsCatalogViewProps {
     onShowDetail: (title: string, content: ReactNode) => void;
@@ -15,21 +15,21 @@ interface NeedsCatalogViewProps {
 
 // --- Priority/Status colors ---
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
-    DRAFT: { bg: '#f1f5f9', fg: '#64748b' },
-    EXPRESSED: { bg: '#eff6ff', fg: '#3b82f6' },
-    ACKNOWLEDGED: { bg: '#f0fdf4', fg: '#16a34a' },
-    ADDRESSED: { bg: '#dcfce7', fg: '#166534' },
-    WITHDRAWN: { bg: '#fef2f2', fg: '#991b1b' },
+    DRAFT: { bg: 'var(--bg-hover)', fg: 'var(--text-secondary)' },
+    EXPRESSED: { bg: 'var(--accent-bg)', fg: 'var(--accent)' },
+    ACKNOWLEDGED: { bg: 'var(--success-bg)', fg: 'var(--success-text)' },
+    ADDRESSED: { bg: 'var(--success-bg)', fg: 'var(--success-text)' },
+    WITHDRAWN: { bg: 'var(--error-bg)', fg: 'var(--error-text)' },
 };
 const PRIORITY_COLORS: Record<string, { bg: string; fg: string }> = {
-    LOW: { bg: '#f1f5f9', fg: '#64748b' },
-    MEDIUM: { bg: '#fefce8', fg: '#a16207' },
-    HIGH: { bg: '#fff7ed', fg: '#c2410c' },
-    CRITICAL: { bg: '#fef2f2', fg: '#dc2626' },
+    LOW: { bg: 'var(--bg-hover)', fg: 'var(--text-secondary)' },
+    MEDIUM: { bg: 'var(--warning-bg)', fg: 'var(--warning-text)' },
+    HIGH: { bg: 'var(--warning-bg)', fg: 'var(--warning-text)' },
+    CRITICAL: { bg: 'var(--error-bg)', fg: 'var(--error-text)' },
 };
 
 function Badge({ label, colors }: { label: string; colors?: { bg: string; fg: string } }) {
-    const c = colors || { bg: '#f1f5f9', fg: '#64748b' };
+    const c = colors || { bg: 'var(--bg-hover)', fg: 'var(--text-secondary)' };
     return (
         <span style={{
             fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
@@ -43,7 +43,7 @@ function Badge({ label, colors }: { label: string; colors?: { bg: string; fg: st
 function NeedDetailView({ detail }: { detail: NeedDetail }) {
     return (
         <div style={{ fontSize: 12, lineHeight: 1.7 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
                 wants to <em>{detail.action}</em> {detail.subject}
                 {detail.target && <> for <strong>{detail.target}</strong></>}
             </div>
@@ -57,7 +57,7 @@ function NeedDetailView({ detail }: { detail: NeedDetail }) {
 
             {detail.purpose && (
                 <Section label="Purpose">
-                    <div style={{ color: '#475569' }}>{detail.purpose}</div>
+                    <div style={{ color: 'var(--text-secondary)' }}>{detail.purpose}</div>
                 </Section>
             )}
 
@@ -66,7 +66,7 @@ function NeedDetailView({ detail }: { detail: NeedDetail }) {
                     {detail.justifications.map((j, i) => (
                         <div key={i} style={{ marginBottom: 4 }}>
                             <Badge label={j.type} />
-                            <span style={{ color: '#475569', marginLeft: 6 }}>{j.description}</span>
+                            <span style={{ color: 'var(--text-secondary)', marginLeft: 6 }}>{j.description}</span>
                         </div>
                     ))}
                 </Section>
@@ -78,7 +78,7 @@ function NeedDetailView({ detail }: { detail: NeedDetail }) {
                         {detail.kernel_refs.map((ref) => (
                             <span key={ref} style={{
                                 fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                                background: '#eff6ff', color: '#3b82f6', cursor: 'pointer',
+                                background: 'var(--accent-bg)', color: 'var(--accent)', cursor: 'pointer',
                             }}>
                                 {ref}
                             </span>
@@ -107,13 +107,13 @@ function NeedDetailView({ detail }: { detail: NeedDetail }) {
                 <Section label="Process Units">
                     {detail.process_units.map((pu) => (
                         <div key={pu.id} style={{
-                            padding: '6px 8px', marginBottom: 4, background: '#f8fafc',
-                            borderRadius: 4, border: '1px solid #e2e8f0',
+                            padding: '6px 8px', marginBottom: 4, background: 'var(--bg-secondary)',
+                            borderRadius: 4, border: '1px solid var(--border)',
                         }}>
                             <div style={{ fontWeight: 600, fontSize: 11 }}>
                                 #{pu.sequence} {pu.label}
                             </div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                                 Stage: {pu.stage} {pu.description && `— ${pu.description}`}
                             </div>
                         </div>
@@ -122,7 +122,7 @@ function NeedDetailView({ detail }: { detail: NeedDetail }) {
             )}
 
             <Section label="Metadata">
-                <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                     ID: {detail.id} | Lineage: {detail.lineage_id}
                     <br />
                     Created: {detail.created_at} | Updated: {detail.updated_at}
@@ -136,7 +136,7 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div style={{ marginBottom: 12 }}>
             <div style={{
-                fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase',
+                fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase',
                 letterSpacing: '0.05em', marginBottom: 4,
             }}>
                 {label}
@@ -147,64 +147,37 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps) {
-    const [catalogs, setCatalogs] = useState<NeedsCatalogSummary[]>([]);
     const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null);
-    const [needs, setNeeds] = useState<NeedSummary[]>([]);
-    const [stakeholders, setStakeholders] = useState<{ id: string; name: string; role: string }[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
 
     // Filters
     const [filterStatus, setFilterStatus] = useState('');
     const [filterPriority, setFilterPriority] = useState('');
     const [filterStakeholder, setFilterStakeholder] = useState('');
 
-    // Create catalog form
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [newCatalogName, setNewCatalogName] = useState('');
-    const [newCatalogDesc, setNewCatalogDesc] = useState('');
+    // React Query hooks
+    const {
+        data: catalogs = [],
+        isLoading: catalogsLoading,
+        isError: catalogsError,
+        refetch: refetchCatalogs,
+    } = useNeedsCatalogs();
 
-    // Load catalogs
-    const loadCatalogs = useCallback(() => {
-        setLoading(true);
-        setError(null);
-        fetchNeedsCatalogs()
-            .then(setCatalogs)
-            .catch(() => setError('unavailable'))
-            .finally(() => setLoading(false));
-    }, []);
+    const filterOpts = {
+        ...(filterStatus ? { status: filterStatus } : {}),
+        ...(filterPriority ? { priority: filterPriority } : {}),
+        ...(filterStakeholder ? { stakeholder_id: filterStakeholder } : {}),
+    };
 
-    useEffect(() => { loadCatalogs(); }, [loadCatalogs]);
+    const {
+        data: needs = [],
+    } = useCatalogNeeds(selectedCatalogId || '', Object.keys(filterOpts).length > 0 ? filterOpts : undefined);
 
-    // Load needs when catalog selected
-    useEffect(() => {
-        if (!selectedCatalogId) {
-            setNeeds([]);
-            setStakeholders([]);
-            return;
-        }
-        const opts: Record<string, string> = {};
-        if (filterStatus) opts.status = filterStatus;
-        if (filterPriority) opts.priority = filterPriority;
-        if (filterStakeholder) opts.stakeholder_id = filterStakeholder;
+    const {
+        data: catalogDetail,
+    } = useNeedsCatalogDetail(selectedCatalogId || '');
 
-        fetchCatalogNeeds(selectedCatalogId, opts).then(setNeeds).catch(() => setNeeds([]));
-        fetchNeedsCatalogDetail(selectedCatalogId)
-            .then((detail) => setStakeholders(detail.stakeholders || []))
-            .catch(() => setStakeholders([]));
-    }, [selectedCatalogId, filterStatus, filterPriority, filterStakeholder]);
-
-    const handleCreateCatalog = useCallback(() => {
-        if (!newCatalogName.trim()) return;
-        createNeedsCatalog(newCatalogName.trim(), newCatalogDesc.trim())
-            .then(() => {
-                setNewCatalogName('');
-                setNewCatalogDesc('');
-                setShowCreateForm(false);
-                loadCatalogs();
-            })
-            .catch((err) => setError(String(err)));
-    }, [newCatalogName, newCatalogDesc, loadCatalogs]);
+    const stakeholders = catalogDetail?.stakeholders || [];
 
     const handleNeedClick = useCallback((need: NeedSummary) => {
         if (!selectedCatalogId) return;
@@ -224,113 +197,49 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
         <div style={{ height: '100%', fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'auto' }}>
             {/* Header */}
             <div style={{
-                padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#fafbfc',
+                padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)',
                 display: 'flex', alignItems: 'center', gap: 8,
             }}>
                 {selectedCatalogId && (
                     <button
-                        onClick={() => { setSelectedCatalogId(null); setNeeds([]); }}
+                        onClick={() => { setSelectedCatalogId(null); }}
                         style={{
                             padding: '4px 10px', fontSize: 12, fontWeight: 600,
-                            border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff',
-                            color: '#64748b', cursor: 'pointer',
+                            border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg-card)',
+                            color: 'var(--text-secondary)', cursor: 'pointer',
                         }}
                     >
                         ← Back
                     </button>
                 )}
                 <span style={{
-                    fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase',
+                    fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase',
                 }}>
                     {selectedCatalog ? selectedCatalog.name : 'Needs Catalogs'}
                 </span>
                 {selectedCatalog && (
-                    <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                         {selectedCatalog.needs_count} needs · {selectedCatalog.stakeholder_count} stakeholders
                     </span>
                 )}
-                <div style={{ marginLeft: 'auto' }}>
-                    {!selectedCatalogId && error !== 'unavailable' && (
-                        <button
-                            onClick={() => setShowCreateForm((v) => !v)}
-                            style={{
-                                padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                                border: '1px solid #3b82f6', borderRadius: 4,
-                                background: showCreateForm ? '#eff6ff' : '#3b82f6',
-                                color: showCreateForm ? '#3b82f6' : '#fff',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {showCreateForm ? 'Cancel' : 'Create Catalog'}
-                        </button>
-                    )}
-                </div>
+                <div style={{ marginLeft: 'auto' }} />
             </div>
 
-            {error === 'unavailable' && (
-                <div style={{
-                    margin: '12px 16px', padding: '14px 16px',
-                    border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc',
-                    fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 10,
-                }}>
-                    <span>Unable to load catalogs — API server may be unavailable.</span>
-                    <button
-                        onClick={loadCatalogs}
-                        style={{
-                            padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                            border: '1px solid #cbd5e1', borderRadius: 4,
-                            background: '#fff', color: '#475569', cursor: 'pointer',
-                        }}
-                    >
-                        Retry
-                    </button>
+            {catalogsError && (
+                <div style={{ margin: '12px 16px' }}>
+                    <ErrorBanner
+                        message="Unable to load catalogs — API server may be unavailable."
+                        onRetry={() => refetchCatalogs()}
+                    />
                 </div>
             )}
-            {error && error !== 'unavailable' && (
+            {error && !catalogsError && (
                 <div style={{
                     margin: '12px 16px', padding: '10px 14px',
-                    border: '1px solid #fecaca', borderRadius: 8, background: '#fef2f2',
-                    fontSize: 12, color: '#991b1b',
+                    border: '1px solid var(--error-bg)', borderRadius: 8, background: 'var(--error-bg)',
+                    fontSize: 12, color: 'var(--error-text)',
                 }}>
                     {error}
-                </div>
-            )}
-
-            {/* Create form */}
-            {showCreateForm && (
-                <div style={{
-                    margin: '12px 16px', padding: 12, border: '1px solid #e2e8f0',
-                    borderRadius: 8, background: '#f8fafc',
-                }}>
-                    <div style={{ marginBottom: 8 }}>
-                        <input
-                            placeholder="Catalog name"
-                            value={newCatalogName}
-                            onChange={(e) => setNewCatalogName(e.target.value)}
-                            style={{
-                                width: '100%', boxSizing: 'border-box', padding: '6px 10px',
-                                fontSize: 13, border: '1px solid #cbd5e1', borderRadius: 4,
-                            }}
-                        />
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                        <input
-                            placeholder="Description (optional)"
-                            value={newCatalogDesc}
-                            onChange={(e) => setNewCatalogDesc(e.target.value)}
-                            style={{
-                                width: '100%', boxSizing: 'border-box', padding: '6px 10px',
-                                fontSize: 13, border: '1px solid #cbd5e1', borderRadius: 4,
-                            }}
-                        />
-                    </div>
-                    <button onClick={handleCreateCatalog} style={{
-                        padding: '6px 16px', fontSize: 12, fontWeight: 600,
-                        border: '1px solid #3b82f6', borderRadius: 4,
-                        background: '#3b82f6', color: '#fff', cursor: 'pointer',
-                    }}>
-                        Create
-                    </button>
                 </div>
             )}
 
@@ -338,10 +247,10 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                 {/* Catalog grid (no catalog selected) */}
                 {!selectedCatalogId && (
                     <>
-                        {loading && <div style={{ color: '#94a3b8', fontSize: 13 }}>Loading...</div>}
-                        {!loading && catalogs.length === 0 && (
-                            <div style={{ color: '#94a3b8', fontSize: 13 }}>
-                                No catalogs yet. Create one to get started.
+                        {catalogsLoading && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</div>}
+                        {!catalogsLoading && catalogs.length === 0 && (
+                            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                                No catalogs found.
                             </div>
                         )}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
@@ -350,33 +259,33 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                                     key={cat.id}
                                     onClick={() => setSelectedCatalogId(cat.id)}
                                     style={{
-                                        padding: 14, border: '1px solid #e2e8f0', borderRadius: 8,
-                                        background: '#fff', cursor: 'pointer',
+                                        padding: 14, border: '1px solid var(--border)', borderRadius: 8,
+                                        background: 'var(--bg-card)', cursor: 'pointer',
                                         transition: 'border-color 0.15s, box-shadow 0.15s',
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = '#3b82f6';
+                                        e.currentTarget.style.borderColor = 'var(--accent)';
                                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(59,130,246,0.08)';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                        e.currentTarget.style.borderColor = 'var(--border)';
                                         e.currentTarget.style.boxShadow = 'none';
                                     }}
                                 >
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
                                         {cat.name}
                                     </div>
                                     {cat.description && (
-                                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>
+                                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
                                             {cat.description}
                                         </div>
                                     )}
-                                    <div style={{ display: 'flex', gap: 10, fontSize: 10, color: '#94a3b8' }}>
+                                    <div style={{ display: 'flex', gap: 10, fontSize: 10, color: 'var(--text-muted)' }}>
                                         <span>{cat.needs_count} needs</span>
                                         <span>{cat.stakeholder_count} stakeholders</span>
                                         <span>{cat.use_case_count} use cases</span>
                                     </div>
-                                    <div style={{ fontSize: 9, color: '#cbd5e1', marginTop: 6 }}>
+                                    <div style={{ fontSize: 9, color: 'var(--border-strong)', marginTop: 6 }}>
                                         Updated: {cat.updated_at}
                                     </div>
                                 </div>
@@ -391,13 +300,13 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                         {/* Stakeholders sidebar */}
                         <div style={{ width: 180, flexShrink: 0 }}>
                             <div style={{
-                                fontSize: 10, fontWeight: 700, color: '#94a3b8',
+                                fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
                                 textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
                             }}>
                                 Stakeholders
                             </div>
                             {stakeholders.length === 0 && (
-                                <div style={{ fontSize: 11, color: '#cbd5e1' }}>No stakeholders</div>
+                                <div style={{ fontSize: 11, color: 'var(--border-strong)' }}>No stakeholders</div>
                             )}
                             {stakeholders.map((sh) => (
                                 <div
@@ -405,13 +314,13 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                                     onClick={() => setFilterStakeholder(filterStakeholder === sh.id ? '' : sh.id)}
                                     style={{
                                         padding: '6px 8px', marginBottom: 4, borderRadius: 4,
-                                        border: `1px solid ${filterStakeholder === sh.id ? '#3b82f6' : '#e2e8f0'}`,
-                                        background: filterStakeholder === sh.id ? '#eff6ff' : '#fff',
+                                        border: `1px solid ${filterStakeholder === sh.id ? 'var(--accent)' : 'var(--border)'}`,
+                                        background: filterStakeholder === sh.id ? 'var(--accent-bg)' : 'var(--bg-card)',
                                         cursor: 'pointer', fontSize: 11,
                                     }}
                                 >
-                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{sh.name}</div>
-                                    <div style={{ fontSize: 10, color: '#94a3b8' }}>{sh.role}</div>
+                                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sh.name}</div>
+                                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{sh.role}</div>
                                 </div>
                             ))}
                         </div>
@@ -444,8 +353,8 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                                     <button
                                         onClick={() => { setFilterStatus(''); setFilterPriority(''); setFilterStakeholder(''); }}
                                         style={{
-                                            padding: '4px 10px', fontSize: 11, border: '1px solid #e2e8f0',
-                                            borderRadius: 4, background: '#fff', color: '#64748b', cursor: 'pointer',
+                                            padding: '4px 10px', fontSize: 11, border: '1px solid var(--border)',
+                                            borderRadius: 4, background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
                                         }}
                                     >
                                         Clear filters
@@ -454,7 +363,7 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                             </div>
 
                             {needs.length === 0 && (
-                                <div style={{ color: '#94a3b8', fontSize: 13, padding: 16 }}>
+                                <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: 16 }}>
                                     No needs found. Express a need via the API to see it here.
                                 </div>
                             )}
@@ -465,28 +374,28 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
                                     onClick={() => handleNeedClick(need)}
                                     style={{
                                         padding: '10px 12px', marginBottom: 6,
-                                        border: '1px solid #e2e8f0', borderRadius: 6,
-                                        background: '#fff', cursor: 'pointer',
+                                        border: '1px solid var(--border)', borderRadius: 6,
+                                        background: 'var(--bg-card)', cursor: 'pointer',
                                         transition: 'border-color 0.15s',
                                     }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                         <Badge label={need.status} colors={STATUS_COLORS[need.status]} />
                                         <Badge label={need.priority} colors={PRIORITY_COLORS[need.priority]} />
-                                        <span style={{ fontSize: 10, color: '#cbd5e1', marginLeft: 'auto' }}>v{need.version}</span>
+                                        <span style={{ fontSize: 10, color: 'var(--border-strong)', marginLeft: 'auto' }}>v{need.version}</span>
                                     </div>
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                                         {need.action} {need.subject}
-                                        {need.target && <span style={{ color: '#64748b' }}> → {need.target}</span>}
+                                        {need.target && <span style={{ color: 'var(--text-secondary)' }}> → {need.target}</span>}
                                     </div>
                                     {need.kernel_refs.length > 0 && (
                                         <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
                                             {need.kernel_refs.map((ref) => (
                                                 <span key={ref} style={{
                                                     fontSize: 9, padding: '1px 6px', borderRadius: 3,
-                                                    background: '#eff6ff', color: '#3b82f6', fontWeight: 600,
+                                                    background: 'var(--accent-bg)', color: 'var(--accent)', fontWeight: 600,
                                                 }}>
                                                     {ref}
                                                 </span>
@@ -506,9 +415,9 @@ export default function NeedsCatalogView({ onShowDetail }: NeedsCatalogViewProps
 const filterSelectStyle = {
     padding: '4px 8px',
     fontSize: 11,
-    border: '1px solid #e2e8f0',
+    border: '1px solid var(--border)',
     borderRadius: 4,
-    background: '#fff',
-    color: '#1e293b',
+    background: 'var(--bg-card)',
+    color: 'var(--text-primary)',
     cursor: 'pointer' as const,
 };

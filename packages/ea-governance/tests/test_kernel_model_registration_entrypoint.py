@@ -151,3 +151,18 @@ def test_model_registration_records_decision_trace_and_exploration(tmp_path):
         row["event_type"] == "kernel_model_registered"
         for row in exploration["history"]
     )
+
+
+def test_list_kernel_models_exposes_registry_index(tmp_path):
+    container = GovernanceContainer(tmp_path, KERNEL_SCHEMA)
+    container.register_kernel_model(
+        _profile_toml(name="RegistryIndexModel"),
+        owner="kernel-team",
+        created_by="tester",
+        actor="tester",
+    )
+
+    models = container.list_kernel_models()
+    names = {item["model_name"] for item in models}
+
+    assert "RegistryIndexModel" in names

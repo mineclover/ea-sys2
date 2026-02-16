@@ -1,70 +1,47 @@
 
-import { useEffect, useState, useCallback } from 'react';
-import { fetchKernelRules } from '@/api/client';
-import type { KernelRulesResponse, KernelRuleSummary } from '@/api/types';
+import { useState } from 'react';
+import { useKernelRules } from '@/api/hooks';
+import { ErrorBanner, LoadingSpinner } from '@/components/ui';
 
 export default function RulesOverview() {
-    const [data, setData] = useState<KernelRulesResponse | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-    const [groupRules, setGroupRules] = useState<KernelRuleSummary[] | null>(null);
-    const [groupLoading, setGroupLoading] = useState(false);
 
-    const load = useCallback(() => {
-        setError(null);
-        fetchKernelRules()
-            .then(setData)
-            .catch(() => setError('unavailable'));
-    }, []);
+    const rulesQuery = useKernelRules();
+    const groupRulesQuery = useKernelRules(
+        expandedGroup ? { group: expandedGroup } : undefined,
+    );
 
-    useEffect(() => { load(); }, [load]);
+    const toggleGroup = (groupName: string) => {
+        setExpandedGroup((prev) => (prev === groupName ? null : groupName));
+    };
 
-    const toggleGroup = useCallback((groupName: string) => {
-        if (expandedGroup === groupName) {
-            setExpandedGroup(null);
-            setGroupRules(null);
-            return;
-        }
-        setExpandedGroup(groupName);
-        setGroupRules(null);
-        setGroupLoading(true);
-        fetchKernelRules({ group: groupName })
-            .then((res) => setGroupRules(res.rules || []))
-            .catch(() => setGroupRules([]))
-            .finally(() => setGroupLoading(false));
-    }, [expandedGroup]);
-
-    if (error === 'unavailable') {
+    if (rulesQuery.isError) {
         return (
             <div style={{ padding: 40, fontFamily: 'system-ui' }}>
-                <div style={{
-                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#f8fafc', fontSize: 12, color: '#64748b',
-                    display: 'flex', alignItems: 'center', gap: 12,
-                }}>
-                    Unable to load kernel rules — API server may be unavailable.
-                    <button onClick={load} style={{
-                        padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                        border: '1px solid #cbd5e1', borderRadius: 4,
-                        background: '#fff', color: '#475569', cursor: 'pointer',
-                    }}>Retry</button>
-                </div>
+                <ErrorBanner
+                    message="Unable to load kernel rules — API server may be unavailable."
+                    onRetry={() => rulesQuery.refetch()}
+                />
             </div>
         );
     }
 
-    if (!data) {
-        return <div style={{ padding: 40, fontFamily: 'system-ui', fontSize: 13, color: '#94a3b8' }}>Loading rules…</div>;
+    if (rulesQuery.isLoading || !rulesQuery.data) {
+        return <LoadingSpinner message="Loading rules..." />;
     }
 
+    const data = rulesQuery.data;
     const groups = data.groups || [];
     const explicitCount = groups.filter((g) => !g.name.startsWith('fallback')).reduce((s, g) => s + g.count, 0);
     const fallbackCount = groups.filter((g) => g.name.startsWith('fallback')).reduce((s, g) => s + g.count, 0);
 
+    const groupRules = expandedGroup ? (groupRulesQuery.data?.rules || null) : null;
+    const groupLoading = expandedGroup ? groupRulesQuery.isLoading : false;
+
     return (
         <div style={{ padding: '24px 32px', fontFamily: 'system-ui, -apple-system, sans-serif', overflowY: 'auto', width: '100%' }}>
             <div style={{ marginBottom: 20 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>Kernel Rules</h2>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Kernel Rules</h2>
                 <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
                     <Stat label="Total" value={data.total} />
                     <Stat label="Explicit" value={explicitCount} />
@@ -80,22 +57,22 @@ export default function RulesOverview() {
                             onClick={() => toggleGroup(g.name)}
                             style={{
                                 width: '100%', textAlign: 'left',
-                                padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: 8,
-                                background: expandedGroup === g.name ? '#eff6ff' : '#fff',
+                                padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 8,
+                                background: expandedGroup === g.name ? 'var(--accent-bg)' : 'var(--bg-card)',
                                 cursor: 'pointer',
                             }}
                         >
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{g.name}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{g.count} rules</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{g.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{g.count} rules</div>
                         </button>
                         {expandedGroup === g.name && (
-                            <div style={{ marginTop: 4, border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
+                            <div style={{ marginTop: 4, border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
                                 {groupLoading ? (
-                                    <div style={{ padding: 12, fontSize: 12, color: '#94a3b8' }}>Loading…</div>
+                                    <div style={{ padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>Loading...</div>
                                 ) : groupRules && groupRules.length > 0 ? (
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                                         <thead>
-                                            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                                 <th style={thStyle}>Source</th>
                                                 <th style={thStyle}>Target</th>
                                                 <th style={thStyle}>Relation</th>
@@ -105,24 +82,24 @@ export default function RulesOverview() {
                                         </thead>
                                         <tbody>
                                             {groupRules.map((r) => (
-                                                <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-hover)' }}>
                                                     <td style={tdStyle}>{r.source}</td>
                                                     <td style={tdStyle}>{r.target}</td>
                                                     <td style={tdStyle}>{r.relation}</td>
                                                     <td style={tdStyle}>
                                                         <span style={{
                                                             padding: '1px 5px', fontSize: 10, fontWeight: 600, borderRadius: 3,
-                                                            background: r.valid ? '#dcfce7' : '#fee2e2',
-                                                            color: r.valid ? '#166534' : '#991b1b',
+                                                            background: r.valid ? 'var(--success-bg)' : 'var(--error-bg)',
+                                                            color: r.valid ? 'var(--success-text)' : 'var(--error-text)',
                                                         }}>{r.valid ? 'ALLOW' : 'DENY'}</span>
                                                     </td>
-                                                    <td style={{ ...tdStyle, color: '#94a3b8' }}>{r.priority}</td>
+                                                    <td style={{ ...tdStyle, color: 'var(--text-muted)' }}>{r.priority}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 ) : (
-                                    <div style={{ padding: 12, fontSize: 12, color: '#94a3b8' }}>No rules</div>
+                                    <div style={{ padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>No rules</div>
                                 )}
                             </div>
                         )}
@@ -136,20 +113,20 @@ export default function RulesOverview() {
 function Stat({ label, value }: { label: string; value: number }) {
     return (
         <div style={{
-            padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 6,
-            background: '#f8fafc', minWidth: 80,
+            padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 6,
+            background: 'var(--bg-secondary)', minWidth: 80,
         }}>
-            <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{value}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
         </div>
     );
 }
 
 const thStyle: React.CSSProperties = {
     textAlign: 'left', padding: '5px 6px', fontSize: 10, fontWeight: 600,
-    color: '#94a3b8', textTransform: 'uppercase',
+    color: 'var(--text-muted)', textTransform: 'uppercase',
 };
 
 const tdStyle: React.CSSProperties = {
-    padding: '5px 6px', fontSize: 11, color: '#1e293b',
+    padding: '5px 6px', fontSize: 11, color: 'var(--text-primary)',
 };

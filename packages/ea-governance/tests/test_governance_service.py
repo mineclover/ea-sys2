@@ -1,8 +1,10 @@
 """Tests for ea_governance.governance_service pure functions."""
 
 from ea_governance.governance_service import (
+    business_flow_topology,
     cross_layer_summary,
     governance_dashboard,
+    layer_schema,
     layer_profile_detail,
     list_managed_layers,
 )
@@ -40,7 +42,8 @@ def test_list_managed_layers_total_profiles():
     # Count loaded items
     loaded_layers = sum(1 for item in result["layers"] if item.get("loaded"))
     loaded_stack = sum(1 for item in result["governance_stack"] if item.get("loaded"))
-    assert total == loaded_layers + loaded_stack
+    loaded_views = sum(1 for item in result.get("system_views", []) if item.get("loaded"))
+    assert total == loaded_layers + loaded_stack + loaded_views
 
 
 def test_list_managed_layers_loaded_profiles_have_counts():
@@ -137,3 +140,33 @@ def test_governance_dashboard_frameworks():
         fw = frameworks[0]
         assert "name" in fw
         assert "element_count" in fw
+
+
+def test_layer_schema_lang_ko_returns_i18n_fields():
+    result = layer_schema("kernel", lang="ko")
+    assert "error" not in result
+    has_ko = False
+    for group in result["elements_by_layer"]:
+        for elem in group["elements"]:
+            if isinstance(elem["display_name"], dict) and "ko" in elem["display_name"]:
+                has_ko = True
+                break
+        if has_ko:
+            break
+    assert has_ko
+
+
+def test_business_flow_lang_ko_returns_i18n_fields():
+    result = business_flow_topology(lang="ko")
+    assert "error" not in result
+    has_ko = False
+    for layer in result["layers"]:
+        if not layer.get("loaded") or not layer.get("elements"):
+            continue
+        for elem in layer["elements"]:
+            if isinstance(elem["display_name"], dict) and "ko" in elem["display_name"]:
+                has_ko = True
+                break
+        if has_ko:
+            break
+    assert has_ko

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ea_kernel.kernel_service import (
     audit_i18n,
+    audit_profile_i18n,
     describe_profile,
     describe_rule,
     get_entity_names,
@@ -141,6 +142,17 @@ class TestDescribeProfile:
         assert "allow" in summary
         assert "deny" in summary
 
+    def test_easystem_kernel_profile_ko_relation_display_names_are_localized(self):
+        result = describe_profile(name="EASystem-Kernel", lang="ko")
+        assert result is not None
+        relation_map = {
+            rel["name"]: rel.get("display_name")
+            for rel in result["relations"]
+        }
+        contains_name = relation_map.get("contains")
+        assert isinstance(contains_name, dict)
+        assert contains_name.get("ko") == "포함"
+
 
 class TestDescribeRule:
     """UC4: describe_rule()."""
@@ -250,6 +262,7 @@ class TestI18nService:
         result = audit_i18n(lang="ko")
         assert "lang" in result
         assert result["lang"] == "ko"
+        assert result["scope"] == "m2"
         assert "coverage" in result
         assert "total_schema_items" in result
         assert "total_translated" in result
@@ -268,3 +281,23 @@ class TestI18nService:
         assert result["lang"] == "xx"
         assert result["coverage"] == 0.0
         assert result["total_translated"] == 0
+
+    def test_audit_profile_i18n_returns_report(self):
+        result = audit_profile_i18n(name="EASystem-Kernel", lang="ko")
+        assert result["scope"] == "m1"
+        assert result["profile"] == "EASystem-Kernel"
+        assert result["lang"] == "ko"
+        assert "total_schema_items" in result
+        assert "total_translated" in result
+        assert "missing_count" in result
+        assert "orphan_count" in result
+        assert "stale_count" in result
+        assert isinstance(result["missing"], list)
+        if result["missing"]:
+            first = result["missing"][0]
+            assert "identifier" in first
+            assert first["identifier"].startswith("m1:EASystem-Kernel:")
+
+    def test_audit_profile_i18n_unknown_profile(self):
+        result = audit_profile_i18n(name="NonExistentProfile", lang="ko")
+        assert "error" in result

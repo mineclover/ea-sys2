@@ -2,6 +2,8 @@
 
 > 본 문서는 모든 ea-* 패키지(kernel, needs, decision, flow, governance, infra)가 따르는 구현 표준이다.
 > ea-kernel에서 검증된 패턴을 정규화한 것이며, 새 레이어 구현 시 이 문서를 권위 출처(source of truth)로 참조한다.
+>
+> 번역(M1/M2) 및 번역 API 요청 규약은 `docs/i18n-m1-m2-api-standard.md`를 함께 참조한다.
 
 ---
 
@@ -175,6 +177,70 @@ def load_layer_schema(path: Path | None = None) -> LayerSchema:
     # ... parse + self-verify + return typed schema
 ```
 
+### 2.5 M1 파이프라인 3모듈 패턴
+
+M2(메타모델)는 레이어별 단일 시스템(`{layer}_schema.py`)으로 정의되지만, M1(프로파일)부터는 `ea-profile` 공통 인터페이스를 통해 profile 단위로 관리된다. 모든 레이어는 M2 → M0 파이프라인을 제공하기 위해 다음 3모듈을 반드시 구현한다.
+
+각 레이어의 M2 설계(엔티티/관계 어휘)는 목적에 따라 다르고, M1·M0의 적재 방식이나 도메인 개념도 레이어마다 다르다. 그러나 프로파일 접근의 공통 인터페이스는 `ea-profile` 패키지가 제공하므로, 3모듈의 구조적 패턴은 동일하다.
+
+| 모듈 | 네이밍 규칙 | 역할 |
+|------|-----------|------|
+| `{layer}_schema.py` | `{Layer}Schema` 클래스 + `{LAYER}_SCHEMA` 싱글턴 | M2 스키마 (SchemaPort 호환) |
+| `condition_registry.py` | `{layer}_condition_registry()` 팩토리 함수 | kernel defaults + 레이어 전용 조건 |
+| `profile_bridge.py` | `load_{layer}_profile()` + `_from_content()` | TOML → KernelProfile 로딩 브릿지 |
+
+**스키마 모듈** (`{layer}_schema.py`):
+
+```python
+# 독립 모듈 — 외부 의존 없음
+@dataclass(frozen=True)
+class LayerEntity:
+    name: str
+    is_abstract: bool = False
+    description: str = ""
+
+@dataclass(frozen=True)
+class LayerRelation:
+    name: str
+    description: str = ""
+
+@dataclass(frozen=True)
+class LayerSchema:                    # SchemaPort 호환
+    entities: tuple[LayerEntity, ...] = ()
+    relations: tuple[LayerRelation, ...] = ()
+    def get_entity(self, name: str) -> LayerEntity | None: ...
+    def get_relation(self, name: str) -> LayerRelation | None: ...
+
+LAYER_SCHEMA = LayerSchema(entities=(...), relations=(...))
+```
+
+**조건 레지스트리** (`condition_registry.py`):
+
+```python
+def layer_condition_registry():
+    from ea_profile.types import ConditionRegistry
+    reg = ConditionRegistry.kernel_default()  # 5 kernel defaults
+    reg.register("SAME_DOMAIN_CONCEPT", "same_domain_concept")
+    return reg
+```
+
+**프로파일 브릿지** (`profile_bridge.py`):
+
+```python
+from my_layer.condition_registry import layer_condition_registry
+from my_layer.layer_schema import LAYER_SCHEMA
+
+def load_layer_profile(path: Path, *, validate: bool = True):
+    from ea_profile.loader import load_profile
+    schema = LAYER_SCHEMA if validate else None
+    return load_profile(path, kernel=schema, condition_registry=layer_condition_registry())
+
+def load_layer_profile_from_content(content: str, *, validate: bool = True):
+    from ea_profile.loader import load_profile_from_content
+    schema = LAYER_SCHEMA if validate else None
+    return load_profile_from_content(content, schema, layer_condition_registry())
+```
+
 ---
 
 ## 3. 서비스 레이어
@@ -227,6 +293,35 @@ def _get_corpus() -> RuleCorpus:
     from my_layer.spec import LAYER_SCHEMA
     return RuleCorpus.from_spec(LAYER_SCHEMA)
 ```
+
+### 3.5 API Router 플러그인 패턴
+
+레이어가 HTTP 엔드포인트를 제공할 때, 엔드포인트 정의는 해당 레이어 패키지 내부에 `api_router.py`로 작성한다. 서버(ea-kernel)는 `try/except ImportError`로 플러그인 방식으로 마운트한다. 이를 통해 역방향 의존(kernel → 하위 레이어) 없이 API를 확장할 수 있다.
+
+**레이어 측** (`ea_governance/api_router.py`):
+
+```python
+from fastapi import APIRouter, HTTPException
+from ea_governance.governance_service import list_managed_layers, ...
+
+governance_router = APIRouter(prefix="/governance", tags=["governance"])
+
+@governance_router.get("/layers")
+def list_governance_layers() -> dict[str, Any]:
+    return list_managed_layers()
+```
+
+**서버 측** (`ea_kernel/api/server.py`):
+
+```python
+try:
+    from ea_governance.api_router import governance_router
+    app.include_router(governance_router)
+except ImportError:
+    pass  # ea-governance not installed; endpoints disabled
+```
+
+레이어 패키지의 `pyproject.toml`에 `[project.optional-dependencies] api = ["fastapi>=0.100"]`를 선언하여 FastAPI 의존을 선택적으로 관리한다.
 
 ---
 
@@ -316,9 +411,10 @@ class SQLiteI18nStore(I18nStore):
 
 각 레이어는 자체 특화 스토어를 갖는다. 모든 레이어가 메타-메타 모델 기반으로 생성되는 프로파일을 지속 관리하며, 기본적인 버전 관리가 필요하기 때문이다.
 
-- **현재 구현**: ea-kernel(i18n_store, profile_store), ea-governance(layer_store, kernel_store, needs_store)
-- **방향**: 나머지 레이어(decision, needs, flow)도 자체 스토어 구현 예정
-- Governance는 크로스 레이어 조율·이력 관리를 담당하되, 각 레이어의 도메인 영속화는 레이어 자체가 소유
+- **커널**: ea-kernel(i18n_store, rule_asset_store, decision_store, corpus_version_store)
+- **거버넌스**: ea-governance(layer_store, kernel_store, needs_store)
+- **도메인 레이어**: ea-decision(topic_store), ea-needs(needs_store), ea-flow(execution_store)
+- 원칙: Governance는 크로스 레이어 조율·이력 관리를 담당하되, 각 레이어의 도메인 영속화는 레이어 자체가 소유
 
 ---
 
@@ -571,3 +667,57 @@ Dict[str, Any]
 Optional[str]
 Tuple[str, ...]
 ```
+
+---
+
+## 11. M2 > M1 > M0 레이어 스택 표준
+
+`kernel`을 기준 레퍼런스로 하되, **모든 레이어(`infra/governance/decision/needs/kernel/flow`)는 동일한 3단 구조**로 조회한다.
+
+### 11.1 공통 조회 API
+
+- `GET /layers/{layer_key}/stack?lang={lang}&m0_limit={n}`
+- `lang` 기본값: `en`
+- `m0_limit` 기본값: `20` (`<=0` 금지)
+
+응답 표준 구조:
+
+```json
+{
+  "layer_key": "infra",
+  "profile_name": "EASystem-Infra",
+  "version": "...",
+  "lang": "ko",
+  "m2": { "...": "layer schema payload" },
+  "m1": { "...": "profile topology payload" },
+  "m0": {
+    "snapshot_total": 0,
+    "snapshots": [],
+    "model_candidate_total": 0,
+    "model_candidates": []
+  }
+}
+```
+
+### 11.2 식별 체계 단일화
+
+언어 패치/감사/동기화를 위해 식별자는 레벨 접두사를 포함해 구분한다.
+
+- M2 식별자: `m2:{layer_key}:{kind}:{name}:{field}`
+- M1 식별자: `m1:{profile_name}:{kind}:{name}:{field}`
+- M0 식별자: `m0:{layer_key}:{object_kind}:{object_id}`
+
+규칙:
+
+- `layer_key`: `infra|governance|decision|needs|kernel|flow`
+- `kind`: `element|relation|rule|node|edge|model|snapshot`
+- `field`: 번역/동기화 대상 필드(`display_name`, `description` 등)
+- 각 토큰은 소문자 snake_case/slug를 사용하고, 구분자는 `:`로 고정
+
+### 11.3 lang 파라미터 컨벤션
+
+모든 번역 가능 조회 API는 `lang` 단일 파라미터를 사용한다.
+
+- 허용값: `en`, `ko` (확장 가능)
+- 미지정 시 `en`
+- 서버는 `lang` 기준으로 M2/M1 로컬라이즈 결과를 구성하고, M0는 원문 데이터(스냅샷/모델 메타)를 반환한다.

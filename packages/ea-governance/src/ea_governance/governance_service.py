@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ea_profile.types import make_node_id
+
 
 def _get_registry() -> Any:
     from ea_kernel.profile_registry import ProfileRegistry
@@ -31,6 +33,22 @@ _GOV_STACK_PROFILE_MAP = {
     "external": "GovernanceStack-External",
 }
 
+# System view profiles (cross-layer views, not individual layers)
+_SYSTEM_VIEW_MAP = {
+    "development": "EASystem-Development",
+}
+
+# ── Cross-layer node identity (shared by all cross-layer functions) ──
+# ModelPort name → owning layer_key  (derived from _EA_SYS_LAYER_KEYS)
+_MODEL_PORT_TO_LAYER: dict[str, str] = {
+    f"{key.capitalize()}ModelPort": key for key in _EA_SYS_LAYER_KEYS
+}
+
+
+def model_port_home_layer(port_name: str) -> str | None:
+    """Return the layer_key that *owns* a ModelPort, or None."""
+    return _MODEL_PORT_TO_LAYER.get(port_name)
+
 
 def _profile_summary(profile: Any) -> dict[str, Any]:
     """Build a compact summary dict from a profile object."""
@@ -47,7 +65,7 @@ def _profile_summary(profile: Any) -> dict[str, Any]:
 
 
 def list_managed_layers() -> dict[str, Any]:
-    """6 EA-sys layer profiles + 2 governance stack profiles summary."""
+    """6 EA-sys layer profiles + 2 governance stack + system view profiles summary."""
     registry = _get_registry()
 
     layers: list[dict[str, Any]] = []
@@ -77,12 +95,28 @@ def list_managed_layers() -> dict[str, Any]:
                 **_profile_summary(profile),
             })
 
-    total = sum(1 for item in layers if item.get("loaded")) + sum(
-        1 for item in governance_stack if item.get("loaded")
+    system_views: list[dict[str, Any]] = []
+    for view_id, reg_name in _SYSTEM_VIEW_MAP.items():
+        profile = registry.get(reg_name)
+        if profile is None:
+            system_views.append({"view_id": view_id, "profile_name": reg_name, "loaded": False})
+        else:
+            system_views.append({
+                "view_id": view_id,
+                "profile_name": reg_name,
+                "loaded": True,
+                **_profile_summary(profile),
+            })
+
+    total = (
+        sum(1 for item in layers if item.get("loaded"))
+        + sum(1 for item in governance_stack if item.get("loaded"))
+        + sum(1 for item in system_views if item.get("loaded"))
     )
     return {
         "layers": layers,
         "governance_stack": governance_stack,
+        "system_views": system_views,
         "total_profiles": total,
     }
 
@@ -213,11 +247,15 @@ def governance_dashboard() -> dict[str, Any]:
 # ── GS5: Layer M2 schema (raw profile data for graph viz) ────────
 
 
-def _serialize_i18n(value: object) -> str | dict[str, str]:
+def _serialize_i18n(
+    value: object,
+) -> str | dict[str, str]:
     """Pass through I18nString as-is for JSON serialization."""
     if isinstance(value, dict):
         return value
-    return str(value) if value else ""
+    if isinstance(value, str):
+        return value
+    return ""
 
 
 def _load_and_localize(profile_name: str, lang: str | None) -> object | None:
@@ -237,7 +275,11 @@ def _load_and_localize(profile_name: str, lang: str | None) -> object | None:
     return localizer.localize(profile, lang, search_path=search_path)
 
 
-def layer_schema(layer_key: str, *, lang: str | None = None) -> dict[str, Any]:
+def layer_schema(
+    layer_key: str,
+    *,
+    lang: str | None = None,
+) -> dict[str, Any]:
     """Return raw M2 profile data for a layer — elements, relations, and rules.
 
     Unlike layer_profile_detail() which returns topology (expanded M1 edges),
@@ -248,7 +290,6 @@ def layer_schema(layer_key: str, *, lang: str | None = None) -> dict[str, Any]:
             "error": f"Unknown layer key: {layer_key}",
             "valid_keys": list(_EA_SYS_PROFILE_MAP.keys()),
         }
-
     reg_name = _EA_SYS_PROFILE_MAP[layer_key]
     profile = _load_and_localize(reg_name, lang)
     if profile is None:
@@ -309,3 +350,181 @@ def layer_schema(layer_key: str, *, lang: str | None = None) -> dict[str, Any]:
         "relations": relations,
         "rules": rules,
     }
+
+
+# ── GS6: Business flow topology (cross-layer graph) ──────────
+
+
+_BUSINESS_FLOW_CATEGORIES = {"Composite", "ActiveStructure", "Interface"}
+
+# Runtime chain: Decision → Needs → Kernel → Flow
+_RUNTIME_CHAIN = [("decision", "needs"), ("needs", "kernel"), ("kernel", "flow")]
+
+
+def business_flow_topology(*, lang: str | None = None) -> dict[str, Any]:
+    """Build a cross-layer business flow topology from all 6 EA-sys profiles.
+
+    Uses ``make_node_id()`` for globally unique element identity and
+    ``model_port_home_layer()`` for 6×6 ModelPort bridge resolution.
+
+    Generates four edge types:
+    - ``intra_layer``: validity-rule edges within one layer
+    - ``model_port_bridge``: foreign ModelPort → home ModelPort (6×6 cross-layer)
+    - ``runtime_chain``: Decision → Needs → Kernel → Flow (synthetic)
+    - ``governance_oversight``: Governance → each other layer (synthetic)
+    """
+    layers: list[dict[str, Any]] = []
+    all_edges: list[dict[str, Any]] = []
+    total_elements = 0
+
+    # Pass 1: collect elements per layer with namespaced node_id
+    for key in _EA_SYS_LAYER_KEYS:
+        reg_name = _EA_SYS_PROFILE_MAP[key]
+        profile = _load_and_localize(reg_name, lang)
+        if profile is None:
+            layers.append({"layer_key": key, "loaded": False, "elements": []})
+            continue
+
+        filtered: list[dict[str, Any]] = []
+        # local name → node_id for rule edge resolution within this layer
+        local_id_map: dict[str, str] = {}
+        for domain_layer in profile.domain_layers():
+            for e in profile.elements_in_layer(domain_layer):
+                if e.category not in _BUSINESS_FLOW_CATEGORIES:
+                    continue
+                is_model_port = e.name.endswith("ModelPort")
+                node_id = make_node_id(key, e.name)
+                elem_dict: dict[str, Any] = {
+                    "node_id": node_id,
+                    "name": e.name,
+                    "kernel_type": e.kernel_type,
+                    "category": e.category,
+                    "description": _serialize_i18n(e.description),
+                    "display_name": _serialize_i18n(e.display_name) if e.display_name else None,
+                    "domain_layer": domain_layer,
+                    "is_model_port": is_model_port,
+                }
+                filtered.append(elem_dict)
+                local_id_map[e.name] = node_id
+
+        # Intra-layer edges from validity rules
+        for r in profile.validity_rules:
+            if not r.valid:
+                continue
+            src, tgt = r.source_pattern, r.target_pattern
+            if src.startswith("@") or src.startswith("#"):
+                continue
+            if tgt.startswith("@") or tgt.startswith("#"):
+                continue
+            src_id = local_id_map.get(src)
+            tgt_id = local_id_map.get(tgt)
+            if not src_id or not tgt_id:
+                continue
+            all_edges.append({
+                "source": src_id,
+                "target": tgt_id,
+                "relation": r.relationship_name,
+                "edge_type": "intra_layer",
+                "source_layer": key,
+                "target_layer": key,
+            })
+
+        layers.append({
+            "layer_key": key,
+            "loaded": True,
+            "profile_name": reg_name,
+            "version": profile.version,
+            "element_count": len(filtered),
+            "elements": filtered,
+        })
+        total_elements += len(filtered)
+
+    # Pass 2: ModelPort bridge edges (6×6 cross-layer)
+    # For each layer's foreign ModelPort, connect to the target layer's home port.
+    # E.g. infra::GovernanceModelPort → governance::GovernanceModelPort
+    node_id_set = _collect_node_ids(layers)
+    for layer in layers:
+        if not layer.get("loaded"):
+            continue
+        src_layer = layer["layer_key"]
+        for elem in layer["elements"]:
+            if not elem["is_model_port"]:
+                continue
+            target_layer = model_port_home_layer(elem["name"])
+            if not target_layer or target_layer == src_layer:
+                continue  # skip home port (self-reference)
+            home_node_id = make_node_id(target_layer, elem["name"])
+            if home_node_id not in node_id_set:
+                continue
+            all_edges.append({
+                "source": elem["node_id"],
+                "target": home_node_id,
+                "relation": "model_port_bridge",
+                "edge_type": "model_port_bridge",
+                "source_layer": src_layer,
+                "target_layer": target_layer,
+            })
+
+    # Synthetic runtime chain edges (Decision → Needs → Kernel → Flow)
+    runtime_chain: list[dict[str, Any]] = []
+    for src_layer, tgt_layer in _RUNTIME_CHAIN:
+        src_id = _find_layer_composite(layers, src_layer)
+        tgt_id = _find_layer_composite(layers, tgt_layer)
+        if src_id and tgt_id:
+            edge = {
+                "source": src_id,
+                "target": tgt_id,
+                "relation": "runtime_chain",
+                "edge_type": "runtime_chain",
+                "source_layer": src_layer,
+                "target_layer": tgt_layer,
+            }
+            all_edges.append(edge)
+            runtime_chain.append(edge)
+
+    # Synthetic governance oversight edges
+    gov_id = _find_layer_composite(layers, "governance")
+    if gov_id:
+        for key in _EA_SYS_LAYER_KEYS:
+            if key == "governance":
+                continue
+            tgt_id = _find_layer_composite(layers, key)
+            if tgt_id:
+                all_edges.append({
+                    "source": gov_id,
+                    "target": tgt_id,
+                    "relation": "governance_oversight",
+                    "edge_type": "governance_oversight",
+                    "source_layer": "governance",
+                    "target_layer": key,
+                })
+
+    return {
+        "layers": layers,
+        "edges": all_edges,
+        "runtime_chain": runtime_chain,
+        "total_elements": total_elements,
+        "total_edges": len(all_edges),
+    }
+
+
+def _collect_node_ids(layers: list[dict[str, Any]]) -> set[str]:
+    ids: set[str] = set()
+    for layer in layers:
+        for elem in layer.get("elements", []):
+            ids.add(elem["node_id"])
+    return ids
+
+
+def _find_layer_composite(layers: list[dict[str, Any]], layer_key: str) -> str | None:
+    """Find the main *Layer composite node_id for a given layer."""
+    for layer in layers:
+        if layer["layer_key"] != layer_key or not layer.get("loaded"):
+            continue
+        for elem in layer["elements"]:
+            if elem["category"] == "Composite" and elem["name"].endswith("Layer"):
+                return elem["node_id"]
+        for elem in layer["elements"]:
+            if elem["category"] == "Composite":
+                return elem["node_id"]
+    return None

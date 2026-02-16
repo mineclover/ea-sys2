@@ -2,7 +2,6 @@
 
 Lightweight SchemaPort-compatible schema for flow-layer profile validation.
 Follows ea-kernel's KernelSchema pattern but with flow-specific vocabulary.
-Named FlowLayerSchema to avoid confusion with schema.py (data SchemaSpec).
 
 Zero internal dependencies — this module defines pure schema vocabulary.
 """
@@ -28,7 +27,7 @@ class FlowRelation:
 
 
 @dataclass(frozen=True)
-class FlowLayerSchema:
+class FlowSchema:
     """Schema definition for the flow layer.
 
     Satisfies SchemaPort protocol (entities + relations properties).
@@ -53,7 +52,7 @@ class FlowLayerSchema:
 
 # ── Singleton ──────────────────────────────────────────────────
 
-FLOW_SCHEMA = FlowLayerSchema(
+FLOW_SCHEMA = FlowSchema(
     entities=(
         # P1 Specification Plane
         FlowEntity("flow_layer", is_abstract=True, description="Abstract flow modeling boundary"),

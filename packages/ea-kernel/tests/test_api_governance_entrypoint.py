@@ -377,3 +377,40 @@ def test_models_endpoint_error_envelope_matches_model_api_error_record(tmp_path)
     assert missing_trace.status_code == 404
     assert missing_trace.json()["detail"]["status_code"] == 404
     assert missing_trace.json()["detail"]["category"] == "not_found"
+
+
+def test_models_index_and_layer_stack_endpoints(tmp_path):
+    schema = load_kernel_schema_from_package()
+    app = create_app(tmp_path, schema)
+    client = TestClient(app)
+
+    register = client.post(
+        "/models/register",
+        json={
+            "profile_toml": _model_profile_toml(name="LayerStackModel.kernel"),
+            "owner": "qa-team",
+            "created_by": "api-tester",
+        },
+    )
+    assert register.status_code == 200
+
+    models_index = client.get("/models")
+    assert models_index.status_code == 200
+    payload = models_index.json()
+    assert payload["total"] >= 1
+    assert any(item["model_name"] == "LayerStackModel.kernel" for item in payload["models"])
+
+    stack = client.get("/layers/kernel/stack?lang=ko&m0_limit=10")
+    assert stack.status_code == 200
+    stack_payload = stack.json()
+    assert stack_payload["layer_key"] == "kernel"
+    assert "m2" in stack_payload
+    assert "m1" in stack_payload
+    assert "m0" in stack_payload
+    assert stack_payload["m2"]["layer_key"] == "kernel"
+    assert stack_payload["m1"]["profile"] == stack_payload["profile_name"]
+    assert "snapshots" in stack_payload["m0"]
+    assert "model_candidates" in stack_payload["m0"]
+
+    invalid_limit = client.get("/layers/kernel/stack?m0_limit=0")
+    assert invalid_limit.status_code == 400

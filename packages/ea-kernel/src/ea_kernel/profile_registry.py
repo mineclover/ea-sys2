@@ -61,6 +61,7 @@ class ProfileRegistry(_ProfileRegistry):
             "kernel": "EASystem-Kernel",
             "flow": "EASystem-Flow",
             "web-kernel-viz": "EASystem-WebKernelViz",
+            "development": "EASystem-Development",
         }
         for layer_key in LAYER_ORDER:
             reg_name = layer_name_map[layer_key]

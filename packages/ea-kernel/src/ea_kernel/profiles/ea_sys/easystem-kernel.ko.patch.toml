@@ -156,14 +156,32 @@ display_name = "흐름 실행 피드백"
 [elements.FlowConstraintViolationEvent]
 display_name = "흐름 제약 위반 이벤트"
 
-[relations]
-contains = "포함"
-registers = "등록"
-coordinates = "조율"
-depends_on = "의존"
-produces = "생산"
-consumes = "소비"
-next = "다음"
-triggers = "트리거"
-constrains = "제약"
-available_in = "가용"
+[relations.contains]
+display_name = "포함"
+
+[relations.registers]
+display_name = "등록"
+
+[relations.coordinates]
+display_name = "조율"
+
+[relations.depends_on]
+display_name = "의존"
+
+[relations.produces]
+display_name = "생산"
+
+[relations.consumes]
+display_name = "소비"
+
+[relations.next]
+display_name = "다음"
+
+[relations.triggers]
+display_name = "트리거"
+
+[relations.constrains]
+display_name = "제약"
+
+[relations.available_in]
+display_name = "가용"

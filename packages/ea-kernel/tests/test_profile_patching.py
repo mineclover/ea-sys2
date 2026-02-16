@@ -1,8 +1,16 @@
+from dataclasses import replace
 from pathlib import Path
 
-from ea_kernel.localizer import ProfileLocalizer
+from ea_kernel.localizer import ProfileLocalizer, audit_profile_i18n_patch
+from ea_kernel.profile_builder import ProfileBuilder
 from ea_kernel.profile_loader import load_profile
-from ea_kernel.types import KernelEntity, KernelRelation, KernelSchema, Layer
+from ea_kernel.types import (
+    KernelEntity,
+    KernelRelation,
+    KernelSchema,
+    KernelValidityRule,
+    Layer,
+)
 
 
 def test_profile_patching_ko():
@@ -57,3 +65,80 @@ def test_localizer_no_patch_behavior():
     # lang='ja' (missing) should return original
     ja_profile = localizer.localize(profile, lang="ja")
     assert ja_profile == profile
+
+
+def test_profile_i18n_audit_detects_missing_orphan_stale(tmp_path: Path):
+    builder = ProfileBuilder("AuditProfile", version="1.0.0", kernel_version="2.5.0")
+    builder.element(
+        "ElementOne",
+        layer="Business",
+        category="Behavior",
+        kernel_type="step",
+        description="Element EN Description",
+        display_name="Element One",
+    )
+    builder.relation(
+        "relates",
+        kernel_relation="association",
+        description="Relation EN Description",
+        display_name="Relates",
+    )
+    profile = builder.build(validate=False, auto_fallback=False)
+    profile = replace(
+        profile,
+        validity_rules=(
+            KernelValidityRule(
+                id="rule_1",
+                source_pattern="ElementOne",
+                target_pattern="ElementOne",
+                relationship_name="relates",
+                description="Rule EN Description",
+            ),
+        ),
+    )
+
+    patch_path = tmp_path / "auditprofile.ko.patch.toml"
+    patch_path.write_text(
+        (
+            "[elements.ElementOne]\n"
+            "display_name = \"요소 하나\"\n"
+            "_en_display_name = \"Element One\"\n"
+            "description = \"요소 설명\"\n"
+            "_en_description = \"Old Element EN Description\"\n\n"
+            "[elements.UnknownElement]\n"
+            "display_name = \"고아 요소\"\n\n"
+            "[relations.relates]\n"
+            "display_name = \"연결\"\n"
+            "_en_display_name = \"Relates\"\n\n"
+            "[validity_rules.rule_1]\n"
+            "description = \"규칙 설명\"\n"
+            "_en_description = \"Rule EN Description\"\n\n"
+            "[validity_rules.ghost_rule]\n"
+            "description = \"고아 규칙\"\n"
+        ),
+        encoding="utf-8",
+    )
+
+    report = audit_profile_i18n_patch(profile, "ko", patch_path=patch_path)
+
+    assert report.total_schema_items == 5
+    assert report.total_translated == 4
+    assert report.coverage == 0.8
+
+    assert len(report.missing) == 1
+    missing = report.missing[0]
+    assert missing.kind == "relation"
+    assert missing.name == "relates"
+    assert missing.field == "description"
+
+    assert len(report.orphan) == 2
+    orphan_keys = {(e.kind, e.name, e.field) for e in report.orphan}
+    assert ("element", "UnknownElement", "display_name") in orphan_keys
+    assert ("validity_rule", "ghost_rule", "description") in orphan_keys
+
+    assert len(report.stale) == 1
+    stale = report.stale[0]
+    assert stale.kind == "element"
+    assert stale.name == "ElementOne"
+    assert stale.field == "description"
+    assert stale.en_recorded == "Old Element EN Description"

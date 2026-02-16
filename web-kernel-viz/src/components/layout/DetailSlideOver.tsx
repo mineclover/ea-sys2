@@ -1,5 +1,5 @@
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface DetailSlideOverProps {
     open: boolean;
@@ -9,8 +9,31 @@ interface DetailSlideOverProps {
 }
 
 export default function DetailSlideOver({ open, onClose, title, children }: DetailSlideOverProps) {
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [open, onClose]);
+
+    useEffect(() => {
+        if (open && panelRef.current) {
+            panelRef.current.focus();
+        }
+    }, [open]);
+
     return (
-        <div style={{
+        <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal={open}
+            aria-label={title || 'Detail panel'}
+            tabIndex={-1}
+            style={{
             position: 'fixed',
             top: 0,
             right: 0,
@@ -38,8 +61,8 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
             <div style={{
                 width: 380,
                 height: '100%',
-                background: '#fff',
-                borderLeft: '1px solid #e2e8f0',
+                background: 'var(--bg-primary)',
+                borderLeft: '1px solid var(--border)',
                 boxShadow: open ? '-4px 0 12px rgba(0,0,0,0.08)' : 'none',
                 display: 'flex',
                 flexDirection: 'column',
@@ -48,20 +71,21 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
                 {/* Header */}
                 <div style={{
                     padding: '14px 16px',
-                    borderBottom: '1px solid #e2e8f0',
+                    borderBottom: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
                         {title || 'Detail'}
                     </span>
                     <button
                         onClick={onClose}
+                        aria-label="Close detail panel"
                         style={{
                             width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid #e2e8f0', borderRadius: 4, background: '#fff',
-                            cursor: 'pointer', fontSize: 14, color: '#94a3b8',
+                            border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg-card)',
+                            cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)',
                         }}
                     >
                         ✕
@@ -74,7 +98,7 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
                     overflowY: 'auto',
                     padding: '16px',
                     fontSize: 13,
-                    color: '#475569',
+                    color: 'var(--text-secondary)',
                 }}>
                     {children}
                 </div>

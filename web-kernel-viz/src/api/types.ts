@@ -393,6 +393,79 @@ export interface LayerSchemaResponse {
     rules: LayerSchemaRule[];
 }
 
+export interface LayerStackSnapshotItem {
+    layer: string;
+    model_id: string;
+    updated_at: string;
+    kind: string;
+    payload_keys: string[];
+}
+
+export interface LayerStackModelCandidate {
+    model_id: string | null;
+    model_name: string;
+    owner: string | null;
+    status: string | null;
+    active_version_id: string | null;
+    updated_at: string | null;
+    score: number;
+    match_rules: string[];
+}
+
+export interface LayerStackResponse {
+    layer_key: string;
+    profile_name: string;
+    version: string;
+    lang: string;
+    m2: LayerSchemaResponse;
+    m1: ProfileTopologyResponse;
+    m0: {
+        snapshot_total: number;
+        snapshots: LayerStackSnapshotItem[];
+        model_candidate_total: number;
+        model_candidates: LayerStackModelCandidate[];
+    };
+}
+
+// --- Business Flow Topology ---
+
+export interface BusinessFlowElement {
+    node_id: string;
+    name: string;
+    kernel_type: string;
+    category: string;
+    description: I18nString;
+    display_name: I18nString | null;
+    domain_layer: string;
+    is_model_port: boolean;
+}
+
+export interface BusinessFlowLayerGroup {
+    layer_key: string;
+    loaded: boolean;
+    profile_name?: string;
+    version?: string;
+    element_count?: number;
+    elements: BusinessFlowElement[];
+}
+
+export interface BusinessFlowEdge {
+    source: string;
+    target: string;
+    relation: string;
+    edge_type: 'intra_layer' | 'model_port_bridge' | 'runtime_chain' | 'governance_oversight';
+    source_layer: string;
+    target_layer: string;
+}
+
+export interface BusinessFlowTopologyResponse {
+    layers: BusinessFlowLayerGroup[];
+    edges: BusinessFlowEdge[];
+    runtime_chain: BusinessFlowEdge[];
+    total_elements: number;
+    total_edges: number;
+}
+
 export interface SimulationResult {
     simulation_id: string;
     impact_level: string;
@@ -406,4 +479,154 @@ export interface SimulationResult {
         simulated: string;
         winning_rule_change: { from: string; to: string };
     }[];
+}
+
+// --- Model Registration ---
+
+export interface ModelRegistrationResult {
+    model_name: string;
+    version: string;
+    created: boolean;
+    validation_run_id: string | null;
+    activated: boolean;
+    status: string;
+    active_version_id: string | null;
+    transaction_id: string | null;
+    decision_trace: Record<string, unknown> | null;
+}
+
+export interface ModelValidationResult {
+    model_name: string;
+    version: string;
+    passed: boolean;
+    run_id: string;
+    errors: string[];
+    transaction_id: string | null;
+    decision_trace: Record<string, unknown> | null;
+}
+
+export interface ModelActivationResult {
+    model_name: string;
+    status: string;
+    active_version_id: string | null;
+    owner: string;
+    transaction_id: string | null;
+    decision_trace: Record<string, unknown> | null;
+}
+
+// --- Business Models ---
+
+export interface BusinessModelSummary {
+    bid: string;
+    name: string;
+    description: string;
+    tag_count: number;
+    created_at: string;
+}
+
+export interface TagSchemaSummary {
+    tag: string;
+    fields: { name: string; type: string; required?: boolean }[];
+    indexes: { name: string; keyPath: string; unique?: boolean }[];
+    keyPath: string;
+    autoIncrement: boolean;
+    kernel_ref: string | null;
+    description: string;
+}
+
+// --- I18n ---
+
+export interface I18nAuditItem {
+    kind: string;
+    name: string;
+    field: string | null;
+    identifier: string;
+    profile?: string;
+    en_current?: string;
+    en_recorded?: string;
+}
+
+export interface I18nAuditResult {
+    scope: 'm1' | 'm2';
+    lang: string;
+    coverage: number;
+    total_schema_items: number;
+    total_translated: number;
+    total_issues: number;
+    is_clean: boolean;
+    missing_count: number;
+    orphan_count: number;
+    stale_count: number;
+    missing: I18nAuditItem[];
+    orphan: I18nAuditItem[];
+    stale: I18nAuditItem[];
+    // Backward-compatible aliases
+    total: number;
+    translated: number;
+    missing_items: I18nAuditItem[];
+}
+
+export interface I18nProfileAuditResult extends I18nAuditResult {
+    scope: 'm1';
+    profile: string;
+    patch_path: string | null;
+}
+
+export interface I18nTranslationItem {
+    kind: string;
+    name: string;
+    field: string;
+    value: string;
+    lang: string;
+}
+
+export interface I18nTranslationsResult {
+    lang: string;
+    kind: string | null;
+    total: number;
+    translations: I18nTranslationItem[];
+}
+
+// --- Profile Versions ---
+
+export interface ProfileVersionEntry {
+    id: string;
+    version: string;
+    hash: string;
+    content_hash: string;
+    author: string;
+    created_at: string;
+    description: string | null;
+    parent_id: string | null;
+    origin: string | null;
+    element_count: number;
+    relation_count: number;
+    rule_count: number;
+    tags: { name: string }[];
+}
+
+export interface ProfileVersionsResponse {
+    profile: string;
+    versions: ProfileVersionEntry[];
+    total: number;
+    count: number;
+}
+
+export interface ProfileDiffChange {
+    name: string;
+    type?: string;
+    change?: 'added' | 'removed' | 'modified';
+    field?: string;
+    detail?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+
+export interface ProfileDiffResponse {
+    profile: string;
+    from_version: string;
+    to_version: string;
+    identical: boolean;
+    element_changes: ProfileDiffChange[];
+    relation_changes: ProfileDiffChange[];
+    rule_changes: ProfileDiffChange[];
 }

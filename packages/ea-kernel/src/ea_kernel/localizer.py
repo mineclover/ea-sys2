@@ -17,6 +17,41 @@ def _to_i18n(value: I18nString, *, fallback_en: str = "") -> dict[str, str]:
     return dict(value)
 
 
+def _en_text(value: I18nString) -> str:
+    """Extract English source text from I18nString."""
+    if isinstance(value, str):
+        return value
+    return value.get("en", "")
+
+
+def _profile_i18n_items(profile: KernelProfile) -> dict[tuple[str, str], dict[str, str]]:
+    """Extract M1 translation slots from a profile.
+
+    Returns:
+        (kind, name) -> {field: en_source}
+    """
+    items: dict[tuple[str, str], dict[str, str]] = {}
+
+    for e in profile.elements:
+        items[("element", e.name)] = {
+            "display_name": _en_text(e.display_name),
+            "description": _en_text(e.description),
+        }
+
+    for r in profile.relations:
+        items[("relation", r.name)] = {
+            "display_name": _en_text(r.display_name),
+            "description": _en_text(r.description),
+        }
+
+    for rule in profile.validity_rules:
+        items[("validity_rule", rule.id)] = {
+            "description": _en_text(rule.description),
+        }
+
+    return items
+
+
 class ProfileLocalizer:
     """Handles loading and merging of language patches for KernelProfiles."""
 
@@ -146,3 +181,117 @@ class ProfileLocalizer:
             return self.apply_patch(profile, patch_data, lang)
 
         return profile
+
+
+def audit_profile_i18n_patch(
+    profile: KernelProfile,
+    lang: str,
+    patch_path: Path | None = None,
+) -> "I18nAuditReport":
+    """M1 profile patch audit (TOML-based, DB-independent)."""
+    from ea_kernel.i18n_store import I18nAuditEntry, I18nAuditReport
+
+    patch_data: dict[str, dict[str, dict[str, str]]] = {
+        "elements": {},
+        "relations": {},
+        "validity_rules": {},
+    }
+    if patch_path is not None and patch_path.exists():
+        try:
+            doc = tomllib.loads(patch_path.read_text(encoding="utf-8"))
+            raw_elements = doc.get("elements", {})
+            raw_relations = doc.get("relations", {})
+            raw_rules = doc.get("validity_rules", {})
+            patch_data["elements"] = (
+                raw_elements if isinstance(raw_elements, dict) else {}
+            )
+            patch_data["relations"] = (
+                raw_relations if isinstance(raw_relations, dict) else {}
+            )
+            patch_data["validity_rules"] = (
+                raw_rules if isinstance(raw_rules, dict) else {}
+            )
+        except (OSError, tomllib.TOMLDecodeError):
+            pass
+
+    profile_items = _profile_i18n_items(profile)
+    section_map = {
+        "element": "elements",
+        "relation": "relations",
+        "validity_rule": "validity_rules",
+    }
+
+    expected_fields = {
+        "element": ("display_name", "description"),
+        "relation": ("display_name", "description"),
+        "validity_rule": ("description",),
+    }
+
+    missing: list[I18nAuditEntry] = []
+    stale: list[I18nAuditEntry] = []
+    orphan: list[I18nAuditEntry] = []
+    schema_keys: set[tuple[str, str, str]] = set()
+
+    for (kind, name), en_fields in profile_items.items():
+        section = section_map[kind]
+        patch = patch_data[section].get(name, {})
+        if not isinstance(patch, Mapping):
+            patch = {}
+
+        for field_name, en_value in en_fields.items():
+            schema_keys.add((kind, name, field_name))
+            if field_name not in patch:
+                missing.append(I18nAuditEntry(
+                    kind=kind,
+                    name=name,
+                    issue="missing",
+                    field=field_name,
+                    en_current=en_value,
+                    en_recorded="",
+                ))
+                continue
+
+            en_key = f"_en_{field_name}"
+            en_recorded = patch.get(en_key, "")
+            if isinstance(en_recorded, str) and en_recorded and en_recorded != en_value:
+                stale.append(I18nAuditEntry(
+                    kind=kind,
+                    name=name,
+                    issue="stale",
+                    field=field_name,
+                    en_current=en_value,
+                    en_recorded=en_recorded,
+                ))
+
+    for section, kind in (
+        ("elements", "element"),
+        ("relations", "relation"),
+        ("validity_rules", "validity_rule"),
+    ):
+        for item_name, fields in patch_data[section].items():
+            if not isinstance(fields, Mapping):
+                continue
+            for field_name in expected_fields[kind]:
+                if field_name in fields and (kind, item_name, field_name) not in schema_keys:
+                    en_key = f"_en_{field_name}"
+                    en_recorded = fields.get(en_key, "")
+                    orphan.append(I18nAuditEntry(
+                        kind=kind,
+                        name=item_name,
+                        issue="orphan",
+                        field=field_name,
+                        en_current="",
+                        en_recorded=en_recorded if isinstance(en_recorded, str) else "",
+                    ))
+
+    total_slots = sum(len(fields) for fields in profile_items.values())
+    translated = total_slots - len(missing)
+
+    return I18nAuditReport(
+        lang=lang,
+        missing=tuple(missing),
+        orphan=tuple(orphan),
+        stale=tuple(stale),
+        total_schema_items=total_slots,
+        total_translated=translated,
+    )

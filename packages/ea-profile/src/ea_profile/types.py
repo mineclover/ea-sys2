@@ -152,6 +152,25 @@ class ProfileElement:
     display_name: I18nString = ""
 
 
+# ── Cross-layer element identity ──────────────────────────────
+#
+# When multiple profiles share element names (e.g. each layer defines
+# its own ``GovernanceModelPort``), a globally unique node ID is needed.
+# Convention: ``{layer_key}::{element_name}``  (double-colon).
+# This is distinct from the rule-ID namespace ``{layer}:{rule_id}``
+# (single-colon) used during profile composition.
+
+def make_node_id(layer_key: str, name: str) -> str:
+    """Create a globally unique element node ID: ``{layer_key}::{name}``."""
+    return f"{layer_key}::{name}"
+
+
+def parse_node_id(node_id: str) -> tuple[str, str]:
+    """Split a node ID back into ``(layer_key, element_name)``."""
+    layer_key, _, name = node_id.partition("::")
+    return layer_key, name
+
+
 @dataclass(frozen=True)
 class ProfileRelation:
     """A domain relation mapped to a kernel relation."""

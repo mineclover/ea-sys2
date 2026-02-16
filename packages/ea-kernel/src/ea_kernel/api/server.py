@@ -118,6 +118,45 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         diagram_schema_cache = target_schema
         return target_schema
 
+    def _layer_model_match(model_name: str, layer_key: str, profile_name: str) -> tuple[int, list[str]]:
+        model_lc = model_name.lower()
+        layer_lc = layer_key.lower()
+        profile_lc = profile_name.lower()
+        score = 0
+        rules: list[str] = []
+
+        if model_lc == profile_lc:
+            score += 120
+            rules.append("exact_profile_name")
+
+        suffix_rules = (
+            (f".{layer_lc}", "dot_suffix"),
+            (f"-{layer_lc}", "dash_suffix"),
+            (f"_{layer_lc}", "underscore_suffix"),
+        )
+        for suffix, label in suffix_rules:
+            if model_lc.endswith(suffix):
+                score += 90
+                rules.append(label)
+                break
+
+        infix_rules = (
+            (f".{layer_lc}.", "dot_infix"),
+            (f"-{layer_lc}-", "dash_infix"),
+            (f"_{layer_lc}_", "underscore_infix"),
+        )
+        for infix, label in infix_rules:
+            if infix in model_lc:
+                score += 35
+                rules.append(label)
+                break
+
+        if layer_lc in model_lc:
+            score += 10
+            rules.append("contains_layer_key")
+
+        return score, rules
+
     # 1. Middleware (CORS)
     app.add_middleware(
         CORSMiddleware,
@@ -440,6 +479,30 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             "decision_trace": decision_trace,
         }
 
+    @_typed_get("/models")
+    def list_models(status: str | None = None) -> dict[str, Any]:
+        container = _get_governance_container()
+        if status is not None and status not in {"registered", "active", "disabled"}:
+            raise _model_api_error(
+                status_code=400,
+                detail=f"Invalid status filter: {status}",
+                category="bad_request",
+            )
+        try:
+            models = container.list_kernel_models(status=status)
+        except Exception as err:
+            logger.exception("Unhandled /models error")
+            raise _model_api_error(
+                status_code=500,
+                detail="Internal governance model API error",
+                category="internal_error",
+            ) from err
+        return {
+            "status": status,
+            "total": len(models),
+            "models": models,
+        }
+
     @_typed_get("/models/{model_name}")
     def get_model(model_name: str, limit_runs: int = 5) -> dict[str, Any]:
         container = _get_governance_container()
@@ -747,6 +810,16 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         from ea_kernel.kernel_service import audit_i18n
         return audit_i18n(lang)
 
+    @_typed_get("/i18n/audit/profiles/{name}")
+    def i18n_profile_audit(name: str, lang: str = "ko") -> dict[str, Any]:
+        """Profile(M1) i18n patch audit report."""
+        from ea_kernel.kernel_service import audit_profile_i18n
+
+        result = audit_profile_i18n(name=name, lang=lang)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
     @_typed_get("/i18n/translations")
     def i18n_list_translations(lang: str = "ko", kind: str | None = None) -> dict[str, Any]:
         """List translations for a language."""
@@ -779,6 +852,92 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         from ea_kernel.kernel_service import translation_history
         return translation_history(kind, name, lang, field)
 
+    @_typed_get("/layers/{layer_key}/stack")
+    def get_layer_stack(
+        layer_key: str,
+        lang: str | None = None,
+        m0_limit: int = 20,
+    ) -> dict[str, Any]:
+        """Unified layer stack view — M2(schema) / M1(topology) / M0(runtime snapshots+models)."""
+        if m0_limit <= 0:
+            raise HTTPException(status_code=400, detail="m0_limit must be greater than zero")
+
+        from ea_governance.governance_service import layer_schema as service_layer_schema
+        from ea_kernel.kernel_service import profile_topology as service_profile_topology
+
+        m2 = service_layer_schema(layer_key, lang=lang)
+        if "error" in m2:
+            raise HTTPException(status_code=404, detail=m2["error"])
+
+        profile_name = str(m2["profile_name"])
+        m1 = service_profile_topology(
+            profile_name=profile_name,
+            cross_layer=False,
+            lang=lang,
+        )
+        if "error" in m1:
+            raise HTTPException(status_code=404, detail=m1["error"])
+
+        container = _get_governance_container()
+        try:
+            snapshots = container.list_layer_snapshots(layer_key)
+        except ValueError as err:
+            raise HTTPException(status_code=404, detail=str(err)) from err
+
+        snapshots_sorted = sorted(
+            snapshots,
+            key=lambda item: str(item.get("updated_at", "")),
+            reverse=True,
+        )
+        snapshot_items = [
+            {
+                "layer": str(item.get("layer", layer_key)),
+                "model_id": str(item.get("model_id", "")),
+                "updated_at": str(item.get("updated_at", "")),
+                "kind": str((item.get("payload") or {}).get("kind", "unknown")),
+                "payload_keys": sorted(((item.get("payload") or {}).keys())),
+            }
+            for item in snapshots_sorted[:m0_limit]
+        ]
+
+        all_models = container.list_kernel_models()
+        model_candidates: list[dict[str, Any]] = []
+        for model in all_models:
+            model_name = str(model.get("model_name", ""))
+            score, rules = _layer_model_match(model_name, layer_key, profile_name)
+            if score <= 0:
+                continue
+            model_candidates.append(
+                {
+                    "model_id": model.get("model_id"),
+                    "model_name": model_name,
+                    "owner": model.get("owner"),
+                    "status": model.get("status"),
+                    "active_version_id": model.get("active_version_id"),
+                    "updated_at": model.get("updated_at"),
+                    "score": score,
+                    "match_rules": rules,
+                }
+            )
+        model_candidates.sort(
+            key=lambda item: (-int(item["score"]), str(item["model_name"]).lower()),
+        )
+
+        return {
+            "layer_key": layer_key,
+            "profile_name": profile_name,
+            "version": m2.get("version", ""),
+            "lang": lang or "en",
+            "m2": m2,
+            "m1": m1,
+            "m0": {
+                "snapshot_total": len(snapshots_sorted),
+                "snapshots": snapshot_items,
+                "model_candidate_total": len(model_candidates),
+                "model_candidates": model_candidates[:m0_limit],
+            },
+        }
+
     # --- Profile Graph Traversal (Profile Topology API) ---
 
     @_typed_get("/profiles")
@@ -796,20 +955,28 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def get_profile(name: str, lang: str | None = None) -> dict[str, Any]:
         """Get profile metadata."""
         from ea_kernel.kernel_service import describe_profile
-        result = describe_profile(name, lang=lang)
+        result = describe_profile(name=name, lang=lang)
         if result is None:
             raise HTTPException(status_code=404, detail=f"Profile not found: {name}")
         return result
 
     @_typed_get("/profiles/{name}/topology")
-    def get_profile_topology(name: str, cross_layer: bool = False, lang: str | None = None) -> dict[str, Any]:
+    def get_profile_topology(
+        name: str,
+        cross_layer: bool = False,
+        lang: str | None = None,
+    ) -> dict[str, Any]:
         """Get full profile topology graph (nodes + edges).
 
         When *cross_layer* is true, only edges connecting elements from
         different domain layers are returned.
         """
         from ea_kernel.kernel_service import profile_topology
-        result = profile_topology(name, cross_layer=cross_layer, lang=lang)
+        result = profile_topology(
+            profile_name=name,
+            cross_layer=cross_layer,
+            lang=lang,
+        )
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result
@@ -879,6 +1046,40 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             status = 404 if "not found" in result["error"].lower() else 400
             raise HTTPException(status_code=status, detail=result["error"])
         return result
+
+    # --- Profile Version Management ---
+
+    @_typed_get("/profiles/{name}/versions")
+    def get_profile_versions(name: str, limit: int = 50) -> dict[str, Any]:
+        """List profile version history (newest first)."""
+        from ea_kernel.kernel_service import profile_version_history
+        return profile_version_history(profile_name=name, limit=limit)
+
+    @_typed_get("/profiles/{name}/versions/diff")
+    def get_profile_version_diff(name: str, a: str = "", b: str = "") -> dict[str, Any]:
+        """Diff two profile versions."""
+        if not a or not b:
+            raise HTTPException(status_code=400, detail="Missing required query params: a, b")
+        from ea_kernel.kernel_service import profile_version_diff
+        result = profile_version_diff(profile_name=name, version_a=a, version_b=b)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_get("/profiles/{name}/versions/{version}")
+    def get_profile_version_detail(name: str, version: str) -> dict[str, Any]:
+        """Get detailed info about a specific profile version."""
+        from ea_kernel.kernel_service import profile_version_detail
+        result = profile_version_detail(profile_name=name, version=version)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_get("/profiles/{name}/tags")
+    def get_profile_tags(name: str) -> dict[str, Any]:
+        """List all tags for a profile."""
+        from ea_kernel.kernel_service import profile_version_tags
+        return profile_version_tags(profile_name=name)
 
     # --- Governance Service API (plugin from ea-governance) ---
     try:

@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
-import { fetchProfileDescription, fetchProfileTopology } from '@/api/client';
-import type { ProfileDescription, ProfileTopologyResponse } from '@/api/types';
+import { fetchNeedsByKernelRef, fetchProfileDescription, fetchProfileTopology } from '@/api/client';
+import type { NeedsByKernelRefResult, ProfileDescription, ProfileTopologyResponse } from '@/api/types';
 
 
 interface ProfileSidePanelProps {
@@ -17,6 +17,7 @@ interface ProfileSidePanelProps {
     onSelectNeedScope: (needId: string | null) => void;
     needScopeCount: { visible: number; total: number } | null;
     needOptions: { id: string; label: string }[];
+    selectedNode?: string | null;
 }
 
 const LAYER_COLORS: Record<string, string> = {
@@ -41,15 +42,26 @@ export default function ProfileSidePanel({
     onSelectNeedScope,
     needScopeCount,
     needOptions,
+    selectedNode,
 }: ProfileSidePanelProps) {
     const [desc, setDesc] = useState<ProfileDescription | null>(null);
     const [topo, setTopo] = useState<ProfileTopologyResponse | null>(null);
+    const [linkedNeeds, setLinkedNeeds] = useState<NeedsByKernelRefResult | null>(null);
+    const [loadingNeeds, setLoadingNeeds] = useState(false);
 
     useEffect(() => {
         if (!profileName) return;
         fetchProfileDescription(profileName).then(setDesc).catch(() => setDesc(null));
         fetchProfileTopology(profileName).then(setTopo).catch(() => setTopo(null));
     }, [profileName]);
+
+    useEffect(() => {
+        if (!selectedNode) { setLinkedNeeds(null); return; }
+        setLoadingNeeds(true);
+        fetchNeedsByKernelRef(selectedNode)
+            .then((res) => { setLinkedNeeds(res); setLoadingNeeds(false); })
+            .catch(() => { setLinkedNeeds(null); setLoadingNeeds(false); });
+    }, [selectedNode]);
 
     const summaryText = desc && topo
         ? [
@@ -75,15 +87,15 @@ export default function ProfileSidePanel({
         <div style={{ fontSize: 12, lineHeight: 1.6 }}>
             {/* Current Profile */}
             {profileName && (
-                <div style={{ marginBottom: 14, padding: '8px 10px', background: '#f1f5f9', borderRadius: 6 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 2 }}>
+                <div style={{ marginBottom: 14, padding: '8px 10px', background: 'var(--bg-hover)', borderRadius: 6 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>
                         Current Profile
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', wordBreak: 'break-all' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-all' }}>
                         {profileName}
                     </div>
                     {desc && (
-                        <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
                             v{desc.version} · {desc.standard} · {desc.organization}
                         </div>
                     )}
@@ -114,10 +126,10 @@ export default function ProfileSidePanel({
                         <StatBadge label="Edges" value={topo.edge_count} color="#22c55e" />
                     </div>
                     <div style={{ marginTop: 6, display: 'flex', gap: 6, marginBottom: 8 }}>
-                        <span style={{ ...miniPill, background: '#dcfce7', color: '#166534' }}>
+                        <span style={{ ...miniPill, background: 'var(--success-bg)', color: 'var(--success-text)' }}>
                             Allow {desc.rule_summary.allow}
                         </span>
-                        <span style={{ ...miniPill, background: '#fee2e2', color: '#991b1b' }}>
+                        <span style={{ ...miniPill, background: 'var(--error-bg)', color: 'var(--error-text)' }}>
                             Deny {desc.rule_summary.deny}
                         </span>
                     </div>
@@ -129,8 +141,8 @@ export default function ProfileSidePanel({
                         style={{
                             width: '100%', boxSizing: 'border-box',
                             fontSize: 10, fontFamily: 'monospace',
-                            color: '#475569', background: '#f8fafc',
-                            border: '1px solid #e2e8f0', borderRadius: 4,
+                            color: 'var(--text-primary)', background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border)', borderRadius: 4,
                             padding: '6px 8px', resize: 'vertical',
                             lineHeight: 1.6,
                         }}
@@ -151,9 +163,9 @@ export default function ProfileSidePanel({
                             style={{
                                 width: '100%', boxSizing: 'border-box',
                                 fontSize: 11, padding: '5px 6px',
-                                border: '1px solid #e2e8f0', borderRadius: 4,
-                                background: goalScope ? '#eff6ff' : '#fff',
-                                color: '#1e293b', cursor: 'pointer',
+                                border: '1px solid var(--border)', borderRadius: 4,
+                                background: goalScope ? 'var(--accent-bg)' : 'var(--bg-card)',
+                                color: 'var(--text-primary)', cursor: 'pointer',
                             }}
                         >
                             <option value="">All (no scope)</option>
@@ -162,7 +174,7 @@ export default function ProfileSidePanel({
                             ))}
                         </select>
                         {scopeCount && (
-                            <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
                                 Showing {scopeCount.visible} of {scopeCount.total} elements
                             </div>
                         )}
@@ -180,9 +192,9 @@ export default function ProfileSidePanel({
                         style={{
                             width: '100%', boxSizing: 'border-box',
                             fontSize: 11, padding: '5px 6px',
-                            border: '1px solid #e2e8f0', borderRadius: 4,
-                            background: needScope ? '#f0fdf4' : '#fff',
-                            color: '#1e293b', cursor: 'pointer',
+                            border: '1px solid var(--border)', borderRadius: 4,
+                            background: needScope ? 'var(--success-bg)' : 'var(--bg-card)',
+                            color: 'var(--text-primary)', cursor: 'pointer',
                         }}
                     >
                         <option value="">All (no scope)</option>
@@ -191,9 +203,46 @@ export default function ProfileSidePanel({
                         ))}
                     </select>
                     {needScopeCount && (
-                        <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
                             Showing {needScopeCount.visible} of {needScopeCount.total} elements
                         </div>
+                    )}
+                </div>
+            )}
+
+            {/* Linked Needs (selected node) */}
+            {selectedNode && (
+                <div style={sectionStyle}>
+                    <div style={labelStyle}>Linked Needs</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                        Element: <strong style={{ color: 'var(--text-primary)' }}>{selectedNode}</strong>
+                    </div>
+                    {loadingNeeds ? (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Loading...</div>
+                    ) : !linkedNeeds || linkedNeeds.matches.length === 0 ? (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 0' }}>No linked needs found</div>
+                    ) : (
+                        linkedNeeds.matches.map((m) => (
+                            <div key={`${m.catalog_id}-${m.need_id}`} style={{
+                                padding: '5px 8px', marginBottom: 4,
+                                border: '1px solid var(--border)', borderRadius: 4,
+                                fontSize: 11, background: 'var(--bg-secondary)',
+                            }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    {m.action} {m.subject}
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>{m.catalog_name}</span>
+                                    <span style={{
+                                        padding: '0 4px', borderRadius: 2, fontSize: 10, fontWeight: 600,
+                                        background: m.status === 'active' ? 'var(--success-bg)' : 'var(--bg-hover)',
+                                        color: m.status === 'active' ? 'var(--success-text)' : 'var(--text-muted)',
+                                    }}>
+                                        {m.status}
+                                    </span>
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
             )}
@@ -228,14 +277,14 @@ export default function ProfileSidePanel({
                                     background: color, display: 'inline-block',
                                 }} />
                                 <span style={{ flex: 1 }}>{lb.layer}</span>
-                                <span style={{ color: '#94a3b8' }}>{lb.count}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>{lb.count}</span>
                             </label>
                         );
                     })}
                     <label style={{
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '6px 0 0', marginTop: 4,
-                        borderTop: '1px solid #e2e8f0',
+                        borderTop: '1px solid var(--border)',
                         cursor: 'pointer',
                     }}>
                         <input
@@ -244,7 +293,7 @@ export default function ProfileSidePanel({
                             onChange={onToggleCrossLayer}
                             style={{ accentColor: '#f97316' }}
                         />
-                        <span style={{ fontSize: 11, fontWeight: 600, color: crossLayerOnly ? '#f97316' : '#64748b' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: crossLayerOnly ? '#f97316' : 'var(--text-secondary)' }}>
                             Cross-layer only
                         </span>
                     </label>
@@ -270,12 +319,12 @@ export default function ProfileSidePanel({
                                     <div key={e.name} style={{
                                         padding: '2px 0 2px 10px',
                                         fontSize: 11,
-                                        color: '#475569',
-                                        borderLeft: `2px solid ${LAYER_COLORS[lb.layer] || '#e2e8f0'}`,
+                                        color: 'var(--text-primary)',
+                                        borderLeft: `2px solid ${LAYER_COLORS[lb.layer] || 'var(--border)'}`,
                                         marginBottom: 1,
                                     }}>
                                         {e.name}
-                                        <span style={{ color: '#94a3b8', marginLeft: 4 }}>
+                                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>
                                             {e.kernel_type}
                                         </span>
                                     </div>
@@ -296,8 +345,8 @@ export default function ProfileSidePanel({
                                 display: 'flex', justifyContent: 'space-between',
                                 padding: '2px 0', fontSize: 11,
                             }}>
-                                <span style={{ color: '#475569' }}>{rel}</span>
-                                <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                                <span style={{ color: 'var(--text-primary)' }}>{rel}</span>
+                                <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
                             </div>
                         ))}
                 </div>
@@ -315,8 +364,8 @@ export default function ProfileSidePanel({
                         style={{
                             width: '100%', boxSizing: 'border-box',
                             fontSize: 10, fontFamily: 'monospace',
-                            color: '#475569', background: '#f8fafc',
-                            border: '1px solid #e2e8f0', borderRadius: 4,
+                            color: 'var(--text-primary)', background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border)', borderRadius: 4,
                             padding: '6px 8px', resize: 'vertical',
                             lineHeight: 1.6,
                         }}
@@ -337,7 +386,7 @@ function StatBadge({ label, value, color }: { label: string; value: number; colo
             border: `1px solid ${color}20`,
         }}>
             <div style={{ fontSize: 16, fontWeight: 700, color }}>{value}</div>
-            <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase' }}>{label}</div>
+            <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
         </div>
     );
 }
@@ -346,7 +395,7 @@ const sectionStyle = { marginBottom: 16 };
 const labelStyle = {
     fontSize: 10 as const,
     fontWeight: 700 as const,
-    color: '#94a3b8',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     marginBottom: 6,

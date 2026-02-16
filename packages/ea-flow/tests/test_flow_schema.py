@@ -1,7 +1,7 @@
-"""Tests for flow_schema.py — FlowLayerSchema and SchemaPort compliance."""
+"""Tests for flow_schema.py — FlowSchema and SchemaPort compliance."""
 
 from ea_profile.types import SchemaPort
-from ea_flow.flow_schema import FLOW_SCHEMA, FlowEntity, FlowRelation, FlowLayerSchema
+from ea_flow.flow_schema import FLOW_SCHEMA, FlowEntity, FlowRelation, FlowSchema
 
 
 class TestFlowSchemaPort:
@@ -75,7 +75,7 @@ class TestFlowSchemaPort:
         assert names == expected
 
     def test_schema_is_frozen(self):
-        schema = FlowLayerSchema(
+        schema = FlowSchema(
             entities=(FlowEntity("test"),),
             relations=(FlowRelation("test_rel"),),
         )

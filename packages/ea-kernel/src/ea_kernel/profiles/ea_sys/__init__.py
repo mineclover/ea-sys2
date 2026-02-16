@@ -12,6 +12,7 @@ LAYER_FILE_MAP: dict[str, str] = {
     "kernel": "40-kernel.toml",
     "flow": "50-flow.toml",
     "web-kernel-viz": "60-web-kernel-viz.toml",
+    "development": "80-development.toml",
 }
 
 LAYER_ORDER: tuple[str, ...] = (
@@ -22,6 +23,7 @@ LAYER_ORDER: tuple[str, ...] = (
     "kernel",
     "flow",
     "web-kernel-viz",
+    "development",
 )
 
 PROFILE_DIR = Path(__file__).resolve().parent

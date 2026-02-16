@@ -47,7 +47,7 @@ const HandleGroup = ({
                     style={{
                         left: (position === Position.Top || position === Position.Bottom) ? `${handle.offset}%` : undefined,
                         top: (position === Position.Left || position === Position.Right) ? `${handle.offset}%` : undefined,
-                        background: '#fff',
+                        background: 'var(--bg-card)',
                         border: `2px solid ${accentColor}`,
                         width: 8,
                         height: 8,
@@ -69,7 +69,7 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
     // Applying custom styles if present
     const customStyle = data.style || {};
     const highlighted = !!(data as Record<string, unknown>).highlighted;
-    const borderColor = selected ? config.color : highlighted ? config.color : (customStyle.borderColor || '#e2e8f0');
+    const borderColor = selected ? config.color : highlighted ? config.color : (customStyle.borderColor || 'var(--border)');
     const borderRadius = customStyle.shape === 'circle' ? '50%' :
         customStyle.shape === 'rounded' ? 20 :
             DESIGN_SYSTEM.node.borderRadius;
@@ -83,8 +83,8 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
             minWidth: customStyle.width || (DESIGN_SYSTEM.node.width - 20),
             minHeight: customStyle.height,
             borderRadius: borderRadius,
-            background: customStyle.backgroundColor || '#fff',
-            boxShadow: glowShadow || (selected ? `0 0 0 2px ${config.color}, 0 4px 6px -1px rgba(0, 0, 0, 0.1)` : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)'),
+            background: customStyle.backgroundColor || 'var(--bg-card)',
+            boxShadow: glowShadow || (selected ? `0 0 0 2px ${config.color}, 0 4px 6px -1px var(--shadow-lg)` : `0 1px 3px 0 var(--shadow-lg), 0 1px 2px -1px var(--shadow-lg)`),
             border: `1px solid ${borderColor}`,
             borderWidth: customStyle.borderWidth || 1,
             transition: 'all 0.2s ease',
@@ -123,7 +123,7 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
                 <span style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: '#1e293b',
+                    color: 'var(--text-primary)',
                     lineHeight: 1.3,
                 }}>
                     {data.label}
@@ -131,7 +131,7 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
                 {data.description && (
                     <span style={{
                         fontSize: 10,
-                        color: '#64748b',
+                        color: 'var(--text-secondary)',
                         lineHeight: 1.4,
                         maxWidth: 200,
                         overflow: 'hidden',

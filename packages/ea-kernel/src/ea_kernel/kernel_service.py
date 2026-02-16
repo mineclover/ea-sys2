@@ -122,7 +122,11 @@ def list_relations(*, lang: str | None = None) -> dict[str, Any]:
 # ── UC2: Profile detail ──────────────────────────────────────
 
 
-def describe_profile(*, name: str, lang: str | None = None) -> dict[str, Any] | None:
+def describe_profile(
+    *,
+    name: str,
+    lang: str | None = None,
+) -> dict[str, Any] | None:
     """UC2: Describe a profile — elements by layer, relations, rule summary."""
     profile = _load_profile(name, lang=lang)
     if profile is None:
@@ -580,32 +584,159 @@ def _get_i18n_store() -> "I18nStore":
     return SQLiteI18nStore(db_path)
 
 
-def audit_i18n(*, lang: str = "ko") -> dict[str, Any]:
-    """TOML 패치 기반 i18n 감사 리포트."""
-    from ea_kernel.schema_loader import audit_i18n_patch
-    spec = _get_spec()
-    report = audit_i18n_patch(spec, lang)
-    return {
+def _make_i18n_identifier(
+    *,
+    scope: str,
+    kind: str,
+    name: str,
+    field: str | None,
+    profile_name: str | None = None,
+) -> str:
+    normalized_field = field or ""
+    if scope == "m1":
+        return f"m1:{profile_name}:{kind}:{name}:{normalized_field}"
+    return f"m2:{kind}:{name}:{normalized_field}"
+
+
+def _audit_entry_payload(
+    *,
+    entry: Any,
+    scope: str,
+    profile_name: str | None = None,
+    include_en_current: bool = False,
+    include_en_recorded: bool = False,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "kind": entry.kind,
+        "name": entry.name,
+        "field": entry.field,
+        "identifier": _make_i18n_identifier(
+            scope=scope,
+            kind=entry.kind,
+            name=entry.name,
+            field=entry.field,
+            profile_name=profile_name,
+        ),
+    }
+    if profile_name is not None:
+        payload["profile"] = profile_name
+    if include_en_current:
+        payload["en_current"] = entry.en_current
+    if include_en_recorded:
+        payload["en_recorded"] = entry.en_recorded
+    return payload
+
+
+def _audit_report_payload(
+    *,
+    report: Any,
+    scope: str,
+    profile_name: str | None = None,
+    patch_path: str | None = None,
+) -> dict[str, Any]:
+    missing = [
+        _audit_entry_payload(
+            entry=e,
+            scope=scope,
+            profile_name=profile_name,
+            include_en_current=True,
+        )
+        for e in report.missing
+    ]
+    orphan = [
+        _audit_entry_payload(
+            entry=e,
+            scope=scope,
+            profile_name=profile_name,
+        )
+        for e in report.orphan
+    ]
+    stale = [
+        _audit_entry_payload(
+            entry=e,
+            scope=scope,
+            profile_name=profile_name,
+            include_en_current=True,
+            include_en_recorded=True,
+        )
+        for e in report.stale
+    ]
+
+    payload: dict[str, Any] = {
+        "scope": scope,
         "lang": report.lang,
         "coverage": report.coverage,
         "total_schema_items": report.total_schema_items,
         "total_translated": report.total_translated,
         "total_issues": report.total_issues,
         "is_clean": report.is_clean,
-        "missing": [
-            {"kind": e.kind, "name": e.name, "field": e.field, "en_current": e.en_current}
-            for e in report.missing
-        ],
-        "orphan": [
-            {"kind": e.kind, "name": e.name, "field": e.field}
-            for e in report.orphan
-        ],
-        "stale": [
-            {"kind": e.kind, "name": e.name, "field": e.field,
-             "en_current": e.en_current, "en_recorded": e.en_recorded}
-            for e in report.stale
-        ],
+        "missing_count": len(missing),
+        "orphan_count": len(orphan),
+        "stale_count": len(stale),
+        "missing": missing,
+        "orphan": orphan,
+        "stale": stale,
+        # Backward-compatible aliases for older admin UI.
+        "total": report.total_schema_items,
+        "translated": report.total_translated,
+        "missing_items": missing,
     }
+    if profile_name is not None:
+        payload["profile"] = profile_name
+    if patch_path is not None:
+        payload["patch_path"] = patch_path
+    return payload
+
+
+def _find_profile_patch_path(profile_name: str, lang: str) -> str | None:
+    from pathlib import Path
+
+    profiles_root = Path(__file__).parent / "profiles"
+    filename = f"{profile_name.lower()}.{lang}.patch.toml"
+
+    direct_candidates = (
+        profiles_root / filename,
+        profiles_root / "ea_sys" / filename,
+        profiles_root / "governance_profile_stack" / filename,
+    )
+    for candidate in direct_candidates:
+        if candidate.exists():
+            return str(candidate)
+
+    matches = sorted(profiles_root.rglob(filename))
+    if matches:
+        return str(matches[0])
+    return None
+
+
+def audit_i18n(*, lang: str = "ko") -> dict[str, Any]:
+    """TOML 패치 기반 i18n 감사 리포트."""
+    from ea_kernel.schema_loader import audit_i18n_patch
+
+    spec = _get_spec()
+    report = audit_i18n_patch(spec, lang)
+    return _audit_report_payload(report=report, scope="m2")
+
+
+def audit_profile_i18n(*, name: str, lang: str = "ko") -> dict[str, Any]:
+    """M1 profile i18n patch audit report."""
+    from pathlib import Path
+
+    from ea_kernel.localizer import audit_profile_i18n_patch
+
+    profile = _load_profile(name)
+    if profile is None:
+        return {"error": f"Profile not found: {name}"}
+
+    patch_path_str = _find_profile_patch_path(name, lang)
+    patch_path = Path(patch_path_str) if patch_path_str else None
+    report = audit_profile_i18n_patch(profile, lang, patch_path=patch_path)
+    return _audit_report_payload(
+        report=report,
+        scope="m1",
+        profile_name=name,
+        patch_path=patch_path_str,
+    )
 
 
 def list_translations(*, lang: str, kind: str | None = None) -> dict[str, Any]:

@@ -53,7 +53,15 @@ Profiles add constraints on top of kernel rules but cannot relax them (2-stage v
 2. kernel_list_entities / kernel_list_relations → understand the structure
 3. kernel_describe_profile → explore how a framework maps to the kernel
 4. kernel_list_rules → browse validity rules by group
-5. kernel_judge → evaluate whether a specific relationship is valid\
+5. kernel_judge → evaluate whether a specific relationship is valid
+
+## Project Exploration (Self-Description)
+
+This system models itself as a kernel profile.
+- kernel_describe_profile("EASystem-Development") — package, module, and dependency structure
+- profile_topology("EASystem-Development") — development topology graph
+- profile_impact("EASystem-Development", "KernelLayer") — kernel change impact analysis
+- profile_reachable("EASystem-Development", "GovernanceLayer", 3) — elements reachable from governance\
 """,
 )
 

@@ -437,6 +437,20 @@ class KernelModelRegistrationService:
             ).fetchone()
         return _row_to_model(row) if row is not None else None
 
+    def list_models(self, *, status: str | None = None) -> tuple[ModelRegistryEntry, ...]:
+        query = """
+            SELECT model_id, model_name, owner, status, active_version_id, created_at, updated_at
+            FROM model_registry
+        """
+        params: list[str] = []
+        if status is not None:
+            query += " WHERE status = ?"
+            params.append(status)
+        query += " ORDER BY model_name ASC"
+        with self._connection() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return tuple(_row_to_model(row) for row in rows)
+
     def list_versions(self, model_name: str) -> tuple[ModelVersionEntry, ...]:
         with self._connection() as conn:
             rows = conn.execute(
@@ -534,4 +548,3 @@ def _row_to_validation_run(row: sqlite3.Row) -> ValidationRunEntry:
         context=context_obj,
         created_at=str(row["created_at"]),
     )
-

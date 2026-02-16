@@ -22,7 +22,8 @@ import { getLayoutedElements } from '@/utils/layout';
 import { DynamicNode } from './nodes';
 import { routeEdges } from '@/utils/routing';
 import TraversalPanel from './TraversalPanel';
-import { fetchProfileTopology, fetchReachable } from '@/api/client';
+import { fetchReachable } from '@/api/client';
+import { useProfileTopology } from '@/api/hooks';
 import type { ProfileTopologyResponse, TopologyNode, I18nString } from '@/api/types';
 
 /** Extract a specific language from an I18nString, falling back to the raw value. */
@@ -89,7 +90,7 @@ function buildElements(
             target: e.target,
             type: 'custom',
             data: {
-                style: { connector: 'solid', strokeColor: '#555', strokeWidth: 1.5 },
+                style: { connector: 'solid', strokeColor: 'var(--text-secondary)', strokeWidth: 1.5 },
             },
             markerEnd: 'url(#directed)',
             label: e.relation,
@@ -114,7 +115,7 @@ function buildElements(
         target: e.target,
         type: 'custom',
         data: {
-            style: { connector: 'solid', strokeColor: '#555', strokeWidth: 1.5 },
+            style: { connector: 'solid', strokeColor: 'var(--text-secondary)', strokeWidth: 1.5 },
         },
         markerEnd: 'url(#directed)',
         label: e.relation,
@@ -131,6 +132,7 @@ interface LayoutProfileFlowProps {
     lang: string;
     scopeElements?: Set<string>;
     onShowDetail?: (title: string, content: ReactNode) => void;
+    onNodeSelect?: (nodeName: string | null) => void;
 }
 
 function NodeDetailContent({ node, lang }: { node: TopologyNode; lang: string }) {
@@ -140,10 +142,10 @@ function NodeDetailContent({ node, lang }: { node: TopologyNode; lang: string })
         <div style={{ fontSize: 12, lineHeight: 1.8 }}>
             <div style={{ marginBottom: 10 }}>
                 <div style={detailLabelStyle}>Name</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                     {displayName || node.name}
                     {displayName && displayName !== node.name && (
-                        <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: 6, fontSize: 12 }}>{node.name}</span>
+                        <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6, fontSize: 12 }}>{node.name}</span>
                     )}
                 </div>
             </div>
@@ -162,7 +164,7 @@ function NodeDetailContent({ node, lang }: { node: TopologyNode; lang: string })
             {desc && (
                 <div style={{ marginBottom: 10 }}>
                     <div style={detailLabelStyle}>Description</div>
-                    <div style={{ color: '#64748b' }}>{desc}</div>
+                    <div style={{ color: 'var(--text-secondary)' }}>{desc}</div>
                 </div>
             )}
         </div>
@@ -170,43 +172,33 @@ function NodeDetailContent({ node, lang }: { node: TopologyNode; lang: string })
 }
 
 const detailLabelStyle = {
-    fontSize: 10, fontWeight: 700 as const, color: '#94a3b8',
+    fontSize: 10, fontWeight: 700 as const, color: 'var(--text-muted)',
     textTransform: 'uppercase' as const, marginBottom: 2,
 };
 
-const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, scopeElements, onShowDetail }: LayoutProfileFlowProps) => {
+const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, scopeElements, onShowDetail, onNodeSelect }: LayoutProfileFlowProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { fitView } = useReactFlow();
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [reachableSet, setReachableSet] = useState<Set<string>>(new Set());
-    const [error, setError] = useState<string | null>(null);
-    const [rawTopo, setRawTopo] = useState<ProfileTopologyResponse | null>(null);
 
-    // Load topology on profile change
+    const { data: rawTopo, isError } = useProfileTopology(profileName, { lang });
+
+    // Reset selection when profile changes
     useEffect(() => {
-        setError(null);
         setSelectedNode(null);
         setReachableSet(new Set());
+    }, [profileName]);
 
-        fetchProfileTopology(profileName, { lang: 'ko' })
-            .then((topo) => {
-                setRawTopo(topo);
-                const { nodes: n, edges: e } = buildElements(topo, visibleLayers, crossLayerOnly, lang, scopeElements);
-                setNodes(n);
-                setEdges(e);
-            })
-            .catch(() => setError('unavailable'));
-    }, [profileName, setNodes, setEdges]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Re-layout when visibleLayers, crossLayerOnly, lang, or scopeElements changes
+    // Build ReactFlow elements when raw data or view options change
     useEffect(() => {
         if (!rawTopo) return;
         const { nodes: n, edges: e } = buildElements(rawTopo, visibleLayers, crossLayerOnly, lang, scopeElements);
         setNodes(n);
         setEdges(e);
         window.requestAnimationFrame(() => fitView());
-    }, [visibleLayers, crossLayerOnly, lang, scopeElements, rawTopo, setNodes, setEdges, fitView]);
+    }, [rawTopo, visibleLayers, crossLayerOnly, lang, scopeElements, setNodes, setEdges, fitView]);
 
     // Fit view on initial load
     useEffect(() => {
@@ -240,6 +232,7 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, s
     const onNodeClick = useCallback(
         (_: React.MouseEvent, node: Node) => {
             setSelectedNode(node.id);
+            onNodeSelect?.(node.id);
 
             // Show detail in slide-over
             if (onShowDetail && rawTopo) {
@@ -259,16 +252,16 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, s
                                 {reachEdges.slice(0, 20).map((e, i) => (
                                     <div key={i} style={{
                                         fontSize: 11, padding: '3px 0',
-                                        color: '#475569', borderBottom: '1px solid #f1f5f9',
+                                        color: 'var(--text-primary)', borderBottom: '1px solid var(--bg-hover)',
                                     }}>
                                         {e.source === node.id
-                                            ? <span>→ <strong>{e.target}</strong> <span style={{ color: '#94a3b8' }}>({e.relation})</span></span>
-                                            : <span>← <strong>{e.source}</strong> <span style={{ color: '#94a3b8' }}>({e.relation})</span></span>
+                                            ? <span>→ <strong>{e.target}</strong> <span style={{ color: 'var(--text-muted)' }}>({e.relation})</span></span>
+                                            : <span>← <strong>{e.source}</strong> <span style={{ color: 'var(--text-muted)' }}>({e.relation})</span></span>
                                         }
                                     </div>
                                 ))}
                                 {reachEdges.length > 20 && (
-                                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                                         ...and {reachEdges.length - 20} more
                                     </div>
                                 )}
@@ -291,7 +284,8 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, s
     const onClear = useCallback(() => {
         setSelectedNode(null);
         setReachableSet(new Set());
-    }, []);
+        onNodeSelect?.(null);
+    }, [onNodeSelect]);
 
     const onLayout = useCallback(
         (direction: string) => {
@@ -304,12 +298,12 @@ const LayoutProfileFlow = ({ profileName, visibleLayers, crossLayerOnly, lang, s
         [nodes, edges, setNodes, setEdges, fitView],
     );
 
-    if (error === 'unavailable') {
+    if (isError) {
         return (
             <div style={{ padding: 40, fontFamily: 'system-ui' }}>
                 <div style={{
-                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#f8fafc', fontSize: 12, color: '#64748b',
+                    padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 8,
+                    background: 'var(--bg-secondary)', fontSize: 12, color: 'var(--text-secondary)',
                 }}>
                     Unable to load profile topology — API server may be unavailable.
                 </div>
@@ -356,9 +350,10 @@ interface ProfileGraphProps {
     lang?: string;
     scopeElements?: Set<string>;
     onShowDetail?: (title: string, content: ReactNode) => void;
+    onNodeSelect?: (nodeName: string | null) => void;
 }
 
-export default function ProfileGraph({ profileName, visibleLayers, crossLayerOnly, lang = 'en', scopeElements, onShowDetail }: ProfileGraphProps) {
+export default function ProfileGraph({ profileName, visibleLayers, crossLayerOnly, lang = 'en', scopeElements, onShowDetail, onNodeSelect }: ProfileGraphProps) {
     // Default: all layers visible
     const layers = visibleLayers || new Set(['Infra', 'Governance', 'Decision', 'Needs', 'Kernel', 'Flow']);
     return (
@@ -370,6 +365,7 @@ export default function ProfileGraph({ profileName, visibleLayers, crossLayerOnl
                 lang={lang}
                 scopeElements={scopeElements}
                 onShowDetail={onShowDetail}
+                onNodeSelect={onNodeSelect}
             />
         </ReactFlowProvider>
     );

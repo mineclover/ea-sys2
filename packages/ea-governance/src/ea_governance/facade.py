@@ -424,6 +424,9 @@ class GovernanceContainer:
     def get_kernel_model_state(self, model_name: str, *, limit_runs: int = 5) -> dict[str, Any] | None:
         return self._kernel_model_ops.get_kernel_model_state(model_name, limit_runs=limit_runs)
 
+    def list_kernel_models(self, *, status: str | None = None) -> list[dict[str, Any]]:
+        return self._kernel_model_ops.list_kernel_models(status=status)
+
     # -- Kernel rule delegates -------------------------------------------------
 
     def submit_kernel_rule(

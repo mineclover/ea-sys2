@@ -28,8 +28,8 @@ function RuleDetailContent({ rule }: { rule: KernelRuleDetail }) {
                     <div style={labelStyle}>Valid</div>
                     <span style={{
                         ...badgeStyle,
-                        background: rule.valid ? '#dcfce7' : '#fee2e2',
-                        color: rule.valid ? '#166534' : '#991b1b',
+                        background: rule.valid ? 'var(--success-bg)' : 'var(--error-bg)',
+                        color: rule.valid ? 'var(--success-text)' : 'var(--error-text)',
                     }}>
                         {rule.valid ? 'ALLOW' : 'DENY'}
                     </span>
@@ -42,7 +42,7 @@ function RuleDetailContent({ rule }: { rule: KernelRuleDetail }) {
             {rule.notes && (
                 <div style={{ marginBottom: 12 }}>
                     <div style={labelStyle}>Notes</div>
-                    <div style={{ ...valueStyle, fontSize: 12, color: '#64748b' }}>{rule.notes}</div>
+                    <div style={{ ...valueStyle, fontSize: 12, color: 'var(--text-secondary)' }}>{rule.notes}</div>
                 </div>
             )}
             <div style={{ marginBottom: 12 }}>
@@ -54,7 +54,7 @@ function RuleDetailContent({ rule }: { rule: KernelRuleDetail }) {
                     {rule.metadata.rationale && <div>Rationale: {rule.metadata.rationale}</div>}
                     {rule.metadata.tags.length > 0 && (
                         <div>Tags: {rule.metadata.tags.map((t) => (
-                            <span key={t} style={{ ...badgeStyle, background: '#f1f5f9', color: '#475569', marginRight: 4 }}>{t}</span>
+                            <span key={t} style={{ ...badgeStyle, background: 'var(--bg-hover)', color: 'var(--text-secondary)', marginRight: 4 }}>{t}</span>
                         ))}</div>
                     )}
                 </div>
@@ -66,7 +66,7 @@ function RuleDetailContent({ rule }: { rule: KernelRuleDetail }) {
                         <div key={i} style={{ fontSize: 12, marginBottom: 4 }}>
                             <strong>{c.type}</strong>
                             {Object.keys(c.parameters).length > 0 && (
-                                <span style={{ color: '#94a3b8' }}> ({JSON.stringify(c.parameters)})</span>
+                                <span style={{ color: 'var(--text-muted)' }}> ({JSON.stringify(c.parameters)})</span>
                             )}
                         </div>
                     ))}
@@ -84,12 +84,12 @@ function JudgeResultContent({ result }: { result: JudgeResponse }) {
                     ...badgeStyle,
                     fontSize: 14,
                     padding: '6px 16px',
-                    background: result.verdict === 'allow' ? '#dcfce7' : result.verdict === 'deny' ? '#fee2e2' : '#fef9c3',
-                    color: result.verdict === 'allow' ? '#166534' : result.verdict === 'deny' ? '#991b1b' : '#854d0e',
+                    background: result.verdict === 'allow' ? 'var(--success-bg)' : result.verdict === 'deny' ? 'var(--error-bg)' : 'var(--warning-bg)',
+                    color: result.verdict === 'allow' ? 'var(--success-text)' : result.verdict === 'deny' ? 'var(--error-text)' : 'var(--warning-text)',
                 }}>
                     {result.verdict.toUpperCase()}
                 </span>
-                <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>
+                <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                     confidence: {result.confidence}
                 </span>
             </div>
@@ -99,12 +99,12 @@ function JudgeResultContent({ result }: { result: JudgeResponse }) {
                     {result.evidence.map((ev) => (
                         <div key={ev.rule_id} style={{
                             padding: '6px 10px', marginBottom: 4, borderRadius: 4, fontSize: 12,
-                            background: ev.winner ? '#eff6ff' : '#f8fafc',
-                            border: ev.winner ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                            background: ev.winner ? 'var(--accent-bg)' : 'var(--bg-secondary)',
+                            border: ev.winner ? '1px solid #93c5fd' : '1px solid var(--border)',
                         }}>
                             <strong>{ev.rule_id}</strong>
-                            {ev.winner && <span style={{ color: '#3b82f6', marginLeft: 6 }}>★ winner</span>}
-                            <div style={{ color: '#64748b', marginTop: 2 }}>
+                            {ev.winner && <span style={{ color: 'var(--accent)', marginLeft: 6 }}>★ winner</span>}
+                            <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>
                                 {ev.source} → {ev.target} | {ev.valid ? 'allow' : 'deny'} | p{ev.priority}
                             </div>
                         </div>
@@ -115,7 +115,7 @@ function JudgeResultContent({ result }: { result: JudgeResponse }) {
                 <div>
                     <div style={labelStyle}>Conflicts</div>
                     {result.conflicts.map((c, i) => (
-                        <div key={i} style={{ fontSize: 12, color: '#ef4444' }}>{c}</div>
+                        <div key={i} style={{ fontSize: 12, color: 'var(--error-text)' }}>{c}</div>
                     ))}
                 </div>
             )}
@@ -175,7 +175,7 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
                 );
             })
             .catch((err) => {
-                onShowDetail('Judge Error', <div style={{ color: '#ef4444' }}>{String(err)}</div>);
+                onShowDetail('Judge Error', <div style={{ color: 'var(--error-text)' }}>{String(err)}</div>);
             });
     }, [judgeSource, judgeTarget, judgeRelation, onShowDetail]);
 
@@ -183,15 +183,15 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
         return (
             <div style={{ padding: 40, fontFamily: 'system-ui' }}>
                 <div style={{
-                    padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: 8,
-                    background: '#f8fafc', fontSize: 12, color: '#64748b',
+                    padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 8,
+                    background: 'var(--bg-secondary)', fontSize: 12, color: 'var(--text-secondary)',
                     display: 'flex', alignItems: 'center', gap: 10,
                 }}>
                     <span>Unable to load kernel rules — API server may be unavailable.</span>
                     <button onClick={loadGroups} style={{
                         padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                        border: '1px solid #cbd5e1', borderRadius: 4,
-                        background: '#fff', color: '#475569', cursor: 'pointer',
+                        border: '1px solid var(--border-strong)', borderRadius: 4,
+                        background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
                     }}>Retry</button>
                 </div>
             </div>
@@ -203,24 +203,24 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
             {/* Judge bar */}
             <div style={{
                 padding: '10px 16px',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 gap: 8,
                 alignItems: 'center',
-                background: '#fafbfc',
+                background: 'var(--bg-secondary)',
             }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Judge</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Judge</span>
                 <input placeholder="Source entity" value={judgeSource} onChange={(e) => setJudgeSource(e.target.value)}
                     style={inputStyle} />
-                <span style={{ color: '#94a3b8' }}>→</span>
+                <span style={{ color: 'var(--text-muted)' }}>→</span>
                 <input placeholder="Target entity" value={judgeTarget} onChange={(e) => setJudgeTarget(e.target.value)}
                     style={inputStyle} />
-                <span style={{ color: '#94a3b8' }}>via</span>
+                <span style={{ color: 'var(--text-muted)' }}>via</span>
                 <input placeholder="Relation" value={judgeRelation} onChange={(e) => setJudgeRelation(e.target.value)}
                     style={inputStyle} />
                 <button onClick={onJudge} style={{
-                    padding: '5px 14px', fontSize: 12, fontWeight: 600, border: '1px solid #3b82f6',
-                    borderRadius: 4, background: '#3b82f6', color: '#fff', cursor: 'pointer',
+                    padding: '5px 14px', fontSize: 12, fontWeight: 600, border: '1px solid var(--accent)',
+                    borderRadius: 4, background: 'var(--accent)', color: 'var(--bg-card)', cursor: 'pointer',
                 }}>
                     Execute
                 </button>
@@ -228,11 +228,11 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
 
             {/* Content */}
             <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-                {loading && <div style={{ color: '#94a3b8' }}>Loading...</div>}
+                {loading && <div style={{ color: 'var(--text-muted)' }}>Loading...</div>}
 
                 {!loading && !activeGroup && groups.length > 0 && (
                     <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 12, textTransform: 'uppercase' }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 12, textTransform: 'uppercase' }}>
                             Rule Groups
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
@@ -242,14 +242,14 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
                                     onClick={() => onSelectGroup(g.name)}
                                     style={{
                                         padding: '14px 16px', textAlign: 'left',
-                                        border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff',
+                                        border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-card)',
                                         cursor: 'pointer', transition: 'border-color 0.15s',
                                     }}
                                     onMouseOver={(e) => (e.currentTarget.style.borderColor = '#93c5fd')}
-                                    onMouseOut={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                                    onMouseOut={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
                                 >
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{g.name}</div>
-                                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{g.count} rules</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{g.name}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{g.count} rules</div>
                                 </button>
                             ))}
                         </div>
@@ -261,18 +261,18 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
                         <button
                             onClick={() => { setActiveGroup(null); setRules([]); }}
                             style={{
-                                marginBottom: 12, fontSize: 12, color: '#3b82f6', background: 'none',
+                                marginBottom: 12, fontSize: 12, color: 'var(--accent)', background: 'none',
                                 border: 'none', cursor: 'pointer', padding: 0,
                             }}
                         >
                             ← Back to groups
                         </button>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 12 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
                             {activeGroup} ({rules.length} rules)
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                             <thead>
-                                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                                <tr style={{ borderBottom: '2px solid var(--border)' }}>
                                     <th style={thStyle}>ID</th>
                                     <th style={thStyle}>Source</th>
                                     <th style={thStyle}>Target</th>
@@ -286,19 +286,19 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
                                     <tr
                                         key={r.id}
                                         onClick={() => onClickRule(r.id)}
-                                        style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
-                                        onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                                        style={{ borderBottom: '1px solid var(--bg-hover)', cursor: 'pointer' }}
+                                        onMouseOver={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
                                         onMouseOut={(e) => (e.currentTarget.style.background = '')}
                                     >
-                                        <td style={tdStyle}><span style={{ color: '#3b82f6' }}>{r.id}</span></td>
+                                        <td style={tdStyle}><span style={{ color: 'var(--accent)' }}>{r.id}</span></td>
                                         <td style={tdStyle}>{r.source}</td>
                                         <td style={tdStyle}>{r.target}</td>
                                         <td style={tdStyle}>{r.relation}</td>
                                         <td style={tdStyle}>
                                             <span style={{
                                                 ...badgeStyle,
-                                                background: r.valid ? '#dcfce7' : '#fee2e2',
-                                                color: r.valid ? '#166534' : '#991b1b',
+                                                background: r.valid ? 'var(--success-bg)' : 'var(--error-bg)',
+                                                color: r.valid ? 'var(--success-text)' : 'var(--error-text)',
                                             }}>
                                                 {r.valid ? 'ALLOW' : 'DENY'}
                                             </span>
@@ -317,9 +317,9 @@ export default function RulesView({ onShowDetail }: RulesViewProps) {
 
 // --- Styles ---
 
-const labelStyle = { fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 2 };
-const valueStyle = { fontSize: 13, color: '#1e293b' };
+const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' as const, marginBottom: 2 };
+const valueStyle = { fontSize: 13, color: 'var(--text-primary)' };
 const badgeStyle = { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, display: 'inline-block' };
-const inputStyle = { padding: '5px 8px', fontSize: 12, border: '1px solid #cbd5e1', borderRadius: 4, width: 130 };
-const thStyle = { textAlign: 'left' as const, padding: '8px 10px', color: '#64748b', fontWeight: 600 };
+const inputStyle = { padding: '5px 8px', fontSize: 12, border: '1px solid var(--border-strong)', borderRadius: 4, width: 130 };
+const thStyle = { textAlign: 'left' as const, padding: '8px 10px', color: 'var(--text-secondary)', fontWeight: 600 };
 const tdStyle = { padding: '8px 10px' };

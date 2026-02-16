@@ -1,17 +1,13 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { SidePanel } from '@/components/layout';
 import ProfileGraph from '@/components/ProfileGraph';
 import ProfileSidePanel from '@/components/ProfileSidePanel';
 import { useAppState } from '@/contexts/AppStateContext';
-import {
-    fetchReachable,
-    fetchProfileTopology,
-    fetchNeedsCatalogs,
-    fetchCatalogNeeds,
-    fetchElementScope,
-} from '@/api/client';
+import { useProfileTopology, useNeedsCatalogs, useReachable } from '@/api/hooks';
+import { fetchCatalogNeeds, fetchElementScope } from '@/api/client';
 
 const ALL_LAYERS = ['Infra', 'Governance', 'Decision', 'Needs', 'Kernel', 'Flow'];
 
@@ -29,13 +25,10 @@ export default function ProfileGraphPage() {
     const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(ALL_LAYERS));
     const [crossLayerOnly, setCrossLayerOnly] = useState(false);
     const [goalScope, setGoalScope] = useState<string | null>(null);
-    const [scopeElements, setScopeElements] = useState<Set<string> | undefined>(undefined);
-    const [totalElementCount, setTotalElementCount] = useState<number>(0);
+    const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
     // Need scope
     const [needScope, setNeedScope] = useState<string | null>(null);
-    const [needOptions, setNeedOptions] = useState<NeedOption[]>([]);
-    const [needScopeElements, setNeedScopeElements] = useState<Set<string> | undefined>(undefined);
 
     const onToggleLayer = useCallback((layer: string) => {
         setVisibleLayers((prev) => {
@@ -47,64 +40,68 @@ export default function ProfileGraphPage() {
     }, []);
 
     // Fetch total element count for scope indicator
-    useEffect(() => {
-        if (!profileName) return;
-        fetchProfileTopology(profileName).then((topo) => {
-            setTotalElementCount(topo.node_count);
-        }).catch(() => {});
-    }, [profileName]);
+    const { data: topologyData } = useProfileTopology(profileName ?? '', {});
+    const totalElementCount = topologyData?.node_count ?? 0;
 
     // Load need options from catalogs
-    useEffect(() => {
-        fetchNeedsCatalogs()
-            .then(async (catalogs) => {
-                const options: NeedOption[] = [];
-                for (const cat of catalogs) {
+    const { data: catalogs } = useNeedsCatalogs();
+    const catalogIds = useMemo(
+        () => (catalogs ?? []).map((c) => c.id).sort().join(','),
+        [catalogs],
+    );
+
+    const { data: needOptions = [] } = useQuery<NeedOption[]>({
+        queryKey: ['needOptions', catalogIds],
+        queryFn: async () => {
+            if (!catalogs || catalogs.length === 0) return [];
+            const results = await Promise.all(
+                catalogs.map(async (cat) => {
                     try {
                         const needs = await fetchCatalogNeeds(cat.id);
-                        for (const n of needs) {
-                            if (n.kernel_refs.length > 0) {
-                                options.push({
-                                    id: `${cat.id}::${n.id}`,
-                                    label: `${n.action} ${n.subject}`,
-                                    kernelRefs: n.kernel_refs,
-                                    catalogId: cat.id,
-                                });
-                            }
-                        }
-                    } catch { /* skip catalog on error */ }
-                }
-                setNeedOptions(options);
-            })
-            .catch(() => setNeedOptions([]));
-    }, []);
+                        return needs
+                            .filter((n) => n.kernel_refs.length > 0)
+                            .map((n) => ({
+                                id: `${cat.id}::${n.id}`,
+                                label: `${n.action} ${n.subject}`,
+                                kernelRefs: n.kernel_refs,
+                                catalogId: cat.id,
+                            }));
+                    } catch {
+                        return [];
+                    }
+                }),
+            );
+            return results.flat();
+        },
+        enabled: !!catalogs && catalogs.length > 0,
+    });
 
     // Compute scope when goal changes
-    useEffect(() => {
-        if (!goalScope || !profileName) {
-            setScopeElements(undefined);
-            return;
-        }
-        fetchReachable(profileName, goalScope, { max_depth: 4 })
-            .then((res) => setScopeElements(new Set([goalScope, ...res.reachable])))
-            .catch(() => setScopeElements(undefined));
-    }, [goalScope, profileName]);
+    const { data: reachableData } = useReachable(
+        profileName ?? '',
+        goalScope ?? '',
+        { max_depth: 4 },
+    );
+    const scopeElements = useMemo(() => {
+        if (!goalScope || !reachableData) return undefined;
+        return new Set([goalScope, ...reachableData.reachable]);
+    }, [goalScope, reachableData]);
 
     // Compute need scope when need selection changes
-    useEffect(() => {
-        if (!needScope || !profileName) {
-            setNeedScopeElements(undefined);
-            return;
-        }
-        const selected = needOptions.find((n) => n.id === needScope);
-        if (!selected || selected.kernelRefs.length === 0) {
-            setNeedScopeElements(undefined);
-            return;
-        }
-        fetchElementScope(profileName, selected.kernelRefs, { max_depth: 4 })
-            .then((res) => setNeedScopeElements(new Set(res.scope)))
-            .catch(() => setNeedScopeElements(undefined));
-    }, [needScope, profileName, needOptions]);
+    const selectedNeed = useMemo(
+        () => needOptions.find((n) => n.id === needScope) ?? null,
+        [needOptions, needScope],
+    );
+    const selectedKernelRefs = selectedNeed?.kernelRefs ?? [];
+    const { data: elementScopeData } = useQuery({
+        queryKey: ['elementScope', profileName, selectedKernelRefs],
+        queryFn: () => fetchElementScope(profileName!, selectedKernelRefs, { max_depth: 4 }),
+        enabled: !!profileName && !!needScope && selectedKernelRefs.length > 0,
+    });
+    const needScopeElements = useMemo(() => {
+        if (!needScope || !elementScopeData) return undefined;
+        return new Set(elementScopeData.scope);
+    }, [needScope, elementScopeData]);
 
     // Auto-open side panel when entering this page
     useEffect(() => {
@@ -112,7 +109,7 @@ export default function ProfileGraphPage() {
     }, [setSidePanelOpen]);
 
     if (!profileName) {
-        return <div style={{ padding: 40, color: '#94a3b8', fontFamily: 'system-ui' }}>Loading profiles...</div>;
+        return <div style={{ padding: 40, color: 'var(--text-muted)', fontFamily: 'system-ui' }}>Loading profiles...</div>;
     }
 
     // Combine goal + need scope (intersection when both active)
@@ -147,6 +144,7 @@ export default function ProfileGraphPage() {
                     onSelectNeedScope={setNeedScope}
                     needScopeCount={needScopeCount}
                     needOptions={needOptions.map((n) => ({ id: n.id, label: n.label }))}
+                    selectedNode={selectedNode}
                 />
             </SidePanel>
             <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -157,6 +155,7 @@ export default function ProfileGraphPage() {
                     scopeElements={combinedScope}
                     onShowDetail={showDetail}
                     lang={lang}
+                    onNodeSelect={setSelectedNode}
                 />
             </div>
         </>

@@ -8,13 +8,13 @@ interface SidePanelProps {
 
 export default function SidePanel({ open, children }: SidePanelProps) {
     return (
-        <div style={{
+        <aside aria-label="Side panel" aria-hidden={!open} style={{
             width: open ? 320 : 0,
             minWidth: open ? 320 : 0,
             overflow: open ? 'visible' : 'hidden',
             transition: 'width 0.2s ease, min-width 0.2s ease',
-            borderRight: open ? '1px solid #e2e8f0' : 'none',
-            background: '#fafbfc',
+            borderRight: open ? '1px solid var(--border)' : 'none',
+            background: 'var(--bg-secondary)',
             height: '100%',
         }}>
             <div style={{
@@ -22,12 +22,12 @@ export default function SidePanel({ open, children }: SidePanelProps) {
                 padding: open ? '12px 14px' : 0,
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontSize: 13,
-                color: '#475569',
+                color: 'var(--text-secondary)',
                 height: '100%',
                 overflowY: 'auto',
             }}>
                 {children}
             </div>
-        </div>
+        </aside>
     );
 }

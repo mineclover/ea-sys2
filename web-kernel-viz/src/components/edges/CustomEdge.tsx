@@ -73,7 +73,7 @@ export const CustomEdge = ({
     const diagramStyle = (data?.style as DiagramStyle) || {};
     const highlighted = !!(data as Record<string, unknown> | undefined)?.highlighted;
     const connectorType = diagramStyle.connector || 'solid';
-    const strokeColor = highlighted ? '#3b82f6' : (diagramStyle.strokeColor || '#555');
+    const strokeColor = highlighted ? 'var(--accent)' : (diagramStyle.strokeColor || '#555');
     const strokeWidth = highlighted ? 2.5 : (diagramStyle.strokeWidth || 1.5);
 
     let strokeDasharray: string | undefined = undefined;
@@ -97,15 +97,15 @@ export const CustomEdge = ({
                     style={{
                         position: 'absolute',
                         transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-                        background: '#ffffff',
+                        background: 'var(--bg-card)',
                         padding: '2px 6px',
                         borderRadius: 4,
                         fontSize: 10,
                         fontWeight: 500,
-                        border: '1px solid #ddd',
+                        border: '1px solid var(--border)',
                         pointerEvents: 'all',
                         zIndex: 10,
-                        color: '#333',
+                        color: 'var(--text-primary)',
                         ...labelStyle,
                         ...(diagramStyle.labelStyle || {}),
                     }}
@@ -136,7 +136,7 @@ export const CustomEdge = ({
                     path={edgePath}
                     style={{
                         ...style,
-                        stroke: '#fff',
+                        stroke: 'var(--bg-card)',
                         strokeWidth: strokeWidth,
                         fill: 'none',
                     }}

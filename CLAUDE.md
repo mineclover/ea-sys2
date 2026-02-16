@@ -18,7 +18,7 @@
 | **Decision** (20) | 의사결정 메타-메타 모델 정의 | 의사결정 활동/상태/옵션/평가/결론 구조 어휘와 전이 규칙 |
 | **Needs** (30) | 요구 모델 정의 | 목표/요구/백로그/컨텍스트의 정형 표현 |
 | **Kernel** (40) | 도메인 핵심 모델 정의 | 존재론(요소/관계)과 유효성 규칙 |
-| **Flow** (50) | 실행/데이터 흐름 모델 정의 | 단계 순서, 입출력 소비/생산, 트리거/전이. 6x6 계약 소유(`FlowLayerContractMatrix`) |
+| **Flow** (50) | 실행/데이터 흐름 모델 + 구체적 데이터 스키마 스펙 소유 | 단계 순서, 입출력 소비/생산, 트리거/전이, **구체적 데이터 형상(JSON Schema·DB Schema·I/O 계약·데이터 카탈로그)**. 6x6 계약 소유(`FlowLayerContractMatrix`) |
 
 ### Governance (별도 관리 시스템)
 
@@ -41,7 +41,7 @@
 피드백 흐름:          flow -> kernel -> governance -> decision
 ```
 
-- **모델 정의**: infra가 데이터 관리 모델을 제공 → decision이 메타-메타 구조 정형화 → needs가 요구 정형화 → kernel이 핵심 의미 체계 고정 → flow가 실행 가능한 절차/데이터 전이 표현
+- **모델 정의**: infra가 데이터 관리 모델을 제공 → decision이 메타-메타 구조 정형화 → needs가 요구 정형화 → kernel이 핵심 의미 체계 고정 → flow가 실행 가능한 절차/데이터 전이 표현 + **구체적 데이터 스키마 스펙**(JSON Schema, DB Schema, I/O 계약, 데이터 카탈로그) 소유
 - **런타임 엔트리포인트**: infra/governance는 체인 노드가 아니라 각각 row 데이터 설계/시스템 진입점 설계 담당
 - **피드백**: flow 이력/결과 → kernel 제약 해석 → governance 버전/검증 이력 축적 → decision 모델 보정 환류
 
@@ -61,28 +61,28 @@
 | `packages/ea-profile` | Profile — kernel-agnostic 프로파일 프레임워크 | Pure Python, zero dep | → `packages/ea-profile/CLAUDE.md` |
 | `packages/ea-kernel` | Kernel — 경량 커널 메타모델 (KerML 설계 철학) | ea-profile | → `packages/ea-kernel/CLAUDE.md` |
 | `packages/ea-needs` | Needs — 목표/요구/백로그/컨텍스트 정형 표현 | ea-kernel | → `packages/ea-needs/CLAUDE.md` |
-| `packages/ea-decision` | Decision — 의사결정 활동/상태/옵션/평가/결론 어휘·전이 규칙 | ea-kernel, ea-needs | |
-| `packages/ea-flow` | Flow — 단계 순서·입출력·트리거/전이, 6x6 계약 소유 | ea-kernel, ea-decision | |
-| `packages/ea-governance` | Governance — 5개 레이어 관리 시스템 (등록/버전/활성/진입점) | ea-kernel, ea-decision, ea-flow | |
-| `packages/ea-infra` | Infra — row 데이터 설계, 저장소/인덱싱/입출력 관리 모델 | chromadb | |
+| `packages/ea-decision` | Decision — 의사결정 활동/상태/옵션/평가/결론 어휘·전이 규칙 | ea-kernel, ea-needs | → `packages/ea-decision/CLAUDE.md` |
+| `packages/ea-flow` | Flow — 실행 흐름 + 구체적 데이터 스키마 스펙, 6x6 계약 소유 | ea-kernel, ea-decision | → `packages/ea-flow/CLAUDE.md` |
+| `packages/ea-governance` | Governance — 5개 레이어 관리 시스템 (등록/버전/활성/진입점) | ea-kernel, ea-decision, ea-flow, ea-needs | → `packages/ea-governance/CLAUDE.md` |
+| `packages/ea-infra` | Infra — row 데이터 설계, 저장소/인덱싱/입출력 관리 모델 | ea-profile | → `packages/ea-infra/CLAUDE.md` |
 | `web-kernel-viz/` | 커널 토폴로지 시각화 (독립 프론트엔드) | Vite + React + @xyflow/react | |
 
 ## Dependency Graph
 
 ```
-ea-infra (독립, row 데이터 설계)     web-kernel-viz (독립, Node)
+web-kernel-viz (독립, Node)
 
 ea-profile (프로파일 프레임워크, zero dep)
-    ↑
-ea-kernel (도메인 핵심 모델, depends on ea-profile)
-    ↑
-ea-needs (요구 모델, depends on kernel)
-    ↑
-ea-decision (의사결정 메타-메타 모델, depends on kernel + needs)
-    ↑
-ea-flow (실행/데이터 흐름 모델, depends on kernel + decision)
-    ↑
-ea-governance (별도 관리 시스템, depends on kernel + decision + flow)
+    ↑                  ↑
+ea-infra (row 데이터)   ea-kernel (도메인 핵심 모델)
+                           ↑
+                       ea-needs (요구 모델)
+                           ↑
+                       ea-decision (의사결정 메타-메타 모델, + needs)
+                           ↑
+                       ea-flow (실행/데이터 흐름 모델, + decision)
+                           ↑
+                       ea-governance (관리 시스템, + decision + flow + needs)
 ```
 
 ## Workspace Setup
@@ -97,6 +97,6 @@ make test-kernel # ea-kernel만
 
 ## Package Isolation
 
-- ea-infra는 row 데이터 설계만 담당하며 다른 ea-* 패키지와 무관 (독립)
+- ea-infra는 row 데이터 설계를 담당하며 ea-profile에만 의존 (M1 파이프라인용)
 - web-kernel-viz는 Python 패키지와 무관 (독립 Node 앱)
 - ea-governance는 5개 레이어 전체를 관리하는 별도 시스템 (단순 파사드가 아님)

@@ -33,7 +33,8 @@ src/ea_governance/
 ├── needs_ops.py             # NeedsOps — Needs 카탈로그 CRUD + 트랜잭션 제어
 ├── layer_store.py           # GovernanceLayerStore ABC + InMemory + SQLite 3중 구현
 ├── kernel_store.py          # GovernanceKernelStore — 커널 규칙/코퍼스/판단 스냅샷 스토어
-└── needs_store.py           # GovernanceNeedsStore — Needs 카탈로그 영속화 어댑터
+├── needs_store.py           # GovernanceNeedsStore — Needs 카탈로그 영속화 어댑터
+└── api_router.py            # §3.5 API Router: governance_router + layer_schema_router (FastAPI)
 ```
 
 ## Storage Layout
@@ -86,6 +87,8 @@ execution_service.py: ea_decision + ea_flow + transaction
 
 facade.py: 모든 ops + store + service 모듈 통합
   ← __init__.py (public re-export 없음, docstring만)
+
+api_router.py: governance_service (FastAPI APIRouter, §3.5 플러그인 패턴)
 ```
 
 governance_schema.py, layer_store.py, transaction.py는 외부 패키지 의존 없는 독립 모듈 (stdlib only).

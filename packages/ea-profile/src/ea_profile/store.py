@@ -1,4 +1,4 @@
-"""StoragePort ABC + SQLiteProfileStore for profile persistence.
+"""StoragePort ABC + InMemoryProfileStore + SQLiteProfileStore for profile persistence.
 
 Follows the RuleVersionStore conventions: WAL mode, foreign keys,
 UUID4 IDs, SHA256 content hashes, ISO 8601 timestamps.
@@ -78,6 +78,163 @@ class StoragePort(ABC):
 
     @abstractmethod
     def delete(self, version_id: str) -> bool: ...
+
+
+class InMemoryProfileStore(StoragePort):
+    """Dict-based in-memory profile store for testing."""
+
+    __slots__ = ("_versions", "_by_name", "_tags", "_audit_hook")
+
+    def __init__(self, audit_hook: StoreAuditHook | None = None) -> None:
+        self._versions: dict[str, ProfileVersion] = {}
+        self._by_name: dict[str, list[str]] = {}  # profile_name → [version_id, ...]
+        self._tags: dict[tuple[str, str], ProfileTag] = {}  # (profile_name, tag_name) → tag
+        self._audit_hook = audit_hook
+
+    # ── Lifecycle ─────────────────────────────────────────────────
+
+    def initialize(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    # ── Store ─────────────────────────────────────────────────────
+
+    def store(self, profile: KernelProfile, *,
+              author: str = "", description: str = "",
+              parent_id: str | None = None,
+              origin: ProfileOrigin | None = None) -> ProfileVersion:
+        if self._audit_hook is not None:
+            result = self._audit_hook(profile)
+            if not result.passed:
+                errors = [f.message for f in result.findings if f.severity.value == "error"]
+                raise ProfileStoreError(
+                    f"Audit failed for '{profile.name}': {'; '.join(errors[:3])}"
+                )
+
+        data = profile_to_dict(profile)
+        ch = compute_content_hash(profile)
+        vid = uuid.uuid4().hex
+        now = _now_iso()
+        origin_str = origin.value if origin is not None else ""
+
+        # Duplicate check
+        for existing in self._by_name.get(profile.name, []):
+            if self._versions[existing].version == profile.version:
+                raise ProfileStoreError(
+                    f"Profile '{profile.name}' version '{profile.version}' already exists"
+                )
+
+        # Auto parent: latest version for this profile if not specified
+        if parent_id is None:
+            name_ids = self._by_name.get(profile.name, [])
+            if name_ids:
+                parent_id = name_ids[-1]
+
+        pv = ProfileVersion(
+            id=vid, profile_name=profile.name, version=profile.version,
+            content_hash=ch, data=data, created_at=now,
+            parent_id=parent_id, author=author, description=description,
+            origin=origin_str,
+        )
+        self._versions[vid] = pv
+        self._by_name.setdefault(profile.name, []).append(vid)
+        return pv
+
+    # ── Retrieve ──────────────────────────────────────────────────
+
+    def get(self, version_id: str) -> ProfileVersion | None:
+        return self._versions.get(version_id)
+
+    def get_latest(self, profile_name: str) -> ProfileVersion | None:
+        ids = self._by_name.get(profile_name, [])
+        if not ids:
+            return None
+        # Return the one with the latest created_at
+        return max(
+            (self._versions[vid] for vid in ids),
+            key=lambda v: v.created_at,
+        )
+
+    def list_versions(self, profile_name: str, *,
+                      ascending: bool = True) -> list[ProfileVersion]:
+        ids = self._by_name.get(profile_name, [])
+        versions = [self._versions[vid] for vid in ids]
+        return sorted(versions, key=lambda v: v.created_at, reverse=not ascending)
+
+    def list_profiles(self) -> list[str]:
+        return sorted(self._by_name.keys())
+
+    def get_by_version(self, profile_name: str,
+                       version: str) -> ProfileVersion | None:
+        for vid in self._by_name.get(profile_name, []):
+            pv = self._versions[vid]
+            if pv.version == version:
+                return pv
+        return None
+
+    # ── Tags ──────────────────────────────────────────────────────
+
+    def tag(self, version_id: str, tag_name: str) -> ProfileTag:
+        pv = self.get(version_id)
+        if pv is None:
+            raise ProfileStoreError(f"Version not found: {version_id}")
+        now = _now_iso()
+        tag_obj = ProfileTag(
+            name=tag_name, profile_name=pv.profile_name,
+            version_id=version_id, created_at=now,
+        )
+        self._tags[(pv.profile_name, tag_name)] = tag_obj
+        return tag_obj
+
+    def get_by_tag(self, profile_name: str,
+                   tag_name: str) -> ProfileVersion | None:
+        tag_obj = self._tags.get((profile_name, tag_name))
+        if tag_obj is None:
+            return None
+        return self._versions.get(tag_obj.version_id)
+
+    def list_tags(self, version_id: str | None = None,
+                  profile_name: str | None = None) -> list[ProfileTag]:
+        if version_id is not None:
+            tags = [t for t in self._tags.values() if t.version_id == version_id]
+        elif profile_name is not None:
+            tags = [t for t in self._tags.values() if t.profile_name == profile_name]
+        else:
+            tags = list(self._tags.values())
+        return sorted(tags, key=lambda t: (t.profile_name, t.name))
+
+    # ── Delete ────────────────────────────────────────────────────
+
+    def delete(self, version_id: str) -> bool:
+        pv = self._versions.pop(version_id, None)
+        if pv is None:
+            return False
+        # Remove from name index
+        name_ids = self._by_name.get(pv.profile_name, [])
+        if version_id in name_ids:
+            name_ids.remove(version_id)
+        if not name_ids:
+            self._by_name.pop(pv.profile_name, None)
+        # Clear parent_id references
+        for v in self._versions.values():
+            if v.parent_id == version_id:
+                # ProfileVersion is frozen, need to create a new one
+                updated = ProfileVersion(
+                    id=v.id, profile_name=v.profile_name, version=v.version,
+                    content_hash=v.content_hash, data=v.data, created_at=v.created_at,
+                    parent_id=None, author=v.author, description=v.description,
+                    origin=v.origin,
+                )
+                self._versions[v.id] = updated
+        # Remove associated tags
+        tag_keys_to_remove = [
+            key for key, t in self._tags.items() if t.version_id == version_id
+        ]
+        for key in tag_keys_to_remove:
+            del self._tags[key]
+        return True
 
 
 _SCHEMA_VERSION = "1"

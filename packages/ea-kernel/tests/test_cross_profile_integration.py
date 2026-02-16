@@ -83,6 +83,13 @@ class TestProfileLoading:
         profile = load_flow_profile(path, validate=False)
         assert isinstance(profile, KernelProfile)
 
+    def test_infra_bridge_loading(self):
+        """Infra bridge loads ea_sys profile (validate=False: ea_sys uses kernel vocabulary)."""
+        from ea_infra.profile_bridge import load_infra_profile
+        path = PROFILE_DIR / LAYER_FILE_MAP["infra"]
+        profile = load_infra_profile(path, validate=False)
+        assert isinstance(profile, KernelProfile)
+
     def test_all_profiles_share_10_relations(self, loaded_profiles):
         """Every core profile defines the same 10 relation names."""
         for layer, profile in loaded_profiles.items():
@@ -226,6 +233,16 @@ class TestPipelineSmoke:
         assert result.stats.source_rule_count > 0
         assert result.stats.compiled_rule_count >= result.stats.source_rule_count
 
+    def test_infra_pipeline(self):
+        """Infra bridge load → compile (validate=False: ea_sys uses kernel vocabulary)."""
+        from ea_infra.profile_bridge import load_infra_profile
+        from ea_kernel.profile_rule_compiler import compile_profile_rules_for_runtime
+
+        profile = load_infra_profile(PROFILE_DIR / LAYER_FILE_MAP["infra"], validate=False)
+        result = compile_profile_rules_for_runtime(profile)
+        assert result.stats.source_rule_count > 0
+        assert result.stats.compiled_rule_count >= result.stats.source_rule_count
+
 
 # ============================================================
 # Group 5 — Condition Registry
@@ -264,12 +281,19 @@ class TestConditionRegistry:
         reg = flow_condition_registry()
         assert len(reg._map) == 9  # 5 kernel + 4 flow
 
+    def test_infra_condition_count(self):
+        from ea_infra.condition_registry import infra_condition_registry
+
+        reg = infra_condition_registry()
+        assert len(reg._map) == 8  # 5 kernel + 3 infra
+
     def test_kernel_defaults_preserved_in_layer_registries(self):
         from ea_profile.types import ConditionRegistry
         from ea_needs.condition_registry import needs_condition_registry
         from ea_governance.condition_registry import governance_condition_registry
         from ea_decision.condition_registry import decision_condition_registry
         from ea_flow.condition_registry import flow_condition_registry
+        from ea_infra.condition_registry import infra_condition_registry
 
         kernel_reg = ConditionRegistry.kernel_default()
         kernel_keys = set(kernel_reg._map.keys())
@@ -279,6 +303,7 @@ class TestConditionRegistry:
             ("governance", governance_condition_registry),
             ("decision", decision_condition_registry),
             ("flow", flow_condition_registry),
+            ("infra", infra_condition_registry),
         ]:
             layer_reg = factory()
             for key in kernel_keys:

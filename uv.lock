@@ -330,6 +330,7 @@ source = { editable = "packages/ea-decision" }
 dependencies = [
     { name = "ea-kernel" },
     { name = "ea-needs" },
+    { name = "ea-profile" },
 ]
 
 [package.optional-dependencies]
@@ -342,6 +343,7 @@ dev = [
 requires-dist = [
     { name = "ea-kernel", editable = "packages/ea-kernel" },
     { name = "ea-needs", editable = "packages/ea-needs" },
+    { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]
@@ -354,6 +356,7 @@ source = { editable = "packages/ea-flow" }
 dependencies = [
     { name = "ea-decision" },
     { name = "ea-kernel" },
+    { name = "ea-profile" },
 ]
 
 [package.optional-dependencies]
@@ -366,6 +369,7 @@ dev = [
 requires-dist = [
     { name = "ea-decision", editable = "packages/ea-decision" },
     { name = "ea-kernel", editable = "packages/ea-kernel" },
+    { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]
@@ -405,6 +409,9 @@ provides-extras = ["dev"]
 name = "ea-infra"
 version = "0.1.0"
 source = { editable = "packages/ea-infra" }
+dependencies = [
+    { name = "ea-profile" },
+]
 
 [package.optional-dependencies]
 dev = [
@@ -414,6 +421,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]

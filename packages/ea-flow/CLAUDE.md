@@ -38,9 +38,10 @@ src/ea_flow/
 ├── kernel_actions.py       # P1: Kernel 연동 스펙 (AddRuleStepSpec, DeprecateRuleStepSpec)
 ├── kernel_implementers.py  # P3: Kernel 연동 실행 (AddRuleImplementer, DeprecateRuleImplementer)
 ├── profile.py              # P1: FlowProfile (도메인별 메타스텝 컬렉션)
-├── runtime.py              # P3: 실행 엔진 (FlowRuntime, StepImplementer ABC)
-├── definitions.py          # ⚠️ shim → spec.py re-export (하위 호환)
-└── ontology.py             # ⚠️ shim → topology.py re-export (하위 호환)
+├── flow_schema.py          # F2.5: FlowLayerSchema (SchemaPort) + FLOW_SCHEMA 싱글턴
+├── condition_registry.py   # F2.5: flow_condition_registry() — kernel defaults + 4개 조건
+├── profile_bridge.py       # F3: load_flow_profile() / load_flow_profile_from_content()
+└── runtime.py              # P3: 실행 엔진 (FlowRuntime, StepImplementer ABC)
 ```
 
 ### 잔여 한계
@@ -78,13 +79,13 @@ spec.py ← kernel_actions.py (StepSpec)
 runtime.py ← kernel_implementers.py (StepImplementer, StepExecutionResult)
 kernel_actions.py ← kernel_implementers.py (AddRuleStepSpec, DeprecateRuleStepSpec)
 schema.py: 독립 (외부 의존 없음)
-definitions.py: shim → spec.py
-ontology.py: shim → topology.py
+flow_schema.py: 독립 (FlowLayerSchema, FlowEntity, FlowRelation, FLOW_SCHEMA)
+condition_registry.py: ea_profile.types lazy import (ConditionRegistry)
+profile_bridge.py: flow_schema + condition_registry ← ea_profile.loader lazy import
 ```
 
 선언(P1/P2)이 실행(P3)을 모르는 것이 최우선 규칙이다. spec.py/types.py → runtime.py/kernel_implementers.py import 금지. 이는 Kernel의 types.py가 kernel_service.py를 모르는 것과 동일한 원칙이다.
 topology.py는 spec.py와 독립적으로 유지한다. 그래프 구조(P2)는 계약(P1)의 구현 세부사항을 알 필요가 없으며, types.py의 열거형만으로 충분하다.
-definitions.py와 ontology.py는 하위 호환 shim이다. 내부 코드는 새 경로(spec.py, topology.py)를 사용한다.
 
 ### Test Convention
 

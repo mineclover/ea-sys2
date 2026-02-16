@@ -138,3 +138,84 @@ class TestIndexingSpec:
     def test_derive_nonexistent_raises(self, svc):
         with pytest.raises(KeyError, match="not found"):
             svc.derive_indexing_spec("nope")
+
+
+# ---- Kernel Ref Validation ----
+
+class TestKernelRefValidation:
+    @pytest.fixture()
+    def svc_with_schema(self, tmp_path):
+        from ea_kernel.schema_loader import load_kernel_schema_from_package
+        schema = load_kernel_schema_from_package()
+        return BusinessService(tmp_path, kernel_schema=schema)
+
+    def test_valid_entity_ref(self, svc_with_schema):
+        svc = svc_with_schema
+        svc.create_business("biz")
+        tag = svc.create_tag("biz", {
+            "tag": "items",
+            "fields": [],
+            "kernel_ref": "item",
+        })
+        assert tag["kernel_ref"] == "item"
+
+    def test_valid_relation_ref(self, svc_with_schema):
+        svc = svc_with_schema
+        svc.create_business("biz")
+        tag = svc.create_tag("biz", {
+            "tag": "flows",
+            "fields": [],
+            "kernel_ref": "flow",
+        })
+        assert tag["kernel_ref"] == "flow"
+
+    def test_invalid_ref_raises(self, svc_with_schema):
+        svc = svc_with_schema
+        svc.create_business("biz")
+        with pytest.raises(ValueError, match="not found in kernel schema"):
+            svc.create_tag("biz", {
+                "tag": "bad",
+                "fields": [],
+                "kernel_ref": "nonexistent_thing",
+            })
+
+    def test_no_schema_skips_validation(self, svc):
+        """Without kernel_schema, any kernel_ref is accepted."""
+        svc.create_business("biz")
+        tag = svc.create_tag("biz", {
+            "tag": "anything",
+            "fields": [],
+            "kernel_ref": "whatever",
+        })
+        assert tag["kernel_ref"] == "whatever"
+
+
+# ---- Export / Import ----
+
+class TestExportImport:
+    def test_export_business(self, svc):
+        svc.create_business("biz", "desc")
+        svc.create_tag("biz", {"tag": "room", "fields": [{"name": "floor", "type": "number"}]})
+        export = svc.export_business("biz")
+        assert export["meta"]["bid"] == "biz"
+        assert len(export["tags"]) == 1
+
+    def test_import_new_business(self, svc):
+        export_data = {
+            "meta": {"bid": "imported", "name": "Imported", "description": "", "created_at": "2024-01-01T00:00:00+00:00"},
+            "tags": [{"tag": "room", "fields": [], "indexes": [], "keyPath": "id", "autoIncrement": True, "kernel_ref": None, "description": "", "created_at": "2024-01-01T00:00:00+00:00", "updated_at": "2024-01-01T00:00:00+00:00"}],
+        }
+        result = svc.import_business(export_data)
+        assert result["bid"] == "imported"
+        assert result["imported_tags"] == 1
+        assert len(svc.list_tags("imported")) == 1
+
+    def test_roundtrip(self, svc):
+        svc.create_business("rt")
+        svc.create_tag("rt", {"tag": "a", "fields": [{"name": "x", "type": "string"}]})
+        svc.create_tag("rt", {"tag": "b", "fields": []})
+        export = svc.export_business("rt")
+        # Import into fresh service
+        svc2 = BusinessService(svc._base.parent / "other")
+        svc2.import_business(export)
+        assert len(svc2.list_tags("rt")) == 2

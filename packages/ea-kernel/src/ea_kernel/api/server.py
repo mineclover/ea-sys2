@@ -133,7 +133,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     app.state.system = system  # Expose for testing
     app.state.registration = None
     io_manager = ModelIOManager(system)
-    business_svc = BusinessService(data_dir)
+    business_svc = BusinessService(data_dir, kernel_schema=schema)
 
     # --- Models ---
 
@@ -1315,6 +1315,31 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 status_code=code,
                 detail=str(err),
                 category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    @_typed_get("/business/{bid}/export")
+    def export_business(bid: str) -> dict[str, Any]:
+        try:
+            return business_svc.export_business(bid)
+        except (ValueError, KeyError) as err:
+            code = 400 if isinstance(err, ValueError) else 404
+            raise _model_api_error(
+                status_code=code,
+                detail=str(err),
+                category="bad_request" if code == 400 else "not_found",
+            ) from err
+
+    class ImportBusinessRequest(BaseModel):
+        meta: dict[str, Any]
+        tags: list[dict[str, Any]] = []
+
+    @_typed_post("/business/import")
+    def import_business(req: ImportBusinessRequest) -> dict[str, Any]:
+        try:
+            return business_svc.import_business(req.model_dump())
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
             ) from err
 
     return app

@@ -40,9 +40,10 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 class BusinessService:
     """Manages business models and their tag-schema registries."""
 
-    def __init__(self, data_dir: Path) -> None:
+    def __init__(self, data_dir: Path, kernel_schema: Any | None = None) -> None:
         self._base = data_dir / "business"
         self._base.mkdir(parents=True, exist_ok=True)
+        self._kernel_schema = kernel_schema
 
     # ---- helpers ----
 
@@ -129,11 +130,38 @@ class BusinessService:
 
     # ---- Tag-Schema CRUD ----
 
+    def _validate_kernel_ref(self, kernel_ref: str | None) -> dict[str, Any] | None:
+        """Validate kernel_ref against kernel schema if available.
+
+        Returns validation info dict or None if no validation was done.
+        """
+        if not kernel_ref or not self._kernel_schema:
+            return None
+
+        schema = self._kernel_schema
+        # Check if kernel_ref matches an entity name
+        entity_names = {e.name for e in schema.entities}
+        relation_names = {r.name for r in schema.relations}
+
+        if kernel_ref in entity_names:
+            return {"kind": "entity", "name": kernel_ref, "valid": True}
+        if kernel_ref in relation_names:
+            return {"kind": "relation", "name": kernel_ref, "valid": True}
+
+        raise ValueError(
+            f"kernel_ref '{kernel_ref}' not found in kernel schema. "
+            f"Valid entities: {sorted(entity_names)[:10]}..."
+        )
+
     def create_tag(self, bid: str, data: dict[str, Any]) -> dict[str, Any]:
         self._validate_bid(bid)
         self._require_bid(bid)
         tag = data.get("tag", "")
         self._validate_tag(tag)
+
+        # Validate kernel_ref if provided
+        kernel_ref = data.get("kernel_ref")
+        validation = self._validate_kernel_ref(kernel_ref)
 
         tag_path = self._tag_path(bid, tag)
         if tag_path.exists():
@@ -177,6 +205,10 @@ class BusinessService:
         self._require_bid(bid)
         self._validate_tag(tag)
         self._require_tag(bid, tag)
+
+        # Validate kernel_ref if being updated
+        if "kernel_ref" in data and data["kernel_ref"]:
+            self._validate_kernel_ref(data["kernel_ref"])
 
         existing = _read_json(self._tag_path(bid, tag))
         for key in ("fields", "indexes", "keyPath", "autoIncrement", "kernel_ref", "description"):
@@ -242,3 +274,39 @@ class BusinessService:
             "xmlHints": xml_hints,
             "promptHints": prompt_hints,
         }
+
+    # ---- Export / Import ----
+
+    def export_business(self, bid: str) -> dict[str, Any]:
+        """Export a complete business model (meta + all tags) as a single JSON object."""
+        self._validate_bid(bid)
+        self._require_bid(bid)
+        meta = _read_json(self._meta_path(bid))
+        tags = self.list_tags(bid)
+        return {"meta": meta, "tags": tags}
+
+    def import_business(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Import a business model from an exported JSON object.
+
+        If the bid already exists, merges tags (overwriting existing, adding new).
+        """
+        meta = data.get("meta", {})
+        tags = data.get("tags", [])
+        bid = meta.get("bid", "")
+        self._validate_bid(bid)
+
+        meta_path = self._meta_path(bid)
+        if not meta_path.exists():
+            _write_json(meta_path, meta)
+            self._tags_dir(bid).mkdir(parents=True, exist_ok=True)
+
+        imported_tags = 0
+        for tag_data in tags:
+            tag = tag_data.get("tag", "")
+            if not tag:
+                continue
+            _write_json(self._tag_path(bid, tag), tag_data)
+            imported_tags += 1
+
+        logger.info("Imported business '%s' with %d tags", bid, imported_tags)
+        return {"bid": bid, "imported_tags": imported_tags}

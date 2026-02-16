@@ -111,6 +111,195 @@ layer = "Governance"
 category = "ActiveStructure"
 description = "Coordinates release gate and version activation process."
 
+# ══════════════════════════════════════════════════════════════
+# Implementation-tier: 3-tier Facade/Ops/Store architecture
+# Maps to ea_governance package (facade.py, *_ops.py, *_store.py)
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "GovernanceContainer"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Facade single entry point integrating kernel, decision, flow, and needs. Delegates to ops modules."
+
+[[elements]]
+name = "KernelModelOps"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Ops module for kernel model registration, validation, activation with decision trace linkage."
+
+[[elements]]
+name = "KernelRuleOps"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Ops module for kernel rule submit/approve/reject/deprecate, evaluation, and snapshot management."
+
+[[elements]]
+name = "DecisionTraceOps"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Ops module encapsulating decision-trace read/write against layer stores with contract versioning."
+
+[[elements]]
+name = "NeedsOps"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Ops module for needs catalog CRUD through governance transaction control."
+
+[[elements]]
+name = "TransactionManager"
+layer = "Governance"
+category = "ActiveStructure"
+description = "SQLite-backed ACID transaction manager with event sourcing (begin/commit/rollback/fail lifecycle)."
+
+[[elements]]
+name = "ExecutionService"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Bridge between DesignReport/UseCaseSpec and ea-flow runtime interpretation with transaction control."
+
+[[elements]]
+name = "MetaGenerator"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Intent analysis engine suggesting decision topics, kernel actions, and flow specs from abstract intent text."
+
+[[elements]]
+name = "ProfileBridge"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Governance profile loading bridge with GovernanceSchema validation and condition registry binding."
+
+[[elements]]
+name = "ConditionRegistryService"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Extends kernel default conditions with 4 governance-specific conditions (SAME_LAYER, SAME_LIFECYCLE, SAME_POLICY_SCOPE, SAME_TRANSACTION)."
+
+# ── Stores ────────────────────────────────────────────────────
+
+[[elements]]
+name = "GovernanceLayerStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Infra-defined layer-scoped store ABC for governance-managed model payloads (save_payload, get_payload, list_snapshots)."
+
+[[elements]]
+name = "GovernanceKernelStore"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Kernel snapshot store for rule assets, corpus versions, and judgments implemented via layer-scoped store."
+
+[[elements]]
+name = "GovernanceNeedsStore"
+layer = "Governance"
+category = "ActiveStructure"
+description = "Needs catalog persistence adapter built on layer-scoped governance store with JSON serialization."
+
+# ── Data structures ───────────────────────────────────────────
+
+[[elements]]
+name = "GovernanceSchemaRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Frozen dataclass schema definition (GOVERNANCE_SCHEMA singleton) with 14 entities and 10 relations."
+
+[[elements]]
+name = "LayerSnapshotRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Frozen dataclass representing a layer-scoped model snapshot (layer, model_id, payload, updated_at)."
+
+[[elements]]
+name = "TransactionUnitRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Transaction unit dataclass (id, name, tx_type, status, payload, logs) for ACID operation tracking."
+
+[[elements]]
+name = "TransactionEventRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Frozen event sourcing record (id, tx_id, event_type, message, payload, created_at) for transaction audit."
+
+[[elements]]
+name = "TransactionStatusRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Transaction status enum values: PENDING, IN_PROGRESS, COMMITTED, ROLLED_BACK, FAILED."
+
+[[elements]]
+name = "GenerationSuggestionRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "MetaGenerator output: suggested decision topic, kernel actions, flow spec, and topology match."
+
+[[elements]]
+name = "RuleAssetSnapshotRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Kernel rule asset snapshot persisted by GovernanceKernelStore (rule, metadata, provenance, lifecycle)."
+
+[[elements]]
+name = "JudgmentSnapshotRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Kernel judgment snapshot persisted by GovernanceKernelStore (verdict, evidence, reference_stats)."
+
+[[elements]]
+name = "CorpusVersionSnapshotRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Kernel corpus version snapshot persisted by GovernanceKernelStore (version_id, rule_count, rule_ids)."
+
+[[elements]]
+name = "NeedsCatalogSnapshotRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Needs catalog JSON snapshot persisted by GovernanceNeedsStore via layer store."
+
+# ── Endpoints for new ops ────────────────────────────────────
+
+[[elements]]
+name = "KernelRuleEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for kernel rule lifecycle operations (submit, approve, reject, deprecate)."
+
+[[elements]]
+name = "KernelEvaluateEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for kernel judgment evaluation (source, target, relation)."
+
+[[elements]]
+name = "KernelSnapshotEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for kernel corpus snapshot creation and version listing."
+
+[[elements]]
+name = "NeedsCatalogEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for needs catalog CRUD (create, express, revise, add process unit)."
+
+[[elements]]
+name = "LayerSnapshotEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for generic layer snapshot save/get/list operations."
+
+[[elements]]
+name = "GovernanceDashboardEndpoint"
+layer = "Governance"
+category = "Interface"
+description = "Endpoint contract for governance_service.py pure function queries (dashboard, layer detail, cross-layer summary)."
+
+# ══════════════════════════════════════════════════════════════
+# End implementation-tier elements
+# ══════════════════════════════════════════════════════════════
+
 [[elements]]
 name = "RegistrationPolicy"
 layer = "Governance"
@@ -140,6 +329,12 @@ name = "BoundaryPolicy"
 layer = "Governance"
 category = "Governance"
 description = "Policy constraints for data/ownership boundary enforcement."
+
+[[elements]]
+name = "TransactionPolicy"
+layer = "Governance"
+category = "Governance"
+description = "Policy constraints for transaction ACID guarantees and event sourcing integrity."
 
 [[elements]]
 name = "GovernanceTransparencyGoal"
@@ -387,6 +582,52 @@ layer = "Governance"
 category = "Behavior"
 description = "Release gate review before activation."
 
+# ── Implementation-tier behavior steps ────────────────────────
+
+[[elements]]
+name = "RuleSubmitStep"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel rule submission step via KernelRuleOps with transaction wrapping."
+
+[[elements]]
+name = "RuleApprovalStep"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel rule approval/rejection decision step via KernelRuleOps."
+
+[[elements]]
+name = "KernelEvaluationStep"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel judgment evaluation step producing EnhancedJudgment via GovernanceSystem.evaluate."
+
+[[elements]]
+name = "CorpusSnapshotStep"
+layer = "Governance"
+category = "Behavior"
+description = "Kernel corpus snapshot creation step persisting version info to GovernanceKernelStore."
+
+[[elements]]
+name = "NeedsCatalogWriteStep"
+layer = "Governance"
+category = "Behavior"
+description = "Needs catalog mutation step (create, express, revise, add process unit) with persist-and-commit."
+
+[[elements]]
+name = "DecisionTraceWriteStep"
+layer = "Governance"
+category = "Behavior"
+description = "Decision trace record/update step accumulating operations, evidence, and history."
+
+[[elements]]
+name = "LayerSnapshotWriteStep"
+layer = "Governance"
+category = "Behavior"
+description = "Generic layer snapshot write step for any of the 6 layer DBs."
+
+# ══════════════════════════════════════════════════════════════
+
 [[elements]]
 name = "PersistModelAction"
 layer = "Governance"
@@ -410,6 +651,28 @@ name = "RouteFeedbackAction"
 layer = "Governance"
 category = "Executable"
 description = "Routes feedback and incident evidence to proper owners."
+
+# ── Implementation-tier executable actions ────────────────────
+
+[[elements]]
+name = "GovernanceDeprecateRuleAction"
+layer = "Governance"
+category = "Executable"
+description = "Deprecates a kernel rule through governance with reason and transaction trace."
+
+[[elements]]
+name = "InterpretReportAction"
+layer = "Governance"
+category = "Executable"
+description = "Translates DesignReport modeling actions into flow workflow specs and interprets via runtime."
+
+[[elements]]
+name = "InterpretUseCaseAction"
+layer = "Governance"
+category = "Executable"
+description = "Interprets a UseCaseSpec through ea-flow runtime with governance transaction wrapping."
+
+# ══════════════════════════════════════════════════════════════
 
 [[elements]]
 name = "ModelRegistrationRequestedEvent"
@@ -440,6 +703,84 @@ name = "ChangeRejectedEvent"
 layer = "Governance"
 category = "Event"
 description = "Raised when the proposed change is rejected."
+
+# ── Implementation-tier events (from transaction event sourcing) ─
+
+[[elements]]
+name = "KernelRuleSubmittedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a kernel rule is submitted through governance (event_type: kernel_rule_submitted)."
+
+[[elements]]
+name = "KernelRuleApprovedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a kernel rule is approved through governance (event_type: kernel_rule_approved)."
+
+[[elements]]
+name = "KernelRuleRejectedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a kernel rule is rejected through governance (event_type: kernel_rule_rejected)."
+
+[[elements]]
+name = "KernelRuleDeprecatedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a kernel rule is deprecated through governance (event_type: kernel_rule_deprecated)."
+
+[[elements]]
+name = "KernelJudgmentRecordedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a kernel judgment is executed and snapshotted (event_type: kernel_judgment_recorded)."
+
+[[elements]]
+name = "KernelSnapshotCreatedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a kernel corpus snapshot is created (event_type: kernel_snapshot_created)."
+
+[[elements]]
+name = "DecisionTraceLinkEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a model operation is linked to a decision trace (event_type: decision_trace_linked)."
+
+[[elements]]
+name = "NeedsCatalogCreatedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a needs catalog is created (event_type: needs_catalog_created)."
+
+[[elements]]
+name = "NeedsExpressedEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a need is expressed in a catalog (event_type: needs_expressed)."
+
+[[elements]]
+name = "TransactionBeginEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a governance transaction begins (event_type: begin)."
+
+[[elements]]
+name = "TransactionCommitEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a governance transaction commits successfully (event_type: commit)."
+
+[[elements]]
+name = "TransactionFailEvent"
+layer = "Governance"
+category = "Event"
+description = "Raised when a governance transaction fails (event_type: fail)."
+
+# ══════════════════════════════════════════════════════════════
+# Pattern-based rules (category-level)
+# ══════════════════════════════════════════════════════════════
 
 [[rules]]
 source = "@Governance"
@@ -519,11 +860,576 @@ priority = 60
 notes = "Events may trigger governance actions directly."
 
 [[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "coordinates"
+priority = 60
+notes = "Services coordinate other services (facade delegates to ops, ops to stores)."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "depends_on"
+priority = 60
+notes = "Services depend on passive data records."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Services produce passive data records."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Behavior steps produce passive data records."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 60
+notes = "Behavior steps consume passive data records."
+
+[[rules]]
+source = "@Executable"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Executable actions produce passive data records."
+
+[[rules]]
+source = "@Executable"
+target = "@Event"
+relation = "produces"
+priority = 60
+notes = "Executable actions emit events."
+
+# ══════════════════════════════════════════════════════════════
+# Element-specific rules: Containment and goals
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
 source = "GovernanceLayer"
 target = "@Goal"
 relation = "contains"
 priority = 70
 notes = "Governance boundary contains purpose goals."
+
+[[rules]]
+source = "GovernanceLayer"
+target = "GovernanceContainer"
+relation = "contains"
+priority = 70
+notes = "Governance boundary contains the facade entry point."
+
+[[rules]]
+source = "GovernanceLayer"
+target = "TransactionManager"
+relation = "contains"
+priority = 70
+notes = "Governance boundary contains the transaction manager."
+
+[[rules]]
+source = "GovernanceLayer"
+target = "GovernanceSchemaRecord"
+relation = "contains"
+priority = 70
+notes = "Governance boundary contains the schema singleton definition."
+
+# ══════════════════════════════════════════════════════════════
+# GovernanceContainer facade delegation rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceContainer"
+target = "KernelModelOps"
+relation = "coordinates"
+priority = 70
+notes = "Facade delegates kernel model operations to KernelModelOps."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "KernelRuleOps"
+relation = "coordinates"
+priority = 70
+notes = "Facade delegates kernel rule operations to KernelRuleOps."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "DecisionTraceOps"
+relation = "coordinates"
+priority = 70
+notes = "Facade delegates decision trace operations to DecisionTraceOps."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "NeedsOps"
+relation = "coordinates"
+priority = 70
+notes = "Facade delegates needs catalog operations to NeedsOps."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "ExecutionService"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates execution through ExecutionService bridge."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "GovernanceLayerStorePort"
+relation = "depends_on"
+priority = 70
+notes = "Facade initializes 6 layer-scoped stores (one per EA layer)."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "GovernanceKernelStore"
+relation = "depends_on"
+priority = 70
+notes = "Facade owns kernel store adapter for rule/judgment/corpus snapshots."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "GovernanceNeedsStore"
+relation = "depends_on"
+priority = 70
+notes = "Facade owns needs store adapter for catalog persistence."
+
+[[rules]]
+source = "GovernanceContainer"
+target = "GovernanceEntryPort"
+relation = "registers"
+priority = 70
+notes = "Facade registers as the governance entry point."
+
+# ══════════════════════════════════════════════════════════════
+# Ops module dependency rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "KernelModelOps"
+target = "DecisionTraceOps"
+relation = "coordinates"
+priority = 70
+notes = "KernelModelOps coordinates decision trace linkage for register/validate/activate."
+
+[[rules]]
+source = "KernelModelOps"
+target = "GovernanceKernelStore"
+relation = "depends_on"
+priority = 70
+notes = "KernelModelOps depends on kernel store for model state snapshots."
+
+[[rules]]
+source = "KernelModelOps"
+target = "GovernanceLayerStorePort"
+relation = "depends_on"
+priority = 70
+notes = "KernelModelOps writes model snapshots to the kernel layer store."
+
+[[rules]]
+source = "KernelModelOps"
+target = "TransactionManager"
+relation = "depends_on"
+priority = 70
+notes = "KernelModelOps wraps all mutations in transactions via ExecutionService."
+
+[[rules]]
+source = "KernelRuleOps"
+target = "GovernanceKernelStore"
+relation = "depends_on"
+priority = 70
+notes = "KernelRuleOps depends on kernel store for rule/judgment/corpus snapshots."
+
+[[rules]]
+source = "KernelRuleOps"
+target = "TransactionManager"
+relation = "depends_on"
+priority = 70
+notes = "KernelRuleOps wraps all mutations in transactions via ExecutionService."
+
+[[rules]]
+source = "DecisionTraceOps"
+target = "GovernanceLayerStorePort"
+relation = "depends_on"
+priority = 70
+notes = "DecisionTraceOps reads/writes decision traces from the decision layer store."
+
+[[rules]]
+source = "DecisionTraceOps"
+target = "TransactionManager"
+relation = "depends_on"
+priority = 70
+notes = "DecisionTraceOps queries transaction events for exploration views."
+
+[[rules]]
+source = "NeedsOps"
+target = "GovernanceNeedsStore"
+relation = "depends_on"
+priority = 70
+notes = "NeedsOps depends on needs store for catalog persistence."
+
+[[rules]]
+source = "NeedsOps"
+target = "TransactionManager"
+relation = "depends_on"
+priority = 70
+notes = "NeedsOps wraps all mutations in transactions via ExecutionService."
+
+[[rules]]
+source = "ExecutionService"
+target = "TransactionManager"
+relation = "depends_on"
+priority = 70
+notes = "ExecutionService owns and initializes the TransactionManager."
+
+[[rules]]
+source = "ExecutionService"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 72
+notes = "ExecutionService bridges governance to ea-flow runtime for workflow interpretation."
+
+# ══════════════════════════════════════════════════════════════
+# Store dependency rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceKernelStore"
+target = "GovernanceLayerStorePort"
+relation = "depends_on"
+priority = 70
+notes = "GovernanceKernelStore delegates to layer-scoped store (kernel layer DB)."
+
+[[rules]]
+source = "GovernanceNeedsStore"
+target = "GovernanceLayerStorePort"
+relation = "depends_on"
+priority = 70
+notes = "GovernanceNeedsStore delegates to layer-scoped store (needs layer DB)."
+
+[[rules]]
+source = "GovernanceLayerStorePort"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "Layer store ABC implementations use infra-defined SQLite DB contract."
+
+[[rules]]
+source = "TransactionManager"
+target = "GovernanceDbPort"
+relation = "depends_on"
+priority = 70
+notes = "TransactionManager persists transactions to SQLite via infra DB contract."
+
+# ══════════════════════════════════════════════════════════════
+# Store produces/consumes data record rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceKernelStore"
+target = "RuleAssetSnapshotRecord"
+relation = "produces"
+priority = 70
+notes = "Kernel store produces rule asset snapshot records."
+
+[[rules]]
+source = "GovernanceKernelStore"
+target = "JudgmentSnapshotRecord"
+relation = "produces"
+priority = 70
+notes = "Kernel store produces judgment snapshot records."
+
+[[rules]]
+source = "GovernanceKernelStore"
+target = "CorpusVersionSnapshotRecord"
+relation = "produces"
+priority = 70
+notes = "Kernel store produces corpus version snapshot records."
+
+[[rules]]
+source = "GovernanceNeedsStore"
+target = "NeedsCatalogSnapshotRecord"
+relation = "produces"
+priority = 70
+notes = "Needs store produces needs catalog snapshot records."
+
+[[rules]]
+source = "GovernanceLayerStorePort"
+target = "LayerSnapshotRecord"
+relation = "produces"
+priority = 70
+notes = "Layer store produces layer snapshot records."
+
+[[rules]]
+source = "TransactionManager"
+target = "TransactionUnitRecord"
+relation = "produces"
+priority = 70
+notes = "Transaction manager produces transaction unit records."
+
+[[rules]]
+source = "TransactionManager"
+target = "TransactionEventRecord"
+relation = "produces"
+priority = 70
+notes = "Transaction manager produces transaction event records."
+
+# ══════════════════════════════════════════════════════════════
+# MetaGenerator and ProfileBridge rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "MetaGenerator"
+target = "GenerationSuggestionRecord"
+relation = "produces"
+priority = 70
+notes = "MetaGenerator produces generation suggestion output."
+
+[[rules]]
+source = "MetaGenerator"
+target = "DecisionModelPort"
+relation = "coordinates"
+priority = 72
+notes = "MetaGenerator suggests decision topics through decision model port."
+
+[[rules]]
+source = "MetaGenerator"
+target = "FlowModelPort"
+relation = "coordinates"
+priority = 72
+notes = "MetaGenerator suggests flow specs through flow model port."
+
+[[rules]]
+source = "ProfileBridge"
+target = "GovernanceSchemaRecord"
+relation = "depends_on"
+priority = 70
+notes = "ProfileBridge validates profiles against GovernanceSchema."
+
+[[rules]]
+source = "ProfileBridge"
+target = "ConditionRegistryService"
+relation = "depends_on"
+priority = 70
+notes = "ProfileBridge uses governance condition registry for profile loading."
+
+# ══════════════════════════════════════════════════════════════
+# Transaction event trigger rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "KernelRuleSubmittedEvent"
+target = "RuleSubmitStep"
+relation = "triggers"
+priority = 70
+notes = "Rule submitted event triggers submission processing step."
+
+[[rules]]
+source = "KernelRuleApprovedEvent"
+target = "RuleApprovalStep"
+relation = "triggers"
+priority = 70
+notes = "Rule approved event triggers post-approval processing."
+
+[[rules]]
+source = "KernelRuleRejectedEvent"
+target = "RejectChangeAction"
+relation = "triggers"
+priority = 70
+notes = "Rule rejected event triggers rejection handling."
+
+[[rules]]
+source = "KernelRuleDeprecatedEvent"
+target = "GovernanceDeprecateRuleAction"
+relation = "triggers"
+priority = 70
+notes = "Rule deprecated event triggers governance deprecation action."
+
+[[rules]]
+source = "KernelJudgmentRecordedEvent"
+target = "KernelEvaluationStep"
+relation = "triggers"
+priority = 70
+notes = "Judgment recorded event triggers evaluation step completion."
+
+[[rules]]
+source = "KernelSnapshotCreatedEvent"
+target = "CorpusSnapshotStep"
+relation = "triggers"
+priority = 70
+notes = "Snapshot created event triggers snapshot step completion."
+
+[[rules]]
+source = "DecisionTraceLinkEvent"
+target = "DecisionTraceWriteStep"
+relation = "triggers"
+priority = 70
+notes = "Decision trace link event triggers trace write step."
+
+[[rules]]
+source = "NeedsCatalogCreatedEvent"
+target = "NeedsCatalogWriteStep"
+relation = "triggers"
+priority = 70
+notes = "Needs catalog created event triggers catalog write step."
+
+[[rules]]
+source = "NeedsExpressedEvent"
+target = "NeedsCatalogWriteStep"
+relation = "triggers"
+priority = 70
+notes = "Need expressed event triggers catalog write step."
+
+[[rules]]
+source = "TransactionBeginEvent"
+target = "TransactionManager"
+relation = "triggers"
+priority = 70
+notes = "Transaction begin event starts transaction lifecycle tracking."
+
+[[rules]]
+source = "TransactionCommitEvent"
+target = "TransactionManager"
+relation = "triggers"
+priority = 70
+notes = "Transaction commit event finalizes transaction lifecycle."
+
+[[rules]]
+source = "TransactionFailEvent"
+target = "RouteFeedbackAction"
+relation = "triggers"
+priority = 70
+notes = "Transaction failure event may trigger feedback routing."
+
+# ══════════════════════════════════════════════════════════════
+# New endpoint routing rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "KernelRuleEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes kernel rule lifecycle operations to rule endpoint."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "KernelEvaluateEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes kernel evaluation requests to evaluate endpoint."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "KernelSnapshotEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes kernel snapshot requests to snapshot endpoint."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "NeedsCatalogEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes needs catalog operations to needs endpoint."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "LayerSnapshotEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes generic layer snapshot operations to layer snapshot endpoint."
+
+[[rules]]
+source = "GovernanceEntryPort"
+target = "GovernanceDashboardEndpoint"
+relation = "coordinates"
+priority = 78
+notes = "Entrypoint routes governance query operations to dashboard endpoint."
+
+[[rules]]
+source = "KernelRuleEndpoint"
+target = "KernelRuleOps"
+relation = "coordinates"
+priority = 78
+notes = "Rule endpoint delegates to KernelRuleOps for rule lifecycle."
+
+[[rules]]
+source = "KernelEvaluateEndpoint"
+target = "KernelRuleOps"
+relation = "coordinates"
+priority = 78
+notes = "Evaluate endpoint delegates to KernelRuleOps for kernel judgment."
+
+[[rules]]
+source = "KernelSnapshotEndpoint"
+target = "KernelRuleOps"
+relation = "coordinates"
+priority = 78
+notes = "Snapshot endpoint delegates to KernelRuleOps for corpus snapshot creation."
+
+[[rules]]
+source = "NeedsCatalogEndpoint"
+target = "NeedsOps"
+relation = "coordinates"
+priority = 78
+notes = "Needs endpoint delegates to NeedsOps for catalog CRUD."
+
+[[rules]]
+source = "LayerSnapshotEndpoint"
+target = "GovernanceLayerStorePort"
+relation = "coordinates"
+priority = 78
+notes = "Layer snapshot endpoint delegates to layer store for snapshot operations."
+
+[[rules]]
+source = "GovernanceDashboardEndpoint"
+target = "LayerModelRegistry"
+relation = "coordinates"
+priority = 78
+notes = "Dashboard endpoint queries layer model registry for managed layer overview."
+
+# ══════════════════════════════════════════════════════════════
+# TransactionPolicy rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "TransactionPolicy"
+target = "TransactionManager"
+relation = "constrains"
+priority = 70
+notes = "Transaction policy constrains transaction manager ACID guarantees."
+
+[[rules]]
+source = "TransactionPolicy"
+target = "KernelModelOps"
+relation = "constrains"
+priority = 70
+notes = "Transaction policy constrains kernel model ops mutation atomicity."
+
+[[rules]]
+source = "TransactionPolicy"
+target = "KernelRuleOps"
+relation = "constrains"
+priority = 70
+notes = "Transaction policy constrains kernel rule ops mutation atomicity."
+
+[[rules]]
+source = "TransactionPolicy"
+target = "NeedsOps"
+relation = "constrains"
+priority = 70
+notes = "Transaction policy constrains needs ops mutation atomicity."
+
+# ══════════════════════════════════════════════════════════════
+# Original element-specific rules (preserved)
+# ══════════════════════════════════════════════════════════════
 
 [[rules]]
 source = "LayerModelRegistry"
@@ -967,6 +1873,20 @@ priority = 79
 notes = "Traceability goal requires explicit evidence warning contract."
 
 [[rules]]
+source = "GovernanceTraceabilityGoal"
+target = "TransactionManager"
+relation = "constrains"
+priority = 79
+notes = "Traceability goal requires ACID transaction event sourcing."
+
+[[rules]]
+source = "GovernanceTraceabilityGoal"
+target = "TransactionEventRecord"
+relation = "constrains"
+priority = 79
+notes = "Traceability goal requires complete event audit trail."
+
+[[rules]]
 source = "GovernanceEvolvabilityGoal"
 target = "VersionLifecycleManager"
 relation = "constrains"
@@ -986,6 +1906,13 @@ target = "ModelDecisionTraceEndpoint"
 relation = "constrains"
 priority = 79
 notes = "Evolvability goal requires migration-safe endpoint evolution."
+
+[[rules]]
+source = "GovernanceEvolvabilityGoal"
+target = "GovernanceLayerStorePort"
+relation = "constrains"
+priority = 79
+notes = "Evolvability goal requires stable store ABC contract for future store implementations."
 
 [[rules]]
 source = "ModelRegisterEndpoint"

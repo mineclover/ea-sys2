@@ -3,7 +3,7 @@
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.1"
+version = "0.5.0"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -273,6 +273,350 @@ layer = "Kernel"
 category = "Interface"
 description = "API endpoint for kernel profile CRUD and version management."
 
+# ── Elements: Governance Lifecycle (S1-S6) ─────────────────
+# 6-Phase governance system implemented in ea-kernel:
+# S1 Authoring, S2 Judgment, S3 Recording, S4 Analysis, S5 Evolution, S6 Propagation
+
+[[elements]]
+name = "GovernanceSystem"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Unified governance facade combining S1-S6 lifecycle components for rule authoring, judgment, recording, analysis, evolution, and propagation."
+
+[[elements]]
+name = "JudgmentService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S2 Judgment: governance-aware judgment service wrapping RuleCorpus.judge() with reference statistics and auto-recording."
+
+[[elements]]
+name = "EvidenceAnalyzer"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S4 Analysis: analyzes accumulated decision records to extract rule effectiveness, conflict hotspots, and usage profiles."
+
+[[elements]]
+name = "PromotionEngine"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S5 Evolution: identifies promotion and deprecation candidates from analysis reports and manages rule change proposals."
+
+[[elements]]
+name = "WhatIfSimulator"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S5 Evolution: simulates impact of rule changes (add/remove/modify/priority) against past decision history before applying."
+
+[[elements]]
+name = "ImpactEvaluator"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S6 Propagation: evaluates impact of rule change sets on existing decisions with severity assessment and recommendations."
+
+[[elements]]
+name = "LifecycleController"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Governance automation controller subscribing to lifecycle events (RULE_SUBMITTED, RULE_APPROVED, CORPUS_UPDATED) and coordinating S1-S6 handlers."
+
+[[elements]]
+name = "KernelModelRegistrationService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Persistent model registration, validation, and activation service with atomic register-validate transactions."
+
+[[elements]]
+name = "KernelService"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Service layer providing UC1-UC6 pure query functions for kernel entities, relations, rules, judgment, topology, and profiles."
+
+[[elements]]
+name = "RuleCorpus"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Metadata-enriched rule collection with evidence-based judgment, domain-aware conflict detection, and query capabilities."
+
+[[elements]]
+name = "ProfileRuleCompiler"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Compiles profile rule patterns (@Category/#Layer) into concrete kernel entity rules with compilation statistics."
+
+[[elements]]
+name = "ProfileTopologyGraph"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Navigable topology graph expanding profile validity rules into concrete element-to-element edges for reachability and path analysis."
+
+# ── Elements: Governance Stores (ABC + InMemory + SQLite) ──
+
+[[elements]]
+name = "RuleAssetStore"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S1 Authoring: rule asset lifecycle persistence (DRAFT -> REVIEW -> APPROVED -> DEPRECATED) with ABC, InMemory, and SQLite implementations."
+
+[[elements]]
+name = "DecisionStore"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S3 Recording: judgment record persistence with query, statistics, and evidence summary. ABC, InMemory, and SQLite implementations."
+
+[[elements]]
+name = "CorpusVersionStore"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "S3 Recording: versioned corpus snapshots enabling judgment reproduction and change tracking. ABC, InMemory, and SQLite implementations."
+
+[[elements]]
+name = "I18nStore"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "Translation CRUD store for kernel schema i18n with versioning and audit. ABC, InMemory, and SQLite implementations."
+
+# ── Elements: Governance Event Infrastructure ──────────────
+
+[[elements]]
+name = "LifecycleEventPort"
+layer = "Kernel"
+category = "Interface"
+description = "Event port ABC for lifecycle event publish/subscribe (RULE_SUBMITTED, RULE_APPROVED, CORPUS_UPDATED)."
+
+[[elements]]
+name = "InMemoryEventBus"
+layer = "Kernel"
+category = "ActiveStructure"
+description = "In-memory lifecycle event bus implementing LifecycleEventPort with synchronous handler dispatch and event history."
+
+[[elements]]
+name = "NotificationService"
+layer = "Kernel"
+category = "Interface"
+description = "Abstract notification interface for sending governance notifications (info/success/warning/error/urgent levels)."
+
+# ── Elements: Governance Data Artifacts ────────────────────
+
+[[elements]]
+name = "EnhancedJudgment"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S2 result: JudgmentReport enriched with ReferenceStats (past judgment consistency) and optional stored decision record."
+
+[[elements]]
+name = "ReferenceStats"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S2 artifact: past judgment statistics for a triple including consistency rate, allow/deny counts, and consensus verdict."
+
+[[elements]]
+name = "AnalysisReport"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S4 artifact: comprehensive evidence analysis combining rule effectiveness, conflict hotspots, usage profiles, and recommendations."
+
+[[elements]]
+name = "RuleEffectiveness"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S4 artifact: per-rule effectiveness measurement (evaluations, matches, wins, overrides, shadows) with effectiveness grade."
+
+[[elements]]
+name = "ConflictHotspot"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S4 artifact: detected repeated conflict triple with domain pair tracking and severity classification."
+
+[[elements]]
+name = "UsageProfile"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S4 artifact: per-domain usage statistics with reference grade (GOLD/SILVER/BRONZE/DRAFT) based on quality metrics."
+
+[[elements]]
+name = "RuleChangeProposal"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S5 artifact: rule change proposal with voting, approval workflow, and evidence report reference."
+
+[[elements]]
+name = "PromotionCriteria"
+layer = "Kernel"
+category = "Assessment"
+description = "S5 expression: promotion threshold criteria (min evaluations, win rate, max override rate, min age) for rule advancement."
+
+[[elements]]
+name = "SimulationResult"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S5 artifact: what-if simulation result with verdict changes, impact level, affected domains, and safety assessment."
+
+[[elements]]
+name = "ImpactReport"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S6 artifact: impact evaluation report with affected decisions, severity, risk factors, and apply recommendation."
+
+[[elements]]
+name = "RuleChangeSet"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "S6 artifact: corpus version diff expressing added, removed, modified, and state-changed rules between two versions."
+
+[[elements]]
+name = "ModelRegistryEntry"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Model registration record with model_id, status, active version reference, and timestamps."
+
+[[elements]]
+name = "ModelVersionEntry"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Model version record with content hash, parent version linkage, and creation metadata."
+
+[[elements]]
+name = "ValidationRunEntry"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Model validation run record with pass/fail result, errors, and validator context."
+
+[[elements]]
+name = "RegistrationResult"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Atomic model registration result combining model_id, version_id, and validation_run_id."
+
+[[elements]]
+name = "Notification"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Governance notification data with recipient, subject, message, and severity level."
+
+[[elements]]
+name = "LifecycleEvent"
+layer = "Kernel"
+category = "Event"
+description = "Lifecycle event carrying trigger type (RULE_SUBMITTED/RULE_APPROVED/CORPUS_UPDATED), payload, and source actor."
+
+# ── Elements: Governance Lifecycle Events ──────────────────
+
+[[elements]]
+name = "RuleSubmittedEvent"
+layer = "Kernel"
+category = "Event"
+description = "Raised when a new rule asset is submitted for review (DRAFT -> REVIEW transition trigger)."
+
+[[elements]]
+name = "RuleApprovedEvent"
+layer = "Kernel"
+category = "Event"
+description = "Raised when a rule is approved (REVIEW -> APPROVED), triggering corpus rebuild and version snapshot."
+
+[[elements]]
+name = "CorpusUpdatedEvent"
+layer = "Kernel"
+category = "Event"
+description = "Raised when the active rule corpus version changes, triggering impact analysis and i18n audit."
+
+# ── Elements: Governance Goals ─────────────────────────────
+
+[[elements]]
+name = "RuleLifecycleIntegrityGoal"
+layer = "Kernel"
+category = "Goal"
+description = "Goal ensuring rule lifecycle transitions follow valid state machine (DRAFT -> REVIEW -> APPROVED -> DEPRECATED)."
+
+[[elements]]
+name = "EvidenceBasedEvolutionGoal"
+layer = "Kernel"
+category = "Goal"
+description = "Goal ensuring rule evolution decisions are driven by evidence analysis rather than arbitrary changes."
+
+# ── Elements: Governance Steps ─────────────────────────────
+
+[[elements]]
+name = "ExecuteJudgmentStep"
+layer = "Kernel"
+category = "Behavior"
+description = "S2 step: execute governance-aware judgment with reference stats lookup and auto-record to decision store."
+
+[[elements]]
+name = "AnalyzeEvidenceStep"
+layer = "Kernel"
+category = "Behavior"
+description = "S4 step: generate comprehensive analysis report from accumulated decision records."
+
+[[elements]]
+name = "SimulateChangeStep"
+layer = "Kernel"
+category = "Behavior"
+description = "S5 step: simulate rule changes against past decisions to assess impact before applying."
+
+[[elements]]
+name = "EvaluateImpactStep"
+layer = "Kernel"
+category = "Behavior"
+description = "S6 step: evaluate rule change set impact on existing decisions with severity and recommendation."
+
+[[elements]]
+name = "RunAutoPromotionStep"
+layer = "Kernel"
+category = "Behavior"
+description = "S5 step: automated promotion loop analyzing evidence, identifying candidates, simulating, and proposing changes."
+
+# ── Elements: Governance Actions ───────────────────────────
+
+[[elements]]
+name = "SubmitRuleAction"
+layer = "Kernel"
+category = "Executable"
+description = "S1 action: submit a new rule asset (DRAFT) and publish RULE_SUBMITTED event."
+
+[[elements]]
+name = "ApproveRuleAction"
+layer = "Kernel"
+category = "Executable"
+description = "S1/S5 action: approve a rule, rebuild active corpus, and publish RULE_APPROVED event."
+
+[[elements]]
+name = "DeprecateRuleAction"
+layer = "Kernel"
+category = "Executable"
+description = "S1 action: deprecate an approved rule and rebuild corpus without the deprecated rule."
+
+[[elements]]
+name = "CreateSnapshotAction"
+layer = "Kernel"
+category = "Executable"
+description = "Version management action: create a persistent snapshot of the current active corpus."
+
+# ── Elements: Governance Experience ────────────────────────
+
+[[elements]]
+name = "GovernanceOperatorContext"
+layer = "Kernel"
+category = "Context"
+description = "User context for operating the kernel governance lifecycle (rule submission, approval, analysis)."
+
+[[elements]]
+name = "KernelGovernanceExperience"
+layer = "Kernel"
+category = "Composite"
+description = "Experience boundary for kernel governance lifecycle operations (S1-S6 journey)."
+
+[[elements]]
+name = "KernelGovernanceDashboardPage"
+layer = "Kernel"
+category = "Page"
+description = "Dashboard view for governance health, rule lifecycle status, and analysis reports."
+
+[[elements]]
+name = "KernelGovernanceEndpoint"
+layer = "Kernel"
+category = "Interface"
+description = "API endpoint for governance operations (submit, approve, analyze, simulate, evaluate impact)."
+
 # ── Rules: Pattern — Implementation ────────────────────────
 
 [[rules]]
@@ -330,6 +674,76 @@ target = "@Interface"
 relation = "registers"
 priority = 60
 notes = "Kernel services register kernel interfaces."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@ActiveStructure"
+relation = "coordinates"
+priority = 60
+notes = "Kernel services coordinate with other kernel services."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Kernel services produce data artifacts."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 60
+notes = "Kernel services consume data artifacts."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Governance steps produce analysis/report artifacts."
+
+[[rules]]
+source = "@Event"
+target = "@Behavior"
+relation = "triggers"
+priority = 60
+notes = "Lifecycle events trigger governance steps."
+
+[[rules]]
+source = "@Event"
+target = "@Executable"
+relation = "triggers"
+priority = 60
+notes = "Lifecycle events trigger governance actions."
+
+[[rules]]
+source = "@Composite"
+target = "@Event"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains lifecycle events."
+
+[[rules]]
+source = "@Composite"
+target = "@Assessment"
+relation = "contains"
+priority = 60
+notes = "Kernel boundary contains assessment criteria."
+
+[[rules]]
+source = "@Goal"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 60
+notes = "Kernel goals constrain kernel services."
+
+[[rules]]
+source = "@Assessment"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Assessment criteria constrain governance steps."
 
 # ── Rules: Pattern — Experience Discovery ──────────────────
 
@@ -1163,3 +1577,694 @@ target = "NeedsCoverageReport"
 relation = "constrains"
 priority = 72
 notes = "Kernel-Needs: consistency goal constrains coverage report completeness."
+
+# ══════════════════════════════════════════════════════════════
+# Governance Lifecycle (S1-S6): Internal Service Coordination
+# ══════════════════════════════════════════════════════════════
+
+# ── GovernanceSystem Facade Coordination ──────────────────────
+
+[[rules]]
+source = "GovernanceSystem"
+target = "JudgmentService"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates S2 judgment execution."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "EvidenceAnalyzer"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates S4 evidence analysis."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "PromotionEngine"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates S5 promotion workflow."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "WhatIfSimulator"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates S5 what-if simulation."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "ImpactEvaluator"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates S6 impact evaluation."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "LifecycleController"
+relation = "coordinates"
+priority = 70
+notes = "Facade coordinates lifecycle automation controller."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "RuleAssetStore"
+relation = "depends_on"
+priority = 70
+notes = "Facade depends on rule asset store for S1 authoring."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "DecisionStore"
+relation = "depends_on"
+priority = 70
+notes = "Facade depends on decision store for S3 recording."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "CorpusVersionStore"
+relation = "depends_on"
+priority = 70
+notes = "Facade depends on corpus version store for snapshot management."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "InMemoryEventBus"
+relation = "depends_on"
+priority = 70
+notes = "Facade depends on event bus for lifecycle event publishing."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "RuleCorpus"
+relation = "depends_on"
+priority = 70
+notes = "Facade depends on rule corpus for judgment execution context."
+
+# ── JudgmentService (S2) ─────────────────────────────────────
+
+[[rules]]
+source = "JudgmentService"
+target = "RuleCorpus"
+relation = "depends_on"
+priority = 70
+notes = "S2: judgment service delegates to rule corpus for evidence-based judgment."
+
+[[rules]]
+source = "JudgmentService"
+target = "DecisionStore"
+relation = "depends_on"
+priority = 70
+notes = "S2: judgment service reads reference stats and auto-records decisions."
+
+[[rules]]
+source = "JudgmentService"
+target = "EnhancedJudgment"
+relation = "produces"
+priority = 70
+notes = "S2: judgment service produces enhanced judgment with reference stats."
+
+[[rules]]
+source = "ExecuteJudgmentStep"
+target = "EnhancedJudgment"
+relation = "produces"
+priority = 70
+notes = "S2 step: execute judgment produces enhanced judgment result."
+
+[[rules]]
+source = "ExecuteJudgmentStep"
+target = "ReferenceStats"
+relation = "produces"
+priority = 70
+notes = "S2 step: execute judgment produces reference statistics from past decisions."
+
+# ── EvidenceAnalyzer (S4) ─────────────────────────────────────
+
+[[rules]]
+source = "EvidenceAnalyzer"
+target = "DecisionStore"
+relation = "depends_on"
+priority = 70
+notes = "S4: evidence analyzer reads judgment history from decision store."
+
+[[rules]]
+source = "EvidenceAnalyzer"
+target = "CorpusVersionStore"
+relation = "depends_on"
+priority = 70
+notes = "S4: evidence analyzer uses corpus versions for version-scoped analysis."
+
+[[rules]]
+source = "EvidenceAnalyzer"
+target = "AnalysisReport"
+relation = "produces"
+priority = 70
+notes = "S4: evidence analyzer produces comprehensive analysis report."
+
+[[rules]]
+source = "AnalyzeEvidenceStep"
+target = "RuleEffectiveness"
+relation = "produces"
+priority = 70
+notes = "S4 step: analyze evidence produces per-rule effectiveness metrics."
+
+[[rules]]
+source = "AnalyzeEvidenceStep"
+target = "ConflictHotspot"
+relation = "produces"
+priority = 70
+notes = "S4 step: analyze evidence produces conflict hotspot detections."
+
+[[rules]]
+source = "AnalyzeEvidenceStep"
+target = "UsageProfile"
+relation = "produces"
+priority = 70
+notes = "S4 step: analyze evidence produces per-domain usage profiles."
+
+[[rules]]
+source = "AnalyzeEvidenceStep"
+target = "AnalysisReport"
+relation = "produces"
+priority = 70
+notes = "S4 step: analyze evidence produces the aggregate analysis report."
+
+# ── PromotionEngine (S5) ──────────────────────────────────────
+
+[[rules]]
+source = "PromotionEngine"
+target = "RuleAssetStore"
+relation = "depends_on"
+priority = 70
+notes = "S5: promotion engine queries rule asset states for candidate identification."
+
+[[rules]]
+source = "PromotionEngine"
+target = "AnalysisReport"
+relation = "consumes"
+priority = 70
+notes = "S5: promotion engine consumes analysis report to identify candidates."
+
+[[rules]]
+source = "PromotionEngine"
+target = "RuleChangeProposal"
+relation = "produces"
+priority = 70
+notes = "S5: promotion engine produces rule change proposals."
+
+[[rules]]
+source = "PromotionCriteria"
+target = "PromotionEngine"
+relation = "constrains"
+priority = 70
+notes = "S5: promotion criteria constrain candidate identification thresholds."
+
+# ── WhatIfSimulator (S5) ──────────────────────────────────────
+
+[[rules]]
+source = "WhatIfSimulator"
+target = "DecisionStore"
+relation = "depends_on"
+priority = 70
+notes = "S5: simulator reads past decisions for impact comparison."
+
+[[rules]]
+source = "WhatIfSimulator"
+target = "RuleAssetStore"
+relation = "depends_on"
+priority = 70
+notes = "S5: simulator queries current rule states for change context."
+
+[[rules]]
+source = "WhatIfSimulator"
+target = "SimulationResult"
+relation = "produces"
+priority = 70
+notes = "S5: simulator produces simulation result with verdict changes."
+
+[[rules]]
+source = "SimulateChangeStep"
+target = "SimulationResult"
+relation = "produces"
+priority = 70
+notes = "S5 step: simulate change produces simulation result."
+
+# ── ImpactEvaluator (S6) ──────────────────────────────────────
+
+[[rules]]
+source = "ImpactEvaluator"
+target = "DecisionStore"
+relation = "depends_on"
+priority = 70
+notes = "S6: impact evaluator scans past decisions for affected relationships."
+
+[[rules]]
+source = "ImpactEvaluator"
+target = "RuleChangeSet"
+relation = "consumes"
+priority = 70
+notes = "S6: impact evaluator consumes rule change set for analysis."
+
+[[rules]]
+source = "ImpactEvaluator"
+target = "ImpactReport"
+relation = "produces"
+priority = 70
+notes = "S6: impact evaluator produces impact report with severity and recommendations."
+
+[[rules]]
+source = "EvaluateImpactStep"
+target = "RuleChangeSet"
+relation = "consumes"
+priority = 70
+notes = "S6 step: evaluate impact consumes the rule change set."
+
+[[rules]]
+source = "EvaluateImpactStep"
+target = "ImpactReport"
+relation = "produces"
+priority = 70
+notes = "S6 step: evaluate impact produces the impact report."
+
+# ── LifecycleController ──────────────────────────────────────
+
+[[rules]]
+source = "LifecycleController"
+target = "LifecycleEventPort"
+relation = "depends_on"
+priority = 70
+notes = "Controller subscribes to lifecycle events through the event port."
+
+[[rules]]
+source = "LifecycleController"
+target = "RuleAssetStore"
+relation = "depends_on"
+priority = 70
+notes = "Controller reads rule assets for event handlers."
+
+[[rules]]
+source = "LifecycleController"
+target = "CorpusVersionStore"
+relation = "depends_on"
+priority = 70
+notes = "Controller creates corpus version snapshots on rule approval."
+
+[[rules]]
+source = "LifecycleController"
+target = "NotificationService"
+relation = "depends_on"
+priority = 70
+notes = "Controller sends notifications for lifecycle transitions."
+
+[[rules]]
+source = "LifecycleController"
+target = "PromotionEngine"
+relation = "coordinates"
+priority = 70
+notes = "Controller drives auto-promotion via promotion engine."
+
+[[rules]]
+source = "LifecycleController"
+target = "WhatIfSimulator"
+relation = "coordinates"
+priority = 70
+notes = "Controller uses simulator for safe auto-promotion checks."
+
+[[rules]]
+source = "LifecycleController"
+target = "ImpactEvaluator"
+relation = "coordinates"
+priority = 70
+notes = "Controller triggers impact evaluation on corpus update."
+
+[[rules]]
+source = "LifecycleController"
+target = "Notification"
+relation = "produces"
+priority = 70
+notes = "Controller produces notification messages for lifecycle transitions."
+
+# ── Event → Handler Triggers ──────────────────────────────────
+
+[[rules]]
+source = "RuleSubmittedEvent"
+target = "ExecuteJudgmentStep"
+relation = "triggers"
+priority = 70
+notes = "Rule submission triggers the review notification handler in lifecycle controller."
+
+[[rules]]
+source = "RuleApprovedEvent"
+target = "CreateSnapshotAction"
+relation = "triggers"
+priority = 70
+notes = "Rule approval triggers corpus version snapshot creation."
+
+[[rules]]
+source = "RuleApprovedEvent"
+target = "CorpusUpdatedEvent"
+relation = "triggers"
+priority = 70
+notes = "Rule approval triggers corpus updated event after rebuild."
+
+[[rules]]
+source = "CorpusUpdatedEvent"
+target = "EvaluateImpactStep"
+relation = "triggers"
+priority = 70
+notes = "Corpus update triggers impact evaluation for the new version."
+
+[[rules]]
+source = "CorpusUpdatedEvent"
+target = "AnalyzeEvidenceStep"
+relation = "triggers"
+priority = 70
+notes = "Corpus update triggers evidence re-analysis."
+
+# ── Event Bus Infrastructure ──────────────────────────────────
+
+[[rules]]
+source = "InMemoryEventBus"
+target = "LifecycleEventPort"
+relation = "registers"
+priority = 70
+notes = "InMemoryEventBus implements the LifecycleEventPort interface."
+
+[[rules]]
+source = "InMemoryEventBus"
+target = "LifecycleEvent"
+relation = "produces"
+priority = 70
+notes = "Event bus dispatches lifecycle events to subscribed handlers."
+
+[[rules]]
+source = "NotificationService"
+target = "Notification"
+relation = "produces"
+priority = 70
+notes = "Notification service produces notification messages for delivery."
+
+# ── Store → Artifact Dependencies ─────────────────────────────
+
+[[rules]]
+source = "RuleAssetStore"
+target = "KernelRuleSet"
+relation = "depends_on"
+priority = 70
+notes = "Rule asset store persists rule lifecycle data linked to kernel rule sets."
+
+[[rules]]
+source = "DecisionStore"
+target = "EnhancedJudgment"
+relation = "consumes"
+priority = 70
+notes = "Decision store persists judgment records from enhanced judgment results."
+
+[[rules]]
+source = "CorpusVersionStore"
+target = "RuleCorpus"
+relation = "depends_on"
+priority = 70
+notes = "Corpus version store snapshots rule corpus entries at versioned points."
+
+# ── S1-S6 Lifecycle Sequence ──────────────────────────────────
+
+[[rules]]
+source = "SubmitRuleAction"
+target = "ExecuteJudgmentStep"
+relation = "next"
+priority = 70
+notes = "S1 Authoring proceeds to S2 Judgment in governance lifecycle."
+
+[[rules]]
+source = "ExecuteJudgmentStep"
+target = "AnalyzeEvidenceStep"
+relation = "next"
+priority = 70
+notes = "S2 Judgment proceeds to S4 Analysis in governance lifecycle."
+
+[[rules]]
+source = "AnalyzeEvidenceStep"
+target = "SimulateChangeStep"
+relation = "next"
+priority = 70
+notes = "S4 Analysis proceeds to S5 Evolution (simulation) in governance lifecycle."
+
+[[rules]]
+source = "SimulateChangeStep"
+target = "RunAutoPromotionStep"
+relation = "next"
+priority = 70
+notes = "S5 Simulation proceeds to S5 auto-promotion in governance lifecycle."
+
+[[rules]]
+source = "RunAutoPromotionStep"
+target = "EvaluateImpactStep"
+relation = "next"
+priority = 70
+notes = "S5 Evolution proceeds to S6 Propagation (impact evaluation) in governance lifecycle."
+
+# ── Governance Actions → Events ───────────────────────────────
+
+[[rules]]
+source = "SubmitRuleAction"
+target = "RuleSubmittedEvent"
+relation = "produces"
+priority = 70
+notes = "Submit rule action publishes RULE_SUBMITTED lifecycle event."
+
+[[rules]]
+source = "ApproveRuleAction"
+target = "RuleApprovedEvent"
+relation = "produces"
+priority = 70
+notes = "Approve rule action publishes RULE_APPROVED lifecycle event."
+
+[[rules]]
+source = "ApproveRuleAction"
+target = "RuleCorpus"
+relation = "coordinates"
+priority = 70
+notes = "Approve rule action triggers corpus rebuild with newly active rule."
+
+[[rules]]
+source = "DeprecateRuleAction"
+target = "RuleCorpus"
+relation = "coordinates"
+priority = 70
+notes = "Deprecate rule action triggers corpus rebuild without deprecated rule."
+
+# ── Model Registration Service ────────────────────────────────
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "ModelRegistryEntry"
+relation = "produces"
+priority = 70
+notes = "Registration service produces model registry entries."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "ModelVersionEntry"
+relation = "produces"
+priority = 70
+notes = "Registration service produces model version entries."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "ValidationRunEntry"
+relation = "produces"
+priority = 70
+notes = "Registration service produces validation run entries."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "RegistrationResult"
+relation = "produces"
+priority = 70
+notes = "Registration service produces atomic registration results."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "KernelProfileRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Registration service coordinates with profile registry for model lookup."
+
+[[rules]]
+source = "KernelModelRegistrationService"
+target = "KernelValidationService"
+relation = "coordinates"
+priority = 70
+notes = "Registration service coordinates with validation service for model validation."
+
+# ── RuleCorpus & Profile Compilation ──────────────────────────
+
+[[rules]]
+source = "RuleCorpus"
+target = "KernelRuleSet"
+relation = "depends_on"
+priority = 70
+notes = "Rule corpus indexes kernel rule set entries for evidence-based judgment."
+
+[[rules]]
+source = "ProfileRuleCompiler"
+target = "KernelRuleSet"
+relation = "produces"
+priority = 70
+notes = "Profile rule compiler produces concrete kernel rules from @Category/#Layer patterns."
+
+[[rules]]
+source = "ProfileRuleCompiler"
+target = "KernelProfileRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Profile rule compiler reads profile definitions from registry."
+
+[[rules]]
+source = "ProfileTopologyGraph"
+target = "KernelProfileRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Topology graph reads profile elements and rules for edge expansion."
+
+# ── KernelService (UC1-UC6) ───────────────────────────────────
+
+[[rules]]
+source = "KernelService"
+target = "RuleCorpus"
+relation = "depends_on"
+priority = 70
+notes = "Kernel service uses rule corpus for UC4 judgment queries."
+
+[[rules]]
+source = "KernelService"
+target = "KernelContractService"
+relation = "coordinates"
+priority = 70
+notes = "Kernel service delegates to contract service for UC1-UC3 queries."
+
+[[rules]]
+source = "KernelService"
+target = "ProfileTopologyGraph"
+relation = "coordinates"
+priority = 70
+notes = "Kernel service delegates to topology graph for UC5 traversal queries."
+
+[[rules]]
+source = "KernelService"
+target = "KernelProfileRegistry"
+relation = "coordinates"
+priority = 70
+notes = "Kernel service delegates to profile registry for UC6 profile queries."
+
+# ── Goal Constraints on Governance Services ───────────────────
+
+[[rules]]
+source = "RuleLifecycleIntegrityGoal"
+target = "RuleAssetStore"
+relation = "constrains"
+priority = 70
+notes = "Lifecycle integrity goal constrains rule state transitions in asset store."
+
+[[rules]]
+source = "RuleLifecycleIntegrityGoal"
+target = "LifecycleController"
+relation = "constrains"
+priority = 70
+notes = "Lifecycle integrity goal constrains controller event handler behavior."
+
+[[rules]]
+source = "EvidenceBasedEvolutionGoal"
+target = "PromotionEngine"
+relation = "constrains"
+priority = 70
+notes = "Evidence-based evolution goal constrains promotion to analysis-driven decisions."
+
+[[rules]]
+source = "EvidenceBasedEvolutionGoal"
+target = "WhatIfSimulator"
+relation = "constrains"
+priority = 70
+notes = "Evidence-based evolution goal constrains changes to require pre-simulation."
+
+[[rules]]
+source = "KernelConsistencyGoal"
+target = "GovernanceSystem"
+relation = "constrains"
+priority = 70
+notes = "Consistency goal constrains governance facade operations."
+
+[[rules]]
+source = "KernelConsistencyGoal"
+target = "JudgmentService"
+relation = "constrains"
+priority = 70
+notes = "Consistency goal constrains judgment service to use approved rules only."
+
+# ── Governance Experience ─────────────────────────────────────
+
+[[rules]]
+source = "GovernanceOperatorContext"
+target = "KernelGovernanceExperience"
+relation = "available_in"
+priority = 70
+notes = "Governance operators access the kernel governance experience."
+
+[[rules]]
+source = "KernelGovernanceExperience"
+target = "KernelGovernanceDashboardPage"
+relation = "contains"
+priority = 70
+notes = "Governance experience contains the dashboard page."
+
+[[rules]]
+source = "KernelGovernanceExperience"
+target = "KernelGovernanceEndpoint"
+relation = "contains"
+priority = 70
+notes = "Governance experience contains the governance API."
+
+[[rules]]
+source = "KernelGovernanceDashboardPage"
+target = "KernelGovernanceEndpoint"
+relation = "coordinates"
+priority = 70
+notes = "Governance dashboard calls the governance endpoint for operations."
+
+[[rules]]
+source = "KernelGovernanceDashboardPage"
+target = "KernelRuleBrowserPage"
+relation = "next"
+priority = 70
+notes = "From governance dashboard, navigate to rule browser for details."
+
+[[rules]]
+source = "KernelGovernanceEndpoint"
+target = "GovernanceSystem"
+relation = "coordinates"
+priority = 70
+notes = "Governance endpoint delegates to governance system facade."
+
+[[rules]]
+source = "KernelGovernanceEndpoint"
+target = "KernelModelRegistrationService"
+relation = "coordinates"
+priority = 70
+notes = "Governance endpoint delegates to model registration service."
+
+# ── I18nStore Integration ─────────────────────────────────────
+
+[[rules]]
+source = "I18nStore"
+target = "KernelRuleSet"
+relation = "depends_on"
+priority = 70
+notes = "I18n store manages translations for kernel schema entities and relations."
+
+[[rules]]
+source = "GovernanceSystem"
+target = "I18nStore"
+relation = "coordinates"
+priority = 70
+notes = "Governance system coordinates i18n audit during corpus updates."

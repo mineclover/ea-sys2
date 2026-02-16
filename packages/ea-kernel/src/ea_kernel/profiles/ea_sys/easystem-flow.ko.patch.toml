@@ -78,10 +78,10 @@ display_name = "계약된 계획 초안"
 [elements.FlowLayerContractMatrix]
 display_name = "흐름 계층 계약 매트릭스"
 
-[elements.FlowStateCheckpoint]
+[elements.FlowCheckpointStore]
 display_name = "흐름 상태 체크포인트"
 
-[elements.FlowExecutionLog]
+[elements.FlowExecutionLogStore]
 display_name = "흐름 실행 로그"
 
 [elements.FlowApprovalGate]

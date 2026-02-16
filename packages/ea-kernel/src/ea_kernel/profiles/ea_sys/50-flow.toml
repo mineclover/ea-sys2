@@ -1,5 +1,10 @@
 # EA System Layer: Flow
 # Role: 실행/데이터 흐름 모델 정의
+#
+# 3-Plane Execution Model (ea-flow implementation):
+#   P1 Specification — 선언적 정의 (StepSpec, WorkflowSpec, SchemaSpec)
+#   P2 Coordination  — 조율/그래프 (ProcessSpec, DataFlowEdge, LogicCondition)
+#   P3 Realization    — 명령적 실행 (FlowRuntime, StepImplementer)
 
 [profile]
 name = "EASystemLayerModel"
@@ -231,6 +236,303 @@ layer = "Flow"
 category = "PassiveStructure"
 description = "Flow-owned 6x6 cross-layer contract matrix (single owner artifact)."
 
+# ─────────────────────────────────────────────────────────────
+# P1 Specification Plane — Declarative Definitions (spec.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "SpecificationPlane"
+layer = "Flow"
+category = "Composite"
+description = "P1 Specification plane — container for declarative step/workflow/schema definitions."
+
+[[elements]]
+name = "StepSpecContract"
+layer = "Flow"
+category = "Interface"
+description = "P1 — Abstract step specification contract (ABC). Defines name, kernel_anchor, meta_type, input/output_schema."
+
+[[elements]]
+name = "FlowMetaStepDefinition"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P1 — Formal definition of a reusable logic pattern (FlowMetaStep). Frozen dataclass with name, description, input/output_schema, kernel_type_requirement."
+
+[[elements]]
+name = "KernelGroundedStepSpecType"
+layer = "Flow"
+category = "Behavior"
+description = "P1 — StepSpec natively anchored to a kernel element via kernel_anchor. Inherits meta_type from FlowMetaStep."
+
+[[elements]]
+name = "WorkflowSpecContract"
+layer = "Flow"
+category = "Interface"
+description = "P1 — Abstract workflow specification contract (ABC). Defines name, kernel_anchor, input/output_schema, get_steps()."
+
+[[elements]]
+name = "UseCaseSpecType"
+layer = "Flow"
+category = "Behavior"
+description = "P1 — First-class business process definition (UseCaseSpec). Concrete WorkflowSpec with primary_actor and success_criteria."
+
+[[elements]]
+name = "ExecutionContextData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P1 — Frozen execution context (ExecutionContext). Contains execution_id and variables dict passed through workflow."
+
+[[elements]]
+name = "StepResultSpecData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P1 — Specification for expected step result structure (StepResultSpec). Contains output_schema and expected_log_patterns."
+
+[[elements]]
+name = "FlowGenerationRuleData"
+layer = "Flow"
+category = "Assessment"
+description = "P1 — Rule for generating flow specifications from kernel entities (FlowGenerationRule). Maps source_kernel_type to target_flow_type with logic_conditions."
+
+[[elements]]
+name = "FlowTopologyData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P1 — Declarative process structure (FlowTopology). Contains steps, entry/exit points, transition_rules, and generation_rules."
+
+# ─────────────────────────────────────────────────────────────
+# P2 Coordination Plane — Process Graph (topology.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "CoordinationPlane"
+layer = "Flow"
+category = "Composite"
+description = "P2 Coordination plane — container for process graph, data flow edges, conditions, and transformations."
+
+[[elements]]
+name = "ProcessSpecType"
+layer = "Flow"
+category = "ActiveStructure"
+description = "P2 — Root ontology entity for a process (ProcessSpec). Contains steps, trigger_event, defined_schemas, and data_flow_edges."
+
+[[elements]]
+name = "StepDefinitionNode"
+layer = "Flow"
+category = "Behavior"
+description = "P2 — Single node in the process graph (StepDefinition). Has id, name, category, condition, transformation, schema_usage, routing."
+
+[[elements]]
+name = "DataFlowEdgeLink"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P2 — Data movement definition between steps (DataFlowEdge). Maps source_step.source_field to target_step.target_field with optional transformation_rule."
+
+[[elements]]
+name = "LogicConditionExpr"
+layer = "Flow"
+category = "Assessment"
+description = "P2 — Conditional expression (LogicCondition). Contains expression string, engine type (json-logic/python/sql), and parameters."
+
+[[elements]]
+name = "DataTransformationSpec"
+layer = "Flow"
+category = "Behavior"
+description = "P2 — Data shape transformation (DataTransformation). Defines input_schema to output_schema with mapping_rules."
+
+[[elements]]
+name = "SchemaDefinitionData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P2 — Data shape definition (SchemaDefinition). Has id, name, schema_format, and definition dict."
+
+[[elements]]
+name = "StepSchemaUsageSpec"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P2 — Step data contract (StepSchemaUsage). Declares input/output_schema_id and required_fields for a step."
+
+[[elements]]
+name = "FlowOntologyRegistry"
+layer = "Flow"
+category = "ActiveStructure"
+description = "P2 — Registry for process specification types (FlowOntology). Static describe() method enumerates registered types."
+
+[[elements]]
+name = "FlowStepCategoryEnum"
+layer = "Flow"
+category = "Assessment"
+description = "Step role classification enum (FlowStepCategory). Values: ACTION, DECISION, EVENT, GATEWAY, TRANSFORMATION."
+
+# ─────────────────────────────────────────────────────────────
+# P3 Realization Plane — Runtime Interpretation (runtime.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "RealizationPlane"
+layer = "Flow"
+category = "Composite"
+description = "P3 Realization plane — container for runtime interpreter, implementers, and execution results."
+
+[[elements]]
+name = "FlowRuntimeEngine"
+layer = "Flow"
+category = "ActiveStructure"
+description = "P3 — Workflow interpreter (FlowRuntime). Sequential step execution with compensating rollback on failure."
+
+[[elements]]
+name = "StepImplementerContract"
+layer = "Flow"
+category = "Interface"
+description = "P3 — Abstract step execution interface (StepImplementer ABC). Defines execute() and rollback() — compensating transaction pattern."
+
+[[elements]]
+name = "StepInterpretationResultData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P3 — Declarative interpretation result (StepInterpretationResult). Frozen dataclass with accepted, intent, logs."
+
+[[elements]]
+name = "StepExecutionResultData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P3 — Backward-compatible alias (StepExecutionResult extends StepInterpretationResult). Same structure for legacy code."
+
+[[elements]]
+name = "FlowExecutionResultData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P3 — Full workflow result (FlowExecutionResult). Contains workflow_name, execution_id, success, step_results, rollback_occurred."
+
+# ─────────────────────────────────────────────────────────────
+# Schema Plane — Schema Specifications (schema.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "SchemaSpecContract"
+layer = "Flow"
+category = "Interface"
+description = "Schema specification interface (SchemaSpec ABC). Defines validate() and to_dict() for format-specific schema implementations."
+
+[[elements]]
+name = "JsonSchema2020SpecType"
+layer = "Flow"
+category = "ActiveStructure"
+description = "JSON Schema 2020-12 implementation (JsonSchema2020Spec). Validates data against raw JSON Schema using jsonschema library."
+
+[[elements]]
+name = "DbSchemaSpecType"
+layer = "Flow"
+category = "ActiveStructure"
+description = "Database schema implementation (DbSchemaSpec). DDL-approach table/view schema with table_name, columns, and optional ddl."
+
+# ─────────────────────────────────────────────────────────────
+# Data Schema Catalog — Step I/O Contracts & Data Lineage
+# ─────────────────────────────────────────────────────────────
+# Flow의 핵심 역할: 스텝 간 입출력 데이터 스키마를 정의·검증·추적한다.
+# P1에서 스텝별 입출력 형태 선언, P2에서 스키마 매칭/버전/호환성 조율,
+# P3에서 런타임 데이터 계보 추적.
+
+# --- P1: 스텝별 입출력 스키마 선언 ---
+
+[[elements]]
+name = "StepInputSchemaData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P1 — Formal input data shape per step. Declares field names, types, required/optional flags, and default values consumed by a step."
+
+[[elements]]
+name = "StepOutputSchemaData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P1 — Formal output data shape per step. Declares field names, types, and guarantees produced by a step upon successful execution."
+
+# --- P2: 스키마 매칭·버전·카탈로그 ---
+
+[[elements]]
+name = "DataContractSpec"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P2 — Producer-consumer schema matching contract. Binds a producer step's output schema to a consumer step's input schema with compatibility_mode (strict/compatible/relaxed)."
+
+[[elements]]
+name = "SchemaVersionRecord"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P2 — Schema version metadata. Tracks version_id, parent_version, change_type (additive/breaking/compatible), and migration_hint for schema evolution."
+
+[[elements]]
+name = "DataCatalogRegistry"
+layer = "Flow"
+category = "ActiveStructure"
+description = "P2 — Flow-owned registry of all data schemas used across steps and workflows. Provides lookup by schema_id, version, and compatibility queries."
+
+[[elements]]
+name = "SchemaCompatibilityRule"
+layer = "Flow"
+category = "Assessment"
+description = "P2 — Schema evolution compatibility rule. Evaluates whether a schema change (additive/breaking/compatible) is safe for existing consumers."
+
+[[elements]]
+name = "DataQualityGate"
+layer = "Flow"
+category = "Assessment"
+description = "P2 — Data quality validation constraint at schema boundary. Enforces nullability, range, format, and cross-field consistency rules on step input/output."
+
+# --- P3: 런타임 데이터 계보 ---
+
+[[elements]]
+name = "DataLineageRecord"
+layer = "Flow"
+category = "PassiveStructure"
+description = "P3 — Data provenance record. Tracks which step produced each data field, the schema version used, and the transformation path through the flow."
+
+# ─────────────────────────────────────────────────────────────
+# Kernel Actions — Kernel-Linked Step Specs (kernel_actions.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "AddRuleStepSpecType"
+layer = "Flow"
+category = "Executable"
+description = "Kernel action — declarative step spec for adding a new rule (AddRuleStepSpec). Carries rule_asset_data and kernel_anchor."
+
+[[elements]]
+name = "DeprecateRuleStepSpecType"
+layer = "Flow"
+category = "Executable"
+description = "Kernel action — declarative step spec for deprecating a rule (DeprecateRuleStepSpec). Carries rule_id and kernel_anchor."
+
+# ─────────────────────────────────────────────────────────────
+# Kernel Implementers — Runtime Executors (kernel_implementers.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "AddRuleImplementerType"
+layer = "Flow"
+category = "Executable"
+description = "P3 — Kernel rule creation implementer (AddRuleImplementer). Interprets AddRuleStepSpec into kernel.submit_rule intent."
+
+[[elements]]
+name = "DeprecateRuleImplementerType"
+layer = "Flow"
+category = "Executable"
+description = "P3 — Kernel rule deprecation implementer (DeprecateRuleImplementer). Interprets DeprecateRuleStepSpec into kernel.deprecate_rule intent."
+
+# ─────────────────────────────────────────────────────────────
+# Flow Profile — Meta-Step Collection (profile.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowProfileType"
+layer = "Flow"
+category = "Composite"
+description = "Domain-specific meta-step collection (FlowProfile). Frozen dataclass with name, version, meta_steps tuple, metadata."
+
+# =============================================================
+# Category-Level Pattern Rules (priority 50)
+# =============================================================
+
 [[rules]]
 source = "@Composite"
 target = "@Behavior"
@@ -251,6 +553,27 @@ target = "@PassiveStructure"
 relation = "contains"
 priority = 50
 notes = "Flow boundary contains flow artifacts and imported datasets."
+
+[[rules]]
+source = "@Composite"
+target = "@ActiveStructure"
+relation = "contains"
+priority = 50
+notes = "Flow boundary contains active structure components (runtime engines, registries, schema implementations)."
+
+[[rules]]
+source = "@Composite"
+target = "@Interface"
+relation = "contains"
+priority = 50
+notes = "Flow boundary contains contract interfaces (ABC ports, schema specs)."
+
+[[rules]]
+source = "@Composite"
+target = "@Assessment"
+relation = "contains"
+priority = 50
+notes = "Flow boundary contains assessment expressions (policies, conditions, categories)."
 
 [[rules]]
 source = "@Behavior"
@@ -349,6 +672,830 @@ target = "@PassiveStructure"
 relation = "depends_on"
 priority = 50
 notes = "Actions depend on passive data state."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "depends_on"
+priority = 50
+notes = "Active structures (runtime, registry) depend on contract interfaces."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "Active structures produce result/state artifacts."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 50
+notes = "Active structures consume configuration/input artifacts."
+
+[[rules]]
+source = "@Interface"
+target = "@ActiveStructure"
+relation = "registers"
+priority = 50
+notes = "Contract interfaces register their implementations."
+
+[[rules]]
+source = "@Assessment"
+target = "@ActiveStructure"
+relation = "constrains"
+priority = 50
+notes = "Assessments constrain active structure behavior."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Behavior"
+relation = "coordinates"
+priority = 50
+notes = "Active structures coordinate behavior step execution."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Executable"
+relation = "coordinates"
+priority = 50
+notes = "Active structures coordinate executable action dispatch."
+
+# =============================================================
+# P1 Specification Plane — Internal Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "SpecificationPlane"
+target = "StepSpecContract"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns StepSpec ABC contract."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "FlowMetaStepDefinition"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns FlowMetaStep definitions."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "KernelGroundedStepSpecType"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns kernel-grounded step specs."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "WorkflowSpecContract"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns WorkflowSpec ABC contract."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "UseCaseSpecType"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns UseCaseSpec workflow type."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "ExecutionContextData"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns ExecutionContext data."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "StepResultSpecData"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns StepResultSpec data."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "FlowGenerationRuleData"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns FlowGenerationRule assessments."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "FlowTopologyData"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns FlowTopology structure."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "SchemaSpecContract"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns SchemaSpec ABC contract."
+
+[[rules]]
+source = "StepSpecContract"
+target = "FlowMetaStepDefinition"
+relation = "depends_on"
+priority = 60
+notes = "StepSpec references FlowMetaStep via meta_type property."
+
+[[rules]]
+source = "StepSpecContract"
+target = "SchemaSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "StepSpec input/output_schema delegates to SchemaSpec."
+
+[[rules]]
+source = "KernelGroundedStepSpecType"
+target = "StepSpecContract"
+relation = "registers"
+priority = 60
+notes = "KernelGroundedStepSpec implements StepSpec contract."
+
+[[rules]]
+source = "KernelGroundedStepSpecType"
+target = "FlowMetaStepDefinition"
+relation = "depends_on"
+priority = 60
+notes = "KernelGroundedStepSpec requires FlowMetaStep at construction."
+
+[[rules]]
+source = "UseCaseSpecType"
+target = "WorkflowSpecContract"
+relation = "registers"
+priority = 60
+notes = "UseCaseSpec implements WorkflowSpec contract."
+
+[[rules]]
+source = "UseCaseSpecType"
+target = "StepSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "UseCaseSpec holds a list of StepSpec instances."
+
+[[rules]]
+source = "WorkflowSpecContract"
+target = "StepSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "WorkflowSpec.get_steps() returns list of StepSpec."
+
+[[rules]]
+source = "WorkflowSpecContract"
+target = "SchemaSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "WorkflowSpec declares global input/output SchemaSpec."
+
+[[rules]]
+source = "FlowTopologyData"
+target = "StepSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "FlowTopology contains list of StepSpec instances."
+
+[[rules]]
+source = "FlowTopologyData"
+target = "FlowGenerationRuleData"
+relation = "depends_on"
+priority = 60
+notes = "FlowTopology includes generation_rules for meta-modeling."
+
+[[rules]]
+source = "FlowGenerationRuleData"
+target = "FlowMetaStepDefinition"
+relation = "depends_on"
+priority = 60
+notes = "FlowGenerationRule references FlowMetaStep names in required_steps."
+
+[[rules]]
+source = "StepResultSpecData"
+target = "SchemaSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "StepResultSpec contains output_schema of type SchemaSpec."
+
+# --- P1: Data Schema Declaration Rules ---
+
+[[rules]]
+source = "SpecificationPlane"
+target = "StepInputSchemaData"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns step input schema declarations."
+
+[[rules]]
+source = "SpecificationPlane"
+target = "StepOutputSchemaData"
+relation = "contains"
+priority = 60
+notes = "P1 plane owns step output schema declarations."
+
+[[rules]]
+source = "StepSpecContract"
+target = "StepInputSchemaData"
+relation = "depends_on"
+priority = 60
+notes = "StepSpec declares its formal input schema shape."
+
+[[rules]]
+source = "StepSpecContract"
+target = "StepOutputSchemaData"
+relation = "depends_on"
+priority = 60
+notes = "StepSpec declares its formal output schema shape."
+
+[[rules]]
+source = "StepInputSchemaData"
+target = "SchemaSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "Input schema data delegates validation to SchemaSpec implementation."
+
+[[rules]]
+source = "StepOutputSchemaData"
+target = "SchemaSpecContract"
+relation = "depends_on"
+priority = 60
+notes = "Output schema data delegates validation to SchemaSpec implementation."
+
+# =============================================================
+# P2 Coordination Plane — Internal Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "CoordinationPlane"
+target = "ProcessSpecType"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns ProcessSpec type."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "StepDefinitionNode"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns StepDefinition nodes."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "DataFlowEdgeLink"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns DataFlowEdge links."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "LogicConditionExpr"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns LogicCondition expressions."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "DataTransformationSpec"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns DataTransformation specs."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "SchemaDefinitionData"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns SchemaDefinition data shapes."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "StepSchemaUsageSpec"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns StepSchemaUsage contracts."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "FlowOntologyRegistry"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns FlowOntology registry."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "FlowStepCategoryEnum"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns FlowStepCategory enum."
+
+[[rules]]
+source = "ProcessSpecType"
+target = "StepDefinitionNode"
+relation = "contains"
+priority = 60
+notes = "ProcessSpec contains list of StepDefinition nodes."
+
+[[rules]]
+source = "ProcessSpecType"
+target = "SchemaDefinitionData"
+relation = "contains"
+priority = 60
+notes = "ProcessSpec contains defined_schemas list."
+
+[[rules]]
+source = "ProcessSpecType"
+target = "DataFlowEdgeLink"
+relation = "contains"
+priority = 60
+notes = "ProcessSpec contains data_flow_edges list."
+
+[[rules]]
+source = "StepDefinitionNode"
+target = "LogicConditionExpr"
+relation = "depends_on"
+priority = 60
+notes = "StepDefinition optionally depends on LogicCondition for decision/gateway steps."
+
+[[rules]]
+source = "StepDefinitionNode"
+target = "DataTransformationSpec"
+relation = "depends_on"
+priority = 60
+notes = "StepDefinition optionally depends on DataTransformation for action/transform steps."
+
+[[rules]]
+source = "StepDefinitionNode"
+target = "StepSchemaUsageSpec"
+relation = "depends_on"
+priority = 60
+notes = "StepDefinition optionally depends on StepSchemaUsage for data contracts."
+
+[[rules]]
+source = "StepDefinitionNode"
+target = "FlowStepCategoryEnum"
+relation = "depends_on"
+priority = 60
+notes = "StepDefinition.category references FlowStepCategory enum."
+
+[[rules]]
+source = "StepDefinitionNode"
+target = "StepDefinitionNode"
+relation = "next"
+priority = 60
+notes = "StepDefinition.next_step_ids creates succession edges in the process graph."
+
+[[rules]]
+source = "DataFlowEdgeLink"
+target = "StepDefinitionNode"
+relation = "coordinates"
+priority = 60
+notes = "DataFlowEdge connects source_step to target_step for data transfer."
+
+[[rules]]
+source = "StepSchemaUsageSpec"
+target = "SchemaDefinitionData"
+relation = "depends_on"
+priority = 60
+notes = "StepSchemaUsage references SchemaDefinition by input/output_schema_id."
+
+[[rules]]
+source = "DataTransformationSpec"
+target = "SchemaDefinitionData"
+relation = "depends_on"
+priority = 60
+notes = "DataTransformation input/output_schema references SchemaDefinition shapes."
+
+[[rules]]
+source = "FlowOntologyRegistry"
+target = "ProcessSpecType"
+relation = "registers"
+priority = 60
+notes = "FlowOntology registers ProcessSpec as a describable type."
+
+[[rules]]
+source = "FlowOntologyRegistry"
+target = "SchemaDefinitionData"
+relation = "registers"
+priority = 60
+notes = "FlowOntology registers SchemaDefinition as a describable type."
+
+[[rules]]
+source = "FlowOntologyRegistry"
+target = "DataFlowEdgeLink"
+relation = "registers"
+priority = 60
+notes = "FlowOntology registers DataFlowEdge as a describable type."
+
+[[rules]]
+source = "FlowOntologyRegistry"
+target = "StepSchemaUsageSpec"
+relation = "registers"
+priority = 60
+notes = "FlowOntology registers StepSchemaUsage as a describable type."
+
+[[rules]]
+source = "LogicConditionExpr"
+target = "StepDefinitionNode"
+relation = "constrains"
+priority = 60
+notes = "LogicCondition constrains step routing at decision/gateway points."
+
+# --- P2: Data Schema Catalog Rules ---
+
+[[rules]]
+source = "CoordinationPlane"
+target = "DataContractSpec"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns producer-consumer data contracts."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "SchemaVersionRecord"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns schema version records."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "DataCatalogRegistry"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns data catalog registry."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "SchemaCompatibilityRule"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns schema compatibility rules."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "DataQualityGate"
+relation = "contains"
+priority = 60
+notes = "P2 plane owns data quality gates."
+
+[[rules]]
+source = "DataContractSpec"
+target = "StepInputSchemaData"
+relation = "depends_on"
+priority = 60
+notes = "Data contract references consumer's input schema."
+
+[[rules]]
+source = "DataContractSpec"
+target = "StepOutputSchemaData"
+relation = "depends_on"
+priority = 60
+notes = "Data contract references producer's output schema."
+
+[[rules]]
+source = "DataContractSpec"
+target = "SchemaCompatibilityRule"
+relation = "depends_on"
+priority = 60
+notes = "Data contract uses compatibility rule to verify producer-consumer schema matching."
+
+[[rules]]
+source = "DataCatalogRegistry"
+target = "SchemaDefinitionData"
+relation = "registers"
+priority = 60
+notes = "Data catalog registers all schema definitions."
+
+[[rules]]
+source = "DataCatalogRegistry"
+target = "StepInputSchemaData"
+relation = "registers"
+priority = 60
+notes = "Data catalog registers step input schemas for lookup."
+
+[[rules]]
+source = "DataCatalogRegistry"
+target = "StepOutputSchemaData"
+relation = "registers"
+priority = 60
+notes = "Data catalog registers step output schemas for lookup."
+
+[[rules]]
+source = "DataCatalogRegistry"
+target = "SchemaVersionRecord"
+relation = "registers"
+priority = 60
+notes = "Data catalog registers schema version history."
+
+[[rules]]
+source = "SchemaVersionRecord"
+target = "SchemaDefinitionData"
+relation = "depends_on"
+priority = 60
+notes = "Schema version tracks a specific SchemaDefinition snapshot."
+
+[[rules]]
+source = "SchemaCompatibilityRule"
+target = "SchemaVersionRecord"
+relation = "depends_on"
+priority = 60
+notes = "Compatibility rule evaluates between two schema versions."
+
+[[rules]]
+source = "DataQualityGate"
+target = "StepInputSchemaData"
+relation = "constrains"
+priority = 60
+notes = "Data quality gate validates data entering a step against input schema constraints."
+
+[[rules]]
+source = "DataQualityGate"
+target = "StepOutputSchemaData"
+relation = "constrains"
+priority = 60
+notes = "Data quality gate validates data leaving a step against output schema guarantees."
+
+[[rules]]
+source = "DataFlowEdgeLink"
+target = "DataContractSpec"
+relation = "depends_on"
+priority = 60
+notes = "DataFlowEdge references DataContract for schema matching between connected steps."
+
+[[rules]]
+source = "StepSchemaUsageSpec"
+target = "StepInputSchemaData"
+relation = "depends_on"
+priority = 60
+notes = "StepSchemaUsage input_schema_id resolves to StepInputSchemaData."
+
+[[rules]]
+source = "StepSchemaUsageSpec"
+target = "StepOutputSchemaData"
+relation = "depends_on"
+priority = 60
+notes = "StepSchemaUsage output_schema_id resolves to StepOutputSchemaData."
+
+# =============================================================
+# P3 Realization Plane — Internal Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "RealizationPlane"
+target = "FlowRuntimeEngine"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns FlowRuntime engine."
+
+[[rules]]
+source = "RealizationPlane"
+target = "StepImplementerContract"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns StepImplementer ABC contract."
+
+[[rules]]
+source = "RealizationPlane"
+target = "StepInterpretationResultData"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns StepInterpretationResult data."
+
+[[rules]]
+source = "RealizationPlane"
+target = "StepExecutionResultData"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns StepExecutionResult alias."
+
+[[rules]]
+source = "RealizationPlane"
+target = "FlowExecutionResultData"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns FlowExecutionResult data."
+
+[[rules]]
+source = "RealizationPlane"
+target = "DataLineageRecord"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns DataLineageRecord for runtime data provenance."
+
+[[rules]]
+source = "RealizationPlane"
+target = "AddRuleImplementerType"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns AddRuleImplementer."
+
+[[rules]]
+source = "RealizationPlane"
+target = "DeprecateRuleImplementerType"
+relation = "contains"
+priority = 60
+notes = "P3 plane owns DeprecateRuleImplementer."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "StepImplementerContract"
+relation = "depends_on"
+priority = 60
+notes = "FlowRuntime resolves StepImplementer by step name for dispatch."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "WorkflowSpecContract"
+relation = "consumes"
+priority = 60
+notes = "FlowRuntime.interpret() consumes WorkflowSpec to execute."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "ExecutionContextData"
+relation = "produces"
+priority = 60
+notes = "FlowRuntime creates ExecutionContext for each interpretation."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "FlowExecutionResultData"
+relation = "produces"
+priority = 60
+notes = "FlowRuntime.interpret() produces FlowExecutionResult."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "StepInterpretationResultData"
+relation = "produces"
+priority = 60
+notes = "FlowRuntime per-step interpretation produces StepInterpretationResult."
+
+[[rules]]
+source = "StepImplementerContract"
+target = "StepSpecContract"
+relation = "consumes"
+priority = 60
+notes = "StepImplementer.execute() receives StepSpec for interpretation."
+
+[[rules]]
+source = "StepImplementerContract"
+target = "ExecutionContextData"
+relation = "consumes"
+priority = 60
+notes = "StepImplementer.execute() receives ExecutionContext."
+
+[[rules]]
+source = "StepImplementerContract"
+target = "StepExecutionResultData"
+relation = "produces"
+priority = 60
+notes = "StepImplementer.execute() returns StepExecutionResult."
+
+[[rules]]
+source = "AddRuleImplementerType"
+target = "StepImplementerContract"
+relation = "registers"
+priority = 60
+notes = "AddRuleImplementer implements StepImplementer contract."
+
+[[rules]]
+source = "DeprecateRuleImplementerType"
+target = "StepImplementerContract"
+relation = "registers"
+priority = 60
+notes = "DeprecateRuleImplementer implements StepImplementer contract."
+
+# =============================================================
+# Schema Plane — Internal Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "JsonSchema2020SpecType"
+target = "SchemaSpecContract"
+relation = "registers"
+priority = 60
+notes = "JsonSchema2020Spec implements SchemaSpec ABC."
+
+[[rules]]
+source = "DbSchemaSpecType"
+target = "SchemaSpecContract"
+relation = "registers"
+priority = 60
+notes = "DbSchemaSpec implements SchemaSpec ABC."
+
+# =============================================================
+# Kernel Actions — Cross-Plane Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "AddRuleStepSpecType"
+target = "StepSpecContract"
+relation = "registers"
+priority = 60
+notes = "AddRuleStepSpec implements StepSpec contract."
+
+[[rules]]
+source = "DeprecateRuleStepSpecType"
+target = "StepSpecContract"
+relation = "registers"
+priority = 60
+notes = "DeprecateRuleStepSpec implements StepSpec contract."
+
+[[rules]]
+source = "AddRuleImplementerType"
+target = "AddRuleStepSpecType"
+relation = "depends_on"
+priority = 60
+notes = "AddRuleImplementer interprets only AddRuleStepSpec instances."
+
+[[rules]]
+source = "DeprecateRuleImplementerType"
+target = "DeprecateRuleStepSpecType"
+relation = "depends_on"
+priority = 60
+notes = "DeprecateRuleImplementer interprets only DeprecateRuleStepSpec instances."
+
+[[rules]]
+source = "AddRuleImplementerType"
+target = "StepExecutionResultData"
+relation = "produces"
+priority = 60
+notes = "AddRuleImplementer produces kernel.submit_rule intent as StepExecutionResult."
+
+[[rules]]
+source = "DeprecateRuleImplementerType"
+target = "StepExecutionResultData"
+relation = "produces"
+priority = 60
+notes = "DeprecateRuleImplementer produces kernel.deprecate_rule intent as StepExecutionResult."
+
+# =============================================================
+# Flow Profile — Internal Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "FlowProfileType"
+target = "FlowMetaStepDefinition"
+relation = "contains"
+priority = 60
+notes = "FlowProfile holds tuple of FlowMetaStep definitions."
+
+# =============================================================
+# 3-Plane Containment — FlowLayer owns planes (priority 60)
+# =============================================================
+
+[[rules]]
+source = "FlowLayer"
+target = "SpecificationPlane"
+relation = "contains"
+priority = 60
+notes = "FlowLayer contains P1 Specification plane."
+
+[[rules]]
+source = "FlowLayer"
+target = "CoordinationPlane"
+relation = "contains"
+priority = 60
+notes = "FlowLayer contains P2 Coordination plane."
+
+[[rules]]
+source = "FlowLayer"
+target = "RealizationPlane"
+relation = "contains"
+priority = 60
+notes = "FlowLayer contains P3 Realization plane."
+
+[[rules]]
+source = "FlowLayer"
+target = "FlowProfileType"
+relation = "contains"
+priority = 60
+notes = "FlowLayer contains FlowProfile meta-step collections."
+
+# =============================================================
+# Cross-Plane Dependency Rules — P1 -> P2 -> P3 (priority 60)
+# =============================================================
+
+[[rules]]
+source = "RealizationPlane"
+target = "SpecificationPlane"
+relation = "depends_on"
+priority = 60
+notes = "P3 Realization depends on P1 Specification (runtime consumes specs). P1 does not know P3."
+
+[[rules]]
+source = "CoordinationPlane"
+target = "SpecificationPlane"
+relation = "depends_on"
+priority = 60
+notes = "P2 Coordination is independent of P1 but shares types.py enums."
+
+# =============================================================
+# Existing Element-Specific Rules (priority 70)
+# =============================================================
 
 [[rules]]
 source = "ContextIngestStep"
@@ -532,6 +1679,131 @@ relation = "produces"
 priority = 70
 notes = "Publish action writes final published outcome version."
 
+# =============================================================
+# Data Schema Catalog — Element-Specific Rules (priority 70)
+# =============================================================
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "DataLineageRecord"
+relation = "produces"
+priority = 70
+notes = "FlowRuntime produces data lineage records during step execution."
+
+[[rules]]
+source = "DataLineageRecord"
+target = "StepOutputSchemaData"
+relation = "depends_on"
+priority = 70
+notes = "Data lineage record references the output schema used by the producing step."
+
+[[rules]]
+source = "DataLineageRecord"
+target = "SchemaVersionRecord"
+relation = "depends_on"
+priority = 70
+notes = "Data lineage record references the schema version active at production time."
+
+[[rules]]
+source = "DataQualityGate"
+target = "BuildKernelInputStep"
+relation = "constrains"
+priority = 70
+notes = "Data quality gate validates kernel input data before spec mapping."
+
+[[rules]]
+source = "DataQualityGate"
+target = "VerifyOutcomeStep"
+relation = "constrains"
+priority = 70
+notes = "Data quality gate validates execution output data against schema guarantees."
+
+[[rules]]
+source = "DataContractSpec"
+target = "DataFlowEdgeLink"
+relation = "constrains"
+priority = 70
+notes = "Data contract constrains data flow edges — only compatible schemas can be connected."
+
+[[rules]]
+source = "DataCatalogRegistry"
+target = "DataContractSpec"
+relation = "registers"
+priority = 70
+notes = "Data catalog registers all data contracts for lookup and impact analysis."
+
+[[rules]]
+source = "DataCatalogRegistry"
+target = "DataLineageRecord"
+relation = "registers"
+priority = 70
+notes = "Data catalog registers lineage records for provenance queries."
+
+# =============================================================
+# Kernel Action Element-Specific Rules (priority 70)
+# =============================================================
+
+[[rules]]
+source = "AddRuleStepSpecType"
+target = "KernelModelPort"
+relation = "depends_on"
+priority = 70
+notes = "AddRuleStepSpec grounds to kernel via kernel_anchor for rule creation."
+
+[[rules]]
+source = "DeprecateRuleStepSpecType"
+target = "KernelModelPort"
+relation = "depends_on"
+priority = 70
+notes = "DeprecateRuleStepSpec grounds to kernel via kernel_anchor for rule deprecation."
+
+[[rules]]
+source = "AddRuleImplementerType"
+target = "KernelConstraintHook"
+relation = "coordinates"
+priority = 70
+notes = "AddRuleImplementer produces kernel.submit_rule intent targeting kernel constraint system."
+
+[[rules]]
+source = "DeprecateRuleImplementerType"
+target = "KernelConstraintHook"
+relation = "coordinates"
+priority = 70
+notes = "DeprecateRuleImplementer produces kernel.deprecate_rule intent targeting kernel constraint system."
+
+# =============================================================
+# FlowStepCategory Constrains StepDefinition (priority 70)
+# =============================================================
+
+[[rules]]
+source = "FlowStepCategoryEnum"
+target = "StepDefinitionNode"
+relation = "constrains"
+priority = 70
+notes = "FlowStepCategory (ACTION/DECISION/EVENT/GATEWAY/TRANSFORMATION) classifies StepDefinition role."
+
+# =============================================================
+# FlowRuntime Compensating Transaction Rules (priority 70)
+# =============================================================
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "FlowExecutionPolicy"
+relation = "depends_on"
+priority = 70
+notes = "FlowRuntime sequential execution and rollback governed by execution policy."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "FlowExecutionLogStore"
+relation = "produces"
+priority = 70
+notes = "FlowRuntime interpretation produces execution log entries."
+
+# =============================================================
+# 6x6 Contract Rules (priority 80)
+# =============================================================
+
 [[rules]]
 source = "PersistFlowStateStep"
 target = "FlowLayerContractMatrix"
@@ -586,48 +1858,48 @@ notes = "6x6 contract: flow -> flow interface contract."
 # ─────────────────────────────────────────────────────────────
 
 [[elements]]
-name = "FlowStateCheckpoint"
+name = "FlowCheckpointStore"
 layer = "Infra"
 category = "PassiveStructure"
 description = "Flow view — checkpoint storage for flow execution resumption."
 
 [[elements]]
-name = "FlowExecutionLog"
+name = "FlowExecutionLogStore"
 layer = "Infra"
 category = "PassiveStructure"
 description = "Flow view — execution log storage for step-level audit trail."
 
 [[rules]]
 source = "InfraModelPort"
-target = "FlowStateCheckpoint"
+target = "FlowCheckpointStore"
 relation = "contains"
 priority = 65
 notes = "InfraModelPort contains flow state checkpoint."
 
 [[rules]]
 source = "InfraModelPort"
-target = "FlowExecutionLog"
+target = "FlowExecutionLogStore"
 relation = "contains"
 priority = 65
 notes = "InfraModelPort contains flow execution log."
 
 [[rules]]
 source = "PersistFlowStateStep"
-target = "FlowStateCheckpoint"
+target = "FlowCheckpointStore"
 relation = "depends_on"
 priority = 72
 notes = "Persistence step depends on checkpoint storage for resumption."
 
 [[rules]]
 source = "PersistFlowStateStep"
-target = "FlowExecutionLog"
+target = "FlowExecutionLogStore"
 relation = "produces"
 priority = 72
 notes = "Persistence step produces step-level execution log."
 
 [[rules]]
 source = "ExecuteKernelAction"
-target = "FlowStateCheckpoint"
+target = "FlowCheckpointStore"
 relation = "depends_on"
 priority = 72
 notes = "Execution action depends on checkpoint for state recovery."

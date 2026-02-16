@@ -75,6 +75,10 @@ name = "available_in"
 kernel_relation = "association"
 description = "Context provides access to an experience or element."
 
+# ══════════════════════════════════════════════════════════════
+# Needs Layer Internal Elements
+# ══════════════════════════════════════════════════════════════
+
 [[elements]]
 name = "NeedsLayer"
 layer = "Needs"
@@ -171,6 +175,332 @@ layer = "Needs"
 category = "Event"
 description = "Feedback event for refining needs definitions."
 
+# ══════════════════════════════════════════════════════════════
+# N1 Vocabulary — Frozen Value Objects (types.py)
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedCatalog"
+layer = "Needs"
+category = "Composite"
+description = "Aggregate root containing use-cases, stakeholders, needs, relations, and process units. All mutations go through catalog methods (DDD aggregate pattern)."
+
+[[elements]]
+name = "Stakeholder"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Frozen value object: the subject who has the need. Fields: id, name, role, context."
+
+[[elements]]
+name = "Desire"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Frozen value object: what the stakeholder wants. Fields: action, subject, target (optional)."
+
+[[elements]]
+name = "Justification"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Frozen value object: why the stakeholder has this desire. Fields: type (BECAUSE/IN_ORDER_TO), description."
+
+[[elements]]
+name = "NeedStatement"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Frozen composite: complete immutable expression of a stakeholder need. Combines stakeholder_id + desire + justifications + kernel_refs + tags + purpose + cause_types + complexity."
+
+[[elements]]
+name = "UseCase"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Frozen value object: structured use-case with actor, situation, purpose, outcome, tags, and version."
+
+[[elements]]
+name = "Need"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Mutable lifecycle wrapper around frozen NeedStatement. Manages status, priority, version, lineage_id, decision evidence refs, and timestamps."
+
+[[elements]]
+name = "NeedRelation"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Directed relationship between two needs. Fields: id, source_id, target_id, type (DEPENDS_ON/CONFLICTS_WITH/SUPPORTS/REFINES/SUPERSEDES), description."
+
+[[elements]]
+name = "NeedProcessUnit"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Frozen modeling unit for need processes. Fields: id, need_id, stage (IDENTIFY/QUERY/MODEL_DETAIL), label, description, sequence, metadata."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Enums — Status / Priority / Cause / Complexity / Process
+# ══════════════════════════════════════════════════════════════
+
+# -- NeedStatus lifecycle states --
+
+[[elements]]
+name = "NeedStatusDraft"
+layer = "Needs"
+category = "Goal"
+description = "Need lifecycle state: initial draft before formal expression."
+
+[[elements]]
+name = "NeedStatusExpressed"
+layer = "Needs"
+category = "Goal"
+description = "Need lifecycle state: stakeholder has formally expressed the need."
+
+[[elements]]
+name = "NeedStatusAcknowledged"
+layer = "Needs"
+category = "Goal"
+description = "Need lifecycle state: need has been acknowledged by the system."
+
+[[elements]]
+name = "NeedStatusAddressed"
+layer = "Needs"
+category = "Goal"
+description = "Need lifecycle state: need has been addressed (terminal)."
+
+[[elements]]
+name = "NeedStatusWithdrawn"
+layer = "Needs"
+category = "Goal"
+description = "Need lifecycle state: need has been withdrawn (terminal)."
+
+# -- NeedPriority levels --
+
+[[elements]]
+name = "NeedPriorityCritical"
+layer = "Needs"
+category = "Assessment"
+description = "Need priority: critical urgency, must be addressed immediately."
+
+[[elements]]
+name = "NeedPriorityHigh"
+layer = "Needs"
+category = "Assessment"
+description = "Need priority: high urgency."
+
+[[elements]]
+name = "NeedPriorityMedium"
+layer = "Needs"
+category = "Assessment"
+description = "Need priority: medium urgency (default)."
+
+[[elements]]
+name = "NeedPriorityLow"
+layer = "Needs"
+category = "Assessment"
+description = "Need priority: low urgency."
+
+# -- NeedCauseType domains --
+
+[[elements]]
+name = "CauseTypeEmotional"
+layer = "Needs"
+category = "Context"
+description = "Root cause domain: emotional factor generating a need."
+
+[[elements]]
+name = "CauseTypeSituational"
+layer = "Needs"
+category = "Context"
+description = "Root cause domain: situational factor generating a need."
+
+[[elements]]
+name = "CauseTypePhysical"
+layer = "Needs"
+category = "Context"
+description = "Root cause domain: physical factor generating a need."
+
+[[elements]]
+name = "CauseTypeLogical"
+layer = "Needs"
+category = "Context"
+description = "Root cause domain: logical factor generating a need."
+
+[[elements]]
+name = "CauseTypeMental"
+layer = "Needs"
+category = "Context"
+description = "Root cause domain: mental factor generating a need."
+
+[[elements]]
+name = "CauseTypePhilosophical"
+layer = "Needs"
+category = "Context"
+description = "Root cause domain: philosophical factor generating a need."
+
+# -- NeedResolutionComplexity levels --
+
+[[elements]]
+name = "ResolutionComplexitySimple"
+layer = "Needs"
+category = "Assessment"
+description = "Resolution complexity: simple, straightforward resolution."
+
+[[elements]]
+name = "ResolutionComplexityProcedural"
+layer = "Needs"
+category = "Assessment"
+description = "Resolution complexity: procedural, requires defined steps (default)."
+
+[[elements]]
+name = "ResolutionComplexityComplex"
+layer = "Needs"
+category = "Assessment"
+description = "Resolution complexity: complex, requires multi-faceted approach."
+
+# -- JustificationType --
+
+[[elements]]
+name = "JustificationBecause"
+layer = "Needs"
+category = "Assessment"
+description = "Justification type: causal — 'because X is true'."
+
+[[elements]]
+name = "JustificationInOrderTo"
+layer = "Needs"
+category = "Assessment"
+description = "Justification type: teleological — 'in order to achieve X'."
+
+# -- NeedRelationType --
+
+[[elements]]
+name = "NeedRelDependsOn"
+layer = "Needs"
+category = "Assessment"
+description = "Need relation type: need depends on another need."
+
+[[elements]]
+name = "NeedRelConflictsWith"
+layer = "Needs"
+category = "Assessment"
+description = "Need relation type: need conflicts with another need."
+
+[[elements]]
+name = "NeedRelSupports"
+layer = "Needs"
+category = "Assessment"
+description = "Need relation type: need supports another need."
+
+[[elements]]
+name = "NeedRelRefines"
+layer = "Needs"
+category = "Assessment"
+description = "Need relation type: need refines another need."
+
+[[elements]]
+name = "NeedRelSupersedes"
+layer = "Needs"
+category = "Assessment"
+description = "Need relation type: need supersedes another need."
+
+# ══════════════════════════════════════════════════════════════
+# N2 Catalog — Process Stages (Behavior)
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "IdentifyStage"
+layer = "Needs"
+category = "Behavior"
+description = "Process stage: identify — initial recognition and capture of a need."
+
+[[elements]]
+name = "QueryStage"
+layer = "Needs"
+category = "Behavior"
+description = "Process stage: query — interrogation and elaboration of an identified need."
+
+[[elements]]
+name = "ModelDetailStage"
+layer = "Needs"
+category = "Behavior"
+description = "Process stage: model_detail — detailed modeling and structuring of a need."
+
+# ══════════════════════════════════════════════════════════════
+# N2.5 Schema — NeedsSchema Definition
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedsSchema"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Schema definition for the needs layer (SchemaPort-compatible). Contains NeedsEntity and NeedsRelation tuples. Singleton: NEEDS_SCHEMA."
+
+# ══════════════════════════════════════════════════════════════
+# N2.5 Service — needs_service.py Query Functions
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedsQueryService"
+layer = "Needs"
+category = "ActiveStructure"
+description = "Pure-function query service (needs_service.py). Provides list_stakeholders, list_use_cases, list_needs, describe_need, need_lineage, catalog_summary."
+
+# ══════════════════════════════════════════════════════════════
+# N3 Integration — Kernel Bridge, Profile Bridge, Repository
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "KernelBridgePort"
+layer = "Needs"
+category = "Interface"
+description = "Lazy kernel integration bridge (kernel_bridge.py). Validates kernel_refs against KernelSchema and retrieves kernel entity metadata. Only module importing ea_kernel."
+
+[[elements]]
+name = "ProfileBridgePort"
+layer = "Needs"
+category = "Interface"
+description = "Profile loading bridge (profile_bridge.py). Loads needs-layer profiles from TOML with optional NEEDS_SCHEMA validation and needs condition registry."
+
+[[elements]]
+name = "NeedRepository"
+layer = "Needs"
+category = "ActiveStructure"
+description = "File-based JSON repository for NeedCatalog persistence (repository.py). Methods: save_catalog, get_catalog, list_catalogs."
+
+[[elements]]
+name = "ConditionRegistry"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Needs-specific condition vocabulary extending kernel defaults. Adds SAME_STATUS, SAME_PRIORITY, SAME_USE_CASE, SAME_STAKEHOLDER conditions."
+
+# ══════════════════════════════════════════════════════════════
+# N2 Catalog Events
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedExpressedEvent"
+layer = "Needs"
+category = "Event"
+description = "Event raised when a stakeholder formally expresses a new need."
+
+[[elements]]
+name = "NeedRevisedEvent"
+layer = "Needs"
+category = "Event"
+description = "Event raised when an existing need is revised to create a new lineage version."
+
+[[elements]]
+name = "NeedStatusTransitionEvent"
+layer = "Needs"
+category = "Event"
+description = "Event raised when a need transitions between lifecycle states (DRAFT->EXPRESSED->ACKNOWLEDGED->ADDRESSED/WITHDRAWN)."
+
+[[elements]]
+name = "DecisionEvidenceInheritedEvent"
+layer = "Needs"
+category = "Event"
+description = "Event raised when decision evidence references are inherited into a need."
+
+# ══════════════════════════════════════════════════════════════
+# Existing Internal Rules (preserved)
+# ══════════════════════════════════════════════════════════════
+
 [[rules]]
 source = "@Composite"
 target = "@ActiveStructure"
@@ -205,6 +535,41 @@ target = "@Behavior"
 relation = "constrains"
 priority = 60
 notes = "Needs goals constrain refinement behavior."
+
+[[rules]]
+source = "@Composite"
+target = "@Event"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains lifecycle events."
+
+[[rules]]
+source = "@Composite"
+target = "@Goal"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains status and version goals."
+
+[[rules]]
+source = "@Composite"
+target = "@Assessment"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains priority, complexity, and relation-type assessments."
+
+[[rules]]
+source = "@Composite"
+target = "@Context"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains cause-type contexts."
+
+[[rules]]
+source = "@Composite"
+target = "@Interface"
+relation = "contains"
+priority = 60
+notes = "Needs boundary contains bridge ports and model ports."
 
 [[rules]]
 source = "NeedsCatalogService"
@@ -282,6 +647,312 @@ target = "KernelModelPort"
 relation = "coordinates"
 priority = 70
 notes = "Runtime chain handoff: needs publication routes to kernel model port."
+
+# ══════════════════════════════════════════════════════════════
+# N1/N2 Vocabulary Rules — Aggregate Root Containment
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedCatalog"
+target = "Stakeholder"
+relation = "contains"
+priority = 70
+notes = "Aggregate root: catalog owns stakeholder records."
+
+[[rules]]
+source = "NeedCatalog"
+target = "UseCase"
+relation = "contains"
+priority = 70
+notes = "Aggregate root: catalog owns use-case definitions."
+
+[[rules]]
+source = "NeedCatalog"
+target = "Need"
+relation = "contains"
+priority = 70
+notes = "Aggregate root: catalog owns need lifecycle wrappers."
+
+[[rules]]
+source = "NeedCatalog"
+target = "NeedRelation"
+relation = "contains"
+priority = 70
+notes = "Aggregate root: catalog owns inter-need relations."
+
+[[rules]]
+source = "NeedCatalog"
+target = "NeedProcessUnit"
+relation = "contains"
+priority = 70
+notes = "Aggregate root: catalog owns process-model units."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Vocabulary Rules — Need Internal Composition
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "Need"
+target = "NeedStatement"
+relation = "contains"
+priority = 70
+notes = "Need wraps an immutable NeedStatement. Statement never changes after expression."
+
+[[rules]]
+source = "NeedStatement"
+target = "Desire"
+relation = "contains"
+priority = 70
+notes = "NeedStatement contains the stakeholder's desire (action + subject + target)."
+
+[[rules]]
+source = "NeedStatement"
+target = "Justification"
+relation = "contains"
+priority = 70
+notes = "NeedStatement contains justifications (BECAUSE/IN_ORDER_TO)."
+
+[[rules]]
+source = "Stakeholder"
+target = "Need"
+relation = "produces"
+priority = 70
+notes = "A stakeholder expresses (produces) needs via the catalog."
+
+[[rules]]
+source = "UseCase"
+target = "Need"
+relation = "coordinates"
+priority = 70
+notes = "A use-case contextualizes needs expressed within it."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Enum Rules — Status Lifecycle Transitions
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedStatusDraft"
+target = "NeedStatusExpressed"
+relation = "next"
+priority = 70
+notes = "Status transition: DRAFT -> EXPRESSED."
+
+[[rules]]
+source = "NeedStatusDraft"
+target = "NeedStatusWithdrawn"
+relation = "next"
+priority = 70
+notes = "Status transition: DRAFT -> WITHDRAWN."
+
+[[rules]]
+source = "NeedStatusExpressed"
+target = "NeedStatusAcknowledged"
+relation = "next"
+priority = 70
+notes = "Status transition: EXPRESSED -> ACKNOWLEDGED."
+
+[[rules]]
+source = "NeedStatusExpressed"
+target = "NeedStatusWithdrawn"
+relation = "next"
+priority = 70
+notes = "Status transition: EXPRESSED -> WITHDRAWN."
+
+[[rules]]
+source = "NeedStatusAcknowledged"
+target = "NeedStatusAddressed"
+relation = "next"
+priority = 70
+notes = "Status transition: ACKNOWLEDGED -> ADDRESSED."
+
+[[rules]]
+source = "NeedStatusAcknowledged"
+target = "NeedStatusWithdrawn"
+relation = "next"
+priority = 70
+notes = "Status transition: ACKNOWLEDGED -> WITHDRAWN."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Enum Rules — Priority Constrains Need
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "@Assessment"
+target = "Need"
+relation = "constrains"
+priority = 60
+notes = "Priority/complexity/relation-type assessments constrain need lifecycle."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Enum Rules — CauseType Available In NeedStatement
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "@Context"
+target = "NeedStatement"
+relation = "available_in"
+priority = 60
+notes = "Cause-type contexts are available in need statements as root cause classification."
+
+# ══════════════════════════════════════════════════════════════
+# N2 Process Stage Rules — Sequence (IDENTIFY -> QUERY -> MODEL_DETAIL)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "IdentifyStage"
+target = "QueryStage"
+relation = "next"
+priority = 70
+notes = "Process stage sequence: IDENTIFY -> QUERY."
+
+[[rules]]
+source = "QueryStage"
+target = "ModelDetailStage"
+relation = "next"
+priority = 70
+notes = "Process stage sequence: QUERY -> MODEL_DETAIL."
+
+[[rules]]
+source = "NeedProcessUnit"
+target = "Need"
+relation = "depends_on"
+priority = 70
+notes = "Process units are attached to and depend on a specific need."
+
+# ══════════════════════════════════════════════════════════════
+# N2.5/N3 Service & Integration Rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedCatalog"
+relation = "coordinates"
+priority = 70
+notes = "Catalog service coordinates the aggregate root for all mutations."
+
+[[rules]]
+source = "NeedsQueryService"
+target = "NeedCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Query service depends on catalog for read-only queries."
+
+[[rules]]
+source = "NeedRepository"
+target = "NeedCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Repository depends on catalog for JSON serialization/deserialization."
+
+[[rules]]
+source = "KernelBridgePort"
+target = "NeedStatement"
+relation = "coordinates"
+priority = 70
+notes = "Kernel bridge validates kernel_refs in need statements against KernelSchema."
+
+[[rules]]
+source = "KernelBridgePort"
+target = "KernelDomainReference"
+relation = "depends_on"
+priority = 70
+notes = "Kernel bridge depends on kernel domain references for entity validation."
+
+[[rules]]
+source = "ProfileBridgePort"
+target = "NeedsSchema"
+relation = "depends_on"
+priority = 70
+notes = "Profile bridge depends on NeedsSchema for profile validation."
+
+[[rules]]
+source = "ProfileBridgePort"
+target = "ConditionRegistry"
+relation = "depends_on"
+priority = 70
+notes = "Profile bridge depends on condition registry for needs-specific conditions."
+
+# ══════════════════════════════════════════════════════════════
+# N2 Catalog Event Rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedExpressedEvent"
+target = "NeedRefinementStep"
+relation = "triggers"
+priority = 70
+notes = "Need expression event triggers refinement for newly expressed needs."
+
+[[rules]]
+source = "NeedRevisedEvent"
+target = "NeedRefinementStep"
+relation = "triggers"
+priority = 70
+notes = "Need revision event triggers refinement for revised need versions."
+
+[[rules]]
+source = "NeedStatusTransitionEvent"
+target = "NeedsCatalogService"
+relation = "triggers"
+priority = 70
+notes = "Status transition event triggers catalog service for state bookkeeping."
+
+[[rules]]
+source = "DecisionEvidenceInheritedEvent"
+target = "NeedsCatalogService"
+relation = "triggers"
+priority = 70
+notes = "Decision evidence inheritance event triggers catalog service for evidence tracking."
+
+[[rules]]
+source = "Need"
+target = "NeedRelation"
+relation = "produces"
+priority = 70
+notes = "Needs produce directed relations to other needs (DEPENDS_ON/CONFLICTS_WITH/SUPPORTS/REFINES/SUPERSEDES)."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Justification Rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "JustificationBecause"
+target = "Justification"
+relation = "constrains"
+priority = 70
+notes = "BECAUSE type constrains justification to causal reasoning."
+
+[[rules]]
+source = "JustificationInOrderTo"
+target = "Justification"
+relation = "constrains"
+priority = 70
+notes = "IN_ORDER_TO type constrains justification to teleological reasoning."
+
+# ══════════════════════════════════════════════════════════════
+# N2 Lineage & Versioning Rules
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedVersionGoal"
+target = "Need"
+relation = "constrains"
+priority = 70
+notes = "Version goal constrains need lineage: each revision creates a new version with incremented lineage counter."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsQueryService"
+relation = "coordinates"
+priority = 70
+notes = "Catalog service coordinates query service for read access patterns."
+
+[[rules]]
+source = "NeedRepository"
+target = "NeedsStorageContract"
+relation = "depends_on"
+priority = 70
+notes = "Repository depends on infra storage contract for file-based persistence."
 
 # ══════════════════════════════════════════════════════════════
 # 6x6 Cross-Layer: Needs 관점에서 본 다른 5개 레이어

@@ -363,21 +363,21 @@ description = "Infra view of Kernel: schema migration for kernel data evolution.
 
 [[elements]]
 name = "FlowExecutionLogSchema"
-layer = "Flow"
+layer = "Infra"
 category = "PassiveStructure"
-description = "Infra view of Flow: row schema for flow execution/step/outcome logs."
+description = "Infra-owned row schema for flow execution/step/outcome logs."
 
 [[elements]]
 name = "FlowCheckpointStore"
-layer = "Flow"
+layer = "Infra"
 category = "PassiveStructure"
-description = "Infra view of Flow: state checkpoint storage for flow resumption."
+description = "Infra-owned state checkpoint storage for flow execution resumption."
 
 [[elements]]
 name = "FlowEventLogStore"
-layer = "Flow"
+layer = "Infra"
 category = "PassiveStructure"
-description = "Infra view of Flow: event log storage for flow triggers and transitions."
+description = "Infra-owned event log storage for flow triggers and transitions."
 
 [[elements]]
 name = "FlowDataRetentionPolicy"
@@ -663,3 +663,520 @@ target = "FlowCheckpointStore"
 relation = "constrains"
 priority = 72
 notes = "Infra-Flow: storage policy constrains checkpoint store retention and partitioning."
+
+# ══════════════════════════════════════════════════════════════
+# Implementation-Aligned Infra Elements
+# Actual infrastructure concepts discovered across ea-infra,
+# ea-kernel stores, ea-governance stores, and ea-needs/ea-profile.
+# ══════════════════════════════════════════════════════════════
+
+# ── Resource Indexing Service (ea-infra: ResourceIndexer + Resource) ──
+
+[[elements]]
+name = "ResourceIndexingService"
+layer = "Infra"
+category = "ActiveStructure"
+description = "File system scanner that discovers and indexes resources. Implements ea-infra ResourceIndexer: scan() yields Resource objects with URI, path, content_type, and last_modified metadata."
+
+[[elements]]
+name = "ResourceDescriptor"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Indexed resource metadata record. Corresponds to ea-infra Resource dataclass: uri, path, name, content_type, last_modified, optional content."
+
+# ── SQLite Storage Backend ───────────────────────────────────
+
+[[elements]]
+name = "SQLiteStorageBackend"
+layer = "Infra"
+category = "ActiveStructure"
+description = "SQLite-based storage backend shared across all domain stores. Provides connection management, WAL mode, schema versioning, and migration support. Concrete implementation behind all *Store ABCs."
+
+[[elements]]
+name = "SchemaVersionTable"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Schema version tracking table present in every SQLite database. Enables forward-compatible schema migration across all stores."
+
+# ── Domain Store Ports (ABC interfaces for kernel stores) ────
+
+[[elements]]
+name = "I18nStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for kernel schema translations. ABC with CRUD + history + TOML bulk import + schema audit. SQLite implementation at data/i18n.db with translations and translation_history tables."
+
+[[elements]]
+name = "RuleAssetStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for rule asset lifecycle persistence. ABC with create/get/query/transition/update_entry/history. SQLite implementation with rule_assets and rule_asset_history tables, state and domain indexes."
+
+[[elements]]
+name = "DecisionStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for judgment record persistence. ABC with store/get/query/count/statistics. SQLite implementation with decision_records and materialized judgment_statistics tables."
+
+[[elements]]
+name = "CorpusVersionStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for rule corpus version snapshots. ABC with create_version/get/get_entries/get_latest/query/history/diff. SQLite implementation with corpus_versions and version_entries tables."
+
+[[elements]]
+name = "ProfileVersionStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for profile version persistence. ea-profile StoragePort ABC with store/get/get_latest/list_versions/tag/delete. SQLite implementation at data/profiles.db with profile_versions and profile_tags tables."
+
+# ── Domain Data Stores (concrete persistence) ────────────────
+
+[[elements]]
+name = "I18nDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Translation data store at data/i18n.db. Holds translations (PK: kind+name+lang+field) and translation_history (version audit trail) tables."
+
+[[elements]]
+name = "RuleAssetDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Rule asset data store. Holds rule_assets (current version, PK: rule_id), rule_asset_history (version trail, unique on rule_id+version), and schema_version tables. Indexed by state, domain, author, source_type."
+
+[[elements]]
+name = "DecisionDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Decision record data store. Holds decision_records (PK: storage_id) with triple/actor/judgment_json columns, and judgment_statistics (materialized, PK: source+target+relation). Indexed by triple, actor, timestamp, corpus_version."
+
+[[elements]]
+name = "CorpusVersionDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Corpus version snapshot data store. Holds corpus_versions (PK: version_id) with rule_count and rule_ids_json, and version_entries (PK: version_id+rule_id) with serialized rule and metadata JSON."
+
+[[elements]]
+name = "ProfileVersionDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Profile version data store at data/profiles.db. Holds profile_versions (PK: id, unique on profile_name+version) with content_hash and element/relation/rule counts, and profile_tags (PK: profile_name+name)."
+
+# ── Transaction Infrastructure (ea-governance) ───────────────
+
+[[elements]]
+name = "TransactionStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for ACID transaction management and event sourcing. Corresponds to ea-governance TransactionManager: begin/commit/rollback/fail + event append. SQLite at transactions.db."
+
+[[elements]]
+name = "TransactionDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Transaction data store at transactions.db. Holds transactions (PK: id) with status/payload/logs, and transaction_events (FK: tx_id) for event sourcing. Indexed by status and updated_at."
+
+[[elements]]
+name = "TransactionEvent"
+layer = "Infra"
+category = "Event"
+description = "Domain event appended to transaction event log. Captures event_type, message, payload per transaction. Enables event sourcing replay and audit."
+
+# ── Governance Layer Store (ea-governance) ────────────────────
+
+[[elements]]
+name = "GovernanceLayerStorePort"
+layer = "Infra"
+category = "Interface"
+description = "Storage port for layer-scoped governance model payloads. ABC with save_payload/get_payload/list_snapshots. 6 independent SQLite DBs at layers/{layer}.db for infra, governance, decision, needs, kernel, flow."
+
+[[elements]]
+name = "GovernanceLayerDataStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Layer-scoped data store at layers/{layer}.db. Each DB holds layer_models (PK: layer+model_id) with payload_json and updated_at. Indexed by layer+updated_at."
+
+[[elements]]
+name = "GovernanceKernelSnapshotStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Kernel snapshot store built on GovernanceLayerStore. Prefixed model_ids: rule:{id}, corpus_version:{id}, judgment:{id}. Serializes RuleAsset/CorpusVersionInfo/EnhancedJudgment to JSON payloads."
+
+[[elements]]
+name = "GovernanceNeedsSnapshotStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Needs catalog store built on GovernanceLayerStore. Saves NeedCatalog as JSON payload, enables catalog listing and retrieval by ID."
+
+# ── File-Based Persistence (ea-needs) ────────────────────────
+
+[[elements]]
+name = "FileBasedPersistenceService"
+layer = "Infra"
+category = "ActiveStructure"
+description = "File-based JSON persistence service. Implements ea-needs NeedRepository: save_catalog/get_catalog/list_catalogs using JSON files in data_dir/catalogs/. Lightweight alternative to SQLite."
+
+[[elements]]
+name = "JSONFileStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "JSON file storage structure at data_dir/catalogs/{id}.json. Each file holds a serialized NeedCatalog. Used by ea-needs repository for lightweight persistence."
+
+# ── Storage Layout Convention ────────────────────────────────
+
+[[elements]]
+name = "DataDirectoryLayout"
+layer = "Infra"
+category = "Governance"
+description = "Data directory layout convention governing physical storage organization: {data_dir}/layers/{layer}.db (6 governance DBs), kernel/profiles.db (model registration), transactions.db (ACID event log), ea_kernel/data/i18n.db and profiles.db."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Resource Indexing
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "ResourceIndexingService"
+target = "ResourceDescriptor"
+relation = "produces"
+priority = 70
+notes = "Resource indexer scans file system and produces resource descriptor records."
+
+[[rules]]
+source = "DataPlatformService"
+target = "ResourceIndexingService"
+relation = "coordinates"
+priority = 70
+notes = "Data platform coordinates resource indexing for content discovery."
+
+[[rules]]
+source = "ResourceIndexingService"
+target = "InfraModelPort"
+relation = "registers"
+priority = 70
+notes = "Resource indexing service registers its scanner interface via infra model port."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: SQLite Storage Backend
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "SchemaVersionTable"
+relation = "depends_on"
+priority = 70
+notes = "SQLite backend depends on schema version table for migration tracking."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "SQLiteStorageBackend"
+relation = "coordinates"
+priority = 70
+notes = "Lifecycle service coordinates SQLite backend for schema init and migration."
+
+[[rules]]
+source = "StoragePolicy"
+target = "SQLiteStorageBackend"
+relation = "constrains"
+priority = 70
+notes = "Storage policy constrains SQLite backend WAL mode, connection pooling, and PRAGMA settings."
+
+[[rules]]
+source = "DataPlatformService"
+target = "SQLiteStorageBackend"
+relation = "depends_on"
+priority = 70
+notes = "Data platform service depends on SQLite backend for all persistent store access."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Domain Store Ports → Data Stores
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "I18nStorePort"
+target = "I18nDataStore"
+relation = "depends_on"
+priority = 70
+notes = "I18n store port depends on i18n data store for translation CRUD and history."
+
+[[rules]]
+source = "RuleAssetStorePort"
+target = "RuleAssetDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Rule asset store port depends on rule asset data store for lifecycle persistence."
+
+[[rules]]
+source = "DecisionStorePort"
+target = "DecisionDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Decision store port depends on decision data store for judgment record persistence."
+
+[[rules]]
+source = "CorpusVersionStorePort"
+target = "CorpusVersionDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Corpus version store port depends on corpus version data store for snapshot persistence."
+
+[[rules]]
+source = "ProfileVersionStorePort"
+target = "ProfileVersionDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Profile version store port depends on profile version data store for versioned profile persistence."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "I18nDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces i18n data store tables on initialization."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "RuleAssetDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces rule asset data store tables on initialization."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "DecisionDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces decision data store tables on initialization."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "CorpusVersionDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces corpus version data store tables on initialization."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "ProfileVersionDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces profile version data store tables on initialization."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Store Ports Registration
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "DataPlatformService"
+target = "I18nStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers i18n store port for translation access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "RuleAssetStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers rule asset store port for rule lifecycle access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "DecisionStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers decision store port for judgment record access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "CorpusVersionStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers corpus version store port for snapshot access."
+
+[[rules]]
+source = "DataPlatformService"
+target = "ProfileVersionStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers profile version store port for profile persistence."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Transaction Infrastructure
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "TransactionStorePort"
+target = "TransactionDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Transaction store port depends on transaction data store for ACID persistence."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "TransactionDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces transaction data store tables (transactions + transaction_events)."
+
+[[rules]]
+source = "TransactionStorePort"
+target = "TransactionEvent"
+relation = "produces"
+priority = 70
+notes = "Transaction store port appends transaction events for event sourcing."
+
+[[rules]]
+source = "DataPlatformService"
+target = "TransactionStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers transaction store port for ACID transaction management."
+
+[[rules]]
+source = "StoragePolicy"
+target = "TransactionDataStore"
+relation = "constrains"
+priority = 70
+notes = "Storage policy constrains transaction data store retention and foreign key enforcement."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Governance Layer Store
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "GovernanceLayerStorePort"
+target = "GovernanceLayerDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Governance layer store port depends on per-layer SQLite data stores."
+
+[[rules]]
+source = "SQLiteStorageBackend"
+target = "GovernanceLayerDataStore"
+relation = "produces"
+priority = 70
+notes = "SQLite backend produces governance layer data store tables (layer_models per layer)."
+
+[[rules]]
+source = "GovernanceLayerDataStore"
+target = "GovernanceKernelSnapshotStore"
+relation = "contains"
+priority = 70
+notes = "Governance layer data store contains kernel snapshot store as prefixed model_id subspace."
+
+[[rules]]
+source = "GovernanceLayerDataStore"
+target = "GovernanceNeedsSnapshotStore"
+relation = "contains"
+priority = 70
+notes = "Governance layer data store contains needs snapshot store as catalog_id subspace."
+
+[[rules]]
+source = "DataPlatformService"
+target = "GovernanceLayerStorePort"
+relation = "registers"
+priority = 70
+notes = "Data platform registers governance layer store port for cross-layer model persistence."
+
+[[rules]]
+source = "DataPlatformService"
+target = "GovernanceLayerDataStore"
+relation = "depends_on"
+priority = 70
+notes = "Data platform depends on governance layer data store for 6-layer snapshot access."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: File-Based Persistence
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "FileBasedPersistenceService"
+target = "JSONFileStore"
+relation = "depends_on"
+priority = 70
+notes = "File-based persistence service depends on JSON file store for catalog I/O."
+
+[[rules]]
+source = "FileBasedPersistenceService"
+target = "JSONFileStore"
+relation = "produces"
+priority = 70
+notes = "File-based persistence service produces JSON files for each persisted catalog."
+
+[[rules]]
+source = "DataPlatformService"
+target = "FileBasedPersistenceService"
+relation = "coordinates"
+priority = 70
+notes = "Data platform coordinates file-based persistence as alternative to SQLite for lightweight stores."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Data Directory Layout
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "DataDirectoryLayout"
+target = "DataPlatformService"
+relation = "constrains"
+priority = 70
+notes = "Data directory layout convention constrains platform service physical path resolution."
+
+[[rules]]
+source = "DataDirectoryLayout"
+target = "SQLiteStorageBackend"
+relation = "constrains"
+priority = 70
+notes = "Data directory layout convention constrains SQLite backend DB file placement."
+
+[[rules]]
+source = "DataDirectoryLayout"
+target = "FileBasedPersistenceService"
+relation = "constrains"
+priority = 70
+notes = "Data directory layout convention constrains file-based persistence directory structure."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Cross-Layer Store Port Bindings
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "I18nStorePort"
+target = "KernelSpecSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Kernel: i18n store port depends on kernel spec schema for translation target entities and relations."
+
+[[rules]]
+source = "RuleAssetStorePort"
+target = "KernelSpecSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Kernel: rule asset store port depends on kernel spec schema for validity rule serialization."
+
+[[rules]]
+source = "DecisionStorePort"
+target = "DecisionDataSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Decision: decision store port depends on decision data schema for record serialization."
+
+[[rules]]
+source = "GovernanceLayerStorePort"
+target = "GovernanceStorageSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Gov: governance layer store port depends on governance storage schema for payload contract."
+
+[[rules]]
+source = "TransactionStorePort"
+target = "GovernanceAuditStore"
+relation = "produces"
+priority = 72
+notes = "Infra-Gov: transaction store port produces audit entries via event sourcing into governance audit store."
+
+[[rules]]
+source = "ProfileVersionStorePort"
+target = "KernelSpecSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Kernel: profile version store port depends on kernel spec schema for profile element/relation validation."

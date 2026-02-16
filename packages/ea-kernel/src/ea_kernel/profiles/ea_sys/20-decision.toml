@@ -75,6 +75,10 @@ name = "available_in"
 kernel_relation = "association"
 description = "Context provides access to an experience or element."
 
+# ============================================================
+# Internal Decision Layer Elements
+# ============================================================
+
 [[elements]]
 name = "DecisionLayer"
 layer = "Decision"
@@ -98,6 +102,42 @@ name = "DecisionAgreementService"
 layer = "Decision"
 category = "ActiveStructure"
 description = "Maintains agreement semantics for decision outcome closure."
+
+# --- Topic Aggregate Root (ea_decision.topic) ---
+
+[[elements]]
+name = "TopicAggregate"
+layer = "Decision"
+category = "Composite"
+description = "Aggregate root container for Design Thinking process — groups research, questions, options, report, and report history within a single decision problem."
+
+# --- Services from implementation ---
+
+[[elements]]
+name = "DesignThinkingProcessService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "Orchestrator for the Design Thinking lifecycle phases: define_intent → diverge → converge → utilize."
+
+[[elements]]
+name = "DecisionPatternRegistryService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "Manages registration and lookup of DecisionPattern definitions (ea_decision.registry)."
+
+[[elements]]
+name = "DecisionRepositoryService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "File-based JSON persistence for Topic aggregates — save, retrieve, and list topics (ea_decision.repository)."
+
+[[elements]]
+name = "KernelBridgeService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "Bridges decision outputs to kernel modeling actions via lazy ea_kernel import — create_rule_provenance and decision_result_from_rule_asset (ea_decision.kernel_bridge)."
+
+# --- 6x6 Model Ports ---
 
 [[elements]]
 name = "InfraModelPort"
@@ -135,23 +175,27 @@ layer = "Flow"
 category = "Interface"
 description = "6x6 contract port for flow-layer model interface."
 
+# --- Assessment Models ---
+
 [[elements]]
 name = "DecisionCriteriaModel"
 layer = "Decision"
 category = "Assessment"
-description = "Meta definition for criteria schema used in option evaluation."
+description = "Meta definition for criteria schema used in option evaluation — maps to EvaluationCriteria and EvaluationDimension."
 
 [[elements]]
 name = "DecisionHeuristicModel"
 layer = "Decision"
 category = "Assessment"
-description = "Meta definition for heuristic schema used in deliberation."
+description = "Meta definition for heuristic schema used in deliberation — maps to HeuristicRule in PatternSchema."
 
 [[elements]]
 name = "DecisionRationaleModel"
 layer = "Decision"
 category = "Assessment"
-description = "Meta definition for rationale schema and explainability constraints."
+description = "Meta definition for rationale schema and explainability constraints — maps to Rationale frozen type."
+
+# --- Catalogs (PassiveStructure) ---
 
 [[elements]]
 name = "DecisionNodeTypeCatalog"
@@ -169,7 +213,27 @@ description = "Catalog of relation types among decision nodes."
 name = "DecisionStateCatalog"
 layer = "Decision"
 category = "PassiveStructure"
-description = "Catalog of states used in decision lifecycle modeling."
+description = "Catalog of states used in decision lifecycle modeling — DecisionStatus (PROPOSED/ACCEPTED/REJECTED/DEPRECATED)."
+
+[[elements]]
+name = "DecisionPhaseCatalog"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Catalog of DecisionPhase values — DIVERGE, CONVERGE, UTILIZE — representing Design Thinking workflow stages."
+
+[[elements]]
+name = "DecisionComplexityCatalog"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Catalog of DecisionComplexity levels — TRIVIAL, STRUCTURAL, STRATEGIC — used by DecisionPattern."
+
+[[elements]]
+name = "DecisionLifecycleStateCatalog"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Catalog of DecisionLifecycleState values — DRAFT → PROPOSED → ACCEPTED/REJECTED → DEPRECATED/SUPERSEDED — frozen state machine with transition validation."
+
+# --- Instance Records (PassiveStructure) ---
 
 [[elements]]
 name = "DecisionContextRecord"
@@ -196,10 +260,122 @@ category = "PassiveStructure"
 description = "Structured final decision outcome record."
 
 [[elements]]
+name = "IntentRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Frozen Intent value object — id, description, direction, context_refs — the 'why' starting point of the Diverge phase."
+
+[[elements]]
+name = "ChoiceOptionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Frozen ChoiceOption value object — intent_id, description, feasibility_score, alignment_score — generated during Diverge phase."
+
+[[elements]]
+name = "ChoiceRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Frozen Choice value object — selected_option_id, rationale, distance — output of Converge phase."
+
+[[elements]]
+name = "DecisionResultRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Frozen DecisionResult value object — intent_id, choice_id, outcome_artifact, timestamp — output of Utilize phase."
+
+[[elements]]
+name = "ResearchNoteRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Mutable ResearchNote — markdown content, source_url, references, author — raw data gathered during Diverge phase."
+
+[[elements]]
+name = "QuestionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Mutable Question with reply() — text, asked_by, answer, answered_by — inquiries made during the decision process."
+
+[[elements]]
+name = "OptionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Candidate solution path — title, description, evaluation (pros/cons/score) — generated within Topic."
+
+[[elements]]
+name = "EvaluationDetailRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Pros/cons analysis of an option — pros list, cons list, score (0-10), comment."
+
+[[elements]]
+name = "ModelingActionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Planned kernel model change — action_type (create_rule/define_entity), target, description, status, payload — the 'how' execution plan in DesignReport."
+
+[[elements]]
+name = "DesignDecisionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Finalized decision — selected_option_id, rationale, pattern_name, complexity, impact_analysis, status, approver — with approve() lifecycle method."
+
+[[elements]]
+name = "DesignReportRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Formal Design Thinking output — title, summary, decision, modeling_actions, key_evidence_refs — the 'plan' aggregating decision and execution steps."
+
+[[elements]]
+name = "DecisionPatternRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Frozen DecisionPattern definition — name, description, complexity, governed_rule_group, required_intent_tags, inquiry_template, verification_heuristics, outcome_anchors."
+
+[[elements]]
+name = "PatternSchemaRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Meta-model for decision patterns — name, PatternType (TRADE_OFF/COMPLIANCE/ARCHITECTURE/PROCESS), phases, heuristics, inquiry_template."
+
+[[elements]]
+name = "EvidenceRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Frozen structured evidence — id, EvidenceType (DOCUMENT/DATA/EXPERT_OPINION/BENCHMARK/REGULATION), uri, title, relevance_score."
+
+[[elements]]
+name = "EvidenceCollectionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Immutable collection of Evidence items — add() returns a new collection (functional append)."
+
+[[elements]]
+name = "EvaluationDimensionRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Single evaluation axis — name, description, weight, scale — used by EvaluationResult for weighted scoring."
+
+[[elements]]
+name = "RuleProvenanceRecord"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Kernel bridge output — decision_ref, report_ref — linking a decision to a kernel RuleAsset for traceability."
+
+# --- Goals ---
+
+[[elements]]
 name = "DecisionTraceGoal"
 layer = "Decision"
 category = "Goal"
 description = "Goal for traceable and reproducible decision-flow instances."
+
+[[elements]]
+name = "EvidenceBasedDecisionGoal"
+layer = "Decision"
+category = "Goal"
+description = "Core principle — all decisions must be grounded in evidence; every Decision is justified by Evidence and immutable after finalization."
+
+# --- Behaviors (Steps) ---
 
 [[elements]]
 name = "CaptureDecisionContextStep"
@@ -226,10 +402,56 @@ category = "Behavior"
 description = "Step that closes evaluation into an outcome record."
 
 [[elements]]
+name = "DivergeStep"
+layer = "Decision"
+category = "Behavior"
+description = "Topic Diverge phase — add_research, ask questions, add_option — generating options based on Intent."
+
+[[elements]]
+name = "ConvergeStep"
+layer = "Decision"
+category = "Behavior"
+description = "Topic Converge phase — finalize_plan selects option, creates DesignDecision and DesignReport."
+
+[[elements]]
+name = "UtilizeStep"
+layer = "Decision"
+category = "Behavior"
+description = "Topic Utilize phase — apply DesignReport modeling actions to produce DecisionResult and kernel artifacts."
+
+[[elements]]
+name = "ApplyPatternStep"
+layer = "Decision"
+category = "Behavior"
+description = "Applies a DecisionPattern to a Topic — auto-populates inquiry_template questions and verification_heuristics research notes."
+
+[[elements]]
+name = "ReviseReportStep"
+layer = "Decision"
+category = "Behavior"
+description = "Re-opens a completed Topic for further discussion — archives current report to report_history and resets status to active."
+
+# --- Executables (Actions) ---
+
+[[elements]]
 name = "PublishDecisionModelAction"
 layer = "Decision"
 category = "Executable"
 description = "Action that publishes decision-flow model instances for needs-stage handoff."
+
+[[elements]]
+name = "MapDecisionToKernelAction"
+layer = "Decision"
+category = "Executable"
+description = "Kernel bridge action — create_rule_provenance and decision_result_from_rule_asset — translates decision outputs into kernel-compatible structures."
+
+[[elements]]
+name = "PersistTopicAction"
+layer = "Decision"
+category = "Executable"
+description = "Repository action — save_topic, get_topic, list_topics — JSON file-based persistence for Topic aggregates."
+
+# --- Events ---
 
 [[elements]]
 name = "DecisionRequestedEvent"
@@ -242,6 +464,28 @@ name = "DecisionUpdatedEvent"
 layer = "Decision"
 category = "Event"
 description = "Raised when upstream context changes require reevaluation."
+
+[[elements]]
+name = "DecisionFinalizedEvent"
+layer = "Decision"
+category = "Event"
+description = "Raised when Topic.finalize_plan completes — DesignReport and DesignDecision are produced."
+
+[[elements]]
+name = "DecisionRevisedEvent"
+layer = "Decision"
+category = "Event"
+description = "Raised when Topic.revise_report re-opens a completed topic — current report archived to history."
+
+[[elements]]
+name = "PatternAppliedEvent"
+layer = "Decision"
+category = "Event"
+description = "Raised when a DecisionPattern is applied to a Topic — inquiry questions and verification heuristics populated."
+
+# ============================================================
+# Category-Level Pattern Rules (priority 60)
+# ============================================================
 
 [[rules]]
 source = "@Composite"
@@ -277,6 +521,20 @@ target = "@Executable"
 relation = "contains"
 priority = 60
 notes = "Decision boundary contains publishing actions."
+
+[[rules]]
+source = "@Composite"
+target = "@Event"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains decision events."
+
+[[rules]]
+source = "@Composite"
+target = "@Goal"
+relation = "contains"
+priority = 60
+notes = "Decision boundary contains decision goals."
 
 [[rules]]
 source = "@Assessment"
@@ -321,6 +579,13 @@ priority = 60
 notes = "Decision services coordinate publishing actions."
 
 [[rules]]
+source = "@ActiveStructure"
+target = "@PassiveStructure"
+relation = "registers"
+priority = 60
+notes = "Decision services register pattern and record artifacts."
+
+[[rules]]
 source = "@Behavior"
 target = "@Behavior"
 relation = "next"
@@ -340,6 +605,24 @@ target = "@Behavior"
 relation = "triggers"
 priority = 60
 notes = "Decision events trigger decision-flow steps."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Decision steps produce record artifacts."
+
+[[rules]]
+source = "@PassiveStructure"
+target = "@Behavior"
+relation = "consumes"
+priority = 60
+notes = "Decision steps consume record artifacts as input."
+
+# ============================================================
+# Element-Specific Rules — Existing Services (priority 70)
+# ============================================================
 
 [[rules]]
 source = "DecisionMetaModelRegistry"
@@ -453,6 +736,303 @@ relation = "depends_on"
 priority = 70
 notes = "Agreement service depends on outcome record state."
 
+# ============================================================
+# Element-Specific Rules — Topic Aggregate (priority 70)
+# ============================================================
+
+[[rules]]
+source = "TopicAggregate"
+target = "ResearchNoteRecord"
+relation = "contains"
+priority = 70
+notes = "Topic aggregate contains research notes gathered during Diverge."
+
+[[rules]]
+source = "TopicAggregate"
+target = "QuestionRecord"
+relation = "contains"
+priority = 70
+notes = "Topic aggregate contains questions asked during the process."
+
+[[rules]]
+source = "TopicAggregate"
+target = "OptionRecord"
+relation = "contains"
+priority = 70
+notes = "Topic aggregate contains candidate solution options."
+
+[[rules]]
+source = "TopicAggregate"
+target = "DesignReportRecord"
+relation = "contains"
+priority = 70
+notes = "Topic aggregate contains the finalized DesignReport (and report_history)."
+
+[[rules]]
+source = "TopicAggregate"
+target = "DecisionPatternRecord"
+relation = "depends_on"
+priority = 70
+notes = "Topic may reference an applied DecisionPattern via pattern_name."
+
+[[rules]]
+source = "DesignReportRecord"
+target = "DesignDecisionRecord"
+relation = "contains"
+priority = 70
+notes = "DesignReport contains a single DesignDecision (the 'why' and 'what')."
+
+[[rules]]
+source = "DesignReportRecord"
+target = "ModelingActionRecord"
+relation = "contains"
+priority = 70
+notes = "DesignReport contains modeling actions (the 'how' execution plan)."
+
+[[rules]]
+source = "DesignDecisionRecord"
+target = "OptionRecord"
+relation = "depends_on"
+priority = 70
+notes = "DesignDecision references selected_option_id from Topic options."
+
+[[rules]]
+source = "DesignDecisionRecord"
+target = "DecisionPatternRecord"
+relation = "depends_on"
+priority = 70
+notes = "DesignDecision may reference a pattern_name linking to DecisionPattern."
+
+[[rules]]
+source = "DesignDecisionRecord"
+target = "DecisionComplexityCatalog"
+relation = "depends_on"
+priority = 70
+notes = "DesignDecision references complexity from DecisionComplexity catalog."
+
+[[rules]]
+source = "OptionRecord"
+target = "EvaluationDetailRecord"
+relation = "contains"
+priority = 70
+notes = "Option contains an optional Evaluation (pros/cons/score analysis)."
+
+# ============================================================
+# Element-Specific Rules — New Services (priority 70)
+# ============================================================
+
+[[rules]]
+source = "DesignThinkingProcessService"
+target = "DivergeStep"
+relation = "coordinates"
+priority = 70
+notes = "Process service orchestrates the Diverge phase (generate options from Intent)."
+
+[[rules]]
+source = "DesignThinkingProcessService"
+target = "ConvergeStep"
+relation = "coordinates"
+priority = 70
+notes = "Process service orchestrates the Converge phase (select option via selector function)."
+
+[[rules]]
+source = "DesignThinkingProcessService"
+target = "UtilizeStep"
+relation = "coordinates"
+priority = 70
+notes = "Process service orchestrates the Utilize phase (produce DecisionResult from Choice)."
+
+[[rules]]
+source = "DesignThinkingProcessService"
+target = "IntentRecord"
+relation = "depends_on"
+priority = 70
+notes = "Process service requires Intent as starting input for diverge."
+
+[[rules]]
+source = "DecisionPatternRegistryService"
+target = "DecisionPatternRecord"
+relation = "registers"
+priority = 70
+notes = "Pattern registry manages registration and lookup of DecisionPattern definitions."
+
+[[rules]]
+source = "DecisionPatternRegistryService"
+target = "PatternSchemaRecord"
+relation = "registers"
+priority = 70
+notes = "Pattern registry manages PatternSchema definitions."
+
+[[rules]]
+source = "DecisionPatternRegistryService"
+target = "ApplyPatternStep"
+relation = "coordinates"
+priority = 70
+notes = "Pattern registry coordinates pattern application to topics."
+
+[[rules]]
+source = "DecisionRepositoryService"
+target = "TopicAggregate"
+relation = "coordinates"
+priority = 70
+notes = "Repository service manages Topic persistence — save, retrieve, list."
+
+[[rules]]
+source = "DecisionRepositoryService"
+target = "PersistTopicAction"
+relation = "coordinates"
+priority = 70
+notes = "Repository service coordinates persistence actions."
+
+[[rules]]
+source = "KernelBridgeService"
+target = "MapDecisionToKernelAction"
+relation = "coordinates"
+priority = 70
+notes = "Kernel bridge service coordinates decision-to-kernel mapping actions."
+
+[[rules]]
+source = "KernelBridgeService"
+target = "RuleProvenanceRecord"
+relation = "produces"
+priority = 70
+notes = "Kernel bridge produces RuleProvenance linking decision_ref to kernel rule."
+
+[[rules]]
+source = "KernelBridgeService"
+target = "DecisionResultRecord"
+relation = "depends_on"
+priority = 70
+notes = "Kernel bridge consumes decision results to extract kernel-relevant metadata."
+
+# ============================================================
+# Element-Specific Rules — Pattern and Evidence (priority 70)
+# ============================================================
+
+[[rules]]
+source = "DecisionPatternRecord"
+target = "DecisionComplexityCatalog"
+relation = "depends_on"
+priority = 70
+notes = "DecisionPattern references complexity level from catalog."
+
+[[rules]]
+source = "DecisionPatternRecord"
+target = "QuestionRecord"
+relation = "produces"
+priority = 70
+notes = "DecisionPattern inquiry_template auto-generates questions when applied to a Topic."
+
+[[rules]]
+source = "DecisionPatternRecord"
+target = "ResearchNoteRecord"
+relation = "produces"
+priority = 70
+notes = "DecisionPattern verification_heuristics auto-generates research notes when applied."
+
+[[rules]]
+source = "PatternSchemaRecord"
+target = "DecisionPhaseCatalog"
+relation = "depends_on"
+priority = 70
+notes = "PatternSchema defines required phases from the DecisionPhase catalog."
+
+[[rules]]
+source = "PatternSchemaRecord"
+target = "DecisionHeuristicModel"
+relation = "depends_on"
+priority = 70
+notes = "PatternSchema references HeuristicRule definitions from the heuristic model."
+
+[[rules]]
+source = "EvidenceRecord"
+target = "EvidenceCollectionRecord"
+relation = "available_in"
+priority = 70
+notes = "Individual Evidence items are available within an EvidenceCollection."
+
+[[rules]]
+source = "EvidenceBasedDecisionGoal"
+target = "DivergeStep"
+relation = "constrains"
+priority = 70
+notes = "Evidence-based principle requires research notes and evidence during Diverge."
+
+[[rules]]
+source = "EvidenceBasedDecisionGoal"
+target = "ConvergeStep"
+relation = "constrains"
+priority = 70
+notes = "Evidence-based principle requires rationale grounded in evidence during Converge."
+
+[[rules]]
+source = "EvidenceBasedDecisionGoal"
+target = "FinalizeDecisionStep"
+relation = "constrains"
+priority = 70
+notes = "Evidence-based principle constrains finalization to require evidence references."
+
+# ============================================================
+# Element-Specific Rules — Lifecycle (priority 70)
+# ============================================================
+
+[[rules]]
+source = "DecisionLifecycleStateCatalog"
+target = "DecisionStateCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Lifecycle state catalog extends decision status catalog with full state machine (DRAFT→PROPOSED→ACCEPTED/REJECTED→DEPRECATED/SUPERSEDED)."
+
+[[rules]]
+source = "DecisionLifecycleStateCatalog"
+target = "DesignDecisionRecord"
+relation = "constrains"
+priority = 70
+notes = "Lifecycle state machine constrains valid state transitions on DesignDecision."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionPhaseCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on phase catalog for workflow stage definitions."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionComplexityCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on complexity catalog for pattern classification."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionLifecycleStateCatalog"
+relation = "depends_on"
+priority = 70
+notes = "Schema service depends on lifecycle state catalog for transition validation."
+
+# ============================================================
+# Element-Specific Rules — Evaluation Framework (priority 70)
+# ============================================================
+
+[[rules]]
+source = "EvaluationDimensionRecord"
+target = "DecisionCriteriaModel"
+relation = "depends_on"
+priority = 70
+notes = "Evaluation dimensions are instances of the criteria meta-model schema."
+
+[[rules]]
+source = "EvaluationDimensionRecord"
+target = "EvaluateOptionGraphStep"
+relation = "consumes"
+priority = 70
+notes = "Evaluation dimensions are consumed by option graph evaluation for weighted scoring."
+
+# ============================================================
+# Element-Specific Rules — Step Sequencing (priority 75)
+# ============================================================
+
 [[rules]]
 source = "CaptureDecisionContextStep"
 target = "BuildOptionGraphStep"
@@ -481,6 +1061,47 @@ relation = "next"
 priority = 75
 notes = "Decision flow: finalization before publication/handoff to needs stage."
 
+# --- Topic Design Thinking Phase Sequencing ---
+
+[[rules]]
+source = "DivergeStep"
+target = "ConvergeStep"
+relation = "next"
+priority = 75
+notes = "Topic flow: Diverge (research/question/option) before Converge (finalize_plan)."
+
+[[rules]]
+source = "ConvergeStep"
+target = "UtilizeStep"
+relation = "next"
+priority = 75
+notes = "Topic flow: Converge (select option) before Utilize (apply modeling actions)."
+
+[[rules]]
+source = "UtilizeStep"
+target = "MapDecisionToKernelAction"
+relation = "next"
+priority = 75
+notes = "Topic flow: Utilize phase transitions into kernel bridge mapping action."
+
+[[rules]]
+source = "UtilizeStep"
+target = "PersistTopicAction"
+relation = "next"
+priority = 75
+notes = "Topic flow: Utilize phase transitions into topic persistence action."
+
+[[rules]]
+source = "ApplyPatternStep"
+target = "DivergeStep"
+relation = "next"
+priority = 75
+notes = "Pattern application pre-populates questions/heuristics before Diverge execution."
+
+# ============================================================
+# Element-Specific Rules — Event Triggers (priority 75)
+# ============================================================
+
 [[rules]]
 source = "DecisionRequestedEvent"
 target = "CaptureDecisionContextStep"
@@ -494,6 +1115,45 @@ target = "EvaluateOptionGraphStep"
 relation = "triggers"
 priority = 75
 notes = "Context update triggers reevaluation."
+
+[[rules]]
+source = "DecisionFinalizedEvent"
+target = "PublishDecisionModelAction"
+relation = "triggers"
+priority = 75
+notes = "Decision finalization triggers publication for needs-stage handoff."
+
+[[rules]]
+source = "DecisionFinalizedEvent"
+target = "PersistTopicAction"
+relation = "triggers"
+priority = 75
+notes = "Decision finalization triggers topic persistence."
+
+[[rules]]
+source = "DecisionFinalizedEvent"
+target = "MapDecisionToKernelAction"
+relation = "triggers"
+priority = 75
+notes = "Decision finalization triggers kernel bridge mapping."
+
+[[rules]]
+source = "DecisionRevisedEvent"
+target = "DivergeStep"
+relation = "triggers"
+priority = 75
+notes = "Decision revision event re-opens Topic for further Diverge phase discussion."
+
+[[rules]]
+source = "PatternAppliedEvent"
+target = "ApplyPatternStep"
+relation = "triggers"
+priority = 75
+notes = "Pattern applied event triggers pattern application step."
+
+# ============================================================
+# Element-Specific Rules — Data Flow (priority 75)
+# ============================================================
 
 [[rules]]
 source = "DecisionContextRecord"
@@ -544,6 +1204,52 @@ relation = "consumes"
 priority = 75
 notes = "Publish action consumes finalized decision outcome."
 
+# --- Topic phase data flows ---
+
+[[rules]]
+source = "IntentRecord"
+target = "DivergeStep"
+relation = "consumes"
+priority = 75
+notes = "Diverge step consumes Intent — the starting 'why' for option generation."
+
+[[rules]]
+source = "ResearchNoteRecord"
+target = "ConvergeStep"
+relation = "consumes"
+priority = 75
+notes = "Converge step consumes research notes gathered during Diverge."
+
+[[rules]]
+source = "OptionRecord"
+target = "ConvergeStep"
+relation = "consumes"
+priority = 75
+notes = "Converge step consumes candidate options to select from."
+
+[[rules]]
+source = "DesignReportRecord"
+target = "UtilizeStep"
+relation = "consumes"
+priority = 75
+notes = "Utilize step consumes the finalized DesignReport to execute modeling actions."
+
+[[rules]]
+source = "DesignReportRecord"
+target = "MapDecisionToKernelAction"
+relation = "consumes"
+priority = 75
+notes = "Kernel mapping action consumes DesignReport to create RuleProvenance."
+
+[[rules]]
+source = "TopicAggregate"
+target = "PersistTopicAction"
+relation = "consumes"
+priority = 75
+notes = "Persistence action consumes full Topic aggregate for JSON serialization."
+
+# --- Produces ---
+
 [[rules]]
 source = "CaptureDecisionContextStep"
 target = "DecisionContextRecord"
@@ -580,6 +1286,73 @@ priority = 75
 notes = "Publish action produces decision outcome package for needs-stage consumption."
 
 [[rules]]
+source = "DivergeStep"
+target = "ResearchNoteRecord"
+relation = "produces"
+priority = 75
+notes = "Diverge step produces research notes from investigation."
+
+[[rules]]
+source = "DivergeStep"
+target = "QuestionRecord"
+relation = "produces"
+priority = 75
+notes = "Diverge step produces questions for inquiry."
+
+[[rules]]
+source = "DivergeStep"
+target = "OptionRecord"
+relation = "produces"
+priority = 75
+notes = "Diverge step produces candidate options."
+
+[[rules]]
+source = "DivergeStep"
+target = "ChoiceOptionRecord"
+relation = "produces"
+priority = 75
+notes = "Diverge step produces frozen ChoiceOption values with feasibility/alignment scores."
+
+[[rules]]
+source = "ConvergeStep"
+target = "ChoiceRecord"
+relation = "produces"
+priority = 75
+notes = "Converge step produces frozen Choice with selected option and rationale."
+
+[[rules]]
+source = "ConvergeStep"
+target = "DesignReportRecord"
+relation = "produces"
+priority = 75
+notes = "Converge step (finalize_plan) produces the formal DesignReport."
+
+[[rules]]
+source = "ConvergeStep"
+target = "DesignDecisionRecord"
+relation = "produces"
+priority = 75
+notes = "Converge step produces DesignDecision within the DesignReport."
+
+[[rules]]
+source = "UtilizeStep"
+target = "DecisionResultRecord"
+relation = "produces"
+priority = 75
+notes = "Utilize step produces frozen DecisionResult with outcome artifact and timestamp."
+
+[[rules]]
+source = "MapDecisionToKernelAction"
+target = "RuleProvenanceRecord"
+relation = "produces"
+priority = 75
+notes = "Kernel mapping action produces RuleProvenance for kernel traceability."
+
+# ============================================================
+# Element-Specific Rules — Constraints (priority 75)
+# ============================================================
+
+[[rules]]
 source = "DecisionCriteriaModel"
 target = "EvaluateOptionGraphStep"
 relation = "constrains"
@@ -607,6 +1380,27 @@ relation = "constrains"
 priority = 75
 notes = "Traceability goal constrains publication completeness."
 
+[[rules]]
+source = "DecisionHeuristicModel"
+target = "ApplyPatternStep"
+relation = "constrains"
+priority = 75
+notes = "Heuristic model constrains pattern application to enforce verification guidelines."
+
+[[rules]]
+source = "DecisionCriteriaModel"
+target = "ConvergeStep"
+relation = "constrains"
+priority = 75
+notes = "Criteria model constrains Converge phase option selection."
+
+[[rules]]
+source = "DecisionRationaleModel"
+target = "ConvergeStep"
+relation = "constrains"
+priority = 75
+notes = "Rationale model constrains Converge to require explicit justification."
+
 # ============================================================
 # 6x6 Cross-Layer Perspectives — Decision이 보는 다른 5개 레이어
 # ============================================================
@@ -625,7 +1419,7 @@ description = "Decision view — data availability preconditions for decision in
 name = "DecisionStorageContract"
 layer = "Infra"
 category = "Interface"
-description = "Decision view — storage contract for persisting decision instances."
+description = "Decision view — storage contract for persisting decision instances (Topic JSON files)."
 
 [[elements]]
 name = "DecisionQueryIndex"
@@ -674,6 +1468,13 @@ target = "DecisionQueryIndex"
 relation = "depends_on"
 priority = 72
 notes = "Schema service depends on infra query index for trace retrieval."
+
+[[rules]]
+source = "DecisionRepositoryService"
+target = "DecisionStorageContract"
+relation = "depends_on"
+priority = 72
+notes = "Repository service depends on infra storage contract for Topic JSON persistence."
 
 # ------------------------------------------------------------
 # Decision → Governance (Decision이 보는 Governance)
@@ -878,6 +1679,12 @@ layer = "Kernel"
 category = "PassiveStructure"
 description = "Decision view — kernel validation results consumed for decision re-evaluation."
 
+[[elements]]
+name = "KernelRuleProvenancePort"
+layer = "Kernel"
+category = "Interface"
+description = "Decision view — kernel port accepting RuleProvenance (decision_ref, report_ref) from kernel bridge."
+
 [[rules]]
 source = "KernelModelPort"
 target = "KernelConstraintReference"
@@ -907,6 +1714,13 @@ priority = 65
 notes = "KernelModelPort contains kernel feedback input element."
 
 [[rules]]
+source = "KernelModelPort"
+target = "KernelRuleProvenancePort"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel rule provenance port element."
+
+[[rules]]
 source = "DecisionCriteriaModel"
 target = "KernelConstraintReference"
 relation = "depends_on"
@@ -933,6 +1747,20 @@ target = "KernelFeedbackInput"
 relation = "consumes"
 priority = 72
 notes = "Finalization consumes kernel validation feedback for re-evaluation."
+
+[[rules]]
+source = "KernelBridgeService"
+target = "KernelRuleProvenancePort"
+relation = "coordinates"
+priority = 72
+notes = "Kernel bridge service coordinates rule provenance submission to kernel."
+
+[[rules]]
+source = "MapDecisionToKernelAction"
+target = "KernelRuleProvenancePort"
+relation = "coordinates"
+priority = 72
+notes = "Kernel mapping action submits RuleProvenance via kernel provenance port."
 
 # ------------------------------------------------------------
 # Decision → Flow (Decision이 보는 Flow)

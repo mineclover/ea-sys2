@@ -312,6 +312,14 @@ class SQLiteI18nStore(I18nStore):
 
 테스트용 인메모리 구현체는 dict 기반으로 동일 ABC를 구현한다. 프로덕션 코드와 테스트가 동일 인터페이스로 동작함을 보장한다.
 
+### 5.4 레이어별 특화 스토어
+
+각 레이어는 자체 특화 스토어를 갖는다. 모든 레이어가 메타-메타 모델 기반으로 생성되는 프로파일을 지속 관리하며, 기본적인 버전 관리가 필요하기 때문이다.
+
+- **현재 구현**: ea-kernel(i18n_store, profile_store), ea-governance(layer_store, kernel_store, needs_store)
+- **방향**: 나머지 레이어(decision, needs, flow)도 자체 스토어 구현 예정
+- Governance는 크로스 레이어 조율·이력 관리를 담당하되, 각 레이어의 도메인 영속화는 레이어 자체가 소유
+
 ---
 
 ## 6. Lifecycle / State Machine

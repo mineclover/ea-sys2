@@ -4,6 +4,20 @@
 > ea-kernel에서 검증된 패턴을 정규화한 것이며, 새 레이어 구현 시 이 문서를 권위 출처(source of truth)로 참조한다.
 >
 > 번역(M1/M2) 및 번역 API 요청 규약은 `docs/i18n-m1-m2-api-standard.md`를 함께 참조한다.
+> M1 표현 계층(Projection Layer, M1P) 규약은 `docs/projection-layer-standard.md`를 함께 참조한다.
+
+### Rule Ownership 규약 (필수)
+
+- 모든 rule은 반드시 **소속 프로파일**과 **소속 레이어**를 함께 노출해야 한다.
+  - M2 rule: `profile_name`, `profile_layer_key`, `profile_rule_id`, `profile_rule_identifier`
+- M2 digest identifier(`m2::{layer}::rule::{digest}`)는 조회 키이고, 의미적 소유권은 `profile_rule_identifier`가 담당한다.
+- M1 edge는 rule provenance 대신 `edge_origin`(`explicit|expanded|mixed`)과 `explicit_count`, `expanded_count`를 제공한다.
+- M1 edge는 의미 노출을 위해 `semantic_axis`, `semantic_intent`, `surface_exposed`를 함께 제공한다.
+- semantic 분류는 global 기본 사전을 가지며, `kernel|infra|needs`는 레이어 override를 우선 적용한다.
+- 프로파일 단위 탐색 시 domain 표현은 `domain_scope=all|owned|bridge`를 표준으로 사용한다.
+- 프로파일 단위 탐색에서 표층 관계만 확인할 때는 `surface_only=true`를 사용한다.
+  - 적용 대상: `GET /profiles/{name}/topology`, `GET /profiles/{name}/composed`
+  - 의미: 상속/메타/자기설명 관계를 기본 렌즈에서 제외하고 구조/인과 중심 관계를 우선 노출
 
 ---
 
@@ -240,6 +254,23 @@ def load_layer_profile_from_content(content: str, *, validate: bool = True):
     schema = LAYER_SCHEMA if validate else None
     return load_profile_from_content(content, schema, layer_condition_registry())
 ```
+
+### 2.6 Projection Policy (M1P) 규약
+
+탐색/표현 정책은 다음 2단계로 분리한다.
+
+- `M2(계약)`: 정책 필드/타입/허용값 정의
+- `M1(값)`: 레이어별 탐색 정책 값(관계 allow-list, 카테고리, edge budget)
+
+표준 정책 파일:
+
+`packages/ea-kernel/src/ea_kernel/profiles/ea_sys/projection_policy.toml`
+
+필수 구조:
+
+- `[m2.schema]`, `[m2.schema.lens_to_level]`, `[m2.defaults]`
+- `[m1.global.levels.<l0..l4>]`
+- `[m1.layers.<layer_key>.levels.<l0..l4>]` (선택 override)
 
 ---
 
@@ -676,9 +707,24 @@ Tuple[str, ...]
 
 ### 11.1 공통 조회 API
 
+- `GET /layers/{layer_key}/m2?lang={lang}` (M2 전용)
 - `GET /layers/{layer_key}/stack?lang={lang}&m0_limit={n}`
+- `GET /profiles/{profile_name}/topology?lang={lang}&view_mode={raw|summary}&max_edges={n}` (M1 토폴로지)
+- `GET /profiles/{profile_name}/composed?lang={lang}&domain_scope={all|owned|bridge}&max_edges={n}&focus={core|relation|layer|actor}` (M1 cross-profile 합성)
 - `lang` 기본값: `en`
 - `m0_limit` 기본값: `20` (`<=0` 금지)
+- `view_mode` 기본값: `raw`
+  - `raw`: rule-edge 원본
+  - `summary`: `(source,target,relation)` 집약 edge (`rule_count`, `priority max`, `edge_origin` 포함)
+  - `composed`: anchor profile 기준 다중 프로파일 합성 view (edge `edge_origin`, node `profile_owners` 포함)
+
+레이어 키 규칙:
+
+- 허용값: `infra|governance|decision|needs|kernel|flow`
+- 스키마 UI 라우트(`/schema/:layerKey`)는 입력 layerKey를 정규화한다.
+  - 소문자화, URL decode, 공백/쉼표/구두점 제거
+  - 복합 문자열(예: `infra,`, `needs%20`)은 첫 유효 layer key로 해석
+  - 유효하지 않으면 `kernel`로 폴백 후 리다이렉트
 
 응답 표준 구조:
 
@@ -701,18 +747,35 @@ Tuple[str, ...]
 
 ### 11.2 식별 체계 단일화
 
-언어 패치/감사/동기화를 위해 식별자는 레벨 접두사를 포함해 구분한다.
+식별자는 **도메인별 native 식별 + 계층 공통 식별**을 함께 유지한다.
 
-- M2 식별자: `m2:{layer_key}:{kind}:{name}:{field}`
-- M1 식별자: `m1:{profile_name}:{kind}:{name}:{field}`
-- M0 식별자: `m0:{layer_key}:{object_kind}:{object_id}`
+- Layer M2 object 식별자 (API payload):
+  - `element`: `m2::{layer_key}::element::{name}`
+  - `relation`: `m2::{layer_key}::relation::{name}`
+  - `category`: `m2::{layer_key}::category::{name}`
+  - `rule`: `m2::{layer_key}::rule::{sha1(source|relation|target|valid|priority)[:12]}`
+- Kernel native 식별자:
+  - `entity_id = entity.name`
+  - `relation_id = relation.name`
+  - `rule_id = rule.id` (rule corpus 원본 식별자)
+- 번역 슬롯 식별자(패치/감사)는 별도 규약 사용:
+  - M2: `m2:{kind}:{name}:{field}`
+  - M1: `m1:{profile}:{kind}:{name}:{field}`
 
 규칙:
 
 - `layer_key`: `infra|governance|decision|needs|kernel|flow`
-- `kind`: `element|relation|rule|node|edge|model|snapshot`
+- `kind`: `element|relation|category|rule|node|edge|model|snapshot`
 - `field`: 번역/동기화 대상 필드(`display_name`, `description` 등)
-- 각 토큰은 소문자 snake_case/slug를 사용하고, 구분자는 `:`로 고정
+- Layer M2 object 식별자는 구분자 `::`를 사용하고, 번역 슬롯 식별자는 구분자 `:`를 사용한다.
+
+Flow start-condition 식별자(패치/영향 분석):
+
+- 패턴: `start::{workflow_or_*}::{source_or___entry__}->{target}::{kind}[:{source_field}>{target_field}]`
+- `kind`: `control_edge|data_edge|event_trigger`
+- `source`가 없으면 `__entry__`를 사용한다.
+- `workflow`가 전역이면 `*`를 사용한다.
+- 해당 식별자는 `ea_flow.flow_simulator.StartConditionSpec.identifier` 계산식과 동일해야 한다.
 
 ### 11.3 lang 파라미터 컨벤션
 
@@ -721,3 +784,128 @@ Tuple[str, ...]
 - 허용값: `en`, `ko` (확장 가능)
 - 미지정 시 `en`
 - 서버는 `lang` 기준으로 M2/M1 로컬라이즈 결과를 구성하고, M0는 원문 데이터(스냅샷/모델 메타)를 반환한다.
+
+### 11.4 작업 컨벤션: 식별 계산 시스템 노출 우선
+
+정합성 검증과 언어 패치 안정성을 위해, 설계 설명은 추상 용어보다 **실제 계산식**을 우선 노출한다.
+
+- MUST: API 응답에 식별자 계산 계약(`identifier_system` 등)을 포함한다.
+- MUST: UI는 식별자 예시가 아니라 계산 패턴(문자열 템플릿/해시 입력식)을 그대로 표시한다.
+- MUST: rule 식별자는 해시 알고리즘/입력 템플릿/잘림 길이를 명시한다.
+- SHOULD: 시스템별 native 식별자(`entity.name`, `rule.id` 등)와 layer 공통 식별자를 함께 노출한다.
+- MUST NOT: `semantic/behavior/runtime` 같은 표현을 식별 계산 계약보다 우선 규약으로 사용하지 않는다.
+
+검증 체크리스트:
+
+- `/kernel/entities`, `/kernel/relations`, `/kernel/rules`가 canonical kernel M2를 반환하는가
+- `/layers/{layer_key}/m2`가 `identifier_system`과 object identifiers를 반환하는가
+- `/profiles/{name}/topology`가 `view_mode`, `edge_total_raw`, `edge_total_before_cap`, `edge_truncated`를 반환하는가
+- `/schema/kernel`와 `/schema/{non-kernel}` 화면에서 식별 계산 규칙이 시각적으로 노출되는가
+
+### 11.5 스키마 UI 노출 규칙
+
+M2 화면은 레이어별 native 설계를 보존하면서, 계산 규칙을 직접 노출한다.
+
+- `/schema/kernel`:
+  - `FlowGraph`를 사용한다.
+  - 데이터 소스: `/kernel/entities`, `/kernel/relations`, `/kernel/rules`
+  - 식별 규칙은 kernel native(`entity.name`, `relation.name`, `rule.id`)를 노출한다.
+- `/schema/infra`, `/schema/needs`:
+  - `LayerSchemaView` 기본 모드를 `blueprint`로 사용한다.
+  - `identifier_system` 계산식과 `m2_blueprint.layer_responsibilities`를 패널에 노출한다.
+- `/schema/{decision|governance|flow}`:
+  - `LayerSchemaView` 기본 모드는 `elements`이며, 필요 시 `blueprint` 전환을 제공한다.
+
+### 11.6 Needs API 완성도 규칙
+
+Needs 레이어는 단순 조회가 아니라, M2 설계를 따라 모델링 변경(write)도 API로 완결되어야 한다.
+
+- 필수 write endpoint:
+  - `POST /needs/catalogs/{catalog_id}/use-cases`
+  - `POST /needs/catalogs/{catalog_id}/needs`
+  - `POST /needs/catalogs/{catalog_id}/needs/{need_id}/revise`
+  - `POST /needs/catalogs/{catalog_id}/needs/{need_id}/process-units`
+  - `POST /needs/catalogs/{catalog_id}/needs/{need_id}/inherit-decision-evidence`
+- `priority`, `purpose`, `complexity`, `cause_types`는 도메인 canonical 값으로 정규화되어야 한다.
+- `GET /needs/catalogs/{catalog_id}/needs`는 최소 아래 필드를 포함해야 한다.
+  - `purpose`, `cause_types`, `complexity`, `use_case_id`
+
+### 11.7 M1 품질 가드레일 표준
+
+`/schema/{layer}`의 M1 뷰는 `raw`/`summary`/`focus`를 지원하되, `summary`를 기본으로 하고 품질 진단을 함께 노출한다.
+
+- 진단 지표:
+  - dominant relation share
+  - relation kind count
+  - cross-layer edge share
+  - API/UI edge cap 여부
+- 품질 상태:
+  - `healthy` | `attention` | `critical`
+- 공통 기본 임계치:
+  - summary: `dominant <= 40%`, `relation kinds >= 4`, `cross-layer <= 55%`
+  - focus: `dominant <= 42%`, `relation kinds >= 3`, `cross-layer <= 60%`
+  - raw: `dominant <= 55%`, `relation kinds >= 5`, `cross-layer <= 70%`
+- 레이어별 허용 편차:
+  - `kernel`은 dominant/cross 허용치를 더 낮게 둔다.
+  - `governance`는 cross-layer 허용치를 더 높게 둔다.
+  - `infra`는 relation 다양성 최소치(`relation kinds >= 5`)를 유지한다.
+  - `needs`는 `contains` relation이 구조적으로 우세할 수 있으므로 relation-specific dominant 임계치를 적용한다.
+
+UI 노출 규칙:
+
+- M1 패널은 현재 품질 상태와 임계치, 탐지된 이슈(최대 3개)를 함께 표시한다.
+- `api_edge_cap`은 `critical`로 분류해 “평가 신뢰도 제한”을 명시한다.
+- 품질 경고는 구조 축약을 강제하는 정책이 아니라, 설계 적절성 점검 신호로만 사용한다.
+- `focus` 모드는 `core|relation|layer` 전략을 지원하며, relation/layer 후보를 함께 노출한다.
+  - `focus=core`는 빈도 기반이 아니라 고정 표층 규칙을 사용한다.
+  - 기본 노출(구조/인과): `contains`, `depends_on`, `next`, `triggers`, `constrains`
+  - 기본 숨김(운영/자기표현/상속계열): `produces`, `consumes`, `coordinates`, `registers`, `available_in`, `specialization`, `redefinition`, `subsetting`, `feature_typing`
+
+### 11.8 Decision Trace 목적/계약
+
+Decision 레이어의 1차 목적은 "무엇을 바꿨는가"가 아니라
+"왜 그 변경을 선택했는가 + 어떤 근거로 + 어떤 시스템 변경이 발생했는가"를
+프로젝트 수명주기 전체에서 추적 가능하게 만드는 것이다.
+
+핵심 목적:
+
+- 프로젝트 의사결정의 과정(대안/판단/선택)을 기록한다.
+- 커널/모델 변경 연산을 decision과 연결해 변경 이유를 역추적 가능하게 만든다.
+- 결과적으로 시스템이 어떻게 바뀌었는지(영향 범위/결과 상태)를 조회 가능하게 만든다.
+
+필수 규약(MUST):
+
+- 모델 변경(write) 연산은 `decision_id`와 `evidence_refs[]`를 함께 처리해야 한다.
+  - 전달되지 않으면 경고를 남기고, 전달되면 decision trace에 연동 기록한다.
+- 외부 모델 변경 API(`POST /models/register|validate|activate`)는 `decision_id`를 필수로 요구해야 한다.
+  - 직접 원인은 항상 `decision`이며, `needs`는 decision 아티팩트를 통해서만 간접 원인으로 연결한다.
+- decision trace는 최소 아래 의미 필드를 유지해야 한다.
+  - `decision_id`, `rationale`, `evidence_refs[]`
+  - `operations[]` (어떤 변경 연산이 수행되었는가)
+  - `impact[]` (어떤 노드/엣지/레이어에 영향이 있었는가)
+  - `history[]` (언제 어떤 상태 변화가 있었는가)
+- `operations[]` 항목은 최소 아래를 포함해야 한다.
+  - `model_id`, `model_version`, `operation`, `operation_ref`
+  - `actor`, `recorded_at`
+  - `cause_type` (`decision|need`), `cause_id`
+  - `change_phase` (`planned|applied|superseded|rolled_back`)
+- decision과 연결된 변경 응답에는 trace 연결 정보를 포함해야 한다.
+  - 예: `decision_trace.decision_id`, `decision_trace.trace_model_id`, `decision_trace.evidence_refs`
+  - 예: `decision_trace.cause_type`, `decision_trace.cause_id`, `decision_trace.change_phase`
+
+Needs 연동 규약(MUST):
+
+- need는 커널 반영 단계를 `kernel_change_phase`로 노출해야 한다.
+  - 허용 값: `planned|applied|superseded|rolled_back`
+- decision 근거를 needs로 상속할 때(`inherit-decision-evidence`) 단계 업데이트를 함께 처리할 수 있어야 한다.
+- needs 조회 API는 `kernel_change_phase` 필터/응답 필드를 지원해야 한다.
+
+조회 가능성 규약(SHOULD):
+
+- decision 단위 탐색 API는 evidence/impact/history 프로젝션을 제공해야 한다.
+- L4(trace) 탐색에서 decision 기반 필터링(특정 `decision_id`)을 지원해야 한다.
+
+비목표(MUST NOT):
+
+- 단순 결과 요약만 저장하고 판단 근거를 누락하는 구현
+- 커널 변경 이력과 decision 이력을 분리 저장해 상호 참조가 끊기는 구현

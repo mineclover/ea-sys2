@@ -9,6 +9,32 @@ _DECISION_TRACE_PREFIX = "decision_trace:"
 _DECISION_TRACE_KIND = "decision_trace_contract"
 _DECISION_TRACE_VERSION = "1.0"
 _MISSING_EVIDENCE_WARNING = "missing_evidence_refs"
+_INVALID_CAUSE_TYPE_PREFIX = "invalid_cause_type:"
+_INVALID_CHANGE_PHASE_PREFIX = "invalid_change_phase:"
+
+_ALLOWED_CAUSE_TYPES = frozenset({"decision", "need"})
+_CAUSE_TYPE_ALIASES = {
+    "needs": "need",
+}
+
+_ALLOWED_CHANGE_PHASES = frozenset({"planned", "applied", "superseded", "rolled_back"})
+_CHANGE_PHASE_ALIASES = {
+    "pending": "planned",
+    "registered": "planned",
+    "validated": "planned",
+    "active": "applied",
+    "implemented": "applied",
+    "done": "applied",
+    "deprecated": "superseded",
+    "historical": "superseded",
+    "rollback": "rolled_back",
+    "rolledback": "rolled_back",
+}
+_OPERATION_PHASE_DEFAULT = {
+    "register": "planned",
+    "validate": "planned",
+    "activate": "applied",
+}
 
 
 def _now_iso() -> str:
@@ -38,6 +64,15 @@ class DecisionTraceOps:
         return normalized
 
     @staticmethod
+    def normalize_cause_id(cause_id: str | None) -> str | None:
+        if cause_id is None:
+            return None
+        normalized = cause_id.strip()
+        if len(normalized) == 0:
+            return None
+        return normalized
+
+    @staticmethod
     def normalize_evidence_refs(
         evidence_refs: list[str] | tuple[str, ...] | None,
     ) -> list[str]:
@@ -55,6 +90,42 @@ class DecisionTraceOps:
     @staticmethod
     def decision_trace_model_id(decision_id: str) -> str:
         return f"{_DECISION_TRACE_PREFIX}{decision_id}"
+
+    @classmethod
+    def normalize_cause_type(
+        cls,
+        cause_type: str | None,
+        *,
+        default: str = "decision",
+    ) -> tuple[str, str | None]:
+        token = (cause_type or "").strip().lower().replace("-", "_")
+        if len(token) == 0:
+            return default, None
+        token = _CAUSE_TYPE_ALIASES.get(token, token)
+        if token in _ALLOWED_CAUSE_TYPES:
+            return token, None
+        return default, f"{_INVALID_CAUSE_TYPE_PREFIX}{token}"
+
+    @classmethod
+    def default_change_phase(cls, operation: str | None) -> str:
+        op = (operation or "").strip().lower()
+        return _OPERATION_PHASE_DEFAULT.get(op, "planned")
+
+    @classmethod
+    def normalize_change_phase(
+        cls,
+        change_phase: str | None,
+        *,
+        operation: str | None = None,
+    ) -> tuple[str, str | None]:
+        token = (change_phase or "").strip().lower().replace("-", "_")
+        default = cls.default_change_phase(operation)
+        if len(token) == 0:
+            return default, None
+        token = _CHANGE_PHASE_ALIASES.get(token, token)
+        if token in _ALLOWED_CHANGE_PHASES:
+            return token, None
+        return default, f"{_INVALID_CHANGE_PHASE_PREFIX}{token}"
 
     @staticmethod
     def decision_trace_warnings(
@@ -80,6 +151,9 @@ class DecisionTraceOps:
         transaction_id: str,
         evidence_refs: list[str],
         warnings: list[str],
+        cause_type: str,
+        cause_id: str | None,
+        change_phase: str,
         detail: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         store = self._layer_stores["decision"]
@@ -101,6 +175,8 @@ class DecisionTraceOps:
                 "warnings": [],
                 "operations": [],
                 "impact": [],
+                "causes": [],
+                "phase_timeline": [],
                 "history": [],
             }
         else:
@@ -123,6 +199,16 @@ class DecisionTraceOps:
             trace["impact"] = [
                 item
                 for item in trace.get("impact", [])
+                if isinstance(item, dict)
+            ]
+            trace["causes"] = [
+                item
+                for item in trace.get("causes", [])
+                if isinstance(item, dict)
+            ]
+            trace["phase_timeline"] = [
+                item
+                for item in trace.get("phase_timeline", [])
                 if isinstance(item, dict)
             ]
             trace["history"] = [
@@ -160,6 +246,9 @@ class DecisionTraceOps:
                 "transaction_id": transaction_id,
                 "evidence_refs": list(evidence_refs),
                 "warnings": list(warnings),
+                "cause_type": cause_type,
+                "cause_id": cause_id,
+                "change_phase": change_phase,
                 "detail": dict(detail or {}),
                 "created_at": now,
             }
@@ -174,11 +263,39 @@ class DecisionTraceOps:
             "status": status,
             "transaction_id": transaction_id,
             "actor": actor,
+            "cause_type": cause_type,
+            "cause_id": cause_id,
+            "change_phase": change_phase,
             "created_at": now,
         }
         if detail:
             impact_entry["detail"] = dict(detail)
         impact.append(impact_entry)
+
+        causes = cast(list[dict[str, Any]], trace["causes"])
+        resolved_cause_id = cause_id or decision_id
+        if resolved_cause_id and not any(
+            row.get("cause_type") == cause_type and row.get("cause_id") == resolved_cause_id
+            for row in causes
+        ):
+            causes.append(
+                {
+                    "cause_type": cause_type,
+                    "cause_id": resolved_cause_id,
+                    "first_seen_at": now,
+                }
+            )
+
+        phase_timeline = cast(list[dict[str, Any]], trace["phase_timeline"])
+        phase_timeline.append(
+            {
+                "transaction_id": transaction_id,
+                "operation": operation,
+                "phase": change_phase,
+                "status": status,
+                "created_at": now,
+            }
+        )
 
         history = cast(list[dict[str, Any]], trace["history"])
         history.append(
@@ -187,10 +304,16 @@ class DecisionTraceOps:
                 "event_type": "decision_trace_linked",
                 "message": "Model operation linked to decision trace.",
                 "operation": operation,
+                "cause_type": cause_type,
+                "cause_id": resolved_cause_id,
+                "change_phase": change_phase,
                 "created_at": now,
             }
         )
 
+        trace["cause_type"] = cause_type
+        trace["cause_id"] = resolved_cause_id
+        trace["latest_change_phase"] = change_phase
         trace["updated_at"] = now
         store.save_payload(model_id=model_id, payload=trace)
         return trace
@@ -280,9 +403,34 @@ class DecisionTraceOps:
             )
         )
 
+        causes: list[dict[str, str]] = []
+        phase_counts: dict[str, int] = {}
+        latest_phase: str | None = None
+        for row in operations:
+            phase = str(row.get("change_phase", ""))
+            if phase:
+                phase_counts[phase] = phase_counts.get(phase, 0) + 1
+                latest_phase = phase
+
+            cause_type = row.get("cause_type")
+            cause_id = row.get("cause_id")
+            if isinstance(cause_type, str) and isinstance(cause_id, str):
+                if not any(
+                    item["cause_type"] == cause_type and item["cause_id"] == cause_id
+                    for item in causes
+                ):
+                    causes.append({"cause_type": cause_type, "cause_id": cause_id})
+
         return {
             "decision_id": trace.get("decision_id"),
             "contract_version": trace.get("contract_version"),
+            "causal_context": {
+                "cause_type": trace.get("cause_type"),
+                "cause_id": trace.get("cause_id"),
+                "causes": causes,
+                "latest_change_phase": trace.get("latest_change_phase") or latest_phase,
+                "phase_counts": phase_counts,
+            },
             "evidence": {
                 "refs": evidence_refs,
                 "warnings": warnings,

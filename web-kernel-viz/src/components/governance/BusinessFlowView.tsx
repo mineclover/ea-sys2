@@ -109,15 +109,24 @@ function buildElements(
         edgeByIdx.set(eid, be);
 
         const edgeStyle = getEdgeStyle(be.edge_type);
+        const edgePriority = getEdgePriority(be.edge_type);
+        const edgeLabel = be.edge_type === 'intra_layer'
+            ? be.relation
+            : be.edge_type.replace(/_/g, ' ');
 
         rfEdges.push({
             id: eid,
             source: be.source,
             target: be.target,
             type: 'custom',
-            data: { style: edgeStyle },
+            data: {
+                style: edgeStyle,
+                relation: be.relation,
+                edgeType: be.edge_type,
+                priority: edgePriority,
+            },
             markerEnd: 'url(#directed)',
-            label: be.edge_type === 'intra_layer' ? be.relation : undefined,
+            label: edgeLabel,
         });
     }
 
@@ -129,13 +138,26 @@ function buildElements(
 function getEdgeStyle(edgeType: string) {
     switch (edgeType) {
         case 'model_port_bridge':
-            return { connector: 'solid', strokeColor: '#f59e0b', strokeWidth: 2 };
+            return { connector: 'solid', strokeColor: 'var(--status-warning-text)', strokeWidth: 2 };
         case 'runtime_chain':
-            return { connector: 'dashed', strokeColor: '#3b82f6', strokeWidth: 2, animated: true };
+            return { connector: 'dashed', strokeColor: 'var(--color-layer-kernel)', strokeWidth: 2, animated: true };
         case 'governance_oversight':
-            return { connector: 'spaced', strokeColor: '#ef4444', strokeWidth: 1.5 };
+            return { connector: 'spaced', strokeColor: 'var(--destructive)', strokeWidth: 1.5 };
         default: // intra_layer
-            return { connector: 'solid', strokeColor: '#555' };
+            return { connector: 'solid', strokeColor: 'var(--muted-foreground)' };
+    }
+}
+
+function getEdgePriority(edgeType: string): number {
+    switch (edgeType) {
+        case 'runtime_chain':
+            return 90;
+        case 'model_port_bridge':
+            return 78;
+        case 'governance_oversight':
+            return 72;
+        default:
+            return 60;
     }
 }
 
@@ -145,14 +167,14 @@ type InfoData =
     | { kind: 'node'; elem: BusinessFlowElement & { layer_key: string } }
     | { kind: 'edge'; edge: BusinessFlowEdge };
 
-const lbl = { fontSize: 10, fontWeight: 700 as const, color: 'var(--text-muted)', textTransform: 'uppercase' as const };
+const lbl = { fontSize: 10, fontWeight: 700 as const, color: 'var(--muted-foreground)', textTransform: 'uppercase' as const };
 
 function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onClose: () => void }) {
     const isNode = info.kind === 'node';
     return (
         <Panel position="bottom-right">
             <div style={{
-                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
+                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
                 padding: '12px 16px', boxShadow: '0 4px 6px -1px var(--shadow-lg)',
                 minWidth: 220, maxWidth: 340, fontFamily: 'system-ui, -apple-system, sans-serif',
             }}>
@@ -160,18 +182,18 @@ function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onCl
                     <div style={lbl}>{isNode ? 'Element' : 'Edge'}</div>
                     <button onClick={onClose} style={{
                         background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--text-muted)', fontSize: 14, lineHeight: 1, padding: 0,
+                        color: 'var(--muted-foreground)', fontSize: 14, lineHeight: 1, padding: 0,
                     }}>&times;</button>
                 </div>
                 {isNode ? (
                     <>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 2 }}>
                             {i18n(info.elem.display_name, lang) || info.elem.name}
                             {info.elem.display_name && (
-                                <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6, fontSize: 11 }}>{info.elem.name}</span>
+                                <span style={{ fontWeight: 400, color: 'var(--muted-foreground)', marginLeft: 6, fontSize: 11 }}>{info.elem.name}</span>
                             )}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 2 }}>
                             {LAYER_LABELS[info.elem.layer_key] || info.elem.layer_key}
                             {` · ${info.elem.category}`}
                             {info.elem.is_model_port && ' · ModelPort'}
@@ -179,27 +201,27 @@ function InfoPanel({ info, lang, onClose }: { info: InfoData; lang: string; onCl
                         <div style={{ marginTop: 4 }}>
                             <span style={{
                                 padding: '1px 6px', fontSize: 10, fontWeight: 600,
-                                background: '#ede9fe', color: '#6d28d9', borderRadius: 3,
+                                background: 'var(--status-indigo-bg)', color: 'var(--status-indigo-text)', borderRadius: 3,
                             }}>{info.elem.kernel_type}</span>
                         </div>
                         {i18n(info.elem.description, lang) && (
-                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 6, lineHeight: 1.5 }}>
                                 {i18n(info.elem.description, lang)}
                             </div>
                         )}
                     </>
                 ) : (
                     <>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                            {info.edge.source} <span style={{ color: 'var(--text-muted)' }}>{'\u2192'}</span> {info.edge.target}
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 4 }}>
+                            {info.edge.source} <span style={{ color: 'var(--muted-foreground)' }}>{'\u2192'}</span> {info.edge.target}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 2 }}>
                             Relation: <strong>{info.edge.relation}</strong>
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
                             Type: {info.edge.edge_type.replace(/_/g, ' ')}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>
                             {LAYER_LABELS[info.edge.source_layer] || info.edge.source_layer}
                             {' \u2192 '}
                             {LAYER_LABELS[info.edge.target_layer] || info.edge.target_layer}
@@ -292,14 +314,14 @@ function InnerGraph({ lang }: InnerProps) {
             <div style={{ padding: 40, fontFamily: 'system-ui' }}>
                 <div style={{
                     padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 8,
-                    background: 'var(--bg-secondary)', fontSize: 12, color: 'var(--text-secondary)',
+                    background: 'var(--secondary)', fontSize: 12, color: 'var(--muted-foreground)',
                     display: 'flex', alignItems: 'center', gap: 12,
                 }}>
                     Unable to load business flow — API server may be unavailable.
                     <button onClick={load} style={{
                         padding: '4px 12px', fontSize: 11, fontWeight: 600,
-                        border: '1px solid var(--border-strong)', borderRadius: 4,
-                        background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+                        border: '1px solid var(--input)', borderRadius: 4,
+                        background: 'var(--card)', color: 'var(--muted-foreground)', cursor: 'pointer',
                     }}>Retry</button>
                 </div>
             </div>
@@ -334,8 +356,8 @@ function InnerGraph({ lang }: InnerProps) {
                     }}>
                         {stats && (
                             <span style={{
-                                fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
-                                padding: '4px 8px', background: 'var(--bg-hover)', borderRadius: 4,
+                                fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)',
+                                padding: '4px 8px', background: 'var(--accent)', borderRadius: 4,
                             }}>
                                 {stats.elements} elements · {stats.edges} edges
                             </span>
@@ -346,11 +368,11 @@ function InnerGraph({ lang }: InnerProps) {
                 </Panel>
                 <Panel position="top-left">
                     <div style={{
-                        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
-                        padding: '8px 12px', boxShadow: '0 1px 3px var(--shadow)',
+                        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
+                        padding: '8px 12px', boxShadow: '0 1px 3px var(--shadow-md)',
                         fontFamily: 'system-ui, -apple-system, sans-serif',
                     }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', marginBottom: 6 }}>
                             Layers
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -360,31 +382,31 @@ function InnerGraph({ lang }: InnerProps) {
                                 return (
                                     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                         <div style={{ width: 10, height: 10, borderRadius: 2, background: c.color }} />
-                                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</span>
+                                        <span style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{label}</span>
                                     </div>
                                 );
                             })}
                         </div>
-                        <div style={{ borderTop: '1px solid var(--bg-hover)', marginTop: 8, paddingTop: 6 }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+                        <div style={{ borderTop: '1px solid var(--accent)', marginTop: 8, paddingTop: 6 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', marginBottom: 4 }}>
                                 Edge Types
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#555" strokeWidth="1.5" /></svg>
-                                    <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Intra-layer</span>
+                                    <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Intra-layer</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#f59e0b" strokeWidth="2" /></svg>
-                                    <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>ModelPort bridge</span>
+                                    <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="var(--color-layer-infra)" strokeWidth="2" /></svg>
+                                    <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>ModelPort bridge</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#3b82f6" strokeWidth="2" strokeDasharray="3 3" /></svg>
-                                    <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Runtime chain</span>
+                                    <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="var(--color-layer-kernel)" strokeWidth="2" strokeDasharray="3 3" /></svg>
+                                    <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Runtime chain</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="8 8" /></svg>
-                                    <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Governance oversight</span>
+                                    <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="var(--destructive)" strokeWidth="1.5" strokeDasharray="8 8" /></svg>
+                                    <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>Governance oversight</span>
                                 </div>
                             </div>
                         </div>
@@ -398,8 +420,8 @@ function InnerGraph({ lang }: InnerProps) {
 
 const layoutBtnStyle: React.CSSProperties = {
     padding: '4px 10px', fontSize: 11, fontWeight: 500,
-    border: '1px solid var(--border-strong)', borderRadius: 4,
-    background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+    border: '1px solid var(--input)', borderRadius: 4,
+    background: 'var(--card)', color: 'var(--muted-foreground)', cursor: 'pointer',
 };
 
 // --- Exported wrapper ---

@@ -1,0 +1,746 @@
+{
+  "generated_at": "2026-02-17T05:58:07.576342Z",
+  "profile": "EASystem-Kernel",
+  "requested_nodes": [
+    "KernelLayer",
+    "RequirementConstraintBridge",
+    "KernelModelPort"
+  ],
+  "kernel_m1_context": {
+    "node_count": 106,
+    "edge_count": 1200,
+    "edge_total_raw": 3304,
+    "edge_total_before_cap": 3218,
+    "edge_truncated": true
+  },
+  "nodes": {
+    "KernelLayer": {
+      "exists": true,
+      "reachable": {
+        "max_depth": 3,
+        "count": 103,
+        "sample": [
+          "AnalysisReport",
+          "AnalyzeEvidenceStep",
+          "ApproveRuleAction",
+          "ConflictHotspot",
+          "ContractReviewStep",
+          "CorpusUpdatedEvent",
+          "CorpusVersionStore",
+          "CreateSnapshotAction",
+          "DecisionConstraintInput",
+          "DecisionFeedbackChannel",
+          "DecisionModelPort",
+          "DecisionRuleMapping",
+          "DecisionStore",
+          "DecisionTraceReference",
+          "DeprecateRuleAction",
+          "EnhancedJudgment",
+          "EvaluateImpactStep",
+          "EvidenceAnalyzer",
+          "ExecuteJudgmentStep",
+          "FlowConstraintViolationEvent"
+        ]
+      },
+      "impact": {
+        "both": {
+          "max_depth": 3,
+          "affected_count": 103,
+          "top_impacted": [
+            {
+              "name": "KernelRuleSet",
+              "path_count": 1547,
+              "best_length": 1
+            },
+            {
+              "name": "KernelSpecSnapshot",
+              "path_count": 1437,
+              "best_length": 1
+            },
+            {
+              "name": "KernelSpecStore",
+              "path_count": 1403,
+              "best_length": 1
+            },
+            {
+              "name": "EnhancedJudgment",
+              "path_count": 1400,
+              "best_length": 1
+            },
+            {
+              "name": "AnalysisReport",
+              "path_count": 1398,
+              "best_length": 1
+            },
+            {
+              "name": "KernelProfileStore",
+              "path_count": 1392,
+              "best_length": 1
+            },
+            {
+              "name": "DecisionTraceReference",
+              "path_count": 1390,
+              "best_length": 1
+            },
+            {
+              "name": "KernelAuditLog",
+              "path_count": 1390,
+              "best_length": 1
+            },
+            {
+              "name": "NeedsCoverageReport",
+              "path_count": 1390,
+              "best_length": 1
+            },
+            {
+              "name": "KernelRuleStore",
+              "path_count": 1388,
+              "best_length": 1
+            },
+            {
+              "name": "KernelChangeRecord",
+              "path_count": 1387,
+              "best_length": 1
+            },
+            {
+              "name": "Notification",
+              "path_count": 1386,
+              "best_length": 1
+            },
+            {
+              "name": "FlowContractSnapshot",
+              "path_count": 1373,
+              "best_length": 1
+            },
+            {
+              "name": "KernelCapabilityModel",
+              "path_count": 1373,
+              "best_length": 1
+            },
+            {
+              "name": "ImpactReport",
+              "path_count": 1371,
+              "best_length": 1
+            }
+          ]
+        },
+        "outgoing": {
+          "max_depth": 3,
+          "affected_count": 103,
+          "top_impacted": [
+            {
+              "name": "KernelRuleSet",
+              "path_count": 1547,
+              "best_length": 1
+            },
+            {
+              "name": "KernelSpecSnapshot",
+              "path_count": 1437,
+              "best_length": 1
+            },
+            {
+              "name": "KernelSpecStore",
+              "path_count": 1403,
+              "best_length": 1
+            },
+            {
+              "name": "EnhancedJudgment",
+              "path_count": 1400,
+              "best_length": 1
+            },
+            {
+              "name": "AnalysisReport",
+              "path_count": 1398,
+              "best_length": 1
+            },
+            {
+              "name": "KernelProfileStore",
+              "path_count": 1392,
+              "best_length": 1
+            },
+            {
+              "name": "DecisionTraceReference",
+              "path_count": 1390,
+              "best_length": 1
+            },
+            {
+              "name": "KernelAuditLog",
+              "path_count": 1390,
+              "best_length": 1
+            },
+            {
+              "name": "NeedsCoverageReport",
+              "path_count": 1390,
+              "best_length": 1
+            },
+            {
+              "name": "KernelRuleStore",
+              "path_count": 1388,
+              "best_length": 1
+            },
+            {
+              "name": "KernelChangeRecord",
+              "path_count": 1387,
+              "best_length": 1
+            },
+            {
+              "name": "Notification",
+              "path_count": 1386,
+              "best_length": 1
+            },
+            {
+              "name": "FlowContractSnapshot",
+              "path_count": 1373,
+              "best_length": 1
+            },
+            {
+              "name": "KernelCapabilityModel",
+              "path_count": 1373,
+              "best_length": 1
+            },
+            {
+              "name": "ImpactReport",
+              "path_count": 1371,
+              "best_length": 1
+            }
+          ]
+        },
+        "incoming": {
+          "max_depth": 3,
+          "affected_count": 8,
+          "top_impacted": [
+            {
+              "name": "ModelExplorerContext",
+              "path_count": 43,
+              "best_length": 1
+            },
+            {
+              "name": "KernelExplorationExperience",
+              "path_count": 42,
+              "best_length": 1
+            },
+            {
+              "name": "KernelGovernanceExperience",
+              "path_count": 42,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelingExperience",
+              "path_count": 42,
+              "best_length": 1
+            },
+            {
+              "name": "KernelValidationExperience",
+              "path_count": 41,
+              "best_length": 1
+            },
+            {
+              "name": "GovernanceOperatorContext",
+              "path_count": 36,
+              "best_length": 1
+            },
+            {
+              "name": "ModelAuthorContext",
+              "path_count": 36,
+              "best_length": 1
+            },
+            {
+              "name": "ModelValidatorContext",
+              "path_count": 36,
+              "best_length": 1
+            }
+          ]
+        }
+      }
+    },
+    "RequirementConstraintBridge": {
+      "exists": true,
+      "reachable": {
+        "max_depth": 3,
+        "count": 75,
+        "sample": [
+          "AnalysisReport",
+          "ConflictHotspot",
+          "ContractReviewStep",
+          "CorpusVersionStore",
+          "DecisionConstraintInput",
+          "DecisionFeedbackChannel",
+          "DecisionModelPort",
+          "DecisionRuleMapping",
+          "DecisionStore",
+          "DecisionTraceReference",
+          "EnhancedJudgment",
+          "EvidenceAnalyzer",
+          "FlowConstraintViolationEvent",
+          "FlowContractSnapshot",
+          "FlowExecutionFeedback",
+          "FlowModelPort",
+          "FlowValidationHook",
+          "GovernanceModelPort",
+          "GovernanceSystem",
+          "I18nStore"
+        ]
+      },
+      "impact": {
+        "both": {
+          "max_depth": 3,
+          "affected_count": 104,
+          "top_impacted": [
+            {
+              "name": "GovernanceSystem",
+              "path_count": 1448,
+              "best_length": 1
+            },
+            {
+              "name": "KernelExplorationExperience",
+              "path_count": 1362,
+              "best_length": 1
+            },
+            {
+              "name": "KernelGovernanceExperience",
+              "path_count": 1361,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelingExperience",
+              "path_count": 1361,
+              "best_length": 1
+            },
+            {
+              "name": "KernelLayer",
+              "path_count": 1357,
+              "best_length": 1
+            },
+            {
+              "name": "KernelValidationExperience",
+              "path_count": 1357,
+              "best_length": 1
+            },
+            {
+              "name": "LifecycleController",
+              "path_count": 1157,
+              "best_length": 1
+            },
+            {
+              "name": "KernelConsistencyGoal",
+              "path_count": 1155,
+              "best_length": 2
+            },
+            {
+              "name": "KernelService",
+              "path_count": 1118,
+              "best_length": 1
+            },
+            {
+              "name": "RuleLifecycleIntegrityGoal",
+              "path_count": 1094,
+              "best_length": 2
+            },
+            {
+              "name": "EvidenceBasedEvolutionGoal",
+              "path_count": 1090,
+              "best_length": 2
+            },
+            {
+              "name": "KernelContractService",
+              "path_count": 1067,
+              "best_length": 1
+            },
+            {
+              "name": "EvidenceAnalyzer",
+              "path_count": 1032,
+              "best_length": 1
+            },
+            {
+              "name": "JudgmentService",
+              "path_count": 1030,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelRegistrationService",
+              "path_count": 1030,
+              "best_length": 1
+            }
+          ]
+        },
+        "outgoing": {
+          "max_depth": 3,
+          "affected_count": 75,
+          "top_impacted": [
+            {
+              "name": "KernelRuleSet",
+              "path_count": 49,
+              "best_length": 2
+            },
+            {
+              "name": "AnalysisReport",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "DecisionTraceReference",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "EnhancedJudgment",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "KernelAuditLog",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "KernelChangeRecord",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "KernelProfileStore",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "KernelRuleStore",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "KernelSpecSnapshot",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "KernelSpecStore",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "NeedsCoverageReport",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "Notification",
+              "path_count": 44,
+              "best_length": 2
+            },
+            {
+              "name": "DecisionConstraintInput",
+              "path_count": 43,
+              "best_length": 2
+            },
+            {
+              "name": "DecisionRuleMapping",
+              "path_count": 43,
+              "best_length": 2
+            },
+            {
+              "name": "FlowContractSnapshot",
+              "path_count": 43,
+              "best_length": 2
+            }
+          ]
+        },
+        "incoming": {
+          "max_depth": 3,
+          "affected_count": 71,
+          "top_impacted": [
+            {
+              "name": "GovernanceSystem",
+              "path_count": 1427,
+              "best_length": 1
+            },
+            {
+              "name": "KernelExplorationExperience",
+              "path_count": 1362,
+              "best_length": 1
+            },
+            {
+              "name": "KernelGovernanceExperience",
+              "path_count": 1361,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelingExperience",
+              "path_count": 1361,
+              "best_length": 1
+            },
+            {
+              "name": "KernelLayer",
+              "path_count": 1357,
+              "best_length": 1
+            },
+            {
+              "name": "KernelValidationExperience",
+              "path_count": 1357,
+              "best_length": 1
+            },
+            {
+              "name": "KernelConsistencyGoal",
+              "path_count": 1155,
+              "best_length": 2
+            },
+            {
+              "name": "LifecycleController",
+              "path_count": 1136,
+              "best_length": 1
+            },
+            {
+              "name": "KernelService",
+              "path_count": 1098,
+              "best_length": 1
+            },
+            {
+              "name": "RuleLifecycleIntegrityGoal",
+              "path_count": 1094,
+              "best_length": 2
+            },
+            {
+              "name": "EvidenceBasedEvolutionGoal",
+              "path_count": 1090,
+              "best_length": 2
+            },
+            {
+              "name": "KernelContractService",
+              "path_count": 1044,
+              "best_length": 1
+            },
+            {
+              "name": "EvidenceAnalyzer",
+              "path_count": 1011,
+              "best_length": 1
+            },
+            {
+              "name": "JudgmentService",
+              "path_count": 1009,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelRegistrationService",
+              "path_count": 1009,
+              "best_length": 1
+            }
+          ]
+        }
+      }
+    },
+    "KernelModelPort": {
+      "exists": true,
+      "reachable": {
+        "max_depth": 3,
+        "count": 0,
+        "sample": []
+      },
+      "impact": {
+        "both": {
+          "max_depth": 3,
+          "affected_count": 71,
+          "top_impacted": [
+            {
+              "name": "GovernanceSystem",
+              "path_count": 697,
+              "best_length": 1
+            },
+            {
+              "name": "KernelExplorationExperience",
+              "path_count": 665,
+              "best_length": 1
+            },
+            {
+              "name": "KernelGovernanceExperience",
+              "path_count": 661,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelingExperience",
+              "path_count": 660,
+              "best_length": 1
+            },
+            {
+              "name": "KernelLayer",
+              "path_count": 656,
+              "best_length": 1
+            },
+            {
+              "name": "KernelValidationExperience",
+              "path_count": 655,
+              "best_length": 1
+            },
+            {
+              "name": "KernelConsistencyGoal",
+              "path_count": 558,
+              "best_length": 2
+            },
+            {
+              "name": "LifecycleController",
+              "path_count": 555,
+              "best_length": 1
+            },
+            {
+              "name": "KernelService",
+              "path_count": 536,
+              "best_length": 1
+            },
+            {
+              "name": "RuleLifecycleIntegrityGoal",
+              "path_count": 528,
+              "best_length": 2
+            },
+            {
+              "name": "EvidenceBasedEvolutionGoal",
+              "path_count": 526,
+              "best_length": 2
+            },
+            {
+              "name": "KernelContractService",
+              "path_count": 510,
+              "best_length": 1
+            },
+            {
+              "name": "EvidenceAnalyzer",
+              "path_count": 494,
+              "best_length": 1
+            },
+            {
+              "name": "JudgmentService",
+              "path_count": 493,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelRegistrationService",
+              "path_count": 493,
+              "best_length": 1
+            }
+          ]
+        },
+        "outgoing": {
+          "max_depth": 3,
+          "affected_count": 0,
+          "top_impacted": []
+        },
+        "incoming": {
+          "max_depth": 3,
+          "affected_count": 71,
+          "top_impacted": [
+            {
+              "name": "GovernanceSystem",
+              "path_count": 697,
+              "best_length": 1
+            },
+            {
+              "name": "KernelExplorationExperience",
+              "path_count": 665,
+              "best_length": 1
+            },
+            {
+              "name": "KernelGovernanceExperience",
+              "path_count": 661,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelingExperience",
+              "path_count": 660,
+              "best_length": 1
+            },
+            {
+              "name": "KernelLayer",
+              "path_count": 656,
+              "best_length": 1
+            },
+            {
+              "name": "KernelValidationExperience",
+              "path_count": 655,
+              "best_length": 1
+            },
+            {
+              "name": "KernelConsistencyGoal",
+              "path_count": 558,
+              "best_length": 2
+            },
+            {
+              "name": "LifecycleController",
+              "path_count": 555,
+              "best_length": 1
+            },
+            {
+              "name": "KernelService",
+              "path_count": 536,
+              "best_length": 1
+            },
+            {
+              "name": "RuleLifecycleIntegrityGoal",
+              "path_count": 528,
+              "best_length": 2
+            },
+            {
+              "name": "EvidenceBasedEvolutionGoal",
+              "path_count": 526,
+              "best_length": 2
+            },
+            {
+              "name": "KernelContractService",
+              "path_count": 510,
+              "best_length": 1
+            },
+            {
+              "name": "EvidenceAnalyzer",
+              "path_count": 494,
+              "best_length": 1
+            },
+            {
+              "name": "JudgmentService",
+              "path_count": 493,
+              "best_length": 1
+            },
+            {
+              "name": "KernelModelRegistrationService",
+              "path_count": 493,
+              "best_length": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  "pairwise_paths_max_depth_4": [
+    {
+      "source": "KernelLayer",
+      "target": "RequirementConstraintBridge",
+      "status": "ok",
+      "path_count": 28523
+    },
+    {
+      "source": "KernelLayer",
+      "target": "KernelModelPort",
+      "status": "ok",
+      "path_count": 13927
+    },
+    {
+      "source": "RequirementConstraintBridge",
+      "target": "KernelLayer",
+      "status": "ok",
+      "path_count": 0
+    },
+    {
+      "source": "RequirementConstraintBridge",
+      "target": "KernelModelPort",
+      "status": "ok",
+      "path_count": 448
+    },
+    {
+      "source": "KernelModelPort",
+      "target": "KernelLayer",
+      "status": "ok",
+      "path_count": 0
+    },
+    {
+      "source": "KernelModelPort",
+      "target": "RequirementConstraintBridge",
+      "status": "ok",
+      "path_count": 0
+    }
+  ]
+}

@@ -180,8 +180,9 @@ class NeedsOps:
         tags: list[str] | None = None,
         use_case_id: str | None = None,
         cause_types: list[Any] | None = None,
-        purpose: str = "",
+        purpose: str = "unspecified",
         complexity: Any = "procedural",
+        kernel_change_phase: str | None = None,
         actor: str = "governance",
     ) -> dict[str, Any]:
         catalog = self._require_needs_catalog(catalog_id)
@@ -197,6 +198,7 @@ class NeedsOps:
             "cause_types": cause_types,
             "purpose": purpose,
             "complexity": complexity,
+            "kernel_change_phase": kernel_change_phase,
         }
         if priority is not None:
             express_kwargs["priority"] = priority
@@ -292,6 +294,7 @@ class NeedsOps:
         *,
         decision_id: str,
         evidence_refs: list[str],
+        kernel_change_phase: str | None = None,
         actor: str = "governance",
     ) -> dict[str, str]:
         catalog = self._require_needs_catalog(catalog_id)
@@ -299,6 +302,7 @@ class NeedsOps:
             need_id=need_id,
             decision_id=decision_id,
             evidence_refs=evidence_refs,
+            kernel_change_phase=kernel_change_phase,
         )
         result = self._persist_needs_change(
             catalog,
@@ -310,6 +314,11 @@ class NeedsOps:
                 "need_id": updated.id,
                 "decision_id": decision_id,
                 "evidence_count": len(evidence_refs),
+                "kernel_change_phase": (
+                    updated.kernel_change_phase.value
+                    if hasattr(updated.kernel_change_phase, "value")
+                    else str(updated.kernel_change_phase)
+                ),
             },
         )
         return {**result, "need_id": updated.id}

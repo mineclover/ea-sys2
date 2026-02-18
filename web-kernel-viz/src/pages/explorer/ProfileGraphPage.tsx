@@ -6,7 +6,7 @@ import { SidePanel } from '@/components/layout';
 import ProfileGraph from '@/components/ProfileGraph';
 import ProfileSidePanel from '@/components/ProfileSidePanel';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useProfileTopology, useNeedsCatalogs, useReachable } from '@/api/hooks';
+import { useProfileDescription, useNeedsCatalogs, useReachable } from '@/api/hooks';
 import { fetchCatalogNeeds, fetchElementScope } from '@/api/client';
 
 const ALL_LAYERS = ['Infra', 'Governance', 'Decision', 'Needs', 'Kernel', 'Flow'];
@@ -40,8 +40,8 @@ export default function ProfileGraphPage() {
     }, []);
 
     // Fetch total element count for scope indicator
-    const { data: topologyData } = useProfileTopology(profileName ?? '', {});
-    const totalElementCount = topologyData?.node_count ?? 0;
+    const { data: profileDesc } = useProfileDescription(profileName ?? '', { lang });
+    const totalElementCount = profileDesc?.element_count ?? 0;
 
     // Load need options from catalogs
     const { data: catalogs } = useNeedsCatalogs();
@@ -105,28 +105,32 @@ export default function ProfileGraphPage() {
 
     // Auto-open side panel when entering this page
     useEffect(() => {
-        setSidePanelOpen(true);
-    }, [setSidePanelOpen]);
+        if (!sidePanelOpen) {
+            setSidePanelOpen(true);
+        }
+    }, [sidePanelOpen, setSidePanelOpen]);
 
     if (!profileName) {
-        return <div style={{ padding: 40, color: 'var(--text-muted)', fontFamily: 'system-ui' }}>Loading profiles...</div>;
+        return <div style={{ padding: 40, color: 'var(--muted-foreground)', fontFamily: 'system-ui' }}>Loading profiles...</div>;
     }
 
     // Combine goal + need scope (intersection when both active)
-    let combinedScope: Set<string> | undefined;
-    if (scopeElements && needScopeElements) {
-        combinedScope = new Set([...scopeElements].filter((e) => needScopeElements.has(e)));
-    } else {
-        combinedScope = scopeElements || needScopeElements;
-    }
+    const combinedScope = useMemo(() => {
+        if (scopeElements && needScopeElements) {
+            return new Set([...scopeElements].filter((e) => needScopeElements.has(e)));
+        }
+        return scopeElements || needScopeElements;
+    }, [scopeElements, needScopeElements]);
 
-    const scopeCount = scopeElements
-        ? { visible: scopeElements.size, total: totalElementCount }
-        : null;
+    const scopeCount = useMemo(
+        () => (scopeElements ? { visible: scopeElements.size, total: totalElementCount } : null),
+        [scopeElements, totalElementCount],
+    );
 
-    const needScopeCount = needScopeElements
-        ? { visible: needScopeElements.size, total: totalElementCount }
-        : null;
+    const needScopeCount = useMemo(
+        () => (needScopeElements ? { visible: needScopeElements.size, total: totalElementCount } : null),
+        [needScopeElements, totalElementCount],
+    );
 
     return (
         <>

@@ -6,6 +6,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from ea_kernel.kernel_service import profile_topology
 from ea_kernel.profile_loader import load_profile
 from ea_kernel.profiles.ea_sys import LAYER_FILE_MAP, layer_path
 from ea_kernel.spec import KERNEL_SPEC
@@ -72,3 +73,38 @@ def test_main_simulate_success(monkeypatch, capsys):
         or "[sim][warn] layer-role-sync:" in out
     )
     assert "[sim] passed" in out
+
+
+@pytest.mark.parametrize("layer", _VALIDATION_LAYERS)
+def test_core_layers_have_no_dormant_relations(layer: str):
+    profile = load_profile(layer_path(layer), KERNEL_SPEC)
+    relation_names = {rel.name for rel in profile.relations}
+    used_relations = {
+        rule.relationship_name
+        for rule in profile.validity_rules
+        if rule.valid
+    }
+    assert relation_names - used_relations == set()
+
+
+@pytest.mark.parametrize(
+    "profile_name",
+    [
+        "EASystem-Infra",
+        "EASystem-Governance",
+        "EASystem-Decision",
+        "EASystem-Needs",
+        "EASystem-Kernel",
+        "EASystem-Flow",
+    ],
+)
+def test_actor_focus_default_seed_returns_connected_topology(profile_name: str):
+    topology = profile_topology(
+        profile_name=profile_name,
+        view_mode="focus",
+        focus="actor",
+        focus_depth=4,
+        max_edges=260,
+    )
+    assert "error" not in topology
+    assert topology["edge_count"] > 0

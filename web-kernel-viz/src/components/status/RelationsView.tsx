@@ -5,7 +5,8 @@ import { fetchProfileTopology } from '@/api/client';
 import { useProfiles } from '@/api/hooks';
 import type { TopologyEdge } from '@/api/types';
 import { useAppState } from '@/contexts/AppStateContext';
-import { ErrorBanner, LoadingSpinner } from '@/components/ui';
+import { Badge, ErrorBanner, LoadingSpinner } from '@/components/ui';
+import { PageHeader } from '@/components/layout';
 
 interface ProfileEdgeData {
     name: string;
@@ -26,7 +27,12 @@ export default function RelationsView() {
             const profiles = profilesQuery.data!;
             const results = await Promise.all(
                 profiles.map((p) =>
-                    fetchProfileTopology(p.name, { lang })
+                    fetchProfileTopology(p.name, {
+                        lang,
+                        view_mode: 'summary',
+                        surface_only: true,
+                        max_edges: 900,
+                    })
                         .then((topo) => ({
                             name: p.name,
                             version: p.version,
@@ -66,12 +72,25 @@ export default function RelationsView() {
 
     return (
         <div style={{ padding: '24px 32px', fontFamily: 'system-ui, -apple-system, sans-serif', overflowY: 'auto', width: '100%' }}>
-            <div style={{ marginBottom: 20 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Relations — All Profiles</h2>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Total: {totalEdges} edges across {data.length} profiles
-                </span>
-            </div>
+            <PageHeader
+                metaKey="status.relations"
+                subtitle={`${totalEdges} edges across ${data.length} profiles`}
+                rightContent={
+                    <>
+                        <Badge
+                            label={lang === 'ko' ? 'M1 요약' : 'M1 summary'}
+                            bg="var(--status-indigo-bg)"
+                            color="var(--status-indigo-text)"
+                        />
+                        <Badge
+                            label={lang === 'ko' ? '표층만' : 'surface-only'}
+                            bg="var(--status-success-bg)"
+                            color="var(--status-success-text)"
+                        />
+                        <Badge label="max:900" />
+                    </>
+                }
+            />
 
             {data.map((profile) => {
                 const open = expanded[profile.name] !== false;
@@ -92,13 +111,13 @@ export default function RelationsView() {
                                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                                 padding: '10px 14px', fontSize: 13, fontWeight: 600,
                                 border: '1px solid var(--border)', borderRadius: 6,
-                                background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer',
+                                background: 'var(--secondary)', color: 'var(--foreground)', cursor: 'pointer',
                                 textAlign: 'left',
                             }}
                         >
                             <span style={{ fontSize: 10 }}>{open ? '\u25BC' : '\u25B6'}</span>
                             {profile.name}
-                            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted-foreground)', marginLeft: 4 }}>
                                 v{profile.version} — {profile.edges.length} edges
                             </span>
                         </button>
@@ -111,7 +130,7 @@ export default function RelationsView() {
                                         .map(([rel, count]) => (
                                             <span key={rel} style={{
                                                 padding: '2px 8px', fontSize: 10, fontWeight: 600,
-                                                background: 'var(--bg-hover)', borderRadius: 3, color: 'var(--text-secondary)',
+                                                background: 'var(--accent)', borderRadius: 3, color: 'var(--muted-foreground)',
                                             }}>
                                                 {rel}: {count}
                                             </span>
@@ -121,8 +140,8 @@ export default function RelationsView() {
                                 {relations.map(([relName, edges]) => (
                                     <div key={relName} style={{ marginBottom: 8 }}>
                                         <div style={{
-                                            fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
-                                            padding: '4px 8px', background: 'var(--bg-hover)', borderRadius: 4,
+                                            fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)',
+                                            padding: '4px 8px', background: 'var(--accent)', borderRadius: 4,
                                             display: 'inline-block', marginBottom: 4,
                                         }}>
                                             {relName} ({edges.length})
@@ -133,17 +152,22 @@ export default function RelationsView() {
                                                     <th style={thStyle}>Source</th>
                                                     <th style={{ ...thStyle, width: 30, textAlign: 'center' }}></th>
                                                     <th style={thStyle}>Target</th>
-                                                    <th style={thStyle}>Rule ID</th>
+                                                    <th style={thStyle}>Semantic</th>
+                                                    <th style={thNumStyle}>Edges</th>
                                                     <th style={thNumStyle}>Priority</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {edges.map((e, i) => (
-                                                    <tr key={i} style={{ borderBottom: '1px solid var(--bg-hover)' }}>
+                                                    <tr key={i} style={{ borderBottom: '1px solid var(--accent)' }}>
                                                         <td style={tdStyle}>{e.source}</td>
-                                                        <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-muted)' }}>{'\u2192'}</td>
+                                                        <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted-foreground)' }}>{'\u2192'}</td>
                                                         <td style={tdStyle}>{e.target}</td>
-                                                        <td style={{ ...tdStyle, fontSize: 10, color: 'var(--text-muted)' }}>{e.rule_id}</td>
+                                                        <td style={{ ...tdStyle, fontSize: 10, color: 'var(--muted-foreground)' }}>
+                                                            {e.semantic_axis ?? 'other'}
+                                                            {e.semantic_intent ? `/${e.semantic_intent}` : ''}
+                                                        </td>
+                                                        <td style={tdNumStyle}>{e.rule_count ?? 1}</td>
                                                         <td style={tdNumStyle}>{e.priority}</td>
                                                     </tr>
                                                 ))}
@@ -162,13 +186,13 @@ export default function RelationsView() {
 
 const thStyle: React.CSSProperties = {
     textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 600,
-    color: 'var(--text-muted)', textTransform: 'uppercase',
+    color: 'var(--muted-foreground)', textTransform: 'uppercase',
 };
 
 const thNumStyle: React.CSSProperties = { ...thStyle, textAlign: 'right' };
 
 const tdStyle: React.CSSProperties = {
-    padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)',
+    padding: '6px 8px', fontSize: 12, color: 'var(--foreground)',
 };
 
 const tdNumStyle: React.CSSProperties = { ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };

@@ -11,7 +11,7 @@ export default function LoadingSpinner({ message = 'Loading...', fullHeight = tr
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-muted)',
+            color: 'var(--muted-foreground)',
             fontSize: 14,
             fontFamily: 'system-ui, -apple-system, sans-serif',
         }}>

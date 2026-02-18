@@ -76,6 +76,56 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             },
         )
 
+    def _normalize_optional_text(value: str | None) -> str | None:
+        if value is None:
+            return None
+        token = value.strip()
+        if len(token) == 0:
+            return None
+        return token
+
+    def _require_decision_id(decision_id: str | None, *, operation: str) -> str:
+        normalized = _normalize_optional_text(decision_id)
+        if normalized is None:
+            raise _model_api_error(
+                status_code=400,
+                detail=(
+                    f"decision_id is required for /models/{operation}; "
+                    "causal flow must be needs -> decision -> kernel"
+                ),
+                category="bad_request",
+            )
+        return normalized
+
+    def _enforce_direct_decision_cause(
+        *,
+        decision_id: str,
+        cause_type: str | None,
+        cause_id: str | None,
+        operation: str,
+    ) -> tuple[str, str]:
+        normalized_cause_type = _normalize_optional_text(cause_type)
+        normalized_cause_id = _normalize_optional_text(cause_id)
+        if normalized_cause_type is not None and normalized_cause_type.lower() != "decision":
+            raise _model_api_error(
+                status_code=400,
+                detail=(
+                    f"cause_type must be 'decision' for /models/{operation}; "
+                    "direct kernel change cause is always decision"
+                ),
+                category="bad_request",
+            )
+        if normalized_cause_id is not None and normalized_cause_id != decision_id:
+            raise _model_api_error(
+                status_code=400,
+                detail=(
+                    f"cause_id must match decision_id for /models/{operation}; "
+                    "upstream need must be linked through the decision artifact"
+                ),
+                category="bad_request",
+            )
+        return "decision", decision_id
+
     def _get_governance_container() -> Any:
         cached = getattr(app.state, "governance_container", None)
         if cached is not None:
@@ -205,6 +255,9 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         on_exists: str | None = "validate"  # validate | error
         decision_id: str | None = None
         evidence_refs: list[str] | None = None
+        cause_type: str | None = None
+        cause_id: str | None = None
+        change_phase: str | None = None
 
     class UpdateTranslationRequest(BaseModel):
         value: str
@@ -218,6 +271,14 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         role: str
         context: str = ""
 
+    class AddNeedsUseCaseRequest(BaseModel):
+        title: str
+        actor: str
+        situation: str
+        purpose: str
+        outcome: str = ""
+        tags: list[str] | None = None
+
     class ExpressNeedRequest(BaseModel):
         stakeholder_id: str
         action: str
@@ -229,8 +290,36 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         tags: list[str] | None = None
         use_case_id: str | None = None
         cause_types: list[str] | None = None
-        purpose: str = ""
+        purpose: str = "unspecified"
         complexity: str = "procedural"
+        kernel_change_phase: str | None = None
+
+    class ReviseNeedRequest(BaseModel):
+        action: str | None = None
+        subject: str | None = None
+        target: str | None = None
+        justifications: list[dict[str, str]] | None = None
+        priority: str | None = None
+        kernel_refs: list[str] | None = None
+        tags: list[str] | None = None
+        use_case_id: str | None = None
+        cause_types: list[str] | None = None
+        purpose: str | None = None
+        complexity: str | None = None
+        kernel_change_phase: str | None = None
+        clone_process_units: bool | None = None
+
+    class AddNeedProcessUnitRequest(BaseModel):
+        stage: str
+        label: str
+        description: str = ""
+        sequence: int | None = None
+        metadata: dict[str, str] | None = None
+
+    class InheritNeedDecisionEvidenceRequest(BaseModel):
+        decision_id: str
+        evidence_refs: list[str]
+        kernel_change_phase: str | None = None
 
     class ModelValidateRequest(BaseModel):
         model_name: str
@@ -238,6 +327,9 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         context: dict[str, Any] | None = None
         decision_id: str | None = None
         evidence_refs: list[str] | None = None
+        cause_type: str | None = None
+        cause_id: str | None = None
+        change_phase: str | None = None
 
     class ModelActivateRequest(BaseModel):
         model_name: str
@@ -245,6 +337,9 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         actor: str | None = "api-user"
         decision_id: str | None = None
         evidence_refs: list[str] | None = None
+        cause_type: str | None = None
+        cause_id: str | None = None
+        change_phase: str | None = None
 
     class CreateBusinessRequest(BaseModel):
         name: str
@@ -288,6 +383,13 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
 
         container = _get_governance_container()
         try:
+            normalized_decision_id = _require_decision_id(req.decision_id, operation="register")
+            normalized_cause_type, normalized_cause_id = _enforce_direct_decision_cause(
+                decision_id=normalized_decision_id,
+                cause_type=req.cause_type,
+                cause_id=req.cause_id,
+                operation="register",
+            )
             result = container.register_kernel_model(
                 req.profile_toml,
                 owner=req.owner or "api-user",
@@ -297,8 +399,11 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 context={"source": "api:models/register", **(req.context or {})},
                 on_exists=req.on_exists or "validate",
                 actor=req.created_by or "api-user",
-                decision_id=req.decision_id,
+                decision_id=normalized_decision_id,
                 evidence_refs=req.evidence_refs,
+                cause_type=normalized_cause_type,
+                cause_id=normalized_cause_id,
+                change_phase=req.change_phase,
                 return_transaction=True,
             )
             if isinstance(result, dict):
@@ -357,13 +462,23 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def validate_model(req: ModelValidateRequest) -> dict[str, Any]:
         container = _get_governance_container()
         try:
+            normalized_decision_id = _require_decision_id(req.decision_id, operation="validate")
+            normalized_cause_type, normalized_cause_id = _enforce_direct_decision_cause(
+                decision_id=normalized_decision_id,
+                cause_type=req.cause_type,
+                cause_id=req.cause_id,
+                operation="validate",
+            )
             validate_result = container.validate_kernel_model(
                 req.model_name,
                 req.version,
                 context={"source": "api:models/validate", **(req.context or {})},
                 actor="api-user",
-                decision_id=req.decision_id,
+                decision_id=normalized_decision_id,
                 evidence_refs=req.evidence_refs,
+                cause_type=normalized_cause_type,
+                cause_id=normalized_cause_id,
+                change_phase=req.change_phase,
                 return_transaction=True,
             )
             run = validate_result
@@ -421,12 +536,22 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def activate_model(req: ModelActivateRequest) -> dict[str, Any]:
         container = _get_governance_container()
         try:
+            normalized_decision_id = _require_decision_id(req.decision_id, operation="activate")
+            normalized_cause_type, normalized_cause_id = _enforce_direct_decision_cause(
+                decision_id=normalized_decision_id,
+                cause_type=req.cause_type,
+                cause_id=req.cause_id,
+                operation="activate",
+            )
             activate_result = container.activate_kernel_model(
                 req.model_name,
                 req.version,
                 actor=req.actor or "api-user",
-                decision_id=req.decision_id,
+                decision_id=normalized_decision_id,
                 evidence_refs=req.evidence_refs,
+                cause_type=normalized_cause_type,
+                cause_id=normalized_cause_id,
+                change_phase=req.change_phase,
                 return_transaction=True,
             )
             model = activate_result
@@ -874,6 +999,9 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             profile_name=profile_name,
             cross_layer=False,
             lang=lang,
+            view_mode="summary",
+            surface_only=True,
+            max_edges=900,
         )
         if "error" in m1:
             raise HTTPException(status_code=404, detail=m1["error"])
@@ -965,20 +1093,174 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         name: str,
         cross_layer: bool = False,
         lang: str | None = None,
+        max_edges: int | None = None,
+        view_mode: str = "raw",
+        surface_only: bool = False,
+        domain_scope: str = "all",
+        focus: str | None = None,
+        focus_relation: str | None = None,
+        focus_layer: str | None = None,
+        focus_actor: str | None = None,
+        focus_topic: str | None = None,
+        focus_depth: int | None = None,
     ) -> dict[str, Any]:
         """Get full profile topology graph (nodes + edges).
 
         When *cross_layer* is true, only edges connecting elements from
         different domain layers are returned.
         """
+        if max_edges is not None and max_edges <= 0:
+            raise HTTPException(status_code=400, detail="max_edges must be greater than zero")
+        if view_mode not in {"raw", "summary", "focus"}:
+            raise HTTPException(status_code=400, detail="view_mode must be one of: raw, summary, focus")
+        if domain_scope not in {"all", "owned", "bridge"}:
+            raise HTTPException(status_code=400, detail="domain_scope must be one of: all, owned, bridge")
+        if focus is not None and focus not in {"core", "relation", "layer", "actor", "topic"}:
+            raise HTTPException(status_code=400, detail="focus must be one of: core, relation, layer, actor, topic")
+        if focus_depth is not None and focus_depth <= 0:
+            raise HTTPException(status_code=400, detail="focus_depth must be greater than zero")
+        if view_mode != "focus" and (
+            focus is not None
+            or focus_relation is not None
+            or focus_layer is not None
+            or focus_actor is not None
+            or focus_topic is not None
+            or focus_depth is not None
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="focus params are only valid when view_mode=focus",
+            )
+        if view_mode == "focus" and focus == "relation" and not focus_relation:
+            raise HTTPException(status_code=400, detail="focus_relation is required when focus=relation")
+        if view_mode == "focus" and focus == "layer" and not focus_layer:
+            raise HTTPException(status_code=400, detail="focus_layer is required when focus=layer")
+        if view_mode == "focus" and focus == "topic" and not focus_topic:
+            raise HTTPException(status_code=400, detail="focus_topic is required when focus=topic")
         from ea_kernel.kernel_service import profile_topology
         result = profile_topology(
             profile_name=name,
             cross_layer=cross_layer,
             lang=lang,
+            max_edges=max_edges,
+            view_mode=view_mode,
+            surface_only=surface_only,
+            domain_scope=domain_scope,
+            focus=focus,
+            focus_relation=focus_relation,
+            focus_layer=focus_layer,
+            focus_actor=focus_actor,
+            focus_topic=focus_topic,
+            focus_depth=focus_depth,
         )
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
+        return result
+
+    @_typed_get("/profiles/{name}/projection")
+    def get_profile_projection(
+        name: str,
+        level: str = "l0",
+        lens: str | None = None,
+        cross_layer: bool = False,
+        domain_scope: str = "all",
+        lang: str | None = None,
+        actor: str | None = None,
+        depth: int | None = None,
+        max_edges: int | None = None,
+    ) -> dict[str, Any]:
+        """Get projection-layer topology view (L0~L4 abstraction levels)."""
+        from ea_kernel.kernel_service import profile_projection
+
+        result = profile_projection(
+            profile_name=name,
+            level=level,
+            lens=lens,
+            cross_layer=cross_layer,
+            domain_scope=domain_scope,
+            lang=lang,
+            actor=actor,
+            depth=depth,
+            max_edges=max_edges,
+        )
+        if "error" in result:
+            message = str(result["error"]).lower()
+            status_code = 404 if "profile not found" in message else 400
+            detail: Any
+            if "policy_error" in result:
+                detail = {
+                    "error": result["error"],
+                    "policy_error": result["policy_error"],
+                }
+            else:
+                detail = result["error"]
+            raise HTTPException(status_code=status_code, detail=detail)
+        return result
+
+    @_typed_get("/profiles/{name}/composed")
+    def get_profile_composed_topology(
+        name: str,
+        lang: str | None = None,
+        domain_scope: str = "all",
+        max_edges: int | None = None,
+        surface_only: bool = False,
+        include_profiles: str | None = None,
+        focus: str | None = None,
+        focus_relation: str | None = None,
+        focus_layer: str | None = None,
+        focus_actor: str | None = None,
+        focus_topic: str | None = None,
+        focus_depth: int | None = None,
+    ) -> dict[str, Any]:
+        """Get cross-profile composed M1 topology anchored by a profile."""
+        if max_edges is not None and max_edges <= 0:
+            raise HTTPException(status_code=400, detail="max_edges must be greater than zero")
+        if domain_scope not in {"all", "owned", "bridge"}:
+            raise HTTPException(status_code=400, detail="domain_scope must be one of: all, owned, bridge")
+        if focus is not None and focus not in {"core", "relation", "layer", "actor", "topic"}:
+            raise HTTPException(status_code=400, detail="focus must be one of: core, relation, layer, actor, topic")
+        if focus is None and (
+            focus_relation is not None
+            or focus_layer is not None
+            or focus_actor is not None
+            or focus_topic is not None
+            or focus_depth is not None
+        ):
+            raise HTTPException(status_code=400, detail="focus params require focus mode")
+        if focus == "relation" and not focus_relation:
+            raise HTTPException(status_code=400, detail="focus_relation is required when focus=relation")
+        if focus == "layer" and not focus_layer:
+            raise HTTPException(status_code=400, detail="focus_layer is required when focus=layer")
+        if focus == "topic" and not focus_topic:
+            raise HTTPException(status_code=400, detail="focus_topic is required when focus=topic")
+        if focus_depth is not None and focus_depth <= 0:
+            raise HTTPException(status_code=400, detail="focus_depth must be greater than zero")
+
+        profile_filter: list[str] | None = None
+        if include_profiles is not None:
+            parsed = [item.strip() for item in include_profiles.split(",") if item.strip()]
+            profile_filter = parsed or None
+
+        from ea_kernel.kernel_service import profile_composed_topology
+
+        result = profile_composed_topology(
+            profile_name=name,
+            lang=lang,
+            domain_scope=domain_scope,
+            max_edges=max_edges,
+            surface_only=surface_only,
+            include_profiles=profile_filter,
+            focus=focus,
+            focus_relation=focus_relation,
+            focus_layer=focus_layer,
+            focus_actor=focus_actor,
+            focus_topic=focus_topic,
+            focus_depth=focus_depth,
+        )
+        if "error" in result:
+            message = str(result["error"]).lower()
+            status_code = 404 if "profile not found" in message else 400
+            raise HTTPException(status_code=status_code, detail=result["error"])
         return result
 
     @_typed_get("/profiles/{name}/reachable")
@@ -992,7 +1274,12 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         if not element:
             raise HTTPException(status_code=400, detail="Missing required query param: element")
         from ea_kernel.kernel_service import profile_reachable
-        result = profile_reachable(name, element, max_depth=max_depth, relation=relation)
+        result = profile_reachable(
+            profile_name=name,
+            element=element,
+            max_depth=max_depth,
+            relation=relation,
+        )
         if "error" in result:
             status = 404 if "not found" in result["error"].lower() else 400
             raise HTTPException(status_code=status, detail=result["error"])
@@ -1006,7 +1293,11 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
     def post_profile_element_scope(name: str, req: ElementScopeRequest) -> dict[str, Any]:
         """Compute union of reachable sets from multiple seed elements."""
         from ea_kernel.kernel_service import profile_element_scope
-        result = profile_element_scope(name, req.elements, max_depth=req.max_depth)
+        result = profile_element_scope(
+            profile_name=name,
+            elements=req.elements,
+            max_depth=req.max_depth,
+        )
         if "error" in result:
             status = 404 if "not found" in result["error"].lower() else 400
             raise HTTPException(status_code=status, detail=result["error"])
@@ -1024,7 +1315,13 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         if not source or not target:
             raise HTTPException(status_code=400, detail="Missing required query params: source, target")
         from ea_kernel.kernel_service import profile_paths
-        result = profile_paths(name, source, target, max_depth=max_depth, relation=relation)
+        result = profile_paths(
+            profile_name=name,
+            source=source,
+            target=target,
+            max_depth=max_depth,
+            relation=relation,
+        )
         if "error" in result:
             status = 404 if "not found" in result["error"].lower() else 400
             raise HTTPException(status_code=status, detail=result["error"])
@@ -1041,7 +1338,12 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         if not element:
             raise HTTPException(status_code=400, detail="Missing required query param: element")
         from ea_kernel.kernel_service import profile_impact
-        result = profile_impact(name, element, direction=direction, max_depth=max_depth)
+        result = profile_impact(
+            profile_name=name,
+            element=element,
+            direction=direction,
+            max_depth=max_depth,
+        )
         if "error" in result:
             status = 404 if "not found" in result["error"].lower() else 400
             raise HTTPException(status_code=status, detail=result["error"])
@@ -1177,6 +1479,13 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         status: str | None = None,
         priority: str | None = None,
         stakeholder_id: str | None = None,
+        purpose: str | None = None,
+        complexity: str | None = None,
+        use_case_id: str | None = None,
+        cause_type: str | None = None,
+        kernel_change_phase: str | None = None,
+        decision_id: str | None = None,
+        decision_linked: bool | None = None,
     ) -> list[dict[str, Any]]:
         """List needs in a catalog with optional filters."""
         container = _get_governance_container()
@@ -1198,20 +1507,69 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             needs = [n for n in needs if n.priority.value.lower() == priority.lower()]
         if stakeholder_id:
             needs = [n for n in needs if n.statement.stakeholder_id == stakeholder_id]
+        if purpose:
+            needs = [
+                n for n in needs
+                if str(getattr(n.statement.purpose, "value", n.statement.purpose)).lower() == purpose.lower()
+            ]
+        if complexity:
+            needs = [
+                n for n in needs
+                if str(getattr(n.statement.complexity, "value", n.statement.complexity)).lower() == complexity.lower()
+            ]
+        if use_case_id:
+            needs = [n for n in needs if n.statement.use_case_id == use_case_id or n.use_case_id == use_case_id]
+        if cause_type:
+            needs = [
+                n for n in needs
+                if any(
+                    str(getattr(ct, "value", ct)).lower() == cause_type.lower()
+                    for ct in n.statement.cause_types
+                )
+            ]
+        if kernel_change_phase:
+            needs = [
+                n for n in needs
+                if str(getattr(n.kernel_change_phase, "value", n.kernel_change_phase)).lower()
+                == kernel_change_phase.lower()
+            ]
+        if decision_id:
+            needs = [
+                n for n in needs
+                if decision_id in getattr(n, "inherited_from_decisions", [])
+            ]
+        if decision_linked is not None:
+            needs = [
+                n for n in needs
+                if (
+                    len(getattr(n, "inherited_from_decisions", [])) > 0
+                    or len(getattr(n, "decision_evidence_refs", [])) > 0
+                ) == decision_linked
+            ]
         result = []
         for n in needs:
+            inherited_from_decisions = list(getattr(n, "inherited_from_decisions", []))
+            decision_evidence_refs = list(getattr(n, "decision_evidence_refs", []))
             result.append({
                 "id": n.id,
                 "lineage_id": n.lineage_id,
                 "version": n.version,
                 "status": n.status.value,
                 "priority": n.priority.value,
+                "kernel_change_phase": str(getattr(n.kernel_change_phase, "value", n.kernel_change_phase)),
                 "stakeholder_id": n.statement.stakeholder_id,
                 "action": n.statement.desire.action,
                 "subject": n.statement.desire.subject,
                 "target": n.statement.desire.target,
                 "kernel_refs": list(n.statement.kernel_refs),
                 "tags": list(n.statement.tags),
+                "purpose": str(getattr(n.statement.purpose, "value", n.statement.purpose)),
+                "cause_types": [str(getattr(ct, "value", ct)) for ct in n.statement.cause_types],
+                "complexity": str(getattr(n.statement.complexity, "value", n.statement.complexity)),
+                "use_case_id": n.statement.use_case_id,
+                "decision_evidence_refs": decision_evidence_refs,
+                "inherited_from_decisions": inherited_from_decisions,
+                "decision_linked": bool(inherited_from_decisions or decision_evidence_refs),
                 "updated_at": n.updated_at,
             })
         return result
@@ -1243,6 +1601,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             "version": need.version,
             "status": need.status.value,
             "priority": need.priority.value,
+            "kernel_change_phase": str(getattr(need.kernel_change_phase, "value", need.kernel_change_phase)),
             "stakeholder_id": need.statement.stakeholder_id,
             "action": need.statement.desire.action,
             "subject": need.statement.desire.subject,
@@ -1253,10 +1612,16 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             ],
             "kernel_refs": list(need.statement.kernel_refs),
             "tags": list(need.statement.tags),
-            "purpose": need.statement.purpose,
+            "purpose": need.statement.purpose.value if hasattr(need.statement.purpose, "value") else str(need.statement.purpose),
             "cause_types": [ct.value if hasattr(ct, "value") else str(ct) for ct in need.statement.cause_types],
             "complexity": need.statement.complexity.value if hasattr(need.statement.complexity, "value") else str(need.statement.complexity),
             "use_case_id": need.statement.use_case_id,
+            "decision_evidence_refs": list(getattr(need, "decision_evidence_refs", [])),
+            "inherited_from_decisions": list(getattr(need, "inherited_from_decisions", [])),
+            "decision_linked": bool(
+                list(getattr(need, "decision_evidence_refs", []))
+                or list(getattr(need, "inherited_from_decisions", [])),
+            ),
             "created_at": need.created_at,
             "updated_at": need.updated_at,
             "process_units": [
@@ -1290,6 +1655,32 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 status_code=500, detail="Internal needs API error", category="internal_error",
             ) from err
 
+    @_typed_post("/needs/catalogs/{catalog_id}/use-cases")
+    def add_needs_use_case(catalog_id: str, req: AddNeedsUseCaseRequest) -> dict[str, Any]:
+        """Add a needs use-case in a catalog."""
+        container = _get_governance_container()
+        try:
+            result = container.add_needs_use_case(
+                catalog_id,
+                title=req.title,
+                actor_name=req.actor,
+                situation=req.situation,
+                purpose=req.purpose,
+                outcome=req.outcome,
+                tags=req.tags,
+                actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled POST /needs/catalogs/{catalog_id}/use-cases error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
     @_typed_post("/needs/catalogs/{catalog_id}/needs")
     def express_need(catalog_id: str, req: ExpressNeedRequest) -> dict[str, Any]:
         """Express a new need in a catalog."""
@@ -1309,6 +1700,7 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                 cause_types=req.cause_types,
                 purpose=req.purpose,
                 complexity=req.complexity,
+                kernel_change_phase=req.kernel_change_phase,
                 actor="api-user",
             )
             return result
@@ -1318,6 +1710,93 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             ) from err
         except Exception as err:
             logger.exception("Unhandled POST /needs/catalogs/{catalog_id}/needs error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_post("/needs/catalogs/{catalog_id}/needs/{need_id}/revise")
+    def revise_need(catalog_id: str, need_id: str, req: ReviseNeedRequest) -> dict[str, Any]:
+        """Create a revised version of an existing need."""
+        container = _get_governance_container()
+        try:
+            changes = req.model_dump(exclude_unset=True)
+            if not changes:
+                raise ValueError("At least one change field must be provided")
+            result = container.revise_need_in_catalog(
+                catalog_id,
+                need_id,
+                changes=changes,
+                actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception("Unhandled POST /needs/catalogs/{catalog_id}/needs/{need_id}/revise error")
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_post("/needs/catalogs/{catalog_id}/needs/{need_id}/process-units")
+    def add_need_process_unit(
+        catalog_id: str,
+        need_id: str,
+        req: AddNeedProcessUnitRequest,
+    ) -> dict[str, Any]:
+        """Add process-model unit to a need."""
+        container = _get_governance_container()
+        try:
+            result = container.add_need_process_unit(
+                catalog_id,
+                need_id,
+                stage=req.stage,
+                label=req.label,
+                description=req.description,
+                sequence=req.sequence,
+                metadata=req.metadata,
+                actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception(
+                "Unhandled POST /needs/catalogs/{catalog_id}/needs/{need_id}/process-units error",
+            )
+            raise _model_api_error(
+                status_code=500, detail="Internal needs API error", category="internal_error",
+            ) from err
+
+    @_typed_post("/needs/catalogs/{catalog_id}/needs/{need_id}/inherit-decision-evidence")
+    def inherit_need_decision_evidence(
+        catalog_id: str,
+        need_id: str,
+        req: InheritNeedDecisionEvidenceRequest,
+    ) -> dict[str, Any]:
+        """Inherit evidence references from a decision into a need."""
+        container = _get_governance_container()
+        try:
+            result = container.inherit_need_decision_evidence(
+                catalog_id,
+                need_id,
+                decision_id=req.decision_id,
+                evidence_refs=req.evidence_refs,
+                kernel_change_phase=req.kernel_change_phase,
+                actor="api-user",
+            )
+            return result
+        except ValueError as err:
+            raise _model_api_error(
+                status_code=400, detail=str(err), category="bad_request",
+            ) from err
+        except Exception as err:
+            logger.exception(
+                "Unhandled POST /needs/catalogs/{catalog_id}/needs/{need_id}/inherit-decision-evidence error",
+            )
             raise _model_api_error(
                 status_code=500, detail="Internal needs API error", category="internal_error",
             ) from err
@@ -1356,6 +1835,9 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
                     "action": need.statement.desire.action,
                     "subject": need.statement.desire.subject,
                     "status": need.status.value,
+                    "kernel_change_phase": str(
+                        getattr(need.kernel_change_phase, "value", need.kernel_change_phase),
+                    ),
                 })
         return {"kernel_ref": ref, "matches": matches}
 

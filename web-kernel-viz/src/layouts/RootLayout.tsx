@@ -100,7 +100,7 @@ export default function RootLayout() {
     return (
         <div style={{
             width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
-            background: 'var(--bg-primary)', color: 'var(--text-primary)',
+            background: 'var(--background)', color: 'var(--foreground)',
         }}>
             {/* Skip to content link for keyboard navigation */}
             <a
@@ -118,8 +118,8 @@ export default function RootLayout() {
                     e.currentTarget.style.overflow = 'visible';
                     e.currentTarget.style.zIndex = '9999';
                     e.currentTarget.style.padding = '8px 16px';
-                    e.currentTarget.style.background = 'var(--accent)';
-                    e.currentTarget.style.color = 'var(--bg-card)';
+                    e.currentTarget.style.background = 'var(--primary)';
+                    e.currentTarget.style.color = 'var(--card)';
                     e.currentTarget.style.borderRadius = '6px';
                     e.currentTarget.style.fontSize = '14px';
                     e.currentTarget.style.fontWeight = '600';

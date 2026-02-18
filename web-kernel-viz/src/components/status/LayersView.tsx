@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCrossLayerSummary, useGovernanceDashboard } from '@/api/hooks';
 import { ErrorBanner, LoadingSpinner } from '@/components/ui';
+import { PageHeader } from '@/components/layout';
 
 interface LayerRow {
     layer_key: string;
@@ -81,10 +82,7 @@ export default function LayersView() {
 
     return (
         <div style={{ padding: '24px 32px', fontFamily: 'system-ui, -apple-system, sans-serif', overflowY: 'auto', width: '100%' }}>
-            <div style={{ marginBottom: 20 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Layer Comparison</h2>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{rows.length} layers loaded</span>
-            </div>
+            <PageHeader metaKey="status.layers" subtitle={`${rows.length} layers loaded`} />
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
@@ -103,12 +101,12 @@ export default function LayersView() {
                         <tr
                             key={r.layer_key}
                             onClick={() => navigate(`/explorer/profile/${r.profile_name}`)}
-                            style={{ borderBottom: '1px solid var(--bg-hover)', cursor: 'pointer' }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                            style={{ borderBottom: '1px solid var(--accent)', cursor: 'pointer' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--secondary)')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                         >
                             <td style={{ ...tdStyle, fontWeight: 600 }}>{r.layer_key}</td>
-                            <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{r.profile_name}</td>
+                            <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{r.profile_name}</td>
                             <td style={tdNumStyle}>{r.elements}</td>
                             <td style={tdNumStyle}>{r.relations}</td>
                             <td style={tdNumStyle}>{r.rules}</td>
@@ -132,13 +130,13 @@ export default function LayersView() {
 
 const thStyle: React.CSSProperties = {
     textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600,
-    color: 'var(--text-muted)', textTransform: 'uppercase',
+    color: 'var(--muted-foreground)', textTransform: 'uppercase',
 };
 
 const thNumStyle: React.CSSProperties = { ...thStyle, textAlign: 'right' };
 
 const tdStyle: React.CSSProperties = {
-    padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+    padding: '8px 10px', fontSize: 12, color: 'var(--foreground)',
 };
 
 const tdNumStyle: React.CSSProperties = { ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };

@@ -26,16 +26,16 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
         <div style={{ flex: 1, overflow: 'auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Version History</h2>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{profileName} — {versions.count} versions</div>
+                    <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--foreground)' }}>Version History</h2>
+                    <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 2 }}>{profileName} — {versions.count} versions</div>
                 </div>
                 <button
                     onClick={() => setShowDiff(!showDiff)}
                     style={{
                         padding: '6px 14px', fontSize: 12, fontWeight: 600,
-                        border: `1px solid ${showDiff ? '#a855f7' : 'var(--border-strong)'}`,
-                        borderRadius: 6, background: showDiff ? '#faf5ff' : 'var(--bg-card)',
-                        color: showDiff ? '#a855f7' : 'var(--text-primary)', cursor: 'pointer',
+                        border: `1px solid ${showDiff ? 'var(--color-layer-decision)' : 'var(--input)'}`,
+                        borderRadius: 6, background: showDiff ? 'var(--color-layer-decision-bg)' : 'var(--card)',
+                        color: showDiff ? 'var(--color-layer-decision)' : 'var(--foreground)', cursor: 'pointer',
                     }}
                 >
                     {showDiff ? 'Hide Diff' : 'Compare Versions'}
@@ -44,18 +44,18 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
 
             {/* Diff selector */}
             {showDiff && (
-                <div style={{ padding: '12px 24px', background: '#faf5ff', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>FROM</span>
+                <div style={{ padding: '12px 24px', background: 'var(--color-layer-decision-bg)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)' }}>FROM</span>
                     <select value={diffA} onChange={(e) => setDiffA(e.target.value)}
-                        style={{ padding: '4px 8px', fontSize: 12, border: '1px solid var(--border-strong)', borderRadius: 4 }}>
+                        style={{ padding: '4px 8px', fontSize: 12, border: '1px solid var(--input)', borderRadius: 4 }}>
                         <option value="">Select version...</option>
                         {versions.versions.map((v) => (
                             <option key={v.id} value={v.version}>{v.version}</option>
                         ))}
                     </select>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>TO</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)' }}>TO</span>
                     <select value={diffB} onChange={(e) => setDiffB(e.target.value)}
-                        style={{ padding: '4px 8px', fontSize: 12, border: '1px solid var(--border-strong)', borderRadius: 4 }}>
+                        style={{ padding: '4px 8px', fontSize: 12, border: '1px solid var(--input)', borderRadius: 4 }}>
                         <option value="">Select version...</option>
                         {versions.versions.map((v) => (
                             <option key={v.id} value={v.version}>{v.version}</option>
@@ -66,10 +66,10 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
 
             {/* Diff result */}
             {showDiff && diff && (
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 12 }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--secondary)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)', marginBottom: 12 }}>
                         Diff: {diff.from_version} → {diff.to_version}
-                        {diff.identical && <Badge label="IDENTICAL" bg="var(--success-bg)" color="var(--success-text)" />}
+                        {diff.identical && <Badge label="IDENTICAL" bg="var(--status-success-bg)" color="var(--status-success-text)" />}
                     </div>
                     {!diff.identical && (
                         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
@@ -83,7 +83,7 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
                                 <DiffSection title="Rule Changes" changes={diff.rule_changes} keyField="id" />
                             )}
                             {diff.element_changes.length === 0 && diff.relation_changes.length === 0 && diff.rule_changes.length === 0 && (
-                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No structural changes detected.</div>
+                                <div style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>No structural changes detected.</div>
                             )}
                         </div>
                     )}
@@ -99,22 +99,22 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
                             onClick={() => setSelectedVersion(v.version)}
                             style={{
                                 padding: '12px 24px',
-                                borderBottom: '1px solid var(--bg-hover)',
+                                borderBottom: '1px solid var(--accent)',
                                 cursor: 'pointer',
-                                background: selectedVersion === v.version ? 'var(--accent-bg)' : 'transparent',
+                                background: selectedVersion === v.version ? 'var(--muted)' : 'transparent',
                             }}
-                            onMouseEnter={(e) => { if (selectedVersion !== v.version) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                            onMouseEnter={(e) => { if (selectedVersion !== v.version) e.currentTarget.style.background = 'var(--secondary)'; }}
                             onMouseLeave={(e) => { if (selectedVersion !== v.version) e.currentTarget.style.background = ''; }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{v.version}</span>
-                                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{v.content_hash?.slice(0, 8)}</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--foreground)' }}>{v.version}</span>
+                                <span style={{ fontSize: 10, color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>{v.content_hash?.slice(0, 8)}</span>
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                            <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
                                 {v.author} — {v.created_at}
                             </div>
                             {v.description && (
-                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{v.description}</div>
+                                <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>{v.description}</div>
                             )}
                         </div>
                     ))}
@@ -122,8 +122,8 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
 
                 {/* Detail panel */}
                 {detail && (
-                    <div style={{ width: 360, borderLeft: '1px solid var(--border)', padding: '16px 20px', background: 'var(--bg-secondary)' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
+                    <div style={{ width: 360, borderLeft: '1px solid var(--border)', padding: '16px 20px', background: 'var(--secondary)' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', marginBottom: 12 }}>
                             Version Detail
                         </div>
                         <DetailField label="Version" value={detail.version} />
@@ -138,10 +138,10 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
                         </div>
                         {detail.tags && detail.tags.length > 0 && (
                             <div>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Tags</div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', marginBottom: 4 }}>Tags</div>
                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                     {detail.tags.map((t: { name: string }) => (
-                                        <Badge key={t.name} label={t.name} bg="var(--indigo-bg)" color="var(--indigo-text)" />
+                                        <Badge key={t.name} label={t.name} bg="var(--status-indigo-bg)" color="var(--status-indigo-text)" />
                                     ))}
                                 </div>
                             </div>
@@ -156,9 +156,9 @@ export default function ProfileVersionHistory({ profileName }: ProfileVersionHis
 function DetailField({ label, value, mono }: { label: string; value: string | number | null; mono?: boolean }) {
     return (
         <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>{label}</div>
             <div style={{
-                fontSize: 12, color: 'var(--text-primary)', wordBreak: 'break-all',
+                fontSize: 12, color: 'var(--foreground)', wordBreak: 'break-all',
                 fontFamily: mono ? 'monospace' : 'inherit',
             }}>
                 {value ?? '-'}
@@ -170,8 +170,8 @@ function DetailField({ label, value, mono }: { label: string; value: string | nu
 function MiniStat({ label, value }: { label: string; value: number }) {
     return (
         <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--foreground)' }}>{value}</div>
+            <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>{label}</div>
         </div>
     );
 }
@@ -179,20 +179,20 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 function DiffSection({ title, changes, keyField }: { title: string; changes: ProfileDiffChange[]; keyField: string }) {
     return (
         <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{title}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)', marginBottom: 6 }}>{title}</div>
             {changes.map((c, i) => {
                 const changeType = String(c.type || c.change || '');
                 return (
-                    <div key={i} style={{ fontSize: 11, padding: '4px 8px', marginBottom: 2, borderRadius: 4, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                    <div key={i} style={{ fontSize: 11, padding: '4px 8px', marginBottom: 2, borderRadius: 4, background: 'var(--card)', border: '1px solid var(--border)' }}>
                         <Badge
                             label={changeType.toUpperCase()}
-                            bg={changeType === 'added' ? 'var(--success-bg)' : changeType === 'removed' ? 'var(--error-bg)' : 'var(--warning-bg)'}
-                            color={changeType === 'added' ? 'var(--success-text)' : changeType === 'removed' ? 'var(--error-text)' : 'var(--warning-text)'}
+                            bg={changeType === 'added' ? 'var(--status-success-bg)' : changeType === 'removed' ? 'var(--status-error-bg)' : 'var(--status-warning-bg)'}
+                            color={changeType === 'added' ? 'var(--status-success-text)' : changeType === 'removed' ? 'var(--status-error-text)' : 'var(--status-warning-text)'}
                             size="sm"
                         />
                         {' '}
                         <span style={{ fontWeight: 600 }}>{String(c[keyField] || '')}</span>
-                        {c.field && <span style={{ color: 'var(--text-muted)' }}> .{String(c.field)}</span>}
+                        {c.field && <span style={{ color: 'var(--muted-foreground)' }}> .{String(c.field)}</span>}
                     </div>
                 );
             })}

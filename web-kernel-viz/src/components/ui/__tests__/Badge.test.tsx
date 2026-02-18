@@ -10,13 +10,13 @@ describe('Badge', () => {
     it('applies preset colors for known labels', () => {
         render(<Badge label="APPROVED" />);
         const badge = screen.getByText('APPROVED');
-        expect(badge).toHaveStyle({ background: 'var(--success-bg)', color: 'var(--success-text)' });
+        expect(badge).toHaveStyle({ background: 'var(--status-success-bg)', color: 'var(--status-success-text)' });
     });
 
     it('falls back to default colors for unknown labels', () => {
         render(<Badge label="custom-label" />);
         const badge = screen.getByText('custom-label');
-        expect(badge).toHaveStyle({ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' });
+        expect(badge).toHaveStyle({ background: 'var(--secondary)', color: 'var(--muted-foreground)' });
     });
 
     it('uses custom color and bg when provided', () => {

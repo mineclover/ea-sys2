@@ -37,7 +37,7 @@ decision → **needs** → kernel → flow
 
 | 계층 | 명칭 | 책임 |
 |:-----|:-----|:-----|
-| **N1** | Vocabulary (동결 타입) | 불변 어휘 정의 — Stakeholder, Desire, Justification, NeedStatement, UseCase, NeedProcessUnit + StrEnum 7종 |
+| **N1** | Vocabulary (동결 타입) | 불변 어휘 정의 — Stakeholder, Desire, Justification, NeedStatement, UseCase, NeedProcessUnit + StrEnum 8종 |
 | **N2** | Catalog (집합 루트) | NeedCatalog 집합 루트가 use_cases + stakeholders + needs + relations + process_units 관리. Need만 mutable |
 | **N3** | Integration (커널 브릿지) | kernel_bridge.py, profile_bridge.py, repository.py — ea-kernel과의 유일한 접점 |
 
@@ -192,6 +192,7 @@ IDENTIFY → QUERY → MODEL_DETAIL
 
 - UseCase에 바인딩된 니즈를 `use_case_id`로 관리한다.
 - 니즈 발생 원인을 6가지 `NeedCauseType`으로 분류한다: EMOTIONAL, SITUATIONAL, PHYSICAL, LOGICAL, MENTAL, PHILOSOPHICAL.
+- 니즈 목적은 `NeedPurpose` 분류로 표준화한다: SAFETY, EFFICIENCY, USABILITY, COMPLIANCE, GROWTH, TRUST, UNSPECIFIED.
 
 ### 4.7 해결 복잡도 분류
 
@@ -219,7 +220,7 @@ DDD Aggregate Root 패턴의 경량 적용. 모든 변경(mutation)은 NeedCatal
 | `NeedProcessUnit` | types.py | Y | 프로세스 모델링 단위 |
 | `Need` | catalog.py | N | 생명주기 관리 가변 래퍼 (상태/우선순위 전이) |
 
-### 4.10 StrEnum 타입 (7종)
+### 4.10 StrEnum 타입 (8종)
 
 | 타입 | 값 |
 |:-----|:---|
@@ -228,6 +229,7 @@ DDD Aggregate Root 패턴의 경량 적용. 모든 변경(mutation)은 NeedCatal
 | `NeedStatus` | DRAFT, EXPRESSED, ACKNOWLEDGED, ADDRESSED, WITHDRAWN |
 | `NeedRelationType` | DEPENDS_ON, CONFLICTS_WITH, SUPPORTS, REFINES, SUPERSEDES |
 | `NeedCauseType` | EMOTIONAL, SITUATIONAL, PHYSICAL, LOGICAL, MENTAL, PHILOSOPHICAL |
+| `NeedPurpose` | SAFETY, EFFICIENCY, USABILITY, COMPLIANCE, GROWTH, TRUST, UNSPECIFIED |
 | `NeedResolutionComplexity` | SIMPLE, PROCEDURAL, COMPLEX |
 | `NeedProcessStage` | IDENTIFY, QUERY, MODEL_DETAIL |
 

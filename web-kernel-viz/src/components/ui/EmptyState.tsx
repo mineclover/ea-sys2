@@ -12,7 +12,7 @@ export default function EmptyState({ message = 'No data found.', icon = '\u2205'
             alignItems: 'center',
             justifyContent: 'center',
             padding: 40,
-            color: 'var(--text-muted)',
+            color: 'var(--muted-foreground)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
         }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>

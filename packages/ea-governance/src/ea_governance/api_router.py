@@ -74,3 +74,15 @@ def get_layer_schema(
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
+
+
+@layer_schema_router.get("/layers/{layer_key}/m2")
+def get_layer_m2(
+    layer_key: str,
+    lang: str | None = None,
+) -> dict[str, Any]:
+    """Layer M2 schema alias — explicit M2 endpoint for layer-first clients."""
+    result = layer_schema(layer_key, lang=lang)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result

@@ -2,15 +2,65 @@
 import { useState, type ReactNode } from 'react';
 import { useRegisterModel, useValidateModel, useActivateModel } from '@/api/hooks';
 import { fetchModelState } from '@/api/client';
-import type { ModelState, ModelRegistrationResult, ModelValidationResult, ModelActivationResult } from '@/api/types';
+import type {
+    ModelState,
+    ModelRegistrationResult,
+    ModelValidationResult,
+    ModelActivationResult,
+    ModelRegisterPayload,
+    ModelValidatePayload,
+    ModelActivatePayload,
+    ModelChangePhase,
+} from '@/api/types';
 import Badge from '@/components/ui/Badge';
 import ErrorBanner from '@/components/ui/ErrorBanner';
+import { PageHeader } from '@/components/layout';
 
 interface ModelsViewProps {
     onShowDetail: (title: string, content: ReactNode) => void;
 }
 
 type TabType = 'lookup' | 'register' | 'validate';
+
+const CHANGE_PHASE_OPTIONS: { value: ModelChangePhase; label: string }[] = [
+    { value: 'planned', label: 'Planned' },
+    { value: 'applied', label: 'Applied' },
+    { value: 'superseded', label: 'Superseded' },
+    { value: 'rolled_back', label: 'Rolled Back' },
+];
+
+function parseCommaSeparatedValues(raw: string): string[] {
+    return raw
+        .split(',')
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0);
+}
+
+function readTraceValue(trace: Record<string, unknown> | null, key: string): string | null {
+    if (!trace) return null;
+    const value = trace[key];
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+}
+
+function DecisionTraceMeta({ trace }: { trace: Record<string, unknown> | null }) {
+    const decisionId = readTraceValue(trace, 'decision_id');
+    const causeType = readTraceValue(trace, 'cause_type');
+    const changePhase = readTraceValue(trace, 'change_phase');
+    if (!decisionId && !causeType && !changePhase) return null;
+
+    return (
+        <div style={{ marginTop: 8, fontSize: 10, color: 'var(--muted-foreground)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Decision Trace</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {decisionId && <Badge label={`decision: ${decisionId}`} size="sm" />}
+                {causeType && <Badge label={`cause: ${causeType}`} size="sm" />}
+                {changePhase && <Badge label={`phase: ${changePhase}`} size="sm" />}
+            </div>
+        </div>
+    );
+}
 
 // --- Model Lookup Tab ---
 
@@ -41,7 +91,7 @@ function ModelLookupTab() {
         <div style={{ padding: 16, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             <div style={{ marginBottom: 16 }}>
                 <label style={{
-                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                     textTransform: 'uppercase', marginBottom: 6,
                 }}>
                     Model Name
@@ -54,7 +104,7 @@ function ModelLookupTab() {
                         onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
                         placeholder="e.g. my-governance-model"
                         style={{
-                            flex: 1, padding: '6px 10px', fontSize: 12, border: '1px solid var(--border-strong)',
+                            flex: 1, padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
                             borderRadius: 4, outline: 'none',
                         }}
                     />
@@ -63,8 +113,8 @@ function ModelLookupTab() {
                         disabled={!modelName.trim() || loading}
                         style={{
                             padding: '6px 16px', fontSize: 12, fontWeight: 600,
-                            border: '1px solid var(--accent)', borderRadius: 4,
-                            background: 'var(--accent)', color: 'var(--bg-card)', cursor: 'pointer',
+                            border: '1px solid var(--primary)', borderRadius: 4,
+                            background: 'var(--primary)', color: 'var(--card)', cursor: 'pointer',
                             opacity: (!modelName.trim() || loading) ? 0.5 : 1,
                         }}
                     >
@@ -78,28 +128,28 @@ function ModelLookupTab() {
             {state && (
                 <div style={{
                     border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px',
-                    background: 'var(--bg-secondary)',
+                    background: 'var(--secondary)',
                 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', marginBottom: 8 }}>
                         {state.model_name}
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                         <Badge label={state.status} />
                         {state.active_version_id && (
-                            <Badge label={`Active: ${state.active_version_id}`} bg="var(--success-bg)" color="var(--success-text)" />
+                            <Badge label={`Active: ${state.active_version_id}`} bg="var(--status-success-bg)" color="var(--status-success-text)" />
                         )}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
                         Owner: <strong>{state.owner}</strong>
                     </div>
                     {Object.keys(state).filter((k) => !['model_name', 'status', 'active_version_id', 'owner'].includes(k)).length > 0 && (
                         <details style={{ marginTop: 8 }}>
-                            <summary style={{ fontSize: 10, color: 'var(--text-muted)', cursor: 'pointer' }}>
+                            <summary style={{ fontSize: 10, color: 'var(--muted-foreground)', cursor: 'pointer' }}>
                                 Additional fields
                             </summary>
                             <pre style={{
-                                fontSize: 10, color: 'var(--text-secondary)', marginTop: 4, padding: 8,
-                                background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'auto',
+                                fontSize: 10, color: 'var(--muted-foreground)', marginTop: 4, padding: 8,
+                                background: 'var(--secondary)', borderRadius: 4, overflow: 'auto',
                             }}>
                                 {JSON.stringify(state, null, 2)}
                             </pre>
@@ -115,37 +165,114 @@ function ModelLookupTab() {
 
 function RegisterModelTab() {
     const [profileToml, setProfileToml] = useState('');
+    const [decisionId, setDecisionId] = useState('');
+    const [evidenceRefs, setEvidenceRefs] = useState('');
+    const [changePhase, setChangePhase] = useState<ModelChangePhase>('planned');
     const [owner, setOwner] = useState('');
     const [modelNameOverride, setModelNameOverride] = useState('');
     const [activate, setActivate] = useState(false);
-    const [onExists, setOnExists] = useState('error');
+    const [onExists, setOnExists] = useState<'validate' | 'error'>('validate');
 
     const registerMutation = useRegisterModel();
 
     const handleRegister = () => {
-        if (!profileToml.trim()) return;
+        const normalizedDecisionId = decisionId.trim();
+        if (!profileToml.trim() || !normalizedDecisionId) return;
 
-        const body: {
-            profile_toml: string;
-            owner?: string;
-            model_name?: string;
-            activate?: boolean;
-            on_exists?: string;
-        } = { profile_toml: profileToml };
+        const body: ModelRegisterPayload = {
+            profile_toml: profileToml,
+            decision_id: normalizedDecisionId,
+            change_phase: changePhase,
+        };
 
         if (owner.trim()) body.owner = owner.trim();
         if (modelNameOverride.trim()) body.model_name = modelNameOverride.trim();
         if (activate) body.activate = true;
-        if (onExists !== 'error') body.on_exists = onExists;
+        if (onExists !== 'validate') body.on_exists = onExists;
+        const parsedEvidenceRefs = parseCommaSeparatedValues(evidenceRefs);
+        if (parsedEvidenceRefs.length > 0) body.evidence_refs = parsedEvidenceRefs;
 
         registerMutation.mutate(body);
     };
 
     return (
         <div style={{ padding: 16, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            <div style={{
+                marginBottom: 12, border: '1px solid var(--border)', borderRadius: 6,
+                padding: '10px 12px', background: 'var(--secondary)',
+            }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>
+                    Decision-first write policy
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
+                    Register/validate/activate writes must include `decision_id`. Direct cause is fixed as `decision`.
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                    <label style={{
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                        textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                        Decision ID (required)
+                    </label>
+                    <input
+                        type="text"
+                        value={decisionId}
+                        onChange={(e) => setDecisionId(e.target.value)}
+                        placeholder="e.g. DEC-2026-0001"
+                        style={{
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                            borderRadius: 4, outline: 'none',
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <label style={{
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                        textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                        Change Phase
+                    </label>
+                    <select
+                        value={changePhase}
+                        onChange={(e) => setChangePhase(e.target.value as ModelChangePhase)}
+                        style={{
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                            borderRadius: 4, outline: 'none',
+                        }}
+                    >
+                        {CHANGE_PHASE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             <div style={{ marginBottom: 12 }}>
                 <label style={{
-                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                    textTransform: 'uppercase', marginBottom: 6,
+                }}>
+                    Evidence Refs (optional, comma-separated)
+                </label>
+                <input
+                    type="text"
+                    value={evidenceRefs}
+                    onChange={(e) => setEvidenceRefs(e.target.value)}
+                    placeholder="ticket-123, run-456, doc-789"
+                    style={{
+                        width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                        borderRadius: 4, outline: 'none',
+                    }}
+                />
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+                <label style={{
+                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                     textTransform: 'uppercase', marginBottom: 6,
                 }}>
                     Profile TOML
@@ -156,7 +283,7 @@ function RegisterModelTab() {
                     placeholder="Paste TOML profile content here..."
                     style={{
                         width: '100%', minHeight: 200, padding: '8px 10px', fontSize: 11,
-                        fontFamily: 'Monaco, monospace', border: '1px solid var(--border-strong)',
+                        fontFamily: 'Monaco, monospace', border: '1px solid var(--input)',
                         borderRadius: 4, outline: 'none', resize: 'vertical',
                     }}
                 />
@@ -165,7 +292,7 @@ function RegisterModelTab() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                     <label style={{
-                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                         textTransform: 'uppercase', marginBottom: 6,
                     }}>
                         Owner (optional)
@@ -176,7 +303,7 @@ function RegisterModelTab() {
                         onChange={(e) => setOwner(e.target.value)}
                         placeholder="e.g. admin"
                         style={{
-                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--border-strong)',
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
                             borderRadius: 4, outline: 'none',
                         }}
                     />
@@ -184,7 +311,7 @@ function RegisterModelTab() {
 
                 <div>
                     <label style={{
-                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                         textTransform: 'uppercase', marginBottom: 6,
                     }}>
                         Model Name Override (optional)
@@ -195,7 +322,7 @@ function RegisterModelTab() {
                         onChange={(e) => setModelNameOverride(e.target.value)}
                         placeholder="Override profile name"
                         style={{
-                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--border-strong)',
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
                             borderRadius: 4, outline: 'none',
                         }}
                     />
@@ -204,22 +331,21 @@ function RegisterModelTab() {
 
             <div style={{ marginBottom: 12 }}>
                 <label style={{
-                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                    display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                     textTransform: 'uppercase', marginBottom: 6,
                 }}>
                     On Exists
                 </label>
                 <select
                     value={onExists}
-                    onChange={(e) => setOnExists(e.target.value)}
+                    onChange={(e) => setOnExists(e.target.value as 'validate' | 'error')}
                     style={{
-                        padding: '6px 10px', fontSize: 12, border: '1px solid var(--border-strong)',
+                        padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
                         borderRadius: 4, outline: 'none',
                     }}
                 >
-                    <option value="error">Error</option>
-                    <option value="skip">Skip</option>
-                    <option value="overwrite">Overwrite</option>
+                    <option value="validate">Validate existing version</option>
+                    <option value="error">Error if already exists</option>
                 </select>
             </div>
 
@@ -230,18 +356,18 @@ function RegisterModelTab() {
                         checked={activate}
                         onChange={(e) => setActivate(e.target.checked)}
                     />
-                    <span style={{ color: 'var(--text-secondary)' }}>Activate immediately after registration</span>
+                    <span style={{ color: 'var(--muted-foreground)' }}>Activate immediately after registration</span>
                 </label>
             </div>
 
             <button
                 onClick={handleRegister}
-                disabled={!profileToml.trim() || registerMutation.isPending}
+                disabled={!profileToml.trim() || !decisionId.trim() || registerMutation.isPending}
                 style={{
                     padding: '8px 20px', fontSize: 12, fontWeight: 600,
-                    border: '1px solid var(--accent)', borderRadius: 4,
-                    background: 'var(--accent)', color: 'var(--bg-card)', cursor: 'pointer',
-                    opacity: (!profileToml.trim() || registerMutation.isPending) ? 0.5 : 1,
+                    border: '1px solid var(--primary)', borderRadius: 4,
+                    background: 'var(--primary)', color: 'var(--card)', cursor: 'pointer',
+                    opacity: (!profileToml.trim() || !decisionId.trim() || registerMutation.isPending) ? 0.5 : 1,
                 }}
             >
                 {registerMutation.isPending ? 'Registering...' : 'Register Model'}
@@ -263,18 +389,18 @@ function RegisterModelTab() {
 function RegistrationResult({ result }: { result: ModelRegistrationResult }) {
     return (
         <div style={{
-            marginTop: 16, border: '1px solid var(--success-bg)', borderRadius: 8,
-            padding: '12px 14px', background: 'var(--success-bg)',
+            marginTop: 16, border: '1px solid var(--status-success-bg)', borderRadius: 8,
+            padding: '12px 14px', background: 'var(--status-success-bg)',
         }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--success-text)', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--status-success-text)', marginBottom: 8 }}>
                 Registration Successful
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <div style={{ fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.6 }}>
                 <div><strong>Model:</strong> {result.model_name}</div>
                 <div><strong>Version:</strong> {result.version}</div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                    {result.created && <Badge label="CREATED" bg="var(--success-bg)" color="var(--success-text)" />}
-                    {result.activated && <Badge label="ACTIVATED" bg="var(--info-bg)" color="var(--accent-text)" />}
+                    {result.created && <Badge label="CREATED" bg="var(--status-success-bg)" color="var(--status-success-text)" />}
+                    {result.activated && <Badge label="ACTIVATED" bg="var(--status-info-bg)" color="var(--primary)" />}
                     <Badge label={result.status} />
                 </div>
                 {result.active_version_id && (
@@ -283,15 +409,16 @@ function RegistrationResult({ result }: { result: ModelRegistrationResult }) {
                     </div>
                 )}
                 {result.validation_run_id && (
-                    <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-secondary)' }}>
+                    <div style={{ marginTop: 4, fontSize: 10, color: 'var(--muted-foreground)' }}>
                         Validation Run: {result.validation_run_id}
                     </div>
                 )}
                 {result.transaction_id && (
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>
                         Transaction: {result.transaction_id}
                     </div>
                 )}
+                <DecisionTraceMeta trace={result.decision_trace} />
             </div>
         </div>
     );
@@ -302,28 +429,62 @@ function RegistrationResult({ result }: { result: ModelRegistrationResult }) {
 function ValidateActivateTab() {
     const [modelName, setModelName] = useState('');
     const [version, setVersion] = useState('');
+    const [decisionId, setDecisionId] = useState('');
+    const [evidenceRefs, setEvidenceRefs] = useState('');
+    const [validationPhase, setValidationPhase] = useState<ModelChangePhase>('planned');
+    const [activationPhase, setActivationPhase] = useState<ModelChangePhase>('applied');
 
     const validateMutation = useValidateModel();
     const activateMutation = useActivateModel();
 
     const handleValidate = () => {
-        if (!modelName.trim() || !version.trim()) return;
-        validateMutation.mutate({ model_name: modelName.trim(), version: version.trim() });
+        const normalizedDecisionId = decisionId.trim();
+        if (!modelName.trim() || !version.trim() || !normalizedDecisionId) return;
+        const payload: ModelValidatePayload = {
+            model_name: modelName.trim(),
+            version: version.trim(),
+            decision_id: normalizedDecisionId,
+            change_phase: validationPhase,
+        };
+        const parsedEvidenceRefs = parseCommaSeparatedValues(evidenceRefs);
+        if (parsedEvidenceRefs.length > 0) payload.evidence_refs = parsedEvidenceRefs;
+        validateMutation.mutate(payload);
     };
 
     const handleActivate = () => {
-        if (!modelName.trim() || !version.trim()) return;
-        activateMutation.mutate({ model_name: modelName.trim(), version: version.trim() });
+        const normalizedDecisionId = decisionId.trim();
+        if (!modelName.trim() || !version.trim() || !normalizedDecisionId) return;
+        const payload: ModelActivatePayload = {
+            model_name: modelName.trim(),
+            version: version.trim(),
+            decision_id: normalizedDecisionId,
+            change_phase: activationPhase,
+        };
+        const parsedEvidenceRefs = parseCommaSeparatedValues(evidenceRefs);
+        if (parsedEvidenceRefs.length > 0) payload.evidence_refs = parsedEvidenceRefs;
+        activateMutation.mutate(payload);
     };
 
     const validationPassed = validateMutation.isSuccess && validateMutation.data?.passed;
 
     return (
         <div style={{ padding: 16, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            <div style={{
+                marginBottom: 12, border: '1px solid var(--border)', borderRadius: 6,
+                padding: '10px 12px', background: 'var(--secondary)',
+            }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>
+                    Decision-linked lifecycle control
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
+                    Validate and activate operations must be linked to the same decision chain.
+                </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div>
                     <label style={{
-                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                         textTransform: 'uppercase', marginBottom: 6,
                     }}>
                         Model Name
@@ -334,7 +495,7 @@ function ValidateActivateTab() {
                         onChange={(e) => setModelName(e.target.value)}
                         placeholder="e.g. my-governance-model"
                         style={{
-                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--border-strong)',
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
                             borderRadius: 4, outline: 'none',
                         }}
                     />
@@ -342,7 +503,7 @@ function ValidateActivateTab() {
 
                 <div>
                     <label style={{
-                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
                         textTransform: 'uppercase', marginBottom: 6,
                     }}>
                         Version
@@ -353,22 +514,106 @@ function ValidateActivateTab() {
                         onChange={(e) => setVersion(e.target.value)}
                         placeholder="e.g. 1.0.0"
                         style={{
-                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--border-strong)',
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
                             borderRadius: 4, outline: 'none',
                         }}
                     />
                 </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                    <label style={{
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                        textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                        Decision ID (required)
+                    </label>
+                    <input
+                        type="text"
+                        value={decisionId}
+                        onChange={(e) => setDecisionId(e.target.value)}
+                        placeholder="e.g. DEC-2026-0001"
+                        style={{
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                            borderRadius: 4, outline: 'none',
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <label style={{
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                        textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                        Evidence Refs (optional)
+                    </label>
+                    <input
+                        type="text"
+                        value={evidenceRefs}
+                        onChange={(e) => setEvidenceRefs(e.target.value)}
+                        placeholder="ticket-123, run-456"
+                        style={{
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                            borderRadius: 4, outline: 'none',
+                        }}
+                    />
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div>
+                    <label style={{
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                        textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                        Validate Phase
+                    </label>
+                    <select
+                        value={validationPhase}
+                        onChange={(e) => setValidationPhase(e.target.value as ModelChangePhase)}
+                        style={{
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                            borderRadius: 4, outline: 'none',
+                        }}
+                    >
+                        {CHANGE_PHASE_OPTIONS.map((option) => (
+                            <option key={`validation-${option.value}`} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label style={{
+                        display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)',
+                        textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                        Activate Phase
+                    </label>
+                    <select
+                        value={activationPhase}
+                        onChange={(e) => setActivationPhase(e.target.value as ModelChangePhase)}
+                        style={{
+                            width: '100%', padding: '6px 10px', fontSize: 12, border: '1px solid var(--input)',
+                            borderRadius: 4, outline: 'none',
+                        }}
+                    >
+                        {CHANGE_PHASE_OPTIONS.map((option) => (
+                            <option key={`activation-${option.value}`} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 <button
                     onClick={handleValidate}
-                    disabled={!modelName.trim() || !version.trim() || validateMutation.isPending}
+                    disabled={!modelName.trim() || !version.trim() || !decisionId.trim() || validateMutation.isPending}
                     style={{
                         padding: '8px 20px', fontSize: 12, fontWeight: 600,
-                        border: '1px solid #f59e0b', borderRadius: 4,
-                        background: '#f59e0b', color: 'var(--bg-card)', cursor: 'pointer',
-                        opacity: (!modelName.trim() || !version.trim() || validateMutation.isPending) ? 0.5 : 1,
+                        border: '1px solid var(--status-warning-text)', borderRadius: 4,
+                        background: 'var(--status-warning-text)', color: 'var(--card)', cursor: 'pointer',
+                        opacity: (!modelName.trim() || !version.trim() || !decisionId.trim() || validateMutation.isPending) ? 0.5 : 1,
                     }}
                 >
                     {validateMutation.isPending ? 'Validating...' : 'Validate'}
@@ -376,12 +621,12 @@ function ValidateActivateTab() {
 
                 <button
                     onClick={handleActivate}
-                    disabled={!modelName.trim() || !version.trim() || activateMutation.isPending || !validationPassed}
+                    disabled={!modelName.trim() || !version.trim() || !decisionId.trim() || activateMutation.isPending || !validationPassed}
                     style={{
                         padding: '8px 20px', fontSize: 12, fontWeight: 600,
-                        border: '1px solid #10b981', borderRadius: 4,
-                        background: '#10b981', color: 'var(--bg-card)', cursor: 'pointer',
-                        opacity: (!modelName.trim() || !version.trim() || activateMutation.isPending || !validationPassed) ? 0.5 : 1,
+                        border: '1px solid var(--status-success-text)', borderRadius: 4,
+                        background: 'var(--status-success-text)', color: 'var(--card)', cursor: 'pointer',
+                        opacity: (!modelName.trim() || !version.trim() || !decisionId.trim() || activateMutation.isPending || !validationPassed) ? 0.5 : 1,
                     }}
                 >
                     {activateMutation.isPending ? 'Activating...' : 'Activate'}
@@ -390,10 +635,10 @@ function ValidateActivateTab() {
 
             {!validationPassed && (
                 <div style={{
-                    padding: '10px 12px', border: '1px solid var(--warning-bg)', borderRadius: 6,
-                    background: 'var(--warning-bg)', fontSize: 11, color: 'var(--warning-text)',
+                    padding: '10px 12px', border: '1px solid var(--status-warning-bg)', borderRadius: 6,
+                    background: 'var(--status-warning-bg)', fontSize: 11, color: 'var(--status-warning-text)',
                 }}>
-                    Validation must pass before activation is enabled.
+                    Validation must pass before activation is enabled. `decision_id` is required for both operations.
                 </div>
             )}
 
@@ -423,40 +668,41 @@ function ValidateActivateTab() {
 function ValidationResult({ result }: { result: ModelValidationResult }) {
     return (
         <div style={{
-            marginBottom: 12, border: result.passed ? '1px solid var(--success-bg)' : '1px solid var(--error-bg)',
+            marginBottom: 12, border: result.passed ? '1px solid var(--status-success-bg)' : '1px solid var(--status-error-bg)',
             borderRadius: 8, padding: '12px 14px',
-            background: result.passed ? 'var(--success-bg)' : 'var(--error-bg)',
+            background: result.passed ? 'var(--status-success-bg)' : 'var(--status-error-bg)',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: result.passed ? 'var(--success-text)' : 'var(--error-text)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: result.passed ? 'var(--status-success-text)' : 'var(--status-error-text)' }}>
                     Validation Result
                 </div>
                 <Badge label={result.passed ? 'PASS' : 'FAIL'} />
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <div style={{ fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.6 }}>
                 <div><strong>Model:</strong> {result.model_name}</div>
                 <div><strong>Version:</strong> {result.version}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
+                <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 4 }}>
                     Run ID: {result.run_id}
                 </div>
                 {result.transaction_id && (
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>
                         Transaction: {result.transaction_id}
                     </div>
                 )}
+                <DecisionTraceMeta trace={result.decision_trace} />
             </div>
             {result.errors && result.errors.length > 0 && (
                 <div style={{ marginTop: 8 }}>
                     <div style={{
-                        fontSize: 10, fontWeight: 700, color: 'var(--error-text)',
+                        fontSize: 10, fontWeight: 700, color: 'var(--status-error-text)',
                         textTransform: 'uppercase', marginBottom: 4,
                     }}>
                         Errors
                     </div>
                     {result.errors.map((err, idx) => (
                         <div key={idx} style={{
-                            fontSize: 10, color: '#7f1d1d', padding: '4px 6px',
-                            background: 'var(--error-bg)', borderRadius: 3, marginBottom: 2,
+                            fontSize: 10, color: 'var(--status-error-text)', padding: '4px 6px',
+                            background: 'var(--status-error-bg)', borderRadius: 3, marginBottom: 2,
                         }}>
                             {err}
                         </div>
@@ -470,26 +716,27 @@ function ValidationResult({ result }: { result: ModelValidationResult }) {
 function ActivationResult({ result }: { result: ModelActivationResult }) {
     return (
         <div style={{
-            marginTop: 12, border: '1px solid var(--info-bg)', borderRadius: 8,
-            padding: '12px 14px', background: 'var(--accent-bg)',
+            marginTop: 12, border: '1px solid var(--status-info-bg)', borderRadius: 8,
+            padding: '12px 14px', background: 'var(--muted)',
         }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
                 Activation Successful
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <div style={{ fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.6 }}>
                 <div><strong>Model:</strong> {result.model_name}</div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                     <Badge label={result.status} />
                     {result.active_version_id && (
-                        <Badge label={`Active: ${result.active_version_id}`} bg="var(--success-bg)" color="var(--success-text)" />
+                        <Badge label={`Active: ${result.active_version_id}`} bg="var(--status-success-bg)" color="var(--status-success-text)" />
                     )}
                 </div>
                 <div style={{ marginTop: 4 }}><strong>Owner:</strong> {result.owner}</div>
                 {result.transaction_id && (
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
+                    <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 4 }}>
                         Transaction: {result.transaction_id}
                     </div>
                 )}
+                <DecisionTraceMeta trace={result.decision_trace} />
             </div>
         </div>
     );
@@ -508,10 +755,11 @@ export default function ModelsView({ onShowDetail: _onShowDetail }: ModelsViewPr
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            <PageHeader metaKey="governance.models" compact />
             {/* Tab Navigation */}
             <div style={{
                 display: 'flex', gap: 0, borderBottom: '1px solid var(--border)',
-                background: 'var(--bg-secondary)', padding: '0 16px',
+                background: 'var(--secondary)', padding: '0 16px',
             }}>
                 {tabs.map((tab) => (
                     <button
@@ -520,8 +768,8 @@ export default function ModelsView({ onShowDetail: _onShowDetail }: ModelsViewPr
                         style={{
                             padding: '10px 16px', fontSize: 12, fontWeight: 600,
                             border: 'none', background: 'none', cursor: 'pointer',
-                            color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
-                            borderBottom: activeTab === tab.key ? '2px solid var(--accent)' : '2px solid transparent',
+                            color: activeTab === tab.key ? 'var(--foreground)' : 'var(--muted-foreground)',
+                            borderBottom: activeTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent',
                             transition: 'all 0.2s',
                         }}
                     >

@@ -405,6 +405,46 @@ category = "PassiveStructure"
 description = "P3 — Full workflow result (FlowExecutionResult). Contains workflow_name, execution_id, success, step_results, rollback_occurred."
 
 # ─────────────────────────────────────────────────────────────
+# S5 Evolution Plane — Topology What-If Simulation (flow_simulator.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowSimulatorEngine"
+layer = "Flow"
+category = "ActiveStructure"
+description = "S5 — Topology change impact simulator (FlowSimulator). Replays execution history against topology change sets before applying."
+
+[[elements]]
+name = "TopologyChangeRequest"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S5 — Topology change request (TopologyChange). Encodes change_type, step_name, workflow_name, new_position, and optional start_condition."
+
+[[elements]]
+name = "TopologyChangeTypeEnum"
+layer = "Flow"
+category = "Assessment"
+description = "S5 — Topology change type enum (TopologyChangeType). Values: ADD_STEP, REMOVE_STEP, REORDER_STEP, PATCH_START_CONDITION."
+
+[[elements]]
+name = "StartConditionSpecData"
+layer = "Flow"
+category = "Assessment"
+description = "S5 — Explicit start condition contract (StartConditionSpec). Encodes target/source step, kind, optional field mapping, optional condition expression, and canonical identifier."
+
+[[elements]]
+name = "StartConditionKindEnum"
+layer = "Flow"
+category = "Assessment"
+description = "S5 — Start condition edge kind enum (StartConditionKind). Values: CONTROL_EDGE, DATA_EDGE, EVENT_TRIGGER."
+
+[[elements]]
+name = "TopologySimulationResultData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S5 — Topology simulation result (TopologySimulationResult). Reports affected executions, impact level, dependency/start-condition violations, risk factors, and safe_to_apply."
+
+# ─────────────────────────────────────────────────────────────
 # Schema Plane — Schema Specifications (schema.py)
 # ─────────────────────────────────────────────────────────────
 
@@ -1369,6 +1409,101 @@ priority = 60
 notes = "DeprecateRuleImplementer implements StepImplementer contract."
 
 # =============================================================
+# S5 Evolution — Topology What-If Rules (priority 60)
+# =============================================================
+
+[[rules]]
+source = "RealizationPlane"
+target = "FlowSimulatorEngine"
+relation = "contains"
+priority = 60
+notes = "S5 simulator is owned by realization boundary for pre-apply topology verification."
+
+[[rules]]
+source = "FlowSimulatorEngine"
+target = "TopologyChangeRequest"
+relation = "consumes"
+priority = 60
+notes = "FlowSimulator consumes one or more topology change requests as simulation input."
+
+[[rules]]
+source = "FlowSimulatorEngine"
+target = "FlowExecutionResultData"
+relation = "consumes"
+priority = 60
+notes = "FlowSimulator compares topology changes against historical execution outcomes."
+
+[[rules]]
+source = "FlowSimulatorEngine"
+target = "FlowExecutionLogStore"
+relation = "consumes"
+priority = 60
+notes = "FlowSimulator reads persisted execution traces from FlowExecutionLogStore."
+
+[[rules]]
+source = "FlowSimulatorEngine"
+target = "TopologySimulationResultData"
+relation = "produces"
+priority = 60
+notes = "FlowSimulator produces simulation results with impact level and safety recommendation."
+
+[[rules]]
+source = "TopologyChangeRequest"
+target = "TopologyChangeTypeEnum"
+relation = "depends_on"
+priority = 60
+notes = "TopologyChangeRequest is classified by TopologyChangeType."
+
+[[rules]]
+source = "TopologyChangeRequest"
+target = "StartConditionSpecData"
+relation = "depends_on"
+priority = 60
+notes = "When start conditions are patched, TopologyChangeRequest carries StartConditionSpec (identifier: start::{workflow_or_*}::{source_or___entry__}->{target}::{kind}[:{source_field}>{target_field}])."
+
+[[rules]]
+source = "StartConditionSpecData"
+target = "StartConditionKindEnum"
+relation = "depends_on"
+priority = 60
+notes = "StartConditionSpec kind is one of CONTROL_EDGE, DATA_EDGE, EVENT_TRIGGER."
+
+[[rules]]
+source = "StartConditionSpecData"
+target = "StepDefinitionNode"
+relation = "constrains"
+priority = 60
+notes = "Start condition specification constrains when a target StepDefinition can begin."
+
+[[rules]]
+source = "StartConditionSpecData"
+target = "DataFlowEdgeLink"
+relation = "depends_on"
+priority = 60
+notes = "Data-edge start conditions can include source_field -> target_field mapping."
+
+[[rules]]
+source = "StartConditionSpecData"
+target = "LogicConditionExpr"
+relation = "depends_on"
+priority = 60
+notes = "StartConditionSpec may carry condition_expression for guard-based starts."
+
+[[rules]]
+source = "TopologySimulationResultData"
+target = "TopologyChangeRequest"
+relation = "depends_on"
+priority = 60
+notes = "Simulation result records the exact change requests applied in the what-if run."
+
+[[rules]]
+source = "TopologySimulationResultData"
+target = "StartConditionSpecData"
+relation = "depends_on"
+priority = 60
+notes = "Simulation result tracks start-condition impact metrics (start_condition_violations)."
+
+# =============================================================
 # Schema Plane — Internal Rules (priority 60)
 # =============================================================
 
@@ -2234,3 +2369,21 @@ target = "KernelValidationResult"
 relation = "produces"
 priority = 72
 notes = "Kernel execution produces validation result for outcome verification."
+
+# ─────────────────────────────────────────────────────────────
+# Coverage anchors for dormant relations
+# ─────────────────────────────────────────────────────────────
+
+[[rules]]
+source = "KernelInputDraft"
+target = "FlowLayer"
+relation = "available_in"
+priority = 64
+notes = "Kernel input drafts are available within the flow layer context."
+
+[[rules]]
+source = "NeedsCompletionNotification"
+target = "ContextIngestStep"
+relation = "triggers"
+priority = 64
+notes = "Needs completion notification triggers a new context ingestion cycle."

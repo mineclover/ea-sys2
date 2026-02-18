@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ea_kernel.kernel_service as kernel_service_module
+
 from ea_kernel.kernel_service import (
     audit_i18n,
     audit_profile_i18n,
@@ -12,6 +14,8 @@ from ea_kernel.kernel_service import (
     list_entities,
     list_relations,
     list_rules,
+    profile_composed_topology,
+    profile_projection,
     profile_topology,
 )
 
@@ -253,6 +257,553 @@ class TestProfileTopology:
     def test_unknown_profile_returns_error(self):
         result = profile_topology(profile_name="NonExistentProfile")
         assert "error" in result
+
+    def test_topology_edges_include_rule_provenance(self):
+        result = profile_topology(profile_name="EASystem-Kernel", view_mode="raw", include_rule_provenance=True)
+        assert result["edges"], "expected non-empty topology edges"
+        first = result["edges"][0]
+        assert "rule_ref" in first
+        assert first["rule_ref"]["profile"] == "EASystem-Kernel"
+        assert first["rule_ref"]["rule_id"]
+        assert first["rule_ref"]["source_pattern"] is not None
+        assert first["rule_ref"]["target_pattern"] is not None
+
+    def test_topology_summary_edges_include_rule_ref_samples(self):
+        result = profile_topology(profile_name="EASystem-Kernel", view_mode="summary", include_rule_provenance=True)
+        assert result["edges"], "expected non-empty summary topology edges"
+        first = result["edges"][0]
+        assert "rule_refs" in first
+        assert isinstance(first["rule_refs"], list)
+        if first["rule_refs"]:
+            assert first["rule_refs"][0]["profile"] == "EASystem-Kernel"
+
+    def test_topology_domain_scope_filters_bridge_edges(self):
+        all_scope = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="summary",
+            domain_scope="all",
+        )
+        bridge_scope = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="summary",
+            domain_scope="bridge",
+        )
+        owned_scope = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="summary",
+            domain_scope="owned",
+        )
+        assert all_scope["domain_view"]["scope"] == "all"
+        assert bridge_scope["domain_view"]["scope"] == "bridge"
+        assert owned_scope["domain_view"]["scope"] == "owned"
+        assert bridge_scope["edge_count"] <= all_scope["edge_count"]
+        assert owned_scope["edge_count"] <= all_scope["edge_count"]
+        assert (
+            bridge_scope["domain_view"]["stats"]["bridge_edges"]
+            + bridge_scope["domain_view"]["stats"]["owned_edges"]
+            == bridge_scope["domain_view"]["stats"]["edges_before_scope"]
+        )
+
+    def test_summary_view_mode_aggregates_rule_edges(self):
+        raw = profile_topology(profile_name="ArchiMate", view_mode="raw")
+        summary = profile_topology(profile_name="ArchiMate", view_mode="summary")
+        assert summary["view_mode"] == "summary"
+        assert summary["edge_total_raw"] == raw["edge_count"]
+        assert summary["edge_count"] <= raw["edge_count"]
+        assert all(int(edge.get("rule_count", 1)) >= 1 for edge in summary["edges"])
+
+    def test_summary_view_mode_respects_max_edges(self):
+        summary = profile_topology(profile_name="ArchiMate", view_mode="summary", max_edges=10)
+        assert summary["edge_count"] <= 10
+        assert summary["edge_truncated"] is True
+        assert summary["edge_total_before_cap"] >= summary["edge_count"]
+
+    def test_surface_only_filters_non_focus_relations(self):
+        filtered = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="summary",
+            surface_only=True,
+        )
+        assert "error" not in filtered
+        assert filtered["surface_filter"]["enabled"] is True
+        assert filtered["surface_filter"]["applied"] is True
+        visible = set(filtered["surface_filter"]["visible_relations"])
+        assert visible
+        assert all(edge["relation"] in visible for edge in filtered["edges"])
+
+    def test_surface_only_ignored_in_focus_mode(self):
+        focused = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="focus",
+            focus="actor",
+            focus_actor="ModelExplorerContext",
+            surface_only=True,
+        )
+        assert "error" not in focused
+        assert focused["surface_filter"]["enabled"] is True
+        assert focused["surface_filter"]["applied"] is False
+
+    def test_focus_view_mode_core_returns_focus_payload(self):
+        raw = profile_topology(profile_name="ArchiMate", view_mode="raw")
+        focus = profile_topology(profile_name="ArchiMate", view_mode="focus", focus="core")
+        assert focus["view_mode"] == "focus"
+        assert focus["focus"]["mode"] == "core"
+        assert focus["edge_count"] <= raw["edge_count"]
+        assert set(focus["focus"]["selected_relations"]).issubset(
+            {"contains", "depends_on", "next", "triggers", "constrains"},
+        )
+        assert "visibility_profile" in focus["focus"]
+        assert "visible_relations" in focus["focus"]
+        assert "hidden_relations" in focus["focus"]
+
+    def test_focus_view_mode_relation_filters_edges(self):
+        raw = profile_topology(profile_name="ArchiMate", view_mode="raw")
+        assert raw["edges"], "expected non-empty topology edges"
+        relation = raw["edges"][0]["relation"]
+        focus = profile_topology(
+            profile_name="ArchiMate",
+            view_mode="focus",
+            focus="relation",
+            focus_relation=relation,
+        )
+        assert focus["view_mode"] == "focus"
+        assert focus["focus"]["mode"] == "relation"
+        assert focus["focus"]["relation"] == relation
+        assert all(edge["relation"] == relation for edge in focus["edges"])
+
+    def test_focus_view_mode_layer_filters_edges(self):
+        raw = profile_topology(profile_name="ArchiMate", view_mode="raw")
+        assert raw["edges"], "expected non-empty topology edges"
+        layer_of = {node["name"]: node["layer"] for node in raw["nodes"]}
+        sample_edge = raw["edges"][0]
+        layer = layer_of[sample_edge["source"]]
+        focus = profile_topology(
+            profile_name="ArchiMate",
+            view_mode="focus",
+            focus="layer",
+            focus_layer=layer,
+        )
+        assert focus["view_mode"] == "focus"
+        assert focus["focus"]["mode"] == "layer"
+        assert focus["focus"]["layer"] == layer
+        assert focus["edge_count"] > 0
+        focus_layer_of = {node["name"]: node["layer"] for node in focus["nodes"]}
+        assert all(
+            focus_layer_of.get(edge["source"]) == layer
+            or focus_layer_of.get(edge["target"]) == layer
+            for edge in focus["edges"]
+        )
+
+    def test_focus_view_mode_actor_filters_to_actor_interaction_scope(self):
+        focus = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="focus",
+            focus="actor",
+            focus_actor="ModelExplorerContext",
+            focus_depth=4,
+        )
+        assert focus["view_mode"] == "focus"
+        assert focus["focus"]["mode"] == "actor"
+        assert focus["focus"]["actor"] == "ModelExplorerContext"
+        assert focus["focus"]["actor_depth"] == 4
+        assert "actor_candidates" in focus["focus"]
+        assert any(node["name"] == "ModelExplorerContext" for node in focus["nodes"])
+        selected = set(focus["focus"]["selected_relations"])
+        assert selected
+        assert all(edge["relation"] in selected for edge in focus["edges"])
+
+    def test_focus_view_mode_actor_rejects_unknown_actor(self):
+        focus = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="focus",
+            focus="actor",
+            focus_actor="NonExistentActor",
+        )
+        assert "error" in focus
+        assert "available_actors" in focus
+
+    def test_focus_view_mode_actor_without_seed_prefers_connected_candidate(self):
+        for profile_name in ("EASystem-Infra", "EASystem-Governance", "EASystem-Needs"):
+            focus = profile_topology(
+                profile_name=profile_name,
+                view_mode="focus",
+                focus="actor",
+                focus_depth=4,
+                max_edges=260,
+            )
+            assert "error" not in focus
+            assert focus["edge_count"] > 0
+            actor_name = str(focus["focus"]["actor"])
+            candidate_map = {
+                str(item.get("name", "")): item
+                for item in focus["focus"]["actor_candidates"]
+            }
+            assert actor_name in candidate_map
+            assert int(candidate_map[actor_name].get("interaction_degree", 0)) > 0
+
+    def test_focus_view_mode_topic_filters_to_topic_scope(self):
+        focus = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="focus",
+            focus="topic",
+            focus_topic="ModelExplorer",
+            focus_depth=2,
+        )
+        assert "error" not in focus
+        assert focus["view_mode"] == "focus"
+        assert focus["focus"]["mode"] == "topic"
+        assert focus["focus"]["topic"] == "ModelExplorer"
+        assert focus["focus"]["topic_depth"] == 2
+        assert focus["focus"]["topic_seeds"]
+        selected = set(focus["focus"]["selected_relations"])
+        assert selected
+        assert all(edge["relation"] in selected for edge in focus["edges"])
+
+    def test_focus_view_mode_topic_uses_toml_policy_defaults(self):
+        focus = profile_topology(
+            profile_name="EASystem-Kernel",
+            view_mode="focus",
+            focus="topic",
+            focus_topic="ModelExplorer",
+        )
+        assert "error" not in focus
+        assert focus["focus"]["topic_depth"] == 2
+        policy = focus["focus"].get("topic_policy", {})
+        assert policy.get("default_depth") == 2
+        assert policy.get("max_scope_nodes_per_depth") == 48
+        assert policy.get("max_match_count") == 20
+
+    def test_focus_view_mode_topic_uses_infra_layer_override(self):
+        focus = profile_topology(
+            profile_name="EASystem-Infra",
+            view_mode="focus",
+            focus="topic",
+            focus_topic="Infra",
+        )
+        assert "error" not in focus
+        policy = focus["focus"].get("topic_policy", {})
+        assert policy.get("max_scope_nodes_per_depth") == 28
+        assert policy.get("max_seed_count") == 6
+        assert policy.get("max_match_count") == 12
+        assert policy.get("min_token_coverage") == 0.6
+
+    def test_focus_view_mode_topic_uses_fallback_policy_on_non_kernel_layer(self):
+        focus = profile_topology(
+            profile_name="EASystem-Needs",
+            view_mode="focus",
+            focus="topic",
+            focus_topic="Need",
+        )
+        assert "error" not in focus
+        policy = focus["focus"].get("topic_policy", {})
+        assert policy.get("max_scope_nodes_per_depth") == 40
+
+    def test_focus_view_mode_rejects_invalid_focus_mode(self):
+        focus = profile_topology(profile_name="ArchiMate", view_mode="focus", focus="invalid")
+        assert "error" in focus
+
+
+class TestProfileProjection:
+    """Projection-layer API helpers."""
+
+    def test_projection_default_level_l0(self):
+        result = profile_projection(profile_name="EASystem-Kernel")
+        assert "projection" in result
+        assert result["projection"]["level"] == "L0"
+        assert result["projection"]["lens"] == "panorama"
+        assert result["projection"]["filters"]["domain_scope"] in {"all", "owned", "bridge"}
+        assert result["node_count"] > 0
+        assert result["edge_count"] > 0
+        assert result["edge_count"] <= result["projection"]["budget"]["effective_max_edges"]
+
+    def test_projection_l2_actor_seed(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l2",
+            actor="ModelExplorerContext",
+            depth=4,
+        )
+        assert "projection" in result
+        assert result["projection"]["level"] == "L2"
+        seed = result["projection"].get("seed")
+        assert isinstance(seed, dict)
+        assert seed["actor"] == "ModelExplorerContext"
+
+    def test_projection_uses_toml_layer_policy_override(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l2",
+            actor="ModelExplorerContext",
+            depth=4,
+        )
+        assert "projection" in result
+        projection = result["projection"]
+        assert projection["policy"]["source"] == "toml"
+        assert projection["policy"]["scope"] == "layer:kernel"
+        assert projection["budget"]["default_max_edges"] == 620
+        assert projection["budget"]["effective_max_edges"] == 620
+
+    def test_projection_includes_reduction_explainability_metadata(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l2",
+            actor="ModelExplorerContext",
+            depth=4,
+        )
+        assert "projection" in result
+        reduction = result["projection"].get("reduction")
+        assert isinstance(reduction, dict)
+
+        nodes = reduction.get("nodes")
+        assert isinstance(nodes, dict)
+        assert nodes["source"] >= nodes["projected"] >= 0
+        assert 0.0 <= nodes["ratio"] <= 1.0
+
+        edges = reduction.get("edges")
+        assert isinstance(edges, dict)
+        assert edges["source"] >= edges["projected"] >= 0
+        assert edges["source_raw"] >= edges["source"] >= 0
+        assert edges["before_cap"] >= edges["projected"] >= 0
+        assert 0.0 <= edges["ratio"] <= 1.0
+        assert 0.0 <= edges["raw_ratio"] <= 1.0
+
+        stages = reduction.get("stages")
+        assert isinstance(stages, dict)
+        assert stages["edge_input"] >= stages["edge_after_node_scope"] >= stages["edge_after_relation"] >= stages["edge_after_cap"]
+
+        drop_reasons = reduction.get("drop_reasons")
+        assert isinstance(drop_reasons, dict)
+        assert drop_reasons["edge_relation_filtered"] >= 0
+        assert drop_reasons["edge_node_scope_filtered"] >= 0
+
+        preserve = reduction.get("preserve")
+        assert isinstance(preserve, dict)
+        assert preserve["requested"] >= preserve["matched"] >= 0
+        assert preserve["retained"] >= 0
+
+    def test_projection_reduction_cap_drop_matches_edge_totals(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            max_edges=20,
+        )
+        assert "projection" in result
+        reduction = result["projection"].get("reduction")
+        assert isinstance(reduction, dict)
+        drop_reasons = reduction.get("drop_reasons")
+        assert isinstance(drop_reasons, dict)
+        assert drop_reasons["edge_capped"] == result["edge_total_before_cap"] - result["edge_count"]
+
+    def test_projection_policy_fail_fast_on_invalid_contract(self, monkeypatch):
+        def fake_policy_loader() -> dict[str, object]:
+            return {
+                "status": "ok",
+                "path": "/tmp/projection_policy.toml",
+                "document": {
+                    "m2": {
+                        "schema": {
+                            "levels": ["l0"],
+                            "lenses": ["panorama"],
+                            "base_view_modes": ["summary"],
+                            "focus_modes": ["actor"],
+                            "required_level_fields": ["level", "lens", "default_max_edges"],
+                            "lens_to_level": {
+                                "panorama": "l9",
+                            },
+                        },
+                        "defaults": {"actor_default_depth": 0},
+                    },
+                    "m1": {
+                        "global": {
+                            "levels": {
+                                "l0": {
+                                    "level": "L0",
+                                    "lens": "panorama",
+                                    "default_max_edges": -1,
+                                },
+                            },
+                        },
+                    },
+                },
+            }
+
+        kernel_service_module._resolve_projection_policy.cache_clear()
+        monkeypatch.setattr(kernel_service_module, "_load_projection_policy_document", fake_policy_loader)
+
+        result = kernel_service_module.profile_projection(profile_name="EASystem-Kernel", level="l0")
+
+        assert "error" in result
+        assert result["error"] == "Projection policy contract validation failed"
+        policy_error = result.get("policy_error")
+        assert isinstance(policy_error, dict)
+        assert policy_error.get("status") == "invalid_contract"
+        issues = policy_error.get("issues")
+        assert isinstance(issues, list)
+        assert len(issues) > 0
+
+        kernel_service_module._resolve_projection_policy.cache_clear()
+
+    def test_projection_rejects_invalid_level(self):
+        result = profile_projection(profile_name="EASystem-Kernel", level="l9")
+        assert "error" in result
+        assert "valid_levels" in result
+
+
+class TestProfileComposedTopology:
+    """Cross-profile composed M1 topology helpers."""
+
+    def test_composed_topology_contains_composition_metadata(self):
+        result = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="owned",
+            max_edges=320,
+        )
+        assert "error" not in result
+        composition = result["composition"]
+        assert composition["anchor_profile"] == "EASystem-Kernel"
+        assert composition["anchor_layer_key"] == "kernel"
+        assert composition["source_profile_count"] >= 1
+        assert "EASystem-Kernel" in composition["included_profiles"]
+        assert result["edge_count"] <= 320
+
+    def test_composed_topology_edges_keep_rule_profile_provenance(self):
+        result = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            max_edges=240,
+            include_rule_provenance=True,
+        )
+        assert "error" not in result
+        assert result["edges"], "expected composed edges"
+        first = result["edges"][0]
+        refs = first.get("rule_refs", [])
+        assert isinstance(refs, list)
+        assert refs, "expected rule_refs on composed edge"
+        assert all(ref.get("profile") for ref in refs)
+
+    def test_composed_topology_rejects_invalid_domain_scope(self):
+        result = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="invalid",
+        )
+        assert "error" in result
+        assert "valid_domain_scopes" in result
+
+    def test_composed_topology_unknown_anchor_returns_error(self):
+        result = profile_composed_topology(profile_name="NonExistentProfile")
+        assert "error" in result
+
+    def test_composed_topology_focus_relation_filters_edges(self):
+        base = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            max_edges=320,
+        )
+        assert "error" not in base
+        assert base["edges"], "expected composed edges"
+        relation = base["edges"][0]["relation"]
+
+        focused = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            focus="relation",
+            focus_relation=relation,
+            max_edges=320,
+        )
+        assert "error" not in focused
+        assert focused["view_mode"] == "focus"
+        assert focused["focus"]["mode"] == "relation"
+        assert focused["focus"]["relation"] == relation
+        assert all(edge["relation"] == relation for edge in focused["edges"])
+
+    def test_composed_topology_focus_actor_filters_interaction_scope(self):
+        focused = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            focus="actor",
+            focus_actor="ModelExplorerContext",
+            focus_depth=4,
+            max_edges=360,
+        )
+        assert "error" not in focused
+        assert focused["view_mode"] == "focus"
+        assert focused["focus"]["mode"] == "actor"
+        assert focused["focus"]["actor"] == "ModelExplorerContext"
+        assert focused["focus"]["actor_depth"] == 4
+        selected = set(focused["focus"]["selected_relations"])
+        assert selected
+        assert all(edge["relation"] in selected for edge in focused["edges"])
+
+    def test_composed_topology_focus_core_includes_actor_candidates(self):
+        focused = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            focus="core",
+            max_edges=320,
+        )
+        assert "error" not in focused
+        assert focused["view_mode"] == "focus"
+        assert focused["focus"]["mode"] == "core"
+        assert "actor_candidates" in focused["focus"]
+        assert isinstance(focused["focus"]["actor_candidates"], list)
+
+    def test_composed_topology_surface_only_filters_non_focus_relations(self):
+        result = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            surface_only=True,
+            max_edges=320,
+        )
+        assert "error" not in result
+        assert result["surface_filter"]["enabled"] is True
+        assert result["surface_filter"]["applied"] is True
+        visible = set(result["surface_filter"]["visible_relations"])
+        assert visible
+        assert all(edge["relation"] in visible for edge in result["edges"])
+
+    def test_composed_topology_focus_topic_filters_to_topic_scope(self):
+        focused = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            domain_scope="all",
+            focus="topic",
+            focus_topic="ModelExplorer",
+            focus_depth=2,
+            max_edges=320,
+        )
+        assert "error" not in focused
+        assert focused["view_mode"] == "focus"
+        assert focused["focus"]["mode"] == "topic"
+        assert focused["focus"]["topic"] == "ModelExplorer"
+        assert focused["focus"]["topic_depth"] == 2
+        assert focused["focus"]["topic_seeds"]
+        selected = set(focused["focus"]["selected_relations"])
+        assert selected
+        assert all(edge["relation"] in selected for edge in focused["edges"])
+
+    def test_composed_topology_focus_rejects_invalid_args(self):
+        invalid_focus = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            focus="invalid",
+        )
+        assert "error" in invalid_focus
+
+        missing_focus_relation = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            focus="relation",
+        )
+        assert "error" in missing_focus_relation
+
+        missing_focus_topic = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            focus="topic",
+        )
+        assert "error" in missing_focus_topic
+
+        focus_param_without_mode = profile_composed_topology(
+            profile_name="EASystem-Kernel",
+            focus_relation="contains",
+        )
+        assert "error" in focus_param_without_mode
 
 
 class TestI18nService:

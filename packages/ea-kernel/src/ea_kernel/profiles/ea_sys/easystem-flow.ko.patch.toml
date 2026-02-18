@@ -1,157 +1,1130 @@
-# EASystem-Flow — Korean (ko) i18n Patch
+# EASystem-Flow — Korean (ko) i18n Patch (normalized)
 
 [elements.FlowLayer]
 display_name = "흐름 계층"
+description = "흐름 모델링 경계 및 런타임 체인 종료 단계."
 
 [elements.InfraModelPort]
 display_name = "인프라 모델 포트"
+description = "인프라 레이어 모델 인터페이스용 6x6 계약 포트입니다."
 
 [elements.GovernanceModelPort]
 display_name = "거버넌스 모델 포트"
+description = "거버넌스 계층 모델 인터페이스를 위한 6x6 계약 포트입니다."
 
 [elements.DecisionModelPort]
 display_name = "의사결정 모델 포트"
+description = "의사결정 계층 모델 인터페이스를 위한 6x6 계약 포트입니다."
 
 [elements.NeedsModelPort]
 display_name = "요구 모델 포트"
+description = "요구 계층 모델 인터페이스를 위한 6x6 계약 포트입니다."
 
 [elements.KernelModelPort]
 display_name = "커널 모델 포트"
+description = "커널 계층 모델 인터페이스를 위한 6x6 계약 포트입니다."
 
 [elements.FlowModelPort]
 display_name = "흐름 모델 포트"
+description = "흐름 계층 모델 인터페이스를 위한 6x6 계약 포트입니다."
 
 [elements.ContextIngestStep]
 display_name = "컨텍스트 수집 단계"
+description = "업스트림 의사결정/요구 모델링에서 전달된 초기 요구 컨텍스트를 수집합니다."
 
 [elements.NormalizeNeedStep]
 display_name = "요구 정규화 단계"
+description = "요구 및 제약 정보를 정규화합니다."
 
 [elements.BuildKernelInputStep]
 display_name = "커널 입력 구축 단계"
+description = "커널 지원 입력 페이로드를 빌드합니다."
 
 [elements.MapKernelSpecStep]
 display_name = "커널 스펙 매핑 단계"
+description = "커널 단계 핸드오프에서 페이로드를 활성 커널 계약/버전에 매핑합니다."
 
 [elements.ExecuteKernelAction]
 display_name = "커널 액션 실행"
+description = "계약된 작업/작업을 실행합니다."
 
 [elements.VerifyOutcomeStep]
 display_name = "결과 검증 단계"
+description = "예상되는 제약 조건에 대해 실행 출력을 확인합니다."
 
 [elements.PersistFlowStateStep]
 display_name = "흐름 상태 영속화 단계"
+description = "흐름 상태/검증 추적을 유지하고 레이어 계약 매트릭스 소유권을 게시합니다."
 
 [elements.PublishFlowOutcomeAction]
 display_name = "흐름 결과 발행 액션"
+description = "최종 흐름 결과 스냅샷을 게시합니다."
 
 [elements.LayerVersionStore]
 display_name = "계층 버전 저장소"
+description = "흐름 매핑에서 사용되는 인프라 버전 저장소입니다."
 
 [elements.ValidationRunStore]
 display_name = "검증 실행 저장소"
+description = "흐름에 따라 인프라 검증 저장소가 소비/업데이트됩니다."
 
 [elements.UseCaseCatalog]
 display_name = "유스케이스 카탈로그"
+description = "흐름 수집에 의해 사용되는 사용 사례 카탈로그가 필요합니다."
 
 [elements.ActorContextCatalog]
 display_name = "액터 컨텍스트 카탈로그"
+description = "흐름 수집에 의해 소비되는 행위자 컨텍스트가 필요합니다."
 
 [elements.ConstraintCatalog]
 display_name = "제약 카탈로그"
+description = "정규화에 사용되는 제약 조건이 필요합니다."
 
 [elements.PrioritizedNeedSet]
 display_name = "우선순위 요구 집합"
+description = "계획 단계에서 우선적으로 소비되는 요구입니다."
 
 [elements.FlowPlanningPolicy]
 display_name = "흐름 계획 정책"
+description = "계획 및 커널 입력 구성을 위한 흐름 로컬 정책입니다."
 
 [elements.FlowExecutionPolicy]
 display_name = "흐름 실행 정책"
+description = "실행 및 검증 안전성을 위한 Flow-local 정책입니다."
 
 [elements.KernelInputDraft]
 display_name = "커널 입력 초안"
+description = "흐름에 의해 생성된 중간 커널 입력 초안입니다."
 
 [elements.ContractedPlanDraft]
 display_name = "계약된 계획 초안"
+description = "실행에 사용되는 커널 계약 계획 초안입니다."
 
 [elements.FlowLayerContractMatrix]
 display_name = "흐름 계층 계약 매트릭스"
+description = "흐름 소유 6x6 교차 계층 계약 매트릭스(단일 소유자 아티팩트)."
 
 [elements.FlowCheckpointStore]
 display_name = "흐름 상태 체크포인트"
+description = "흐름 보기 — 흐름 실행 재개를 위한 체크포인트 저장소입니다."
 
 [elements.FlowExecutionLogStore]
 display_name = "흐름 실행 로그"
+description = "흐름 보기 — 단계 수준 감사 추적을 위한 실행 로그 저장소입니다."
 
 [elements.FlowApprovalGate]
 display_name = "흐름 승인 게이트"
+description = "흐름 보기 — 흐름 모델 변경에 대한 거버넌스 승인 게이트입니다."
 
 [elements.FlowAuditSubmission]
 display_name = "흐름 감사 제출"
+description = "흐름 보기 — 흐름 실행 증거를 제출하기 위한 감사 포트입니다."
 
 [elements.FlowCompliancePolicy]
 display_name = "흐름 준수 정책"
+description = "흐름 보기 — 흐름 실행을 위한 거버넌스 규정 준수 정책입니다."
 
 [elements.FlowChangeRecord]
 display_name = "흐름 변경 레코드"
+description = "흐름 보기 — 흐름 모델 발전에 대한 변경 기록입니다."
 
 [elements.FlowDecisionGate]
 display_name = "흐름 의사결정 게이트"
+description = "흐름 보기 — 흐름 실행 내의 결정 평가 지점입니다."
 
 [elements.FlowBranchInput]
 display_name = "흐름 분기 입력"
+description = "흐름 보기 — 흐름 전환 지점에서 사용되는 결정 분기 입력입니다."
 
 [elements.FlowDecisionOutcome]
 display_name = "흐름 의사결정 결과"
+description = "흐름 보기 — 흐름 경로 선택에 사용된 결정 결과입니다."
 
 [elements.FlowDecisionFeedback]
 display_name = "흐름 의사결정 피드백"
+description = "흐름 보기 — 의사결정 레이어에 흐름 결과를 보고하기 위한 피드백 포트입니다."
 
 [elements.NeedsFulfillmentReport]
 display_name = "요구 충족 보고서"
+description = "흐름 보기 — 흐름에 따라 충족되는 요구를 추적하는 이행 보고서입니다."
 
 [elements.NeedsCompletionNotification]
 display_name = "요구 완료 알림"
+description = "흐름 보기 — 흐름이 요구과 연결된 작업을 완료할 때 알림 이벤트입니다."
 
 [elements.KernelContractReference]
 display_name = "커널 계약 참조"
+description = "흐름 보기 — 사양 매핑에 사용되는 활성 커널 계약입니다."
 
 [elements.KernelValidationResult]
 display_name = "커널 검증 결과"
+description = "흐름 보기 — 결과 확인을 위해 사용된 확인 결과입니다."
 
 [elements.KernelSpecVersion]
 display_name = "커널 스펙 버전"
+description = "흐름 보기 — 계약 정렬을 위한 커널 사양 버전 메타데이터입니다."
 
 [elements.KernelConstraintHook]
 display_name = "커널 제약 훅"
+description = "흐름 보기 — 흐름 실행 중에 커널 유효성 검사를 호출하기 위한 후크입니다."
+
+[elements.FlowSimulatorEngine]
+display_name = "흐름 시뮬레이터 엔진"
+description = "토폴로지 변경 영향 시뮬레이터. 적용 전 변경 집합을 실행 이력에 재적용해 영향을 평가한다."
+
+[elements.TopologyChangeRequest]
+display_name = "토폴로지 변경 요청"
+description = "토폴로지 변경 요청 데이터. change_type, step_name, workflow_name, new_position, start_condition을 포함한다."
+
+[elements.TopologyChangeTypeEnum]
+display_name = "토폴로지 변경 유형 열거형"
+description = "토폴로지 변경 유형 enum. ADD_STEP, REMOVE_STEP, REORDER_STEP, PATCH_START_CONDITION 값을 가진다."
+
+[elements.StartConditionSpecData]
+display_name = "시작 조건 명세 데이터"
+description = "명시적 시작 조건 계약 데이터. 대상/소스 스텝, kind, 필드 매핑, 조건식, canonical 식별자를 포함한다."
+
+[elements.StartConditionKindEnum]
+display_name = "시작 조건 유형 열거형"
+description = "시작 조건 엣지 유형 enum. CONTROL_EDGE, DATA_EDGE, EVENT_TRIGGER 값을 가진다."
+
+[elements.TopologySimulationResultData]
+display_name = "토폴로지 시뮬레이션 결과"
+description = "토폴로지 시뮬레이션 결과 데이터. 영향받은 실행 수, impact level, 의존/시작조건 위반, risk factor, safe_to_apply를 보고한다."
+
+[elements.SpecificationPlane]
+display_name = "사양 평면"
+description = "P1 사양 평면 — 선언적 단계/워크플로/스키마 정의를 위한 컨테이너입니다."
+
+[elements.StepSpecContract]
+display_name = "단계 사양 계약"
+description = "P1 - 추상 단계 사양 계약(ABC). 이름, kernel_anchor, Meta_type, input/output_schema를 정의합니다."
+
+[elements.FlowMetaStepDefinition]
+display_name = "흐름 메타 단계 정의"
+description = "P1 - 재사용 가능한 논리 패턴(FlowMetaStep)의 공식 정의입니다. 이름, 설명, input/output_schema, kernel_type_requirement가 포함된 고정된 데이터 클래스입니다."
+
+[elements.KernelGroundedStepSpecType]
+display_name = "커널 접지 단계 사양 유형"
+description = "P1 — StepSpec은 기본적으로 kernel_anchor를 통해 커널 요소에 고정됩니다. FlowMetaStep에서 Meta_type을 상속합니다."
+
+[elements.WorkflowSpecContract]
+display_name = "워크플로 사양 계약"
+description = "P1 - 추상 작업 흐름 사양 계약(ABC)입니다. 이름, kernel_anchor, input/output_schema, get_steps()를 정의합니다."
+
+[elements.UseCaseSpecType]
+display_name = "사용 사례 사양 유형"
+description = "P1 — 최고 수준의 비즈니스 프로세스 정의(UseCaseSpec). Primary_actor 및 Success_Criteria가 포함된 구체적인 WorkflowSpec입니다."
+
+[elements.ExecutionContextData]
+display_name = "실행 컨텍스트 데이터"
+description = "P1 — 불변 실행 컨텍스트(ExecutionContext). 워크플로를 통해 전달된 Execution_id 및 변수 dict를 포함합니다."
+
+[elements.StepResultSpecData]
+display_name = "단계 결과 사양 데이터"
+description = "P1 — 예상 단계 결과 구조에 대한 사양(StepResultSpec) 출력_스키마 및 예상_로그_패턴을 포함합니다."
+
+[elements.FlowGenerationRuleData]
+display_name = "흐름 생성 규칙 데이터"
+description = "P1 — 커널 엔터티(FlowGenerationRule)에서 흐름 사양을 생성하기 위한 규칙입니다. logic_conditions를 사용하여 source_kernel_type을 target_flow_type에 매핑합니다."
+
+[elements.FlowTopologyData]
+display_name = "흐름 토폴로지 데이터"
+description = "P1 — 선언적 프로세스 구조(FlowTopology). 단계, 진입/종료 지점, 전환_규칙 및 생성_규칙을 포함합니다."
+
+[elements.CoordinationPlane]
+display_name = "조정 평면"
+description = "P2 조정 평면 — 프로세스 그래프, 데이터 흐름 가장자리, 조건 및 변환을 위한 컨테이너입니다."
+
+[elements.ProcessSpecType]
+display_name = "프로세스 사양 유형"
+description = "P2 — 프로세스(ProcessSpec)에 대한 루트 온톨로지 엔터티입니다. 단계, Trigger_event, Defined_schemas 및 data_flow_edges를 포함합니다."
+
+[elements.StepDefinitionNode]
+display_name = "단계 정의 노드"
+description = "P2 - 프로세스 그래프의 단일 노드(StepDefinition) ID, 이름, 카테고리, 조건, 변환, 스키마_사용, 라우팅이 있습니다."
+
+[elements.DataFlowEdgeLink]
+display_name = "데이터 흐름 엣지 링크"
+description = "P2 — 단계 간 데이터 이동 정의(DataFlowEdge) 선택적 변환_rule을 사용하여 source_step.source_field를 target_step.target_field에 매핑합니다."
+
+[elements.LogicConditionExpr]
+display_name = "논리 조건 표현"
+description = "P2 - 조건식(LogicCondition). 표현식 문자열, 엔진 유형(json-logic/python/sql) 및 매개변수를 포함합니다."
+
+[elements.DataTransformationSpec]
+display_name = "데이터 변환 사양"
+description = "P2 - 데이터 형태 변환(DataTransformation). mapping_rules를 사용하여 input_schema를 output_schema로 정의합니다."
+
+[elements.SchemaDefinitionData]
+display_name = "스키마 정의 데이터"
+description = "P2 — 데이터 형태 정의(SchemaDefinition). ID, 이름, Schema_format 및 정의 dict가 있습니다."
+
+[elements.StepSchemaUsageSpec]
+display_name = "단계 스키마 사용 사양"
+description = "P2 - 단계 데이터 계약(StepSchemaUsage). 단계에 대한 input/output_schema_id 및 필수_필드를 선언합니다."
+
+[elements.FlowOntologyRegistry]
+display_name = "흐름 온톨로지 레지스트리"
+description = "P2 - 프로세스 사양 유형에 대한 레지스트리(FlowOntology) 정적 explain() 메소드는 등록된 유형을 열거합니다."
+
+[elements.FlowStepCategoryEnum]
+display_name = "흐름 단계 범주 열거형"
+description = "단계 역할 분류 열거형(FlowStepCategory). 값: 행동, 결정, 이벤트, 게이트웨이, 변화."
+
+[elements.RealizationPlane]
+display_name = "실현면"
+description = "P3 실현 평면 — 런타임 해석기, 구현자 및 실행 결과를 위한 컨테이너입니다."
+
+[elements.FlowRuntimeEngine]
+display_name = "흐름 런타임 엔진"
+description = "P3 — 워크플로 해석기(FlowRuntime). 실패 시 보상 롤백을 통해 순차적 단계 실행."
+
+[elements.StepImplementerContract]
+display_name = "단계 구현자 계약"
+description = "P3 — 추상 단계 실행 인터페이스(StepImplementer ABC). Execute() 및 Rollback()을 정의하여 트랜잭션 패턴을 보상합니다."
+
+[elements.StepInterpretationResultData]
+display_name = "단계 해석 결과 데이터"
+description = "P3 — 선언적 해석 결과(StepInterpretationResult). 허용된 의도, 로그가 포함된 고정된 데이터 클래스입니다."
+
+[elements.StepExecutionResultData]
+display_name = "단계 실행 결과 데이터"
+description = "P3 - 이전 버전과 호환되는 별칭(StepExecutionResult는 StepInterpretationResult를 확장함) 레거시 코드와 동일한 구조입니다."
+
+[elements.FlowExecutionResultData]
+display_name = "흐름 실행 결과 데이터"
+description = "P3 — 전체 워크플로 결과(FlowExecutionResult). 워크플로우_이름, 실행_ID, 성공, 단계_결과, 롤백_occurred를 포함합니다."
+
+[elements.SchemaSpecContract]
+display_name = "스키마 사양 계약"
+description = "스키마 사양 인터페이스(SchemaSpec ABC). 형식별 스키마 구현을 위해 verify() 및 to_dict()를 정의합니다."
+
+[elements.JsonSchema2020SpecType]
+display_name = "Json Schema2020 사양 유형"
+description = "JSON 스키마 2020-12 구현(JsonSchema2020Spec). jsonschema 라이브러리를 사용하여 원시 JSON 스키마에 대해 데이터의 유효성을 검사합니다."
+
+[elements.DbSchemaSpecType]
+display_name = "Db 스키마 사양 유형"
+description = "데이터베이스 스키마 구현(DbSchemaSpec). table_name, 열 및 선택적 ddl이 포함된 DDL 접근 방식 테이블/뷰 스키마입니다."
+
+[elements.StepInputSchemaData]
+display_name = "단계 입력 스키마 데이터"
+description = "P1 — 단계당 형식적인 입력 데이터 형태입니다. 단계에서 사용되는 필드 이름, 유형, 필수/선택적 플래그 및 기본값을 선언합니다."
+
+[elements.StepOutputSchemaData]
+display_name = "단계 출력 스키마 데이터"
+description = "P1 - 단계별 형식적 출력 데이터 형태. 성공적인 실행 시 단계에서 생성된 필드 이름, 유형 및 보장을 선언합니다."
+
+[elements.DataContractSpec]
+display_name = "데이터 계약 사양"
+description = "P2 - 생산자-소비자 스키마 일치 계약입니다. 호환성 모드(엄격/호환/완화)를 사용하여 생산자 단계의 출력 스키마를 소비자 단계의 입력 스키마에 바인딩합니다."
+
+[elements.SchemaVersionRecord]
+display_name = "스키마 버전 레코드"
+description = "P2 - 스키마 버전 메타데이터입니다. 스키마 발전을 위해 version_id, parent_version,change_type(추가/중단/호환) 및 migration_hint를 추적합니다."
+
+[elements.DataCatalogRegistry]
+display_name = "데이터 카탈로그 레지스트리"
+description = "P2 - 단계 및 워크플로 전반에 걸쳐 사용되는 모든 데이터 스키마의 흐름 소유 레지스트리입니다. Schema_id, 버전, 호환성 쿼리를 기준으로 조회를 제공합니다."
+
+[elements.SchemaCompatibilityRule]
+display_name = "스키마 호환성 규칙"
+description = "P2 — 스키마 진화 호환성 규칙. 스키마 변경(추가/파괴/호환)이 기존 소비자에게 안전한지 여부를 평가합니다."
+
+[elements.DataQualityGate]
+display_name = "데이터 품질 게이트"
+description = "P2 — 스키마 경계의 데이터 품질 검증 제약 조건. 단계 입력/출력에 null 허용 여부, 범위, 형식 및 필드 간 일관성 규칙을 적용합니다."
+
+[elements.DataLineageRecord]
+display_name = "데이터 계보 기록"
+description = "P3 - 데이터 출처 레코드입니다. 각 데이터 필드를 생성한 단계, 사용된 스키마 버전, 흐름을 통한 변환 경로를 추적합니다."
+
+[elements.AddRuleStepSpecType]
+display_name = "규칙 단계 사양 유형 추가"
+description = "커널 작업 — 새 규칙을 추가하기 위한 선언적 단계 사양(AddRuleStepSpec). rule_asset_data 및 kernel_anchor를 전달합니다."
+
+[elements.DeprecateRuleStepSpecType]
+display_name = "규칙 단계 사양 유형 지원 중단"
+description = "커널 작업 — 규칙 사용 중단을 위한 선언적 단계 사양(DeprecateRuleStepSpec) rule_id 및 kernel_anchor를 전달합니다."
+
+[elements.AddRuleImplementerType]
+display_name = "규칙 구현자 유형 추가"
+description = "P3 — 커널 규칙 생성 구현자(AddRuleImplementer). AddRuleStepSpec을 kernel.submit_rule 인텐트로 해석합니다."
+
+[elements.DeprecateRuleImplementerType]
+display_name = "규칙 구현자 유형 지원 중단"
+description = "P3 — 커널 규칙 지원 중단 구현자(DeprecateRuleImplementer). DeprecateRuleStepSpec을 kernel.deprecate_rule 인텐트로 해석합니다."
+
+[elements.FlowProfileType]
+display_name = "흐름 프로필 유형"
+description = "도메인별 메타 단계 컬렉션(FlowProfile). 이름, 버전, Meta_steps 튜플, 메타데이터가 포함된 고정된 데이터 클래스입니다."
 
 [relations.contains]
 display_name = "포함"
+description = "네임스페이스 또는 구성요소 포함."
 
 [relations.registers]
 display_name = "등록"
+description = "구성 요소와 포트 간의 레지스트리 멤버십입니다."
 
 [relations.coordinates]
 display_name = "조율"
+description = "런타임 오케스트레이션 또는 협업 연결."
 
 [relations.depends_on]
 display_name = "의존"
+description = "데이터 또는 정책에 대한 구조적 종속성."
 
 [relations.produces]
 display_name = "생산"
+description = "행동은 인공물을 생산합니다."
 
 [relations.consumes]
 display_name = "소비"
+description = "행동은 아티팩트를 소비합니다."
 
 [relations.next]
 display_name = "다음"
+description = "실행 순서 전환."
 
 [relations.triggers]
 display_name = "트리거"
+description = "이벤트 기반 실행 트리거."
 
 [relations.constrains]
 display_name = "제약"
+description = "정책이나 가드가 실행을 제한합니다."
 
 [relations.available_in]
 display_name = "가용"
+description = "컨텍스트는 경험이나 요소에 대한 액세스를 제공합니다."
+
+[validity_rules.eas-allow-01]
+description = "프로파일 허용 규칙(eas-allow-01)입니다."
+
+[validity_rules.eas-allow-02]
+description = "프로파일 허용 규칙(eas-allow-02)입니다."
+
+[validity_rules.eas-allow-03]
+description = "프로파일 허용 규칙(eas-allow-03)입니다."
+
+[validity_rules.eas-allow-04]
+description = "프로파일 허용 규칙(eas-allow-04)입니다."
+
+[validity_rules.eas-allow-05]
+description = "프로파일 허용 규칙(eas-allow-05)입니다."
+
+[validity_rules.eas-allow-06]
+description = "프로파일 허용 규칙(eas-allow-06)입니다."
+
+[validity_rules.eas-allow-07]
+description = "프로파일 허용 규칙(eas-allow-07)입니다."
+
+[validity_rules.eas-allow-08]
+description = "프로파일 허용 규칙(eas-allow-08)입니다."
+
+[validity_rules.eas-allow-09]
+description = "프로파일 허용 규칙(eas-allow-09)입니다."
+
+[validity_rules.eas-allow-10]
+description = "프로파일 허용 규칙(eas-allow-10)입니다."
+
+[validity_rules.eas-allow-11]
+description = "프로파일 허용 규칙(eas-allow-11)입니다."
+
+[validity_rules.eas-allow-12]
+description = "프로파일 허용 규칙(eas-allow-12)입니다."
+
+[validity_rules.eas-allow-13]
+description = "프로파일 허용 규칙(eas-allow-13)입니다."
+
+[validity_rules.eas-allow-14]
+description = "프로파일 허용 규칙(eas-allow-14)입니다."
+
+[validity_rules.eas-allow-15]
+description = "프로파일 허용 규칙(eas-allow-15)입니다."
+
+[validity_rules.eas-allow-16]
+description = "프로파일 허용 규칙(eas-allow-16)입니다."
+
+[validity_rules.eas-allow-17]
+description = "프로파일 허용 규칙(eas-allow-17)입니다."
+
+[validity_rules.eas-allow-18]
+description = "프로파일 허용 규칙(eas-allow-18)입니다."
+
+[validity_rules.eas-allow-19]
+description = "프로파일 허용 규칙(eas-allow-19)입니다."
+
+[validity_rules.eas-allow-20]
+description = "프로파일 허용 규칙(eas-allow-20)입니다."
+
+[validity_rules.eas-allow-21]
+description = "프로파일 허용 규칙(eas-allow-21)입니다."
+
+[validity_rules.eas-allow-22]
+description = "프로파일 허용 규칙(eas-allow-22)입니다."
+
+[validity_rules.eas-allow-23]
+description = "프로파일 허용 규칙(eas-allow-23)입니다."
+
+[validity_rules.eas-allow-24]
+description = "프로파일 허용 규칙(eas-allow-24)입니다."
+
+[validity_rules.eas-allow-25]
+description = "프로파일 허용 규칙(eas-allow-25)입니다."
+
+[validity_rules.eas-allow-26]
+description = "프로파일 허용 규칙(eas-allow-26)입니다."
+
+[validity_rules.eas-allow-27]
+description = "프로파일 허용 규칙(eas-allow-27)입니다."
+
+[validity_rules.eas-allow-28]
+description = "프로파일 허용 규칙(eas-allow-28)입니다."
+
+[validity_rules.eas-allow-29]
+description = "프로파일 허용 규칙(eas-allow-29)입니다."
+
+[validity_rules.eas-allow-30]
+description = "프로파일 허용 규칙(eas-allow-30)입니다."
+
+[validity_rules.eas-allow-31]
+description = "프로파일 허용 규칙(eas-allow-31)입니다."
+
+[validity_rules.eas-allow-32]
+description = "프로파일 허용 규칙(eas-allow-32)입니다."
+
+[validity_rules.eas-allow-33]
+description = "프로파일 허용 규칙(eas-allow-33)입니다."
+
+[validity_rules.eas-allow-34]
+description = "프로파일 허용 규칙(eas-allow-34)입니다."
+
+[validity_rules.eas-allow-35]
+description = "프로파일 허용 규칙(eas-allow-35)입니다."
+
+[validity_rules.eas-allow-36]
+description = "프로파일 허용 규칙(eas-allow-36)입니다."
+
+[validity_rules.eas-allow-37]
+description = "프로파일 허용 규칙(eas-allow-37)입니다."
+
+[validity_rules.eas-allow-38]
+description = "프로파일 허용 규칙(eas-allow-38)입니다."
+
+[validity_rules.eas-allow-39]
+description = "프로파일 허용 규칙(eas-allow-39)입니다."
+
+[validity_rules.eas-allow-40]
+description = "프로파일 허용 규칙(eas-allow-40)입니다."
+
+[validity_rules.eas-allow-41]
+description = "프로파일 허용 규칙(eas-allow-41)입니다."
+
+[validity_rules.eas-allow-42]
+description = "프로파일 허용 규칙(eas-allow-42)입니다."
+
+[validity_rules.eas-allow-43]
+description = "프로파일 허용 규칙(eas-allow-43)입니다."
+
+[validity_rules.eas-allow-44]
+description = "프로파일 허용 규칙(eas-allow-44)입니다."
+
+[validity_rules.eas-allow-45]
+description = "프로파일 허용 규칙(eas-allow-45)입니다."
+
+[validity_rules.eas-allow-46]
+description = "프로파일 허용 규칙(eas-allow-46)입니다."
+
+[validity_rules.eas-allow-47]
+description = "프로파일 허용 규칙(eas-allow-47)입니다."
+
+[validity_rules.eas-allow-48]
+description = "프로파일 허용 규칙(eas-allow-48)입니다."
+
+[validity_rules.eas-allow-49]
+description = "프로파일 허용 규칙(eas-allow-49)입니다."
+
+[validity_rules.eas-allow-50]
+description = "프로파일 허용 규칙(eas-allow-50)입니다."
+
+[validity_rules.eas-allow-51]
+description = "프로파일 허용 규칙(eas-allow-51)입니다."
+
+[validity_rules.eas-allow-52]
+description = "프로파일 허용 규칙(eas-allow-52)입니다."
+
+[validity_rules.eas-allow-53]
+description = "프로파일 허용 규칙(eas-allow-53)입니다."
+
+[validity_rules.eas-allow-54]
+description = "프로파일 허용 규칙(eas-allow-54)입니다."
+
+[validity_rules.eas-allow-55]
+description = "프로파일 허용 규칙(eas-allow-55)입니다."
+
+[validity_rules.eas-allow-56]
+description = "프로파일 허용 규칙(eas-allow-56)입니다."
+
+[validity_rules.eas-allow-57]
+description = "프로파일 허용 규칙(eas-allow-57)입니다."
+
+[validity_rules.eas-allow-58]
+description = "프로파일 허용 규칙(eas-allow-58)입니다."
+
+[validity_rules.eas-allow-59]
+description = "프로파일 허용 규칙(eas-allow-59)입니다."
+
+[validity_rules.eas-allow-60]
+description = "프로파일 허용 규칙(eas-allow-60)입니다."
+
+[validity_rules.eas-allow-61]
+description = "프로파일 허용 규칙(eas-allow-61)입니다."
+
+[validity_rules.eas-allow-62]
+description = "프로파일 허용 규칙(eas-allow-62)입니다."
+
+[validity_rules.eas-allow-63]
+description = "프로파일 허용 규칙(eas-allow-63)입니다."
+
+[validity_rules.eas-allow-64]
+description = "프로파일 허용 규칙(eas-allow-64)입니다."
+
+[validity_rules.eas-allow-65]
+description = "프로파일 허용 규칙(eas-allow-65)입니다."
+
+[validity_rules.eas-allow-66]
+description = "프로파일 허용 규칙(eas-allow-66)입니다."
+
+[validity_rules.eas-allow-67]
+description = "프로파일 허용 규칙(eas-allow-67)입니다."
+
+[validity_rules.eas-allow-68]
+description = "프로파일 허용 규칙(eas-allow-68)입니다."
+
+[validity_rules.eas-allow-69]
+description = "프로파일 허용 규칙(eas-allow-69)입니다."
+
+[validity_rules.eas-allow-70]
+description = "프로파일 허용 규칙(eas-allow-70)입니다."
+
+[validity_rules.eas-allow-71]
+description = "프로파일 허용 규칙(eas-allow-71)입니다."
+
+[validity_rules.eas-allow-72]
+description = "프로파일 허용 규칙(eas-allow-72)입니다."
+
+[validity_rules.eas-allow-73]
+description = "프로파일 허용 규칙(eas-allow-73)입니다."
+
+[validity_rules.eas-allow-74]
+description = "프로파일 허용 규칙(eas-allow-74)입니다."
+
+[validity_rules.eas-allow-75]
+description = "프로파일 허용 규칙(eas-allow-75)입니다."
+
+[validity_rules.eas-allow-76]
+description = "프로파일 허용 규칙(eas-allow-76)입니다."
+
+[validity_rules.eas-allow-77]
+description = "프로파일 허용 규칙(eas-allow-77)입니다."
+
+[validity_rules.eas-allow-78]
+description = "프로파일 허용 규칙(eas-allow-78)입니다."
+
+[validity_rules.eas-allow-79]
+description = "프로파일 허용 규칙(eas-allow-79)입니다."
+
+[validity_rules.eas-allow-80]
+description = "프로파일 허용 규칙(eas-allow-80)입니다."
+
+[validity_rules.eas-allow-81]
+description = "프로파일 허용 규칙(eas-allow-81)입니다."
+
+[validity_rules.eas-allow-82]
+description = "프로파일 허용 규칙(eas-allow-82)입니다."
+
+[validity_rules.eas-allow-83]
+description = "프로파일 허용 규칙(eas-allow-83)입니다."
+
+[validity_rules.eas-allow-84]
+description = "프로파일 허용 규칙(eas-allow-84)입니다."
+
+[validity_rules.eas-allow-85]
+description = "프로파일 허용 규칙(eas-allow-85)입니다."
+
+[validity_rules.eas-allow-86]
+description = "프로파일 허용 규칙(eas-allow-86)입니다."
+
+[validity_rules.eas-allow-87]
+description = "프로파일 허용 규칙(eas-allow-87)입니다."
+
+[validity_rules.eas-allow-88]
+description = "프로파일 허용 규칙(eas-allow-88)입니다."
+
+[validity_rules.eas-allow-89]
+description = "프로파일 허용 규칙(eas-allow-89)입니다."
+
+[validity_rules.eas-allow-90]
+description = "프로파일 허용 규칙(eas-allow-90)입니다."
+
+[validity_rules.eas-allow-91]
+description = "프로파일 허용 규칙(eas-allow-91)입니다."
+
+[validity_rules.eas-allow-92]
+description = "프로파일 허용 규칙(eas-allow-92)입니다."
+
+[validity_rules.eas-allow-93]
+description = "프로파일 허용 규칙(eas-allow-93)입니다."
+
+[validity_rules.eas-allow-94]
+description = "프로파일 허용 규칙(eas-allow-94)입니다."
+
+[validity_rules.eas-allow-95]
+description = "프로파일 허용 규칙(eas-allow-95)입니다."
+
+[validity_rules.eas-allow-96]
+description = "프로파일 허용 규칙(eas-allow-96)입니다."
+
+[validity_rules.eas-allow-97]
+description = "프로파일 허용 규칙(eas-allow-97)입니다."
+
+[validity_rules.eas-allow-98]
+description = "프로파일 허용 규칙(eas-allow-98)입니다."
+
+[validity_rules.eas-allow-99]
+description = "프로파일 허용 규칙(eas-allow-99)입니다."
+
+[validity_rules.eas-allow-100]
+description = "프로파일 허용 규칙(eas-allow-100)입니다."
+
+[validity_rules.eas-allow-101]
+description = "프로파일 허용 규칙(eas-allow-101)입니다."
+
+[validity_rules.eas-allow-102]
+description = "프로파일 허용 규칙(eas-allow-102)입니다."
+
+[validity_rules.eas-allow-103]
+description = "프로파일 허용 규칙(eas-allow-103)입니다."
+
+[validity_rules.eas-allow-104]
+description = "프로파일 허용 규칙(eas-allow-104)입니다."
+
+[validity_rules.eas-allow-105]
+description = "프로파일 허용 규칙(eas-allow-105)입니다."
+
+[validity_rules.eas-allow-106]
+description = "프로파일 허용 규칙(eas-allow-106)입니다."
+
+[validity_rules.eas-allow-107]
+description = "프로파일 허용 규칙(eas-allow-107)입니다."
+
+[validity_rules.eas-allow-108]
+description = "프로파일 허용 규칙(eas-allow-108)입니다."
+
+[validity_rules.eas-allow-109]
+description = "프로파일 허용 규칙(eas-allow-109)입니다."
+
+[validity_rules.eas-allow-110]
+description = "프로파일 허용 규칙(eas-allow-110)입니다."
+
+[validity_rules.eas-allow-111]
+description = "프로파일 허용 규칙(eas-allow-111)입니다."
+
+[validity_rules.eas-allow-112]
+description = "프로파일 허용 규칙(eas-allow-112)입니다."
+
+[validity_rules.eas-allow-113]
+description = "프로파일 허용 규칙(eas-allow-113)입니다."
+
+[validity_rules.eas-allow-114]
+description = "프로파일 허용 규칙(eas-allow-114)입니다."
+
+[validity_rules.eas-allow-115]
+description = "프로파일 허용 규칙(eas-allow-115)입니다."
+
+[validity_rules.eas-allow-116]
+description = "프로파일 허용 규칙(eas-allow-116)입니다."
+
+[validity_rules.eas-allow-117]
+description = "프로파일 허용 규칙(eas-allow-117)입니다."
+
+[validity_rules.eas-allow-118]
+description = "프로파일 허용 규칙(eas-allow-118)입니다."
+
+[validity_rules.eas-allow-119]
+description = "프로파일 허용 규칙(eas-allow-119)입니다."
+
+[validity_rules.eas-allow-120]
+description = "프로파일 허용 규칙(eas-allow-120)입니다."
+
+[validity_rules.eas-allow-121]
+description = "프로파일 허용 규칙(eas-allow-121)입니다."
+
+[validity_rules.eas-allow-122]
+description = "프로파일 허용 규칙(eas-allow-122)입니다."
+
+[validity_rules.eas-allow-123]
+description = "프로파일 허용 규칙(eas-allow-123)입니다."
+
+[validity_rules.eas-allow-124]
+description = "프로파일 허용 규칙(eas-allow-124)입니다."
+
+[validity_rules.eas-allow-125]
+description = "프로파일 허용 규칙(eas-allow-125)입니다."
+
+[validity_rules.eas-allow-126]
+description = "프로파일 허용 규칙(eas-allow-126)입니다."
+
+[validity_rules.eas-allow-127]
+description = "프로파일 허용 규칙(eas-allow-127)입니다."
+
+[validity_rules.eas-allow-128]
+description = "프로파일 허용 규칙(eas-allow-128)입니다."
+
+[validity_rules.eas-allow-129]
+description = "프로파일 허용 규칙(eas-allow-129)입니다."
+
+[validity_rules.eas-allow-130]
+description = "프로파일 허용 규칙(eas-allow-130)입니다."
+
+[validity_rules.eas-allow-131]
+description = "프로파일 허용 규칙(eas-allow-131)입니다."
+
+[validity_rules.eas-allow-132]
+description = "프로파일 허용 규칙(eas-allow-132)입니다."
+
+[validity_rules.eas-allow-133]
+description = "프로파일 허용 규칙(eas-allow-133)입니다."
+
+[validity_rules.eas-allow-134]
+description = "프로파일 허용 규칙(eas-allow-134)입니다."
+
+[validity_rules.eas-allow-135]
+description = "프로파일 허용 규칙(eas-allow-135)입니다."
+
+[validity_rules.eas-allow-136]
+description = "프로파일 허용 규칙(eas-allow-136)입니다."
+
+[validity_rules.eas-allow-137]
+description = "프로파일 허용 규칙(eas-allow-137)입니다."
+
+[validity_rules.eas-allow-138]
+description = "프로파일 허용 규칙(eas-allow-138)입니다."
+
+[validity_rules.eas-allow-139]
+description = "프로파일 허용 규칙(eas-allow-139)입니다."
+
+[validity_rules.eas-allow-140]
+description = "프로파일 허용 규칙(eas-allow-140)입니다."
+
+[validity_rules.eas-allow-141]
+description = "프로파일 허용 규칙(eas-allow-141)입니다."
+
+[validity_rules.eas-allow-142]
+description = "프로파일 허용 규칙(eas-allow-142)입니다."
+
+[validity_rules.eas-allow-143]
+description = "프로파일 허용 규칙(eas-allow-143)입니다."
+
+[validity_rules.eas-allow-144]
+description = "프로파일 허용 규칙(eas-allow-144)입니다."
+
+[validity_rules.eas-allow-145]
+description = "프로파일 허용 규칙(eas-allow-145)입니다."
+
+[validity_rules.eas-allow-146]
+description = "프로파일 허용 규칙(eas-allow-146)입니다."
+
+[validity_rules.eas-allow-147]
+description = "프로파일 허용 규칙(eas-allow-147)입니다."
+
+[validity_rules.eas-allow-148]
+description = "프로파일 허용 규칙(eas-allow-148)입니다."
+
+[validity_rules.eas-allow-149]
+description = "프로파일 허용 규칙(eas-allow-149)입니다."
+
+[validity_rules.eas-allow-150]
+description = "프로파일 허용 규칙(eas-allow-150)입니다."
+
+[validity_rules.eas-allow-151]
+description = "프로파일 허용 규칙(eas-allow-151)입니다."
+
+[validity_rules.eas-allow-152]
+description = "프로파일 허용 규칙(eas-allow-152)입니다."
+
+[validity_rules.eas-allow-153]
+description = "프로파일 허용 규칙(eas-allow-153)입니다."
+
+[validity_rules.eas-allow-154]
+description = "프로파일 허용 규칙(eas-allow-154)입니다."
+
+[validity_rules.eas-allow-155]
+description = "프로파일 허용 규칙(eas-allow-155)입니다."
+
+[validity_rules.eas-allow-156]
+description = "프로파일 허용 규칙(eas-allow-156)입니다."
+
+[validity_rules.eas-allow-157]
+description = "프로파일 허용 규칙(eas-allow-157)입니다."
+
+[validity_rules.eas-allow-158]
+description = "프로파일 허용 규칙(eas-allow-158)입니다."
+
+[validity_rules.eas-allow-159]
+description = "프로파일 허용 규칙(eas-allow-159)입니다."
+
+[validity_rules.eas-allow-160]
+description = "프로파일 허용 규칙(eas-allow-160)입니다."
+
+[validity_rules.eas-allow-161]
+description = "프로파일 허용 규칙(eas-allow-161)입니다."
+
+[validity_rules.eas-allow-162]
+description = "프로파일 허용 규칙(eas-allow-162)입니다."
+
+[validity_rules.eas-allow-163]
+description = "프로파일 허용 규칙(eas-allow-163)입니다."
+
+[validity_rules.eas-allow-164]
+description = "프로파일 허용 규칙(eas-allow-164)입니다."
+
+[validity_rules.eas-allow-165]
+description = "프로파일 허용 규칙(eas-allow-165)입니다."
+
+[validity_rules.eas-allow-166]
+description = "프로파일 허용 규칙(eas-allow-166)입니다."
+
+[validity_rules.eas-allow-167]
+description = "프로파일 허용 규칙(eas-allow-167)입니다."
+
+[validity_rules.eas-allow-168]
+description = "프로파일 허용 규칙(eas-allow-168)입니다."
+
+[validity_rules.eas-allow-169]
+description = "프로파일 허용 규칙(eas-allow-169)입니다."
+
+[validity_rules.eas-allow-170]
+description = "프로파일 허용 규칙(eas-allow-170)입니다."
+
+[validity_rules.eas-allow-171]
+description = "프로파일 허용 규칙(eas-allow-171)입니다."
+
+[validity_rules.eas-allow-172]
+description = "프로파일 허용 규칙(eas-allow-172)입니다."
+
+[validity_rules.eas-allow-173]
+description = "프로파일 허용 규칙(eas-allow-173)입니다."
+
+[validity_rules.eas-allow-174]
+description = "프로파일 허용 규칙(eas-allow-174)입니다."
+
+[validity_rules.eas-allow-175]
+description = "프로파일 허용 규칙(eas-allow-175)입니다."
+
+[validity_rules.eas-allow-176]
+description = "프로파일 허용 규칙(eas-allow-176)입니다."
+
+[validity_rules.eas-allow-177]
+description = "프로파일 허용 규칙(eas-allow-177)입니다."
+
+[validity_rules.eas-allow-178]
+description = "프로파일 허용 규칙(eas-allow-178)입니다."
+
+[validity_rules.eas-allow-179]
+description = "프로파일 허용 규칙(eas-allow-179)입니다."
+
+[validity_rules.eas-allow-180]
+description = "프로파일 허용 규칙(eas-allow-180)입니다."
+
+[validity_rules.eas-allow-181]
+description = "프로파일 허용 규칙(eas-allow-181)입니다."
+
+[validity_rules.eas-allow-182]
+description = "프로파일 허용 규칙(eas-allow-182)입니다."
+
+[validity_rules.eas-allow-183]
+description = "프로파일 허용 규칙(eas-allow-183)입니다."
+
+[validity_rules.eas-allow-184]
+description = "프로파일 허용 규칙(eas-allow-184)입니다."
+
+[validity_rules.eas-allow-185]
+description = "프로파일 허용 규칙(eas-allow-185)입니다."
+
+[validity_rules.eas-allow-186]
+description = "프로파일 허용 규칙(eas-allow-186)입니다."
+
+[validity_rules.eas-allow-187]
+description = "프로파일 허용 규칙(eas-allow-187)입니다."
+
+[validity_rules.eas-allow-188]
+description = "프로파일 허용 규칙(eas-allow-188)입니다."
+
+[validity_rules.eas-allow-189]
+description = "프로파일 허용 규칙(eas-allow-189)입니다."
+
+[validity_rules.eas-allow-190]
+description = "프로파일 허용 규칙(eas-allow-190)입니다."
+
+[validity_rules.eas-allow-191]
+description = "프로파일 허용 규칙(eas-allow-191)입니다."
+
+[validity_rules.eas-allow-192]
+description = "프로파일 허용 규칙(eas-allow-192)입니다."
+
+[validity_rules.eas-allow-193]
+description = "프로파일 허용 규칙(eas-allow-193)입니다."
+
+[validity_rules.eas-allow-194]
+description = "프로파일 허용 규칙(eas-allow-194)입니다."
+
+[validity_rules.eas-allow-195]
+description = "프로파일 허용 규칙(eas-allow-195)입니다."
+
+[validity_rules.eas-allow-196]
+description = "프로파일 허용 규칙(eas-allow-196)입니다."
+
+[validity_rules.eas-allow-197]
+description = "프로파일 허용 규칙(eas-allow-197)입니다."
+
+[validity_rules.eas-allow-198]
+description = "프로파일 허용 규칙(eas-allow-198)입니다."
+
+[validity_rules.eas-allow-199]
+description = "프로파일 허용 규칙(eas-allow-199)입니다."
+
+[validity_rules.eas-allow-200]
+description = "프로파일 허용 규칙(eas-allow-200)입니다."
+
+[validity_rules.eas-allow-201]
+description = "프로파일 허용 규칙(eas-allow-201)입니다."
+
+[validity_rules.eas-allow-202]
+description = "프로파일 허용 규칙(eas-allow-202)입니다."
+
+[validity_rules.eas-allow-203]
+description = "프로파일 허용 규칙(eas-allow-203)입니다."
+
+[validity_rules.eas-allow-204]
+description = "프로파일 허용 규칙(eas-allow-204)입니다."
+
+[validity_rules.eas-allow-205]
+description = "프로파일 허용 규칙(eas-allow-205)입니다."
+
+[validity_rules.eas-allow-206]
+description = "프로파일 허용 규칙(eas-allow-206)입니다."
+
+[validity_rules.eas-allow-207]
+description = "프로파일 허용 규칙(eas-allow-207)입니다."
+
+[validity_rules.eas-allow-208]
+description = "프로파일 허용 규칙(eas-allow-208)입니다."
+
+[validity_rules.eas-allow-209]
+description = "프로파일 허용 규칙(eas-allow-209)입니다."
+
+[validity_rules.eas-allow-210]
+description = "프로파일 허용 규칙(eas-allow-210)입니다."
+
+[validity_rules.eas-allow-211]
+description = "프로파일 허용 규칙(eas-allow-211)입니다."
+
+[validity_rules.eas-allow-212]
+description = "프로파일 허용 규칙(eas-allow-212)입니다."
+
+[validity_rules.eas-allow-213]
+description = "프로파일 허용 규칙(eas-allow-213)입니다."
+
+[validity_rules.eas-allow-214]
+description = "프로파일 허용 규칙(eas-allow-214)입니다."
+
+[validity_rules.eas-allow-215]
+description = "프로파일 허용 규칙(eas-allow-215)입니다."
+
+[validity_rules.eas-allow-216]
+description = "프로파일 허용 규칙(eas-allow-216)입니다."
+
+[validity_rules.eas-allow-217]
+description = "프로파일 허용 규칙(eas-allow-217)입니다."
+
+[validity_rules.eas-allow-218]
+description = "프로파일 허용 규칙(eas-allow-218)입니다."
+
+[validity_rules.eas-allow-219]
+description = "프로파일 허용 규칙(eas-allow-219)입니다."
+
+[validity_rules.eas-allow-220]
+description = "프로파일 허용 규칙(eas-allow-220)입니다."
+
+[validity_rules.eas-allow-221]
+description = "프로파일 허용 규칙(eas-allow-221)입니다."
+
+[validity_rules.eas-allow-222]
+description = "프로파일 허용 규칙(eas-allow-222)입니다."
+
+[validity_rules.eas-allow-223]
+description = "프로파일 허용 규칙(eas-allow-223)입니다."
+
+[validity_rules.eas-allow-224]
+description = "프로파일 허용 규칙(eas-allow-224)입니다."
+
+[validity_rules.eas-allow-225]
+description = "프로파일 허용 규칙(eas-allow-225)입니다."
+
+[validity_rules.eas-allow-226]
+description = "프로파일 허용 규칙(eas-allow-226)입니다."
+
+[validity_rules.eas-allow-227]
+description = "프로파일 허용 규칙(eas-allow-227)입니다."
+
+[validity_rules.eas-allow-228]
+description = "프로파일 허용 규칙(eas-allow-228)입니다."
+
+[validity_rules.eas-allow-229]
+description = "프로파일 허용 규칙(eas-allow-229)입니다."
+
+[validity_rules.eas-allow-230]
+description = "프로파일 허용 규칙(eas-allow-230)입니다."
+
+[validity_rules.eas-allow-231]
+description = "프로파일 허용 규칙(eas-allow-231)입니다."
+
+[validity_rules.eas-allow-232]
+description = "프로파일 허용 규칙(eas-allow-232)입니다."
+
+[validity_rules.eas-allow-233]
+description = "프로파일 허용 규칙(eas-allow-233)입니다."
+
+[validity_rules.eas-fallback-contains]
+description = "프로파일 기본 규칙(eas-fallback-contains)입니다."
+
+[validity_rules.eas-fallback-registers]
+description = "프로파일 기본 규칙(eas-fallback-registers)입니다."
+
+[validity_rules.eas-fallback-coordinates]
+description = "프로파일 기본 규칙(eas-fallback-coordinates)입니다."
+
+[validity_rules.eas-fallback-depends-on]
+description = "프로파일 기본 규칙(eas-fallback-depends-on)입니다."
+
+[validity_rules.eas-fallback-produces]
+description = "프로파일 기본 규칙(eas-fallback-produces)입니다."
+
+[validity_rules.eas-fallback-consumes]
+description = "프로파일 기본 규칙(eas-fallback-consumes)입니다."
+
+[validity_rules.eas-fallback-next]
+description = "프로파일 기본 규칙(eas-fallback-next)입니다."
+
+[validity_rules.eas-fallback-triggers]
+description = "프로파일 기본 규칙(eas-fallback-triggers)입니다."
+
+[validity_rules.eas-fallback-constrains]
+description = "프로파일 기본 규칙(eas-fallback-constrains)입니다."
+
+[validity_rules.eas-fallback-available-in]
+description = "프로파일 기본 규칙(eas-fallback-available-in)입니다."

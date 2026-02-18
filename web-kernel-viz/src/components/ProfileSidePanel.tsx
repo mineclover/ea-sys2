@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { fetchNeedsByKernelRef, fetchProfileDescription, fetchProfileTopology } from '@/api/client';
 import type { NeedsByKernelRefResult, ProfileDescription, ProfileTopologyResponse } from '@/api/types';
+import { getLayerColor } from '@/lib/layer-colors';
 
 
 interface ProfileSidePanelProps {
@@ -19,15 +20,6 @@ interface ProfileSidePanelProps {
     needOptions: { id: string; label: string }[];
     selectedNode?: string | null;
 }
-
-const LAYER_COLORS: Record<string, string> = {
-    Infra: '#64748b',
-    Governance: '#ef4444',
-    Decision: '#a855f7',
-    Needs: '#06b6d4',
-    Kernel: '#3b82f6',
-    Flow: '#22c55e',
-};
 
 export default function ProfileSidePanel({
     profileName,
@@ -52,7 +44,11 @@ export default function ProfileSidePanel({
     useEffect(() => {
         if (!profileName) return;
         fetchProfileDescription(profileName).then(setDesc).catch(() => setDesc(null));
-        fetchProfileTopology(profileName).then(setTopo).catch(() => setTopo(null));
+        fetchProfileTopology(profileName, {
+            view_mode: 'summary',
+            surface_only: true,
+            max_edges: 600,
+        }).then(setTopo).catch(() => setTopo(null));
     }, [profileName]);
 
     useEffect(() => {
@@ -87,15 +83,15 @@ export default function ProfileSidePanel({
         <div style={{ fontSize: 12, lineHeight: 1.6 }}>
             {/* Current Profile */}
             {profileName && (
-                <div style={{ marginBottom: 14, padding: '8px 10px', background: 'var(--bg-hover)', borderRadius: 6 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>
+                <div style={{ marginBottom: 14, padding: '8px 10px', background: 'var(--accent)', borderRadius: 6 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', marginBottom: 2 }}>
                         Current Profile
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)', wordBreak: 'break-all' }}>
                         {profileName}
                     </div>
                     {desc && (
-                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
+                        <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>
                             v{desc.version} · {desc.standard} · {desc.organization}
                         </div>
                     )}
@@ -104,9 +100,9 @@ export default function ProfileSidePanel({
                             <span key={layer} style={{
                                 fontSize: 9, fontWeight: 600,
                                 padding: '1px 6px', borderRadius: 3,
-                                background: LAYER_COLORS[layer] ? `${LAYER_COLORS[layer]}18` : '#e2e8f020',
-                                color: LAYER_COLORS[layer] || '#64748b',
-                                border: `1px solid ${LAYER_COLORS[layer] || '#e2e8f0'}40`,
+                                background: `${getLayerColor(layer).color}18`,
+                                color: getLayerColor(layer).color,
+                                border: `1px solid ${getLayerColor(layer).color}40`,
                             }}>
                                 {layer}
                             </span>
@@ -120,16 +116,16 @@ export default function ProfileSidePanel({
                 <div style={sectionStyle}>
                     <div style={labelStyle}>Summary</div>
                     <div style={statsGridStyle}>
-                        <StatBadge label="Elements" value={desc.element_count} color="#3b82f6" />
-                        <StatBadge label="Relations" value={desc.relation_count} color="#a855f7" />
-                        <StatBadge label="Rules" value={desc.rule_count} color="#f97316" />
-                        <StatBadge label="Edges" value={topo.edge_count} color="#22c55e" />
+                        <StatBadge label="Elements" value={desc.element_count} color={getLayerColor('Kernel').color} />
+                        <StatBadge label="Relations" value={desc.relation_count} color={getLayerColor('Decision').color} />
+                        <StatBadge label="Rules" value={desc.rule_count} color="var(--status-warning-text)" />
+                        <StatBadge label="Edges" value={topo.edge_count} color={getLayerColor('Flow').color} />
                     </div>
                     <div style={{ marginTop: 6, display: 'flex', gap: 6, marginBottom: 8 }}>
-                        <span style={{ ...miniPill, background: 'var(--success-bg)', color: 'var(--success-text)' }}>
+                        <span style={{ ...miniPill, background: 'var(--status-success-bg)', color: 'var(--status-success-text)' }}>
                             Allow {desc.rule_summary.allow}
                         </span>
-                        <span style={{ ...miniPill, background: 'var(--error-bg)', color: 'var(--error-text)' }}>
+                        <span style={{ ...miniPill, background: 'var(--status-error-bg)', color: 'var(--status-error-text)' }}>
                             Deny {desc.rule_summary.deny}
                         </span>
                     </div>
@@ -141,7 +137,7 @@ export default function ProfileSidePanel({
                         style={{
                             width: '100%', boxSizing: 'border-box',
                             fontSize: 10, fontFamily: 'monospace',
-                            color: 'var(--text-primary)', background: 'var(--bg-secondary)',
+                            color: 'var(--foreground)', background: 'var(--secondary)',
                             border: '1px solid var(--border)', borderRadius: 4,
                             padding: '6px 8px', resize: 'vertical',
                             lineHeight: 1.6,
@@ -164,8 +160,8 @@ export default function ProfileSidePanel({
                                 width: '100%', boxSizing: 'border-box',
                                 fontSize: 11, padding: '5px 6px',
                                 border: '1px solid var(--border)', borderRadius: 4,
-                                background: goalScope ? 'var(--accent-bg)' : 'var(--bg-card)',
-                                color: 'var(--text-primary)', cursor: 'pointer',
+                                background: goalScope ? 'var(--muted)' : 'var(--card)',
+                                color: 'var(--foreground)', cursor: 'pointer',
                             }}
                         >
                             <option value="">All (no scope)</option>
@@ -174,7 +170,7 @@ export default function ProfileSidePanel({
                             ))}
                         </select>
                         {scopeCount && (
-                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
+                            <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 4 }}>
                                 Showing {scopeCount.visible} of {scopeCount.total} elements
                             </div>
                         )}
@@ -193,8 +189,8 @@ export default function ProfileSidePanel({
                             width: '100%', boxSizing: 'border-box',
                             fontSize: 11, padding: '5px 6px',
                             border: '1px solid var(--border)', borderRadius: 4,
-                            background: needScope ? 'var(--success-bg)' : 'var(--bg-card)',
-                            color: 'var(--text-primary)', cursor: 'pointer',
+                            background: needScope ? 'var(--status-success-bg)' : 'var(--card)',
+                            color: 'var(--foreground)', cursor: 'pointer',
                         }}
                     >
                         <option value="">All (no scope)</option>
@@ -203,7 +199,7 @@ export default function ProfileSidePanel({
                         ))}
                     </select>
                     {needScopeCount && (
-                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
+                        <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 4 }}>
                             Showing {needScopeCount.visible} of {needScopeCount.total} elements
                         </div>
                     )}
@@ -214,29 +210,29 @@ export default function ProfileSidePanel({
             {selectedNode && (
                 <div style={sectionStyle}>
                     <div style={labelStyle}>Linked Needs</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                        Element: <strong style={{ color: 'var(--text-primary)' }}>{selectedNode}</strong>
+                    <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginBottom: 6 }}>
+                        Element: <strong style={{ color: 'var(--foreground)' }}>{selectedNode}</strong>
                     </div>
                     {loadingNeeds ? (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Loading...</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>Loading...</div>
                     ) : !linkedNeeds || linkedNeeds.matches.length === 0 ? (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 0' }}>No linked needs found</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted-foreground)', padding: '4px 0' }}>No linked needs found</div>
                     ) : (
                         linkedNeeds.matches.map((m) => (
                             <div key={`${m.catalog_id}-${m.need_id}`} style={{
                                 padding: '5px 8px', marginBottom: 4,
                                 border: '1px solid var(--border)', borderRadius: 4,
-                                fontSize: 11, background: 'var(--bg-secondary)',
+                                fontSize: 11, background: 'var(--secondary)',
                             }}>
-                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--foreground)' }}>
                                     {m.action} {m.subject}
                                 </div>
                                 <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{m.catalog_name}</span>
+                                    <span style={{ color: 'var(--muted-foreground)' }}>{m.catalog_name}</span>
                                     <span style={{
                                         padding: '0 4px', borderRadius: 2, fontSize: 10, fontWeight: 600,
-                                        background: m.status === 'active' ? 'var(--success-bg)' : 'var(--bg-hover)',
-                                        color: m.status === 'active' ? 'var(--success-text)' : 'var(--text-muted)',
+                                        background: m.status === 'active' ? 'var(--status-success-bg)' : 'var(--accent)',
+                                        color: m.status === 'active' ? 'var(--status-success-text)' : 'var(--muted-foreground)',
                                     }}>
                                         {m.status}
                                     </span>
@@ -253,7 +249,7 @@ export default function ProfileSidePanel({
                     <div style={labelStyle}>Layers</div>
                     {desc.elements_by_layer.map((lb) => {
                         const active = visibleLayers.has(lb.layer);
-                        const color = LAYER_COLORS[lb.layer] || '#64748b';
+                        const color = getLayerColor(lb.layer).color;
                         return (
                             <label
                                 key={lb.layer}
@@ -277,7 +273,7 @@ export default function ProfileSidePanel({
                                     background: color, display: 'inline-block',
                                 }} />
                                 <span style={{ flex: 1 }}>{lb.layer}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>{lb.count}</span>
+                                <span style={{ color: 'var(--muted-foreground)' }}>{lb.count}</span>
                             </label>
                         );
                     })}
@@ -291,9 +287,9 @@ export default function ProfileSidePanel({
                             type="checkbox"
                             checked={crossLayerOnly}
                             onChange={onToggleCrossLayer}
-                            style={{ accentColor: '#f97316' }}
+                            style={{ accentColor: 'var(--status-warning-text)' }}
                         />
-                        <span style={{ fontSize: 11, fontWeight: 600, color: crossLayerOnly ? '#f97316' : 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: crossLayerOnly ? 'var(--status-warning-text)' : 'var(--muted-foreground)' }}>
                             Cross-layer only
                         </span>
                     </label>
@@ -310,7 +306,7 @@ export default function ProfileSidePanel({
                             <div key={lb.layer} style={{ marginBottom: 8 }}>
                                 <div style={{
                                     fontSize: 11, fontWeight: 600,
-                                    color: LAYER_COLORS[lb.layer] || '#64748b',
+                                    color: getLayerColor(lb.layer).color,
                                     marginBottom: 2,
                                 }}>
                                     {lb.layer} ({lb.count})
@@ -319,12 +315,12 @@ export default function ProfileSidePanel({
                                     <div key={e.name} style={{
                                         padding: '2px 0 2px 10px',
                                         fontSize: 11,
-                                        color: 'var(--text-primary)',
-                                        borderLeft: `2px solid ${LAYER_COLORS[lb.layer] || 'var(--border)'}`,
+                                        color: 'var(--foreground)',
+                                        borderLeft: `2px solid ${getLayerColor(lb.layer).color}`,
                                         marginBottom: 1,
                                     }}>
                                         {e.name}
-                                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>
+                                        <span style={{ color: 'var(--muted-foreground)', marginLeft: 4 }}>
                                             {e.kernel_type}
                                         </span>
                                     </div>
@@ -345,8 +341,8 @@ export default function ProfileSidePanel({
                                 display: 'flex', justifyContent: 'space-between',
                                 padding: '2px 0', fontSize: 11,
                             }}>
-                                <span style={{ color: 'var(--text-primary)' }}>{rel}</span>
-                                <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                                <span style={{ color: 'var(--foreground)' }}>{rel}</span>
+                                <span style={{ color: 'var(--muted-foreground)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
                             </div>
                         ))}
                 </div>
@@ -364,7 +360,7 @@ export default function ProfileSidePanel({
                         style={{
                             width: '100%', boxSizing: 'border-box',
                             fontSize: 10, fontFamily: 'monospace',
-                            color: 'var(--text-primary)', background: 'var(--bg-secondary)',
+                            color: 'var(--foreground)', background: 'var(--secondary)',
                             border: '1px solid var(--border)', borderRadius: 4,
                             padding: '6px 8px', resize: 'vertical',
                             lineHeight: 1.6,
@@ -386,7 +382,7 @@ function StatBadge({ label, value, color }: { label: string; value: number; colo
             border: `1px solid ${color}20`,
         }}>
             <div style={{ fontSize: 16, fontWeight: 700, color }}>{value}</div>
-            <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
+            <div style={{ fontSize: 9, color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>{label}</div>
         </div>
     );
 }
@@ -395,7 +391,7 @@ const sectionStyle = { marginBottom: 16 };
 const labelStyle = {
     fontSize: 10 as const,
     fontWeight: 700 as const,
-    color: 'var(--text-muted)',
+    color: 'var(--muted-foreground)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     marginBottom: 6,

@@ -28,23 +28,233 @@ export interface TopologyNode {
     kernel_type: string;
     description: I18nString;
     display_name?: I18nString;
+    home_layer?: string | null;
+    ownership?: 'owned' | 'home_port' | 'foreign_port' | 'unknown';
+    profile_owners?: string[];
+}
+
+export interface TopologyRuleRef {
+    profile: string;
+    profile_layer_key?: string | null;
+    rule_id: string;
+    source_pattern: string;
+    target_pattern: string;
+    relation: string;
+    valid: boolean;
+    priority: number;
+    notes?: string;
+    description?: I18nString;
 }
 
 export interface TopologyEdge {
     source: string;
     target: string;
     relation: string;
-    rule_id: string;
     priority: number;
+    rule_count?: number;
+    edge_origin?: 'explicit' | 'expanded' | 'mixed';
+    explicit_count?: number;
+    expanded_count?: number;
+    semantic_axis?: string;
+    semantic_intent?: string;
+    surface_exposed?: boolean;
+}
+
+export interface ProfileDomainView {
+    profile_layer_key: string | null;
+    requested_scope: 'all' | 'owned' | 'bridge';
+    scope: 'all' | 'owned' | 'bridge';
+    scope_applied: boolean;
+    available_scopes: ('all' | 'owned' | 'bridge')[];
+    stats: {
+        edges_before_scope: number;
+        edges_after_scope: number;
+        owned_edges: number;
+        bridge_edges: number;
+        owned_nodes: number;
+        foreign_nodes: number;
+        home_model_ports: number;
+        foreign_model_ports: number;
+    };
+}
+
+export interface ProfileCompositionView {
+    mode: 'cross_profile';
+    anchor_profile: string;
+    anchor_layer_key: string | null;
+    included_profiles: string[];
+    requested_profiles: string[];
+    missing_profiles: string[];
+    source_profile_count: number;
+}
+
+export interface SurfaceFilterMeta {
+    enabled: boolean;
+    applied: boolean;
+    visible_relations: string[];
+    hidden_relations: string[];
 }
 
 export interface ProfileTopologyResponse {
     profile: string;
     nodes: TopologyNode[];
     edges: TopologyEdge[];
+    view_mode?: 'raw' | 'summary' | 'focus';
+    focus?: {
+        mode: 'core' | 'relation' | 'layer' | 'actor' | 'topic';
+        relation?: string;
+        layer?: string;
+        actor?: string;
+        actor_depth?: number;
+        topic?: string;
+        topic_depth?: number;
+        topic_tokens?: string[];
+        topic_seeds?: string[];
+        topic_matches?: {
+            name: string;
+            layer: string;
+            category: string;
+            score: number;
+            coverage: number;
+            matched_in: string[];
+        }[];
+        selected_relation_profile?: {
+            structural?: string[];
+            intent?: string[];
+        };
+        topic_filter_stats?: {
+            input_edges: number;
+            relation_candidate_edges: number;
+            structural_edges?: number;
+            intent_edges?: number;
+            scope_nodes?: number;
+            relation_filtered_out: number;
+            scope_filtered_out: number;
+        };
+        topic_policy?: {
+            default_depth?: number;
+            seed_score_ratio?: number;
+            seed_score_floor?: number;
+            min_token_coverage?: number;
+            max_seed_count?: number;
+            max_match_count?: number;
+            max_scope_nodes_per_depth?: number;
+        };
+        actor_candidates?: {
+            name: string;
+            layer: string;
+            category: string;
+            description: I18nString;
+            display_name?: I18nString | null;
+        }[];
+        selected_relations?: string[];
+        relation_candidates?: string[];
+        layer_candidates?: string[];
+        visibility_profile?: Record<string, string[]>;
+        visible_relations?: string[];
+        hidden_relations?: string[];
+    };
     node_count: number;
     edge_count: number;
+    edge_total_raw?: number;
+    edge_total_before_cap?: number;
+    edge_truncated?: boolean;
     relation_distribution: Record<string, number>;
+    semantic_view?: {
+        profile_scope?: string;
+        layer_key?: string;
+        axis_distribution?: Record<string, number>;
+        intent_distribution?: Record<string, number>;
+        surface_edges?: number;
+        deep_edges?: number;
+        dominant_axis?: string | null;
+        dominant_axis_share?: number;
+    };
+    surface_filter?: SurfaceFilterMeta;
+    domain_view?: ProfileDomainView;
+    composition?: ProfileCompositionView;
+}
+
+export interface ProfileProjectionMeta {
+    level: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
+    lens: 'panorama' | 'capability' | 'interaction' | 'execution' | 'trace';
+    description: string;
+    budget: {
+        default_max_edges: number;
+        effective_max_edges: number;
+    };
+    filters: {
+        relations: string[];
+        categories: string[];
+        domain_scope?: string;
+    };
+    drilldown: {
+        next_levels: string[];
+    };
+    source: {
+        view_mode: 'raw' | 'summary' | 'focus';
+        focus?: 'core' | 'relation' | 'layer' | 'actor' | 'topic' | null;
+        node_count: number;
+        edge_count: number;
+        edge_total_raw: number;
+    };
+    reduction?: {
+        nodes: {
+            source: number;
+            projected: number;
+            ratio: number;
+        };
+        edges: {
+            source: number;
+            source_raw: number;
+            before_cap: number;
+            projected: number;
+            ratio: number;
+            raw_ratio: number;
+            before_cap_ratio: number;
+            truncated?: boolean;
+        };
+        stages?: {
+            node_input?: number;
+            node_candidates?: number;
+            node_connected_or_preserved?: number;
+            edge_input?: number;
+            edge_after_node_scope?: number;
+            edge_after_relation?: number;
+            edge_before_cap?: number;
+            edge_after_cap?: number;
+        };
+        drop_reasons?: {
+            node_without_name?: number;
+            node_category_filtered?: number;
+            node_disconnected?: number;
+            edge_invalid_endpoint?: number;
+            edge_node_scope_filtered?: number;
+            edge_relation_filtered?: number;
+            edge_capped?: number;
+        };
+        preserve?: {
+            requested?: number;
+            matched?: number;
+            retained?: number;
+            unmatched?: string[];
+        };
+    };
+    seed?: {
+        actor?: string;
+        depth?: number;
+        actor_candidates?: {
+            name: string;
+            layer: string;
+            category: string;
+            description: I18nString;
+            display_name?: I18nString | null;
+        }[];
+    };
+}
+
+export interface ProfileProjectionResponse extends ProfileTopologyResponse {
+    projection: ProfileProjectionMeta;
 }
 
 export interface ReachableResponse {
@@ -122,6 +332,8 @@ export interface KernelRelationItem {
     name: string;
     parent: string | null;
     roles: KernelRoleItem[];
+    owns: string[];
+    owns_key: string | null;
     description: I18nString;
     display_name: I18nString | null;
 }
@@ -299,12 +511,20 @@ export interface NeedSummary {
     version: number;
     status: string;
     priority: string;
+    kernel_change_phase: NeedKernelChangePhase;
     stakeholder_id: string;
     action: string;
     subject: string;
     target: string | null;
     kernel_refs: string[];
     tags: string[];
+    purpose: string;
+    cause_types: string[];
+    complexity: string;
+    use_case_id: string | null;
+    decision_evidence_refs: string[];
+    inherited_from_decisions: string[];
+    decision_linked: boolean;
     updated_at: string;
 }
 
@@ -336,6 +556,100 @@ export interface NeedsCatalogDetail {
     relations: { id: string; source_id: string; target_id: string; type: string; description: string }[];
 }
 
+export type NeedPurpose =
+    | 'safety'
+    | 'efficiency'
+    | 'usability'
+    | 'compliance'
+    | 'growth'
+    | 'trust'
+    | 'unspecified';
+
+export type NeedKernelChangePhase = 'planned' | 'applied' | 'superseded' | 'rolled_back';
+
+export interface ExpressNeedPayload {
+    stakeholder_id: string;
+    action: string;
+    subject: string;
+    target?: string | null;
+    justifications?: { type: string; description: string }[];
+    priority?: 'critical' | 'high' | 'medium' | 'low';
+    kernel_refs?: string[];
+    tags?: string[];
+    use_case_id?: string | null;
+    cause_types?: string[];
+    purpose?: NeedPurpose;
+    complexity?: 'simple' | 'procedural' | 'complex';
+    kernel_change_phase?: NeedKernelChangePhase;
+}
+
+export interface ExpressNeedResponse {
+    catalog_id: string;
+    transaction_id: string;
+    need_id: string;
+    lineage_id: string;
+    version: number;
+}
+
+export interface AddNeedsUseCasePayload {
+    title: string;
+    actor: string;
+    situation: string;
+    purpose: string;
+    outcome?: string;
+    tags?: string[];
+}
+
+export interface ReviseNeedPayload {
+    action?: string;
+    subject?: string;
+    target?: string | null;
+    justifications?: { type: string; description: string }[];
+    priority?: 'critical' | 'high' | 'medium' | 'low';
+    kernel_refs?: string[];
+    tags?: string[];
+    use_case_id?: string | null;
+    cause_types?: string[];
+    purpose?: NeedPurpose;
+    complexity?: 'simple' | 'procedural' | 'complex';
+    kernel_change_phase?: NeedKernelChangePhase;
+    clone_process_units?: boolean;
+}
+
+export interface ReviseNeedResponse {
+    catalog_id: string;
+    transaction_id: string;
+    need_id: string;
+    lineage_id: string;
+    version: number;
+}
+
+export interface AddNeedProcessUnitPayload {
+    stage: 'identify' | 'query' | 'model_detail' | string;
+    label: string;
+    description?: string;
+    sequence?: number;
+    metadata?: Record<string, string>;
+}
+
+export interface AddNeedProcessUnitResponse {
+    catalog_id: string;
+    transaction_id: string;
+    process_unit_id: string;
+}
+
+export interface InheritNeedDecisionEvidencePayload {
+    decision_id: string;
+    evidence_refs: string[];
+    kernel_change_phase?: NeedKernelChangePhase;
+}
+
+export interface InheritNeedDecisionEvidenceResponse {
+    catalog_id: string;
+    transaction_id: string;
+    need_id: string;
+}
+
 export interface NeedsByKernelRefResult {
     kernel_ref: string;
     matches: {
@@ -345,14 +659,17 @@ export interface NeedsByKernelRefResult {
         action: string;
         subject: string;
         status: string;
+        kernel_change_phase: NeedKernelChangePhase;
     }[];
 }
 
 // --- Layer Schema (M2 profile data) ---
 
 export interface LayerSchemaElement {
+    identifier?: string;
     name: string;
     kernel_type: string;
+    kernel_layer?: string;
     category: string;
     description: I18nString;
     display_name: I18nString | null;
@@ -365,32 +682,188 @@ export interface LayerSchemaElementGroup {
 }
 
 export interface LayerSchemaRelation {
+    identifier?: string;
     name: string;
     kernel_relation: string;
+    kernel_layer?: string;
     description: I18nString;
     display_name: I18nString | null;
     direction: string | null;
 }
 
 export interface LayerSchemaRule {
+    identifier?: string;
     source: string;
     target: string;
     relation: string;
     valid: boolean;
     priority: number;
     notes: string;
+    description?: I18nString;
+    source_pattern_kind?: string;
+    target_pattern_kind?: string;
+    profile_name?: string;
+    profile_layer_key?: string;
+    profile_rule_id?: string;
+    profile_rule_identifier?: string;
+}
+
+export interface LayerM2BlueprintCategory {
+    identifier: string;
+    name: string;
+    kernel_type: string;
+    kernel_layer: string;
+    description?: I18nString;
+    display_name?: I18nString | null;
+    element_count: number;
+    sample_elements: string[];
+}
+
+export interface LayerM2BlueprintRelation {
+    identifier: string;
+    name: string;
+    kernel_relation: string;
+    kernel_layer: string;
+    description?: I18nString;
+    display_name?: I18nString | null;
+    direction: string;
+}
+
+export interface LayerM2BlueprintRule {
+    identifier: string;
+    source_category: string;
+    target_category: string;
+    relation: string;
+    kernel_relation: string;
+    kernel_layer: string;
+    rule_count: number;
+    priority_max: number;
+    source_examples: string[];
+    target_examples: string[];
+    profile_name?: string;
+    profile_layer_key?: string;
+    profile_rule_ids?: string[];
+    profile_rule_identifiers?: string[];
+}
+
+export interface LayerM2Blueprint {
+    categories: LayerM2BlueprintCategory[];
+    relations: LayerM2BlueprintRelation[];
+    rules: LayerM2BlueprintRule[];
+    summary: {
+        category_count: number;
+        relation_count: number;
+        rule_edge_count: number;
+    };
+    layer_responsibilities: {
+        layer: string;
+        role: string;
+        role_i18n?: I18nString;
+    }[];
+}
+
+export interface LayerM2IdentifierSystem {
+    layer_key: string;
+    profile_name?: string;
+    namespace: string;
+    object_identifiers: {
+        element: string;
+        relation: string;
+        category: string;
+    };
+    rule_identifier: {
+        pattern: string;
+        digest_algorithm: string;
+        digest_length: number;
+        input_template: string;
+        valid_encoding: { true: number; false: number };
+    };
+    profile_rule_binding?: {
+        profile_rule_identifier_pattern: string;
+        binding_fields: string[];
+    };
+    kernel_layer_mapping: {
+        entity: string;
+        relation: string;
+    };
+}
+
+export interface LayerProjectionUIPresetConfig {
+    source_mode: 'topology' | 'projection' | 'composed';
+    view_mode?: 'raw' | 'summary' | 'focus';
+    projection_level?: 'l0' | 'l1' | 'l2' | 'l3' | 'l4';
+    focus_mode?: 'core' | 'relation' | 'layer' | 'actor' | 'topic';
+    focus_depth?: number;
+    domain_scope: 'all' | 'owned' | 'bridge';
+    surface_only: boolean;
+    max_edges: number;
+}
+
+export interface LayerProjectionUIPolicy {
+    edge_budget_options: number[];
+    preset_order: string[];
+    defaults: {
+        safety_mode: boolean;
+        surface_only: boolean;
+        domain_scope: 'all' | 'owned' | 'bridge';
+    };
+    safety_caps: {
+        topology: {
+            raw: number;
+            summary: number;
+            focus: number;
+        };
+        composed: {
+            summary: number;
+            focus: number;
+        };
+        projection: {
+            l0: number;
+            l1: number;
+            l2: number;
+            l3: number;
+            l4: number;
+        };
+    };
+    presets: Record<string, LayerProjectionUIPresetConfig>;
+}
+
+export interface LayerProjectionPolicy {
+    profile_name: string;
+    source: string;
+    scope: string;
+    layer_key?: string | null;
+    schema_contract?: Record<string, unknown>;
+    actor_default_depth: number;
+    lens_to_level: Record<string, string>;
+    levels: Record<string, {
+        level: string;
+        lens: string;
+        description: string;
+        base_view_mode: string;
+        base_focus?: string | null;
+        allowed_relations: string[];
+        allowed_categories: string[];
+        default_max_edges: number;
+        next_levels: string[];
+    }>;
+    topic: Record<string, unknown>;
+    ui: LayerProjectionUIPolicy;
 }
 
 export interface LayerSchemaResponse {
     layer_key: string;
     profile_name: string;
     version: string;
+    identifier_system?: LayerM2IdentifierSystem;
     element_count: number;
     relation_count: number;
     rule_count: number;
     elements_by_layer: LayerSchemaElementGroup[];
     relations: LayerSchemaRelation[];
     rules: LayerSchemaRule[];
+    m2_blueprint?: LayerM2Blueprint;
+    projection_policy?: LayerProjectionPolicy;
 }
 
 export interface LayerStackSnapshotItem {
@@ -482,6 +955,35 @@ export interface SimulationResult {
 }
 
 // --- Model Registration ---
+
+export type ModelChangePhase = 'planned' | 'applied' | 'superseded' | 'rolled_back';
+
+export interface ModelRegisterPayload {
+    profile_toml: string;
+    decision_id: string;
+    owner?: string;
+    model_name?: string;
+    activate?: boolean;
+    on_exists?: string;
+    evidence_refs?: string[];
+    change_phase?: ModelChangePhase;
+}
+
+export interface ModelValidatePayload {
+    model_name: string;
+    version: string;
+    decision_id: string;
+    evidence_refs?: string[];
+    change_phase?: ModelChangePhase;
+}
+
+export interface ModelActivatePayload {
+    model_name: string;
+    version: string;
+    decision_id: string;
+    evidence_refs?: string[];
+    change_phase?: ModelChangePhase;
+}
 
 export interface ModelRegistrationResult {
     model_name: string;

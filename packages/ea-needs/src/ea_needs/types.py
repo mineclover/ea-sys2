@@ -61,6 +61,14 @@ class NeedStatus(StrEnum):
     WITHDRAWN = "withdrawn"
 
 
+class NeedKernelChangePhase(StrEnum):
+    """Kernel reflection phase driven by this need."""
+    PLANNED = "planned"
+    APPLIED = "applied"
+    SUPERSEDED = "superseded"
+    ROLLED_BACK = "rolled_back"
+
+
 class NeedRelationType(StrEnum):
     """Directed relationship between two needs."""
     DEPENDS_ON = "depends_on"
@@ -78,6 +86,17 @@ class NeedCauseType(StrEnum):
     LOGICAL = "logical"
     MENTAL = "mental"
     PHILOSOPHICAL = "philosophical"
+
+
+class NeedPurpose(StrEnum):
+    """Canonical purpose taxonomy for stakeholder needs."""
+    SAFETY = "safety"
+    EFFICIENCY = "efficiency"
+    USABILITY = "usability"
+    COMPLIANCE = "compliance"
+    GROWTH = "growth"
+    TRUST = "trust"
+    UNSPECIFIED = "unspecified"
 
 
 class NeedResolutionComplexity(StrEnum):
@@ -176,7 +195,7 @@ class NeedStatement:
     kernel_refs: list[str] = field(default_factory=list)  # ea-kernel entity IDs
     tags: list[str] = field(default_factory=list)
     use_case_id: str | None = None
-    purpose: str = ""
+    purpose: NeedPurpose = NeedPurpose.UNSPECIFIED
     cause_types: list[NeedCauseType] = field(default_factory=list)
     complexity: NeedResolutionComplexity = NeedResolutionComplexity.PROCEDURAL
     expressed_at: str = field(default_factory=_now)

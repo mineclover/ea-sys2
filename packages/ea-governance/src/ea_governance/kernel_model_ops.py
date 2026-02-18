@@ -51,6 +51,62 @@ class KernelModelOps:
         )
         return snapshot_id
 
+    @staticmethod
+    def _context_string(context: dict[str, Any] | None, key: str) -> str | None:
+        if not isinstance(context, dict):
+            return None
+        raw = context.get(key)
+        if not isinstance(raw, str):
+            return None
+        normalized = raw.strip()
+        if len(normalized) == 0:
+            return None
+        return normalized
+
+    def _resolve_causal_contract(
+        self,
+        *,
+        operation: str,
+        context: dict[str, Any] | None,
+        decision_id: str | None,
+        cause_type: str | None,
+        cause_id: str | None,
+        change_phase: str | None,
+    ) -> dict[str, Any]:
+        resolved_cause_id = self._dt.normalize_cause_id(cause_id)
+        if resolved_cause_id is None:
+            resolved_cause_id = self._context_string(context, "cause_id")
+        if resolved_cause_id is None:
+            resolved_cause_id = self._context_string(context, "need_id")
+        if resolved_cause_id is None:
+            resolved_cause_id = decision_id
+
+        default_cause_type = "decision" if decision_id is not None else "need"
+        context_cause_type = self._context_string(context, "cause_type")
+        resolved_cause_type, cause_warning = self._dt.normalize_cause_type(
+            cause_type or context_cause_type,
+            default=default_cause_type,
+        )
+
+        context_phase = self._context_string(context, "change_phase")
+        resolved_change_phase, phase_warning = self._dt.normalize_change_phase(
+            change_phase or context_phase,
+            operation=operation,
+        )
+
+        warnings: list[str] = []
+        if cause_warning is not None:
+            warnings.append(cause_warning)
+        if phase_warning is not None:
+            warnings.append(phase_warning)
+
+        return {
+            "cause_type": resolved_cause_type,
+            "cause_id": resolved_cause_id,
+            "change_phase": resolved_change_phase,
+            "warnings": warnings,
+        }
+
     def register_kernel_model(
         self,
         profile_toml: str,
@@ -64,6 +120,9 @@ class KernelModelOps:
         actor: str = "governance",
         decision_id: str | None = None,
         evidence_refs: list[str] | tuple[str, ...] | None = None,
+        cause_type: str | None = None,
+        cause_id: str | None = None,
+        change_phase: str | None = None,
         return_transaction: bool = False,
     ) -> dict[str, Any]:
         if on_exists not in ("validate", "error"):
@@ -83,10 +142,21 @@ class KernelModelOps:
 
         normalized_decision_id = self._dt.normalize_decision_id(decision_id)
         normalized_evidence_refs = self._dt.normalize_evidence_refs(evidence_refs)
-        decision_warnings = self._dt.decision_trace_warnings(
-            normalized_decision_id,
-            normalized_evidence_refs,
+        causal_contract = self._resolve_causal_contract(
+            operation="register",
+            context=context,
+            decision_id=normalized_decision_id,
+            cause_type=cause_type,
+            cause_id=cause_id,
+            change_phase=change_phase,
         )
+        decision_warnings = [
+            *self._dt.decision_trace_warnings(
+                normalized_decision_id,
+                normalized_evidence_refs,
+            ),
+            *causal_contract["warnings"],
+        ]
 
         tx = self._execution_service.tx_manager.begin_transaction(
             f"kernel_model_register_{profile.name}_{profile.version}",
@@ -100,6 +170,9 @@ class KernelModelOps:
                 "on_exists": on_exists,
                 "decision_id": normalized_decision_id,
                 "evidence_count": len(normalized_evidence_refs),
+                "cause_type": causal_contract["cause_type"],
+                "cause_id": causal_contract["cause_id"],
+                "change_phase": causal_contract["change_phase"],
             },
         )
 
@@ -108,6 +181,12 @@ class KernelModelOps:
             context_obj["decision_id"] = normalized_decision_id
         if normalized_evidence_refs and "evidence_refs" not in context_obj:
             context_obj["evidence_refs"] = list(normalized_evidence_refs)
+        if "cause_type" not in context_obj:
+            context_obj["cause_type"] = causal_contract["cause_type"]
+        if causal_contract["cause_id"] is not None and "cause_id" not in context_obj:
+            context_obj["cause_id"] = causal_contract["cause_id"]
+        if "change_phase" not in context_obj:
+            context_obj["change_phase"] = causal_contract["change_phase"]
 
         try:
             try:
@@ -154,6 +233,9 @@ class KernelModelOps:
                     "validation_run_id": run_id,
                     "created": created,
                     "actor": actor,
+                    "cause_type": causal_contract["cause_type"],
+                    "cause_id": causal_contract["cause_id"],
+                    "change_phase": causal_contract["change_phase"],
                 },
             )
             if activation is not None:
@@ -166,6 +248,9 @@ class KernelModelOps:
                         "status": activation.status,
                         "active_version_id": activation.active_version_id,
                         "actor": created_by or actor,
+                        "cause_type": causal_contract["cause_type"],
+                        "cause_id": causal_contract["cause_id"],
+                        "change_phase": "applied",
                     },
                 )
             self._execution_service.tx_manager.add_event(
@@ -190,6 +275,9 @@ class KernelModelOps:
                             "operation": "register",
                             "model_name": profile.name,
                             "version": profile.version,
+                            "cause_type": causal_contract["cause_type"],
+                            "cause_id": causal_contract["cause_id"],
+                            "change_phase": causal_contract["change_phase"],
                         },
                     )
                 self._dt.record_model_decision_trace(
@@ -202,6 +290,9 @@ class KernelModelOps:
                     transaction_id=tx.id,
                     evidence_refs=normalized_evidence_refs,
                     warnings=decision_warnings,
+                    cause_type=causal_contract["cause_type"],
+                    cause_id=causal_contract["cause_id"],
+                    change_phase=causal_contract["change_phase"],
                     detail={
                         "created": created,
                         "validation_run_id": run_id,
@@ -220,6 +311,9 @@ class KernelModelOps:
                         "operation": "register",
                         "model_name": profile.name,
                         "version": profile.version,
+                        "cause_type": causal_contract["cause_type"],
+                        "cause_id": causal_contract["cause_id"],
+                        "change_phase": causal_contract["change_phase"],
                     },
                 )
             self._execution_service.tx_manager.commit(tx.id)
@@ -242,6 +336,9 @@ class KernelModelOps:
                 "trace_model_id": self._dt.decision_trace_model_id(normalized_decision_id),
                 "evidence_refs": list(normalized_evidence_refs),
                 "warnings": list(decision_warnings),
+                "cause_type": causal_contract["cause_type"],
+                "cause_id": causal_contract["cause_id"],
+                "change_phase": causal_contract["change_phase"],
             }
         if return_transaction:
             response["transaction_id"] = tx.id
@@ -256,14 +353,28 @@ class KernelModelOps:
         actor: str = "governance",
         decision_id: str | None = None,
         evidence_refs: list[str] | tuple[str, ...] | None = None,
+        cause_type: str | None = None,
+        cause_id: str | None = None,
+        change_phase: str | None = None,
         return_transaction: bool = False,
     ) -> ValidationRunEntry | dict[str, Any]:
         normalized_decision_id = self._dt.normalize_decision_id(decision_id)
         normalized_evidence_refs = self._dt.normalize_evidence_refs(evidence_refs)
-        decision_warnings = self._dt.decision_trace_warnings(
-            normalized_decision_id,
-            normalized_evidence_refs,
+        causal_contract = self._resolve_causal_contract(
+            operation="validate",
+            context=context,
+            decision_id=normalized_decision_id,
+            cause_type=cause_type,
+            cause_id=cause_id,
+            change_phase=change_phase,
         )
+        decision_warnings = [
+            *self._dt.decision_trace_warnings(
+                normalized_decision_id,
+                normalized_evidence_refs,
+            ),
+            *causal_contract["warnings"],
+        ]
 
         tx = self._execution_service.tx_manager.begin_transaction(
             f"kernel_model_validate_{model_name}_{version}",
@@ -275,6 +386,9 @@ class KernelModelOps:
                 "actor": actor,
                 "decision_id": normalized_decision_id,
                 "evidence_count": len(normalized_evidence_refs),
+                "cause_type": causal_contract["cause_type"],
+                "cause_id": causal_contract["cause_id"],
+                "change_phase": causal_contract["change_phase"],
             },
         )
 
@@ -284,6 +398,12 @@ class KernelModelOps:
                 context_obj["decision_id"] = normalized_decision_id
             if normalized_evidence_refs and "evidence_refs" not in context_obj:
                 context_obj["evidence_refs"] = list(normalized_evidence_refs)
+            if "cause_type" not in context_obj:
+                context_obj["cause_type"] = causal_contract["cause_type"]
+            if causal_contract["cause_id"] is not None and "cause_id" not in context_obj:
+                context_obj["cause_id"] = causal_contract["cause_id"]
+            if "change_phase" not in context_obj:
+                context_obj["change_phase"] = causal_contract["change_phase"]
             run = self._model_registration.validate_registered(
                 model_name,
                 version,
@@ -300,6 +420,9 @@ class KernelModelOps:
                     "run_id": run.run_id,
                     "passed": run.passed,
                     "actor": actor,
+                    "cause_type": causal_contract["cause_type"],
+                    "cause_id": causal_contract["cause_id"],
+                    "change_phase": causal_contract["change_phase"],
                 },
             )
             self._execution_service.tx_manager.add_event(
@@ -324,6 +447,9 @@ class KernelModelOps:
                             "operation": "validate",
                             "model_name": model_name,
                             "version": version,
+                            "cause_type": causal_contract["cause_type"],
+                            "cause_id": causal_contract["cause_id"],
+                            "change_phase": causal_contract["change_phase"],
                         },
                     )
                 self._dt.record_model_decision_trace(
@@ -336,6 +462,9 @@ class KernelModelOps:
                     transaction_id=tx.id,
                     evidence_refs=normalized_evidence_refs,
                     warnings=decision_warnings,
+                    cause_type=causal_contract["cause_type"],
+                    cause_id=causal_contract["cause_id"],
+                    change_phase=causal_contract["change_phase"],
                     detail={
                         "run_id": run.run_id,
                         "passed": run.passed,
@@ -352,6 +481,9 @@ class KernelModelOps:
                         "model_name": model_name,
                         "version": version,
                         "run_id": run.run_id,
+                        "cause_type": causal_contract["cause_type"],
+                        "cause_id": causal_contract["cause_id"],
+                        "change_phase": causal_contract["change_phase"],
                     },
                 )
             self._execution_service.tx_manager.commit(tx.id)
@@ -367,6 +499,9 @@ class KernelModelOps:
                     "trace_model_id": self._dt.decision_trace_model_id(normalized_decision_id),
                     "evidence_refs": list(normalized_evidence_refs),
                     "warnings": list(decision_warnings),
+                    "cause_type": causal_contract["cause_type"],
+                    "cause_id": causal_contract["cause_id"],
+                    "change_phase": causal_contract["change_phase"],
                 }
             return response
         return run
@@ -379,14 +514,28 @@ class KernelModelOps:
         actor: str = "governance",
         decision_id: str | None = None,
         evidence_refs: list[str] | tuple[str, ...] | None = None,
+        cause_type: str | None = None,
+        cause_id: str | None = None,
+        change_phase: str | None = None,
         return_transaction: bool = False,
     ) -> ModelRegistryEntry | dict[str, Any]:
         normalized_decision_id = self._dt.normalize_decision_id(decision_id)
         normalized_evidence_refs = self._dt.normalize_evidence_refs(evidence_refs)
-        decision_warnings = self._dt.decision_trace_warnings(
-            normalized_decision_id,
-            normalized_evidence_refs,
+        causal_contract = self._resolve_causal_contract(
+            operation="activate",
+            context=None,
+            decision_id=normalized_decision_id,
+            cause_type=cause_type,
+            cause_id=cause_id,
+            change_phase=change_phase,
         )
+        decision_warnings = [
+            *self._dt.decision_trace_warnings(
+                normalized_decision_id,
+                normalized_evidence_refs,
+            ),
+            *causal_contract["warnings"],
+        ]
 
         tx = self._execution_service.tx_manager.begin_transaction(
             f"kernel_model_activate_{model_name}_{version}",
@@ -398,6 +547,9 @@ class KernelModelOps:
                 "actor": actor,
                 "decision_id": normalized_decision_id,
                 "evidence_count": len(normalized_evidence_refs),
+                "cause_type": causal_contract["cause_type"],
+                "cause_id": causal_contract["cause_id"],
+                "change_phase": causal_contract["change_phase"],
             },
         )
 
@@ -413,6 +565,9 @@ class KernelModelOps:
                     "status": model.status,
                     "active_version_id": model.active_version_id,
                     "actor": actor,
+                    "cause_type": causal_contract["cause_type"],
+                    "cause_id": causal_contract["cause_id"],
+                    "change_phase": causal_contract["change_phase"],
                 },
             )
             self._execution_service.tx_manager.add_event(
@@ -437,6 +592,9 @@ class KernelModelOps:
                             "operation": "activate",
                             "model_name": model_name,
                             "version": version,
+                            "cause_type": causal_contract["cause_type"],
+                            "cause_id": causal_contract["cause_id"],
+                            "change_phase": causal_contract["change_phase"],
                         },
                     )
                 self._dt.record_model_decision_trace(
@@ -449,6 +607,9 @@ class KernelModelOps:
                     transaction_id=tx.id,
                     evidence_refs=normalized_evidence_refs,
                     warnings=decision_warnings,
+                    cause_type=causal_contract["cause_type"],
+                    cause_id=causal_contract["cause_id"],
+                    change_phase=causal_contract["change_phase"],
                     detail={
                         "active_version_id": model.active_version_id,
                         "owner": model.owner,
@@ -464,6 +625,9 @@ class KernelModelOps:
                         "model_name": model_name,
                         "version": version,
                         "active_version_id": model.active_version_id,
+                        "cause_type": causal_contract["cause_type"],
+                        "cause_id": causal_contract["cause_id"],
+                        "change_phase": causal_contract["change_phase"],
                     },
                 )
             self._execution_service.tx_manager.commit(tx.id)
@@ -479,6 +643,9 @@ class KernelModelOps:
                     "trace_model_id": self._dt.decision_trace_model_id(normalized_decision_id),
                     "evidence_refs": list(normalized_evidence_refs),
                     "warnings": list(decision_warnings),
+                    "cause_type": causal_contract["cause_type"],
+                    "cause_id": causal_contract["cause_id"],
+                    "change_phase": causal_contract["change_phase"],
                 }
             return response
         return model

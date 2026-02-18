@@ -66,6 +66,7 @@ def test_register_model_and_query_state(client):
         "owner": "qa-team",
         "created_by": "api-tester",
         "activate": False,
+        "decision_id": "dec-api-model-register-001",
     }
     register_response = client.post("/models/register", json=payload)
     assert register_response.status_code == 200
@@ -88,6 +89,7 @@ def test_register_existing_model_revalidates(client):
         "profile_toml": _profile_toml(name="APIDedupModel", version="1.0"),
         "owner": "qa-team",
         "created_by": "api-tester",
+        "decision_id": "dec-api-model-register-002",
     }
     first = client.post("/models/register", json=payload)
     second = client.post("/models/register", json=payload)
@@ -108,20 +110,30 @@ def test_validate_and_activate_model(client):
             "profile_toml": _profile_toml(name="APIActivateModel", version="1.0"),
             "owner": "qa-team",
             "created_by": "api-tester",
+            "decision_id": "dec-api-model-register-003",
         },
     )
     assert register_response.status_code == 200
 
     validate_response = client.post(
         "/models/validate",
-        json={"model_name": "APIActivateModel", "version": "1.0"},
+        json={
+            "model_name": "APIActivateModel",
+            "version": "1.0",
+            "decision_id": "dec-api-model-validate-003",
+        },
     )
     assert validate_response.status_code == 200
     assert validate_response.json()["passed"] is True
 
     activate_response = client.post(
         "/models/activate",
-        json={"model_name": "APIActivateModel", "version": "1.0", "actor": "ops"},
+        json={
+            "model_name": "APIActivateModel",
+            "version": "1.0",
+            "actor": "ops",
+            "decision_id": "dec-api-model-activate-003",
+        },
     )
     assert activate_response.status_code == 200
     act = activate_response.json()
@@ -132,6 +144,26 @@ def test_validate_and_activate_model(client):
 def test_register_invalid_toml_returns_400(client):
     response = client.post(
         "/models/register",
-        json={"profile_toml": "not valid toml", "owner": "qa-team", "created_by": "api-tester"},
+        json={
+            "profile_toml": "not valid toml",
+            "owner": "qa-team",
+            "created_by": "api-tester",
+            "decision_id": "dec-api-model-register-004",
+        },
     )
     assert response.status_code == 400
+
+
+def test_register_requires_decision_id(client):
+    response = client.post(
+        "/models/register",
+        json={
+            "profile_toml": _profile_toml(name="MissingDecisionModel", version="1.0"),
+            "owner": "qa-team",
+            "created_by": "api-tester",
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["category"] == "bad_request"
+    assert "decision_id is required" in detail["detail"]

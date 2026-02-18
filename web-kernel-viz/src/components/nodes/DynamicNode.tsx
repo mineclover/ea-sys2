@@ -11,6 +11,7 @@ export interface HandleConfig {
 
 export type DynamicNodeData = {
     label: string;
+    subLabel?: string;
     description?: string;
     handles?: {
         top?: HandleConfig[];
@@ -47,7 +48,7 @@ const HandleGroup = ({
                     style={{
                         left: (position === Position.Top || position === Position.Bottom) ? `${handle.offset}%` : undefined,
                         top: (position === Position.Left || position === Position.Right) ? `${handle.offset}%` : undefined,
-                        background: 'var(--bg-card)',
+                        background: 'var(--card)',
                         border: `2px solid ${accentColor}`,
                         width: 8,
                         height: 8,
@@ -83,7 +84,7 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
             minWidth: customStyle.width || (DESIGN_SYSTEM.node.width - 20),
             minHeight: customStyle.height,
             borderRadius: borderRadius,
-            background: customStyle.backgroundColor || 'var(--bg-card)',
+            background: customStyle.backgroundColor || 'var(--card)',
             boxShadow: glowShadow || (selected ? `0 0 0 2px ${config.color}, 0 4px 6px -1px var(--shadow-lg)` : `0 1px 3px 0 var(--shadow-lg), 0 1px 2px -1px var(--shadow-lg)`),
             border: `1px solid ${borderColor}`,
             borderWidth: customStyle.borderWidth || 1,
@@ -118,20 +119,33 @@ export const DynamicNode = memo(({ data, selected }: NodeProps<DynamicNodeType>)
                 minHeight: 40,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: data.description ? 4 : 0,
+                gap: data.subLabel || data.description ? 4 : 0,
             }}>
                 <span style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: 'var(--text-primary)',
+                    color: 'var(--foreground)',
                     lineHeight: 1.3,
                 }}>
                     {data.label}
                 </span>
+                {data.subLabel && data.subLabel !== data.label && (
+                    <span style={{
+                        fontSize: 10,
+                        color: 'var(--muted-foreground)',
+                        lineHeight: 1.25,
+                        maxWidth: 200,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}>
+                        {data.subLabel}
+                    </span>
+                )}
                 {data.description && (
                     <span style={{
                         fontSize: 10,
-                        color: 'var(--text-secondary)',
+                        color: 'var(--muted-foreground)',
                         lineHeight: 1.4,
                         maxWidth: 200,
                         overflow: 'hidden',

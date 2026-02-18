@@ -16,7 +16,7 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
             right: 0,
             width: 480,
             height: '100vh',
-            background: 'var(--bg-card)',
+            background: 'var(--card)',
             boxShadow: '-4px 0 12px var(--shadow-lg)',
             zIndex: 1000,
             display: 'flex',
@@ -34,7 +34,7 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
                     margin: 0,
                     fontSize: 16,
                     fontWeight: 600,
-                    color: 'var(--text-primary)',
+                    color: 'var(--foreground)',
                 }}>
                     Flow Logic: {anchorId}
                 </h2>
@@ -45,7 +45,7 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
                         background: 'transparent',
                         cursor: 'pointer',
                         fontSize: 20,
-                        color: 'var(--text-secondary)',
+                        color: 'var(--muted-foreground)',
                         padding: 4,
                     }}
                 >
@@ -60,7 +60,7 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
             }}>
                 {isLoading && (
                     <div style={{
-                        color: 'var(--text-secondary)',
+                        color: 'var(--muted-foreground)',
                         fontSize: 14,
                         textAlign: 'center',
                         marginTop: 40,
@@ -72,10 +72,10 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
                 {error && (
                     <div style={{
                         padding: 12,
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--status-error-bg)',
+                        border: '1px solid var(--status-error-bg)',
                         borderRadius: 6,
-                        color: 'var(--error-text)',
+                        color: 'var(--status-error-text)',
                         fontSize: 13,
                     }}>
                         Error loading flow logic: {error instanceof Error ? error.message : 'Unknown error'}
@@ -88,14 +88,14 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
                             <div key={key} style={{
                                 marginBottom: 16,
                                 padding: 12,
-                                background: 'var(--bg-secondary)',
+                                background: 'var(--secondary)',
                                 borderRadius: 6,
                                 border: '1px solid var(--border)',
                             }}>
                                 <div style={{
                                     fontSize: 11,
                                     fontWeight: 700,
-                                    color: 'var(--text-muted)',
+                                    color: 'var(--muted-foreground)',
                                     textTransform: 'uppercase',
                                     marginBottom: 6,
                                 }}>
@@ -103,7 +103,7 @@ export default function FlowLogicViewer({ anchorId, onClose }: FlowLogicViewerPr
                                 </div>
                                 <div style={{
                                     fontSize: 13,
-                                    color: 'var(--text-primary)',
+                                    color: 'var(--foreground)',
                                     whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word',
                                 }}>

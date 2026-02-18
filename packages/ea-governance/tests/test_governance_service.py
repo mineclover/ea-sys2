@@ -154,6 +154,8 @@ def test_layer_schema_lang_ko_returns_i18n_fields():
         if has_ko:
             break
     assert has_ko
+    assert result["m2_blueprint"]["categories"][0]["display_name"]["ko"]
+    assert result["m2_blueprint"]["layer_responsibilities"][0]["role_i18n"]["ko"]
 
 
 def test_business_flow_lang_ko_returns_i18n_fields():
@@ -170,3 +172,90 @@ def test_business_flow_lang_ko_returns_i18n_fields():
         if has_ko:
             break
     assert has_ko
+
+
+def test_layer_schema_infra_has_stable_m2_identifiers():
+    result = layer_schema("infra", lang="en")
+    assert "error" not in result
+
+    first_elem = result["elements_by_layer"][0]["elements"][0]
+    first_rel = result["relations"][0]
+    first_rule = result["rules"][0]
+
+    assert first_elem["identifier"].startswith("m2::infra::element::")
+    assert first_rel["identifier"].startswith("m2::infra::relation::")
+    assert first_rule["identifier"].startswith("m2::infra::rule::")
+
+    identifier_system = result["identifier_system"]
+    assert identifier_system["namespace"] == "m2"
+    assert identifier_system["profile_name"] == "EASystem-Infra"
+    assert identifier_system["object_identifiers"]["element"] == "m2::infra::element::{element_name}"
+    assert identifier_system["rule_identifier"]["digest_algorithm"] == "sha1"
+    assert identifier_system["rule_identifier"]["digest_length"] == 12
+    assert identifier_system["profile_rule_binding"]["profile_rule_identifier_pattern"].startswith(
+        "m1::EASystem-Infra::rule::",
+    )
+
+    assert first_rule["profile_name"] == "EASystem-Infra"
+    assert first_rule["profile_layer_key"] == "infra"
+    assert first_rule["profile_rule_id"]
+    assert first_rule["profile_rule_identifier"].startswith("m1::EASystem-Infra::rule::")
+
+
+def test_layer_schema_infra_has_kernel_style_blueprint():
+    result = layer_schema("infra", lang="en")
+    assert "error" not in result
+
+    blueprint = result["m2_blueprint"]
+    assert blueprint["summary"]["category_count"] > 0
+    assert blueprint["summary"]["rule_edge_count"] > 0
+
+    first_category = blueprint["categories"][0]
+    assert first_category["identifier"].startswith("m2::infra::category::")
+    assert first_category["kernel_layer"] in {"L1", "L4"}
+    assert "display_name" in first_category
+    assert "description" in first_category
+
+    first_relation = blueprint["relations"][0]
+    assert first_relation["kernel_layer"] in {"L2", "L3"}
+    assert "description" in first_relation
+
+    responsibilities = blueprint["layer_responsibilities"]
+    assert [item["layer"] for item in responsibilities] == ["L1", "L2", "L3", "L4"]
+    assert all(item["role"] for item in responsibilities)
+
+
+def test_layer_schema_needs_has_kernel_style_blueprint_and_identifier_system():
+    result = layer_schema("needs", lang="en")
+    assert "error" not in result
+
+    first_elem = result["elements_by_layer"][0]["elements"][0]
+    assert first_elem["identifier"].startswith("m2::needs::element::")
+
+    identifier_system = result["identifier_system"]
+    assert identifier_system["namespace"] == "m2"
+    assert identifier_system["profile_name"] == "EASystem-Needs"
+    assert identifier_system["object_identifiers"]["element"] == "m2::needs::element::{element_name}"
+    assert identifier_system["rule_identifier"]["digest_algorithm"] == "sha1"
+
+    blueprint = result["m2_blueprint"]
+    assert blueprint["summary"]["category_count"] > 0
+    assert blueprint["summary"]["rule_edge_count"] > 0
+    assert blueprint["categories"][0]["kernel_layer"] in {"L1", "L4"}
+    assert blueprint["relations"][0]["kernel_layer"] in {"L2", "L3"}
+    first_blueprint_rule = blueprint["rules"][0]
+    assert first_blueprint_rule["profile_name"] == "EASystem-Needs"
+    assert first_blueprint_rule["profile_layer_key"] == "needs"
+
+
+def test_layer_schema_exposes_toml_projection_ui_policy():
+    result = layer_schema("infra", lang="en")
+    assert "error" not in result
+    projection_policy = result["projection_policy"]
+    assert projection_policy["source"] in {"toml", "fallback"}
+    assert projection_policy["layer_key"] == "infra"
+    ui = projection_policy["ui"]
+    assert ui["preset_order"]
+    assert ui["edge_budget_options"]
+    assert ui["presets"]["overview"]["max_edges"] == 320
+    assert ui["presets"]["actor-route"]["focus_depth"] == 2

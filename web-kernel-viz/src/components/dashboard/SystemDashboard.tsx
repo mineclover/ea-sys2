@@ -3,27 +3,16 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGovernanceDashboard, useCrossLayerSummary, useNeedsCatalogs, useGovernanceRules, usePromotionProposals } from '@/api/hooks';
 import { LoadingSpinner, StatCard } from '@/components/ui';
-
-const LAYER_COLORS: Record<string, string> = {
-    infra: '#64748b',
-    governance: '#ef4444',
-    decision: '#a855f7',
-    needs: '#06b6d4',
-    kernel: '#3b82f6',
-    flow: '#22c55e',
-};
-
-function layerColor(key: string): string {
-    return LAYER_COLORS[key] ?? '#94a3b8';
-}
+import { PageHeader } from '@/components/layout';
+import { getLayerColor } from '@/lib/layer-colors';
 
 function SectionHeader({ title, right }: { title: string; right?: string }) {
     return (
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {title}
             </h3>
-            {right && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{right}</span>}
+            {right && <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>{right}</span>}
         </div>
     );
 }
@@ -33,26 +22,26 @@ function LayerCard({ layerKey, name, version, profileName, elementCount, relatio
     elementCount: number; relationCount: number; ruleCount: number; loaded: boolean;
     onClick: () => void;
 }) {
-    const color = layerColor(layerKey);
+    const color = getLayerColor(layerKey).color;
     return (
         <div
             onClick={onClick}
             style={{
                 flex: '1 1 140px', minWidth: 140, maxWidth: 200,
-                padding: '12px 14px', background: 'var(--bg-card)',
+                padding: '12px 14px', background: 'var(--card)',
                 border: '1px solid var(--border)', borderLeft: `4px solid ${color}`,
                 borderRadius: 8, cursor: 'pointer',
                 transition: 'border-color 0.15s, box-shadow 0.15s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(59,130,246,0.10)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(59,130,246,0.10)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.borderLeftColor = color; e.currentTarget.style.boxShadow = 'none'; }}
         >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{name}</span>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: loaded ? '#22c55e' : 'var(--border)', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)' }}>{name}</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: loaded ? 'var(--color-layer-flow)' : 'var(--border)', flexShrink: 0 }} />
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>{profileName} v{version}</div>
-            <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 8 }}>{profileName} v{version}</div>
+            <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--muted-foreground)' }}>
                 <span>E:{elementCount}</span>
                 <span>R:{relationCount}</span>
                 <span>Ru:{ruleCount}</span>
@@ -67,15 +56,15 @@ function StackCard({ stackId, name, version, profileName, elementCount, relation
 }) {
     return (
         <div style={{
-            flex: '1 1 220px', minWidth: 220, padding: '12px 16px', background: 'var(--bg-card)',
-            border: '1px solid var(--border)', borderLeft: `4px solid ${LAYER_COLORS.governance}`, borderRadius: 8,
+            flex: '1 1 220px', minWidth: 220, padding: '12px 16px', background: 'var(--card)',
+            border: '1px solid var(--border)', borderLeft: `4px solid ${getLayerColor('governance').color}`, borderRadius: 8,
         }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{name || stackId}</span>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: loaded ? '#22c55e' : 'var(--border)', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)' }}>{name || stackId}</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: loaded ? 'var(--color-layer-flow)' : 'var(--border)', flexShrink: 0 }} />
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>{profileName} v{version}</div>
-            <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginBottom: 8 }}>{profileName} v{version}</div>
+            <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--muted-foreground)' }}>
                 <span>E:{elementCount}</span>
                 <span>R:{relationCount}</span>
                 <span>Ru:{ruleCount}</span>
@@ -90,10 +79,10 @@ function FrameworkBadge({ name, version, elementCount, relationCount, ruleCount 
     return (
         <div style={{
             display: 'inline-flex', flexDirection: 'column', gap: 2,
-            padding: '8px 12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12,
+            padding: '8px 12px', background: 'var(--secondary)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12,
         }}>
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{name} {version}</span>
-            <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>E:{elementCount} R:{relationCount} Ru:{ruleCount}</span>
+            <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{name} {version}</span>
+            <span style={{ fontSize: 10, color: 'var(--muted-foreground)' }}>E:{elementCount} R:{relationCount} Ru:{ruleCount}</span>
         </div>
     );
 }
@@ -126,12 +115,9 @@ export default function SystemDashboard() {
     return (
         <div style={{
             flex: 1, overflow: 'auto', padding: '24px 32px',
-            fontFamily: 'system-ui, -apple-system, sans-serif', background: 'var(--bg-secondary)',
+            fontFamily: 'system-ui, -apple-system, sans-serif', background: 'var(--secondary)',
         }}>
-            <div style={{ marginBottom: 24 }}>
-                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>System Overview</h1>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>EA-Sys Governance Framework</p>
-            </div>
+            <PageHeader metaKey="dashboard" />
 
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
                 {dashboard && (
@@ -205,11 +191,11 @@ export default function SystemDashboard() {
                         {ruleStateDist && (
                             <div style={{
                                 flex: '1 1 280px', minWidth: 280, padding: '14px 16px',
-                                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
+                                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
                             }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-foreground)', marginBottom: 10 }}>
                                     Rule State Distribution
-                                    <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>{ruleStateDist.total} total</span>
+                                    <span style={{ fontWeight: 400, color: 'var(--muted-foreground)', marginLeft: 8 }}>{ruleStateDist.total} total</span>
                                 </div>
                                 <div style={{ display: 'flex', gap: 4, height: 20, borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
                                     {Object.entries(ruleStateDist.dist).map(([state, count]) => (
@@ -218,7 +204,7 @@ export default function SystemDashboard() {
                                             title={`${state}: ${count}`}
                                             style={{
                                                 flex: count,
-                                                background: state === 'active' ? '#22c55e' : state === 'proposed' ? 'var(--accent)' : state === 'draft' ? 'var(--text-muted)' : state === 'deprecated' ? '#ef4444' : 'var(--border)',
+                                                background: state === 'active' ? 'var(--color-layer-flow)' : state === 'proposed' ? 'var(--primary)' : state === 'draft' ? 'var(--muted-foreground)' : state === 'deprecated' ? 'var(--destructive)' : 'var(--border)',
                                                 minWidth: count > 0 ? 4 : 0,
                                             }}
                                         />
@@ -229,10 +215,10 @@ export default function SystemDashboard() {
                                         <div key={state} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                                             <span style={{
                                                 width: 8, height: 8, borderRadius: 2,
-                                                background: state === 'active' ? '#22c55e' : state === 'proposed' ? 'var(--accent)' : state === 'draft' ? 'var(--text-muted)' : state === 'deprecated' ? '#ef4444' : 'var(--border)',
+                                                background: state === 'active' ? 'var(--color-layer-flow)' : state === 'proposed' ? 'var(--primary)' : state === 'draft' ? 'var(--muted-foreground)' : state === 'deprecated' ? 'var(--destructive)' : 'var(--border)',
                                             }} />
-                                            <span style={{ color: 'var(--text-secondary)' }}>{state}</span>
-                                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{count}</span>
+                                            <span style={{ color: 'var(--muted-foreground)' }}>{state}</span>
+                                            <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{count}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -243,15 +229,15 @@ export default function SystemDashboard() {
                                 onClick={() => navigate('/governance/simulation')}
                                 style={{
                                     flex: '0 1 240px', minWidth: 200, padding: '14px 16px',
-                                    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
+                                    background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
                                     cursor: 'pointer',
                                 }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#a855f7'; }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-layer-decision)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                             >
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Pending Promotions</div>
-                                <div style={{ fontSize: 24, fontWeight: 700, color: '#a855f7', marginBottom: 4 }}>{pendingProposals.length}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>proposals awaiting review</div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-foreground)', marginBottom: 8 }}>Pending Promotions</div>
+                                <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-layer-decision)', marginBottom: 4 }}>{pendingProposals.length}</div>
+                                <div style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>proposals awaiting review</div>
                             </div>
                         )}
                         <StatCard

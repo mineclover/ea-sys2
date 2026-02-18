@@ -8,6 +8,7 @@ import {
 } from '@/api/hooks';
 import { useAppState } from '@/contexts/AppStateContext';
 import { Card, ErrorBanner, LoadingSpinner, Badge } from '@/components/ui';
+import { PageHeader } from '@/components/layout';
 import type { I18nAuditItem, I18nTranslationItem } from '@/api/types';
 
 type TranslationKind = 'all' | 'element' | 'relation' | 'rule' | 'layer';
@@ -135,9 +136,10 @@ export default function TranslationManager() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <PageHeader metaKey="admin.i18n" compact />
       {/* Audit Summary */}
       <Card>
-        <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--foreground)', marginBottom: '16px' }}>
           Translation Coverage - {lang.toUpperCase()}
         </h2>
 
@@ -149,10 +151,10 @@ export default function TranslationManager() {
                 onClick={() => setAuditScope(scope)}
                 style={{
                   padding: '6px 12px',
-                  backgroundColor: auditScope === scope ? 'var(--accent)' : 'var(--bg-secondary)',
-                  color: auditScope === scope ? 'white' : 'var(--text-primary)',
+                  backgroundColor: auditScope === scope ? 'var(--primary)' : 'var(--secondary)',
+                  color: auditScope === scope ? 'white' : 'var(--foreground)',
                   border: '1px solid',
-                  borderColor: auditScope === scope ? 'var(--accent)' : 'var(--border)',
+                  borderColor: auditScope === scope ? 'var(--primary)' : 'var(--border)',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: '500',
@@ -167,7 +169,7 @@ export default function TranslationManager() {
 
           {auditScope === 'm1' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              <label style={{ fontSize: '13px', color: 'var(--muted-foreground)', fontWeight: 500 }}>
                 Profile
               </label>
               <select
@@ -176,9 +178,9 @@ export default function TranslationManager() {
                 style={{
                   padding: '6px 10px',
                   borderRadius: '6px',
-                  border: '1px solid var(--border-strong)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-primary)',
+                  border: '1px solid var(--input)',
+                  backgroundColor: 'var(--card)',
+                  color: 'var(--foreground)',
                   fontSize: '13px',
                   minWidth: '260px',
                 }}
@@ -209,22 +211,22 @@ export default function TranslationManager() {
                 justifyContent: 'space-between',
                 marginBottom: '8px',
                 fontSize: '14px',
-                color: 'var(--text-secondary)'
+                color: 'var(--muted-foreground)'
               }}>
                 <span>Coverage</span>
-                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{coveragePercent}%</span>
+                <span style={{ fontWeight: '600', color: 'var(--foreground)' }}>{coveragePercent}%</span>
               </div>
               <div style={{
                 width: '100%',
                 height: '12px',
-                backgroundColor: 'var(--bg-hover)',
+                backgroundColor: 'var(--accent)',
                 borderRadius: '6px',
                 overflow: 'hidden'
               }}>
                 <div style={{
                   width: `${coveragePercent}%`,
                   height: '100%',
-                  backgroundColor: coveragePercent === 100 ? '#10b981' : coveragePercent > 50 ? 'var(--accent)' : '#f59e0b',
+                  backgroundColor: coveragePercent === 100 ? 'var(--status-success-text)' : coveragePercent > 50 ? 'var(--primary)' : 'var(--status-warning-text)',
                   transition: 'width 0.3s ease'
                 }} />
               </div>
@@ -236,42 +238,42 @@ export default function TranslationManager() {
               gridTemplateColumns: 'repeat(4, 1fr)',
               gap: '16px',
               padding: '16px',
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: 'var(--secondary)',
               borderRadius: '6px'
             }}>
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>
                   Total
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--foreground)' }}>
                   {totalCount}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>
                   Translated
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '600', color: '#10b981' }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--status-success-text)' }}>
                   {translatedCount}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>
                   Missing
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '600', color: '#ef4444' }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: 'var(--destructive)' }}>
                   {missingCount}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>
                   Scope
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--foreground)', textTransform: 'uppercase' }}>
                   {audit.scope}
                 </div>
                 {audit.scope === 'm1' && (
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
                     {(audit as { profile?: string }).profile || selectedProfile}
                   </div>
                 )}
@@ -280,18 +282,18 @@ export default function TranslationManager() {
 
             {/* Audit Issues */}
             <div style={{ marginTop: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '8px' }}>
                 Audit Issues ({filteredAuditIssues.length})
               </div>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                <span style={{ padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--error-bg)', color: '#b91c1c', fontSize: '11px', fontWeight: 600 }}>
+                <span style={{ padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--status-error-bg)', color: 'var(--destructive)', fontSize: '11px', fontWeight: 600 }}>
                   missing {missingItems.length}
                 </span>
-                <span style={{ padding: '3px 8px', borderRadius: '999px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: '11px', fontWeight: 600 }}>
+                <span style={{ padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--status-warning-bg)', color: 'var(--status-warning-text)', fontSize: '11px', fontWeight: 600 }}>
                   orphan {orphanItems.length}
                 </span>
-                <span style={{ padding: '3px 8px', borderRadius: '999px', backgroundColor: '#ede9fe', color: '#5b21b6', fontSize: '11px', fontWeight: 600 }}>
+                <span style={{ padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--status-indigo-bg)', color: 'var(--status-indigo-text)', fontSize: '11px', fontWeight: 600 }}>
                   stale {staleItems.length}
                 </span>
               </div>
@@ -303,9 +305,9 @@ export default function TranslationManager() {
                   style={{
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: '1px solid var(--border-strong)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-primary)',
+                    border: '1px solid var(--input)',
+                    backgroundColor: 'var(--card)',
+                    color: 'var(--foreground)',
                     fontSize: '12px',
                   }}
                 >
@@ -320,9 +322,9 @@ export default function TranslationManager() {
                   style={{
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: '1px solid var(--border-strong)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-primary)',
+                    border: '1px solid var(--input)',
+                    backgroundColor: 'var(--card)',
+                    color: 'var(--foreground)',
                     fontSize: '12px',
                   }}
                 >
@@ -338,8 +340,8 @@ export default function TranslationManager() {
                   style={{
                     padding: '6px 10px',
                     borderRadius: '6px',
-                    border: '1px solid var(--border-strong)',
-                    color: 'var(--text-primary)',
+                    border: '1px solid var(--input)',
+                    color: 'var(--foreground)',
                     fontSize: '12px',
                     minWidth: '260px',
                     flex: 1,
@@ -354,7 +356,7 @@ export default function TranslationManager() {
                       key={`${item.issue}:${item.identifier}:${idx}`}
                       style={{
                         padding: '8px 10px',
-                        backgroundColor: 'var(--bg-card)',
+                        backgroundColor: 'var(--card)',
                         border: '1px solid var(--border)',
                         borderRadius: '6px',
                         fontSize: '12px',
@@ -370,23 +372,23 @@ export default function TranslationManager() {
                             fontSize: '10px',
                             fontWeight: 700,
                             textTransform: 'uppercase',
-                            backgroundColor: item.issue === 'missing' ? 'var(--error-bg)' : item.issue === 'orphan' ? '#fef3c7' : '#ede9fe',
-                            color: item.issue === 'missing' ? '#b91c1c' : item.issue === 'orphan' ? '#92400e' : '#5b21b6',
+                            backgroundColor: item.issue === 'missing' ? 'var(--status-error-bg)' : item.issue === 'orphan' ? 'var(--status-warning-bg)' : 'var(--status-indigo-bg)',
+                            color: item.issue === 'missing' ? 'var(--destructive)' : item.issue === 'orphan' ? 'var(--status-warning-text)' : 'var(--status-indigo-text)',
                           }}
                         >
                           {item.issue}
                         </span>
-                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.name}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>.{item.field ?? '-'}</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>({item.kind})</span>
+                        <span style={{ fontWeight: '600', color: 'var(--foreground)' }}>{item.name}</span>
+                        <span style={{ color: 'var(--muted-foreground)' }}>.{item.field ?? '-'}</span>
+                        <span style={{ color: 'var(--muted-foreground)' }}>({item.kind})</span>
                       </div>
 
-                      <div style={{ marginBottom: '6px', color: 'var(--text-secondary)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                      <div style={{ marginBottom: '6px', color: 'var(--muted-foreground)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                         {item.identifier}
                       </div>
 
                       {item.issue === 'stale' && (item.en_recorded || item.en_current) && (
-                        <div style={{ marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                        <div style={{ marginBottom: '6px', color: 'var(--muted-foreground)' }}>
                           EN source: {item.en_recorded || '(empty)'} → {item.en_current || '(empty)'}
                         </div>
                       )}
@@ -395,10 +397,10 @@ export default function TranslationManager() {
                         onClick={() => handleCopyIdentifier(item.identifier)}
                         style={{
                           padding: '4px 8px',
-                          backgroundColor: copiedIdentifier === item.identifier ? '#10b981' : 'var(--bg-secondary)',
-                          color: copiedIdentifier === item.identifier ? 'white' : 'var(--text-primary)',
+                          backgroundColor: copiedIdentifier === item.identifier ? 'var(--status-success-text)' : 'var(--secondary)',
+                          color: copiedIdentifier === item.identifier ? 'white' : 'var(--foreground)',
                           border: '1px solid',
-                          borderColor: copiedIdentifier === item.identifier ? '#10b981' : 'var(--border-strong)',
+                          borderColor: copiedIdentifier === item.identifier ? 'var(--status-success-text)' : 'var(--input)',
                           borderRadius: '4px',
                           fontSize: '11px',
                           cursor: 'pointer',
@@ -409,13 +411,13 @@ export default function TranslationManager() {
                     </div>
                   ))}
                   {filteredAuditIssues.length > 50 && (
-                    <div style={{ padding: '6px 10px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <div style={{ padding: '6px 10px', fontSize: '12px', color: 'var(--muted-foreground)' }}>
                       +{filteredAuditIssues.length - 50} more
                     </div>
                   )}
                 </div>
               ) : (
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--muted-foreground)' }}>
                   No audit issues match the current filters
                 </div>
               )}
@@ -427,7 +429,7 @@ export default function TranslationManager() {
       {/* Translation Table */}
       <Card>
         <div style={{ marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--foreground)', marginBottom: '12px' }}>
             Translations
           </h2>
 
@@ -439,10 +441,10 @@ export default function TranslationManager() {
                 onClick={() => setSelectedKind(kind)}
                 style={{
                   padding: '6px 12px',
-                  backgroundColor: selectedKind === kind ? 'var(--accent)' : 'var(--bg-secondary)',
-                  color: selectedKind === kind ? 'white' : 'var(--text-primary)',
+                  backgroundColor: selectedKind === kind ? 'var(--primary)' : 'var(--secondary)',
+                  color: selectedKind === kind ? 'white' : 'var(--foreground)',
                   border: '1px solid',
-                  borderColor: selectedKind === kind ? 'var(--accent)' : 'var(--border)',
+                  borderColor: selectedKind === kind ? 'var(--primary)' : 'var(--border)',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: '500',
@@ -464,7 +466,7 @@ export default function TranslationManager() {
           <LoadingSpinner />
         ) : filteredTranslations.length > 0 ? (
           <div style={{
-            backgroundColor: 'var(--bg-secondary)',
+            backgroundColor: 'var(--secondary)',
             border: '1px solid var(--border)',
             borderRadius: '6px',
             overflow: 'hidden'
@@ -475,11 +477,11 @@ export default function TranslationManager() {
               gridTemplateColumns: '200px 1fr 120px 100px',
               gap: '16px',
               padding: '12px 16px',
-              backgroundColor: 'var(--bg-hover)',
+              backgroundColor: 'var(--accent)',
               borderBottom: '1px solid var(--border)',
               fontSize: '12px',
               fontWeight: '600',
-              color: 'var(--text-secondary)'
+              color: 'var(--muted-foreground)'
             }}>
               <div>Key</div>
               <div>Translation</div>
@@ -504,12 +506,12 @@ export default function TranslationManager() {
                       padding: '12px 16px',
                       borderBottom: '1px solid var(--border)',
                       alignItems: 'center',
-                      backgroundColor: isMissing ? 'var(--error-bg)' : 'var(--bg-card)'
+                      backgroundColor: isMissing ? 'var(--status-error-bg)' : 'var(--card)'
                     }}
                   >
                     <div style={{
                       fontSize: '13px',
-                      color: 'var(--text-secondary)',
+                      color: 'var(--muted-foreground)',
                       fontFamily: 'monospace',
                       wordBreak: 'break-all'
                     }}>
@@ -525,7 +527,7 @@ export default function TranslationManager() {
                           style={{
                             width: '100%',
                             padding: '6px 8px',
-                            border: '1px solid var(--accent)',
+                            border: '1px solid var(--primary)',
                             borderRadius: '4px',
                             fontSize: '14px'
                           }}
@@ -534,7 +536,7 @@ export default function TranslationManager() {
                       ) : (
                         <div style={{
                           fontSize: '14px',
-                          color: isMissing ? '#ef4444' : 'var(--text-primary)'
+                          color: isMissing ? 'var(--destructive)' : 'var(--foreground)'
                         }}>
                           {translation.value || '(missing)'}
                         </div>
@@ -553,7 +555,7 @@ export default function TranslationManager() {
                             disabled={updateTranslation.isPending}
                             style={{
                               padding: '4px 8px',
-                              backgroundColor: '#10b981',
+                              backgroundColor: 'var(--status-success-text)',
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
@@ -570,7 +572,7 @@ export default function TranslationManager() {
                             style={{
                               padding: '4px 8px',
                               backgroundColor: 'var(--border)',
-                              color: 'var(--text-primary)',
+                              color: 'var(--foreground)',
                               border: 'none',
                               borderRadius: '4px',
                               fontSize: '12px',
@@ -585,9 +587,9 @@ export default function TranslationManager() {
                           onClick={() => handleStartEdit(key, translation.value)}
                           style={{
                             padding: '4px 8px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            color: 'var(--text-primary)',
-                            border: '1px solid var(--border-strong)',
+                            backgroundColor: 'var(--secondary)',
+                            color: 'var(--foreground)',
+                            border: '1px solid var(--input)',
                             borderRadius: '4px',
                             fontSize: '12px',
                             cursor: 'pointer'
@@ -606,7 +608,7 @@ export default function TranslationManager() {
           <div style={{
             padding: '32px',
             textAlign: 'center',
-            color: 'var(--text-secondary)',
+            color: 'var(--muted-foreground)',
             fontSize: '14px'
           }}>
             No translations found for selected filter

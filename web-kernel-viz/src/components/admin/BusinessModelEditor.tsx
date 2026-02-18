@@ -9,6 +9,7 @@ import {
   useDeleteTag
 } from '@/api/hooks';
 import { Card, Badge, ErrorBanner, EmptyState, LoadingSpinner } from '@/components/ui';
+import { PageHeader } from '@/components/layout';
 
 export default function BusinessModelEditor() {
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
@@ -81,7 +82,9 @@ export default function BusinessModelEditor() {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '24px', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <PageHeader metaKey="admin.business" compact />
+      <div style={{ display: 'flex', gap: '24px', flex: 1, overflow: 'auto', padding: '16px' }}>
       {/* Left Panel - Business Model List */}
       <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <Card>
@@ -91,14 +94,14 @@ export default function BusinessModelEditor() {
             alignItems: 'center',
             marginBottom: '16px'
           }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--foreground)' }}>
               Business Models
             </h2>
             <button
               onClick={() => setShowCreateBusiness(true)}
               style={{
                 padding: '6px 12px',
-                backgroundColor: 'var(--accent)',
+                backgroundColor: 'var(--primary)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
@@ -125,8 +128,8 @@ export default function BusinessModelEditor() {
                   onClick={() => setSelectedBusinessId(business.bid)}
                   style={{
                     padding: '12px',
-                    backgroundColor: selectedBusinessId === business.bid ? 'var(--accent-bg)' : 'var(--bg-secondary)',
-                    border: `1px solid ${selectedBusinessId === business.bid ? 'var(--accent)' : 'var(--border)'}`,
+                    backgroundColor: selectedBusinessId === business.bid ? 'var(--muted)' : 'var(--secondary)',
+                    border: `1px solid ${selectedBusinessId === business.bid ? 'var(--primary)' : 'var(--border)'}`,
                     borderRadius: '6px',
                     cursor: 'pointer',
                     display: 'flex',
@@ -136,10 +139,10 @@ export default function BusinessModelEditor() {
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: '500', color: 'var(--text-primary)', fontSize: '14px' }}>
+                    <div style={{ fontWeight: '500', color: 'var(--foreground)', fontSize: '14px' }}>
                       {business.name}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px' }}>
                       {business.tag_count || 0} tags
                     </div>
                   </div>
@@ -151,8 +154,8 @@ export default function BusinessModelEditor() {
                     style={{
                       padding: '4px 8px',
                       backgroundColor: 'transparent',
-                      color: '#ef4444',
-                      border: '1px solid #ef4444',
+                      color: 'var(--destructive)',
+                      border: '1px solid var(--destructive)',
                       borderRadius: '4px',
                       fontSize: '12px',
                       cursor: 'pointer'
@@ -171,7 +174,7 @@ export default function BusinessModelEditor() {
             <div style={{
               marginTop: '16px',
               padding: '12px',
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: 'var(--secondary)',
               borderRadius: '6px',
               border: '1px solid var(--border)'
             }}>
@@ -183,7 +186,7 @@ export default function BusinessModelEditor() {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  border: '1px solid var(--border-strong)',
+                  border: '1px solid var(--input)',
                   borderRadius: '4px',
                   fontSize: '14px',
                   marginBottom: '8px'
@@ -196,7 +199,7 @@ export default function BusinessModelEditor() {
                   style={{
                     flex: 1,
                     padding: '6px',
-                    backgroundColor: '#10b981',
+                    backgroundColor: 'var(--status-success-text)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
@@ -216,7 +219,7 @@ export default function BusinessModelEditor() {
                     flex: 1,
                     padding: '6px',
                     backgroundColor: 'var(--border)',
-                    color: 'var(--text-primary)',
+                    color: 'var(--foreground)',
                     border: 'none',
                     borderRadius: '4px',
                     fontSize: '14px',
@@ -241,7 +244,7 @@ export default function BusinessModelEditor() {
           <>
             {/* Business Detail */}
             <Card>
-              <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--foreground)', marginBottom: '16px' }}>
                 Business Model Details
               </h2>
 
@@ -254,21 +257,21 @@ export default function BusinessModelEditor() {
               ) : selectedBusiness ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Name</div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>Name</div>
+                    <div style={{ fontSize: '14px', color: 'var(--foreground)', fontWeight: '500' }}>
                       {selectedBusiness.name}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>ID</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>ID</div>
+                    <div style={{ fontSize: '13px', color: 'var(--muted-foreground)', fontFamily: 'monospace' }}>
                       {selectedBusiness.bid}
                     </div>
                   </div>
                   {selectedBusiness.description && (
                     <div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Description</div>
-                      <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>Description</div>
+                      <div style={{ fontSize: '14px', color: 'var(--foreground)' }}>
                         {selectedBusiness.description}
                       </div>
                     </div>
@@ -285,14 +288,14 @@ export default function BusinessModelEditor() {
                 alignItems: 'center',
                 marginBottom: '16px'
               }}>
-                <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--foreground)' }}>
                   Tag Schemas
                 </h2>
                 <button
                   onClick={() => setShowCreateTag(true)}
                   style={{
                     padding: '6px 12px',
-                    backgroundColor: 'var(--accent)',
+                    backgroundColor: 'var(--primary)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -318,7 +321,7 @@ export default function BusinessModelEditor() {
                       key={tag.tag}
                       style={{
                         padding: '16px',
-                        backgroundColor: 'var(--bg-secondary)',
+                        backgroundColor: 'var(--secondary)',
                         border: '1px solid var(--border)',
                         borderRadius: '6px'
                       }}
@@ -330,12 +333,12 @@ export default function BusinessModelEditor() {
                         marginBottom: '12px'
                       }}>
                         <div>
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--foreground)' }}>
                             {tag.tag}
                           </div>
                           {tag.kernel_ref && (
                             <div style={{ marginTop: '6px' }}>
-                              <Badge label={tag.kernel_ref} bg="var(--info-bg)" color="var(--accent-text)" />
+                              <Badge label={tag.kernel_ref} bg="var(--status-info-bg)" color="var(--primary)" />
                             </div>
                           )}
                         </div>
@@ -344,8 +347,8 @@ export default function BusinessModelEditor() {
                           style={{
                             padding: '4px 8px',
                             backgroundColor: 'transparent',
-                            color: '#ef4444',
-                            border: '1px solid #ef4444',
+                            color: 'var(--destructive)',
+                            border: '1px solid var(--destructive)',
                             borderRadius: '4px',
                             fontSize: '12px',
                             cursor: 'pointer'
@@ -357,12 +360,12 @@ export default function BusinessModelEditor() {
 
                       {tag.fields && tag.fields.length > 0 && (
                         <div style={{ marginBottom: '12px' }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '6px' }}>
                             Fields
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                             {tag.fields.map((field, idx) => (
-                              <Badge key={idx} label={`${field.name}: ${field.type}`} bg="var(--bg-hover)" color="var(--text-secondary)" />
+                              <Badge key={idx} label={`${field.name}: ${field.type}`} bg="var(--accent)" color="var(--muted-foreground)" />
                             ))}
                           </div>
                         </div>
@@ -370,12 +373,12 @@ export default function BusinessModelEditor() {
 
                       {tag.indexes && tag.indexes.length > 0 && (
                         <div style={{ marginBottom: '12px' }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '6px' }}>
                             Indexes
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                             {tag.indexes.map((index, idx) => (
-                              <Badge key={idx} label={`${index.name}: ${index.keyPath}`} bg="var(--success-bg)" color="var(--success-text)" />
+                              <Badge key={idx} label={`${index.name}: ${index.keyPath}`} bg="var(--status-success-bg)" color="var(--status-success-text)" />
                             ))}
                           </div>
                         </div>
@@ -383,14 +386,14 @@ export default function BusinessModelEditor() {
 
                       {tag.keyPath && (
                         <div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '4px' }}>
                             Key Path
                           </div>
                           <div style={{
                             fontSize: '13px',
-                            color: 'var(--text-primary)',
+                            color: 'var(--foreground)',
                             fontFamily: 'monospace',
-                            backgroundColor: 'var(--bg-card)',
+                            backgroundColor: 'var(--card)',
                             padding: '8px',
                             borderRadius: '4px',
                             border: '1px solid var(--border)'
@@ -410,7 +413,7 @@ export default function BusinessModelEditor() {
                 <div style={{
                   marginTop: '16px',
                   padding: '12px',
-                  backgroundColor: 'var(--bg-secondary)',
+                  backgroundColor: 'var(--secondary)',
                   borderRadius: '6px',
                   border: '1px solid var(--border)'
                 }}>
@@ -422,7 +425,7 @@ export default function BusinessModelEditor() {
                     style={{
                       width: '100%',
                       padding: '8px',
-                      border: '1px solid var(--border-strong)',
+                      border: '1px solid var(--input)',
                       borderRadius: '4px',
                       fontSize: '14px',
                       marginBottom: '8px'
@@ -435,7 +438,7 @@ export default function BusinessModelEditor() {
                       style={{
                         flex: 1,
                         padding: '6px',
-                        backgroundColor: '#10b981',
+                        backgroundColor: 'var(--status-success-text)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -455,7 +458,7 @@ export default function BusinessModelEditor() {
                         flex: 1,
                         padding: '6px',
                         backgroundColor: 'var(--border)',
-                        color: 'var(--text-primary)',
+                        color: 'var(--foreground)',
                         border: 'none',
                         borderRadius: '4px',
                         fontSize: '14px',
@@ -470,6 +473,7 @@ export default function BusinessModelEditor() {
             </Card>
           </>
         )}
+      </div>
       </div>
     </div>
   );

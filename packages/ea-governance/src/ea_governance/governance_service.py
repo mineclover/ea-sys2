@@ -6,9 +6,10 @@ Depends only on ProfileRegistry (not GovernanceContainer).
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
-from ea_profile.types import make_node_id
+from ea_profile.types import classify_pattern, make_node_id
 
 
 def _get_registry() -> Any:
@@ -275,6 +276,277 @@ def _load_and_localize(profile_name: str, lang: str | None) -> object | None:
     return localizer.localize(profile, lang, search_path=search_path)
 
 
+def _m2_identifier(layer_key: str, kind: str, name: str) -> str:
+    return f"m2::{layer_key}::{kind}::{name}"
+
+
+def _m2_rule_identifier(
+    layer_key: str,
+    source: str,
+    relation: str,
+    target: str,
+    valid: bool,
+    priority: int,
+) -> str:
+    rule_key = f"{source}|{relation}|{target}|{int(valid)}|{priority}"
+    digest = hashlib.sha1(rule_key.encode("utf-8")).hexdigest()[:12]
+    return f"m2::{layer_key}::rule::{digest}"
+
+
+def _m1_rule_identifier(profile_name: str, rule_id: str) -> str:
+    return f"m1::{profile_name}::rule::{rule_id}"
+
+
+def _kernel_entity_layer(kernel_type: str) -> str:
+    """Resolve kernel layer (L1..L4) for a profile element kernel_type."""
+    from ea_kernel.spec import KERNEL_SPEC
+
+    entity = KERNEL_SPEC.get_entity(kernel_type)
+    if entity is None:
+        return ""
+    return entity.layer.value
+
+
+def _kernel_relation_layer(kernel_relation: str) -> str:
+    """Resolve kernel layer (L2/L3) for a profile relation mapping."""
+    from ea_kernel.spec import KERNEL_SPEC
+
+    relation = KERNEL_SPEC.get_relation(kernel_relation)
+    if relation is None:
+        return ""
+    return relation.layer.value
+
+
+def _m2_identifier_system(layer_key: str, profile_name: str) -> dict[str, Any]:
+    """Return the canonical identifier computation contract for layer M2."""
+    return {
+        "layer_key": layer_key,
+        "profile_name": profile_name,
+        "namespace": "m2",
+        "object_identifiers": {
+            "element": f"m2::{layer_key}::element::{{element_name}}",
+            "relation": f"m2::{layer_key}::relation::{{relation_name}}",
+            "category": f"m2::{layer_key}::category::{{category_name}}",
+        },
+        "rule_identifier": {
+            "pattern": f"m2::{layer_key}::rule::{{digest12}}",
+            "digest_algorithm": "sha1",
+            "digest_length": 12,
+            "input_template": "{source}|{relation}|{target}|{valid_int}|{priority_int}",
+            "valid_encoding": {"true": 1, "false": 0},
+        },
+        "profile_rule_binding": {
+            "profile_rule_identifier_pattern": f"m1::{profile_name}::rule::{{rule_id}}",
+            "binding_fields": ["profile_name", "profile_layer_key", "profile_rule_id"],
+        },
+        "kernel_layer_mapping": {
+            "entity": "KERNEL_SPEC.get_entity(kernel_type).layer.value",
+            "relation": "KERNEL_SPEC.get_relation(kernel_relation).layer.value",
+        },
+    }
+
+
+_BLUEPRINT_CATEGORY_KO: dict[str, str] = {
+    "Composite": "복합 구조",
+    "ActiveStructure": "능동 구조",
+    "PassiveStructure": "수동 구조",
+    "Interface": "인터페이스",
+    "Governance": "거버넌스",
+    "Behavior": "행동",
+    "Event": "이벤트",
+    "Goal": "목표",
+    "Executable": "실행 항목",
+    "Context": "컨텍스트",
+    "Assessment": "평가",
+}
+
+_LAYER_RESPONSIBILITY_ENTRIES: list[dict[str, Any]] = [
+    {
+        "layer": "L1",
+        "role": "Structure vocabulary (entity nodes)",
+        "role_i18n": {"en": "Structure vocabulary (entity nodes)", "ko": "구조 어휘 계층 (엔티티 노드)"},
+    },
+    {
+        "layer": "L2",
+        "role": "Structural relation contracts (edge semantics)",
+        "role_i18n": {
+            "en": "Structural relation contracts (edge semantics)",
+            "ko": "정적 관계 계약 (엣지 의미론)",
+        },
+    },
+    {
+        "layer": "L3",
+        "role": "Behavioral relation contracts (runtime edge semantics)",
+        "role_i18n": {
+            "en": "Behavioral relation contracts (runtime edge semantics)",
+            "ko": "동작 관계 계약 (런타임 엣지 의미론)",
+        },
+    },
+    {
+        "layer": "L4",
+        "role": "Concrete runtime entities (entity nodes)",
+        "role_i18n": {"en": "Concrete runtime entities (entity nodes)", "ko": "구체 런타임 엔티티 (엔티티 노드)"},
+    },
+]
+
+
+def _category_display_i18n(category_name: str) -> dict[str, str]:
+    return {
+        "en": category_name,
+        "ko": _BLUEPRINT_CATEGORY_KO.get(category_name, category_name),
+    }
+
+
+def _category_description_i18n(category_name: str, kernel_layer: str) -> dict[str, str]:
+    return {
+        "en": f"M2 category for {category_name} elements ({kernel_layer}).",
+        "ko": f"{category_name} 요소를 분류하는 M2 카테고리 ({kernel_layer}).",
+    }
+
+
+def _build_m2_blueprint(layer_key: str, profile: Any) -> dict[str, Any]:
+    """Build kernel-style M2 blueprint from profile categories/rules.
+
+    - categories: profile categories projected with kernel_type/layer
+    - relations: profile relations projected with kernel relation layer
+    - rules: concrete+pattern rules aggregated at category-to-category level
+    """
+
+    category_info: dict[str, dict[str, Any]] = {}
+    element_by_name: dict[str, Any] = {}
+    for elem in profile.elements:
+        element_by_name[elem.name] = elem
+        current = category_info.get(elem.category)
+        if current is None:
+            category_layer = _kernel_entity_layer(elem.kernel_type)
+            category_info[elem.category] = {
+                "identifier": _m2_identifier(layer_key, "category", elem.category),
+                "name": elem.category,
+                "kernel_type": elem.kernel_type,
+                "kernel_layer": category_layer,
+                "display_name": _category_display_i18n(elem.category),
+                "description": _category_description_i18n(elem.category, category_layer),
+                "element_count": 1,
+                "sample_elements": [elem.name],
+            }
+            continue
+        current["element_count"] += 1
+        if len(current["sample_elements"]) < 4:
+            current["sample_elements"].append(elem.name)
+
+    relation_info: dict[str, dict[str, Any]] = {}
+    for rel in profile.relations:
+        relation_info[rel.name] = {
+            "identifier": _m2_identifier(layer_key, "relation", rel.name),
+            "name": rel.name,
+            "kernel_relation": rel.kernel_relation,
+            "kernel_layer": _kernel_relation_layer(rel.kernel_relation),
+            "description": _serialize_i18n(rel.description),
+            "display_name": _serialize_i18n(rel.display_name) if rel.display_name else None,
+            "direction": getattr(rel, "direction", "") or "",
+        }
+
+    def resolve_category(pattern: str) -> str | None:
+        if pattern.startswith("@"):
+            cat = pattern[1:]
+            return cat if cat in category_info else None
+        if pattern.startswith("#") or pattern == "*":
+            return None
+        elem = element_by_name.get(pattern)
+        return elem.category if elem is not None else None
+
+    edge_map: dict[tuple[str, str, str], dict[str, Any]] = {}
+    rule_ref_sample_limit = 12
+    for rule in profile.validity_rules:
+        if not rule.valid:
+            continue
+        src_cat = resolve_category(rule.source_pattern)
+        tgt_cat = resolve_category(rule.target_pattern)
+        if not src_cat or not tgt_cat:
+            continue
+        key = (src_cat, tgt_cat, rule.relationship_name)
+        existing = edge_map.get(key)
+        if existing is None:
+            edge_map[key] = {
+                "identifier": _m2_rule_identifier(
+                    layer_key,
+                    src_cat,
+                    rule.relationship_name,
+                    tgt_cat,
+                    True,
+                    rule.priority,
+                ),
+                "source_category": src_cat,
+                "target_category": tgt_cat,
+                "relation": rule.relationship_name,
+                "kernel_relation": relation_info.get(rule.relationship_name, {}).get("kernel_relation", ""),
+                "kernel_layer": relation_info.get(rule.relationship_name, {}).get("kernel_layer", ""),
+                "rule_count": 1,
+                "priority_max": rule.priority,
+                "source_examples": [rule.source_pattern],
+                "target_examples": [rule.target_pattern],
+                "profile_name": profile.name,
+                "profile_layer_key": layer_key,
+                "profile_rule_ids": [rule.id],
+                "profile_rule_identifiers": [_m1_rule_identifier(profile.name, rule.id)],
+            }
+            continue
+
+        existing["rule_count"] += 1
+        if rule.priority > existing["priority_max"]:
+            existing["priority_max"] = rule.priority
+        if rule.source_pattern not in existing["source_examples"] and len(existing["source_examples"]) < 4:
+            existing["source_examples"].append(rule.source_pattern)
+        if rule.target_pattern not in existing["target_examples"] and len(existing["target_examples"]) < 4:
+            existing["target_examples"].append(rule.target_pattern)
+        profile_rule_ids = existing.get("profile_rule_ids")
+        if not isinstance(profile_rule_ids, list):
+            profile_rule_ids = []
+            existing["profile_rule_ids"] = profile_rule_ids
+        if rule.id not in profile_rule_ids and len(profile_rule_ids) < rule_ref_sample_limit:
+            profile_rule_ids.append(rule.id)
+        profile_rule_identifiers = existing.get("profile_rule_identifiers")
+        if not isinstance(profile_rule_identifiers, list):
+            profile_rule_identifiers = []
+            existing["profile_rule_identifiers"] = profile_rule_identifiers
+        profile_rule_identifier = _m1_rule_identifier(profile.name, rule.id)
+        if (
+            profile_rule_identifier not in profile_rule_identifiers
+            and len(profile_rule_identifiers) < rule_ref_sample_limit
+        ):
+            profile_rule_identifiers.append(profile_rule_identifier)
+
+    categories = sorted(
+        category_info.values(),
+        key=lambda item: (str(item["kernel_layer"]), str(item["name"]).lower()),
+    )
+    relations = sorted(
+        relation_info.values(),
+        key=lambda item: (str(item["kernel_layer"]), str(item["name"]).lower()),
+    )
+    rules = sorted(
+        edge_map.values(),
+        key=lambda item: (
+            str(item["kernel_layer"]),
+            str(item["source_category"]).lower(),
+            str(item["target_category"]).lower(),
+            str(item["relation"]).lower(),
+        ),
+    )
+
+    return {
+        "categories": categories,
+        "relations": relations,
+        "rules": rules,
+        "summary": {
+            "category_count": len(categories),
+            "relation_count": len(relations),
+            "rule_edge_count": len(rules),
+        },
+        "layer_responsibilities": _LAYER_RESPONSIBILITY_ENTRIES,
+    }
+
+
 def layer_schema(
     layer_key: str,
     *,
@@ -294,6 +566,9 @@ def layer_schema(
     profile = _load_and_localize(reg_name, lang)
     if profile is None:
         return {"error": f"Profile not loaded: {reg_name}"}
+    from ea_kernel.kernel_service import projection_policy_snapshot
+
+    projection_policy = projection_policy_snapshot(profile_name=reg_name)
 
     # Elements grouped by domain layer
     elements_by_layer: list[dict[str, Any]] = []
@@ -304,8 +579,10 @@ def layer_schema(
             "count": len(elems),
             "elements": [
                 {
+                    "identifier": _m2_identifier(layer_key, "element", e.name),
                     "name": e.name,
                     "kernel_type": e.kernel_type,
+                    "kernel_layer": _kernel_entity_layer(e.kernel_type),
                     "category": e.category,
                     "description": _serialize_i18n(e.description),
                     "display_name": _serialize_i18n(e.display_name) if e.display_name else None,
@@ -317,8 +594,10 @@ def layer_schema(
     # Relations
     relations = [
         {
+            "identifier": _m2_identifier(layer_key, "relation", r.name),
             "name": r.name,
             "kernel_relation": r.kernel_relation,
+            "kernel_layer": _kernel_relation_layer(r.kernel_relation),
             "description": _serialize_i18n(r.description),
             "display_name": _serialize_i18n(r.display_name) if r.display_name else None,
             "direction": getattr(r, "direction", None),
@@ -326,29 +605,47 @@ def layer_schema(
         for r in profile.relations
     ]
 
-    # Validity rules (raw profile rules — M2 definitions)
-    rules = [
-        {
+    # Validity rules (raw profile rules — M2 definitions + profile ownership)
+    rules = []
+    for r in profile.validity_rules:
+        identifier = _m2_rule_identifier(
+            layer_key,
+            r.source_pattern,
+            r.relationship_name,
+            r.target_pattern,
+            r.valid,
+            r.priority,
+        )
+        rules.append({
+            "identifier": identifier,
             "source": r.source_pattern,
             "target": r.target_pattern,
             "relation": r.relationship_name,
             "valid": r.valid,
             "priority": r.priority,
             "notes": r.notes or "",
-        }
-        for r in profile.validity_rules
-    ]
+            "description": _serialize_i18n(r.description),
+            "source_pattern_kind": classify_pattern(r.source_pattern).value,
+            "target_pattern_kind": classify_pattern(r.target_pattern).value,
+            "profile_name": reg_name,
+            "profile_layer_key": layer_key,
+            "profile_rule_id": r.id,
+            "profile_rule_identifier": _m1_rule_identifier(reg_name, r.id),
+        })
 
     return {
         "layer_key": layer_key,
         "profile_name": reg_name,
         "version": profile.version,
+        "identifier_system": _m2_identifier_system(layer_key, reg_name),
         "element_count": len(profile.elements),
         "relation_count": len(profile.relations),
         "rule_count": len(profile.validity_rules),
         "elements_by_layer": elements_by_layer,
         "relations": relations,
         "rules": rules,
+        "m2_blueprint": _build_m2_blueprint(layer_key, profile),
+        "projection_policy": projection_policy,
     }
 
 

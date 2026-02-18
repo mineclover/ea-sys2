@@ -6,7 +6,7 @@ from ea_governance.facade import GovernanceContainer, KernelSchema
 from ea_governance.layer_store import SQLiteGovernanceLayerStore
 from ea_governance.needs_store import GovernanceNeedsStore
 from ea_needs.catalog import NeedCatalog
-from ea_needs.types import NeedPriority
+from ea_needs.types import NeedPriority, NeedPurpose
 
 
 def _build_catalog() -> NeedCatalog:
@@ -116,8 +116,9 @@ def test_governance_container_needs_modeling_workflow(tmp_path: Path):
         subject="incident recovery workflow",
         use_case_id=use_case_id,
         cause_types=["situational", "logical"],
-        purpose="reduce MTTR by 30%",
+        purpose=NeedPurpose.EFFICIENCY,
         priority=NeedPriority.HIGH,
+        kernel_change_phase="planned",
         actor="architect",
     )
     need_id = need_result["need_id"]
@@ -146,6 +147,7 @@ def test_governance_container_needs_modeling_workflow(tmp_path: Path):
         revised_need_id,
         decision_id="topic-123",
         evidence_refs=["ev://runbook", "ev://postmortem"],
+        kernel_change_phase="applied",
         actor="architect",
     )
     assert inherit_result["need_id"] == revised_need_id
@@ -157,6 +159,7 @@ def test_governance_container_needs_modeling_workflow(tmp_path: Path):
     assert latest.id == revised_need_id
     assert latest.version == 2
     assert latest.decision_evidence_refs == ["ev://runbook", "ev://postmortem"]
+    assert latest.kernel_change_phase.value == "applied"
 
     history = container.get_needs_catalog_history(catalog_id)
     history_types = [event["event_type"] for event in history]

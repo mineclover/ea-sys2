@@ -4,7 +4,9 @@ import pytest
 from ea_needs.catalog import NeedCatalog
 from ea_needs.types import (
     JustificationType,
+    NeedKernelChangePhase,
     NeedPriority,
+    NeedPurpose,
     NeedRelationType,
     NeedStatus,
 )
@@ -74,6 +76,7 @@ class TestNeedExpression:
         assert need.id.startswith("need-")
         assert need.status == NeedStatus.DRAFT
         assert need.priority == NeedPriority.HIGH
+        assert need.kernel_change_phase == NeedKernelChangePhase.PLANNED
         assert need.statement.desire.action == "migrate"
         assert need.statement.desire.subject == "payment system"
         assert need.statement.desire.target == "cloud"
@@ -89,10 +92,61 @@ class TestNeedExpression:
         assert need.statement.desire.target is None
         assert need.statement.justifications == []
         assert need.priority == NeedPriority.MEDIUM
+        assert need.statement.purpose == NeedPurpose.UNSPECIFIED
 
     def test_express_need_unknown_stakeholder(self, catalog: NeedCatalog):
         with pytest.raises(ValueError, match="not found"):
             catalog.express_need("nonexistent", "do", "something")
+
+    def test_express_need_with_canonical_purpose(self, catalog_with_stakeholder):
+        catalog, sh = catalog_with_stakeholder
+        need = catalog.express_need(
+            sh.id,
+            "stabilize",
+            "incident response",
+            purpose=NeedPurpose.SAFETY,
+        )
+        assert need.statement.purpose == NeedPurpose.SAFETY
+
+    def test_express_need_with_m2_style_purpose_name(self, catalog_with_stakeholder):
+        catalog, sh = catalog_with_stakeholder
+        need = catalog.express_need(
+            sh.id,
+            "improve",
+            "onboarding",
+            purpose="NeedPurposeUsability",
+        )
+        assert need.statement.purpose == NeedPurpose.USABILITY
+
+    def test_express_need_with_string_priority(self, catalog_with_stakeholder):
+        catalog, sh = catalog_with_stakeholder
+        need = catalog.express_need(
+            sh.id,
+            "stabilize",
+            "runtime",
+            priority="high",
+        )
+        assert need.priority == NeedPriority.HIGH
+
+    def test_express_need_rejects_invalid_priority(self, catalog_with_stakeholder):
+        catalog, sh = catalog_with_stakeholder
+        with pytest.raises(ValueError, match="Allowed priority values"):
+            catalog.express_need(
+                sh.id,
+                "stabilize",
+                "runtime",
+                priority="urgent",
+            )
+
+    def test_express_need_rejects_invalid_purpose(self, catalog_with_stakeholder):
+        catalog, sh = catalog_with_stakeholder
+        with pytest.raises(ValueError, match="Allowed purpose values"):
+            catalog.express_need(
+                sh.id,
+                "improve",
+                "dashboard",
+                purpose="reduce MTTR",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -113,11 +167,13 @@ class TestNeedTransitions:
         need.address(decision_ref="topic-abc")
         assert need.status == NeedStatus.ADDRESSED
         assert need.decision_ref == "topic-abc"
+        assert need.kernel_change_phase == NeedKernelChangePhase.APPLIED
 
     def test_withdraw_from_draft(self, catalog_with_need):
         _, _, need = catalog_with_need
         need.withdraw()
         assert need.status == NeedStatus.WITHDRAWN
+        assert need.kernel_change_phase == NeedKernelChangePhase.SUPERSEDED
 
     def test_withdraw_from_expressed(self, catalog_with_need):
         _, _, need = catalog_with_need

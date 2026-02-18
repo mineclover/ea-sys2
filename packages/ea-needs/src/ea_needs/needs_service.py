@@ -65,6 +65,7 @@ def list_needs(
                 "version": n.version,
                 "status": n.status.value,
                 "priority": n.priority.value,
+                "kernel_change_phase": n.kernel_change_phase.value,
                 "action": n.statement.desire.action,
                 "subject": n.statement.desire.subject,
                 "target": n.statement.desire.target,
@@ -91,6 +92,7 @@ def describe_need(
         "version": need.version,
         "status": need.status.value,
         "priority": need.priority.value,
+        "kernel_change_phase": need.kernel_change_phase.value,
         "created_at": need.created_at,
         "updated_at": need.updated_at,
         "statement": {
@@ -143,6 +145,7 @@ def need_lineage(
                 "version": n.version,
                 "status": n.status.value,
                 "priority": n.priority.value,
+                "kernel_change_phase": n.kernel_change_phase.value,
                 "action": n.statement.desire.action,
                 "subject": n.statement.desire.subject,
                 "created_at": n.created_at,

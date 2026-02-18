@@ -1180,3 +1180,35 @@ target = "KernelSpecSchema"
 relation = "depends_on"
 priority = 72
 notes = "Infra-Kernel: profile version store port depends on kernel spec schema for profile element/relation validation."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Dormant Relation Anchors (Coverage Stabilization)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "LayerVersionStore"
+target = "InfraLayer"
+relation = "available_in"
+priority = 64
+notes = "Layer version rows are available in the infra layer boundary."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "ValidationRunStore"
+relation = "consumes"
+priority = 64
+notes = "Lifecycle service consumes validation baselines before applying storage updates."
+
+[[rules]]
+source = "GovernanceDataMigration"
+target = "KernelStorageMigration"
+relation = "next"
+priority = 64
+notes = "Governance migration precedes kernel storage migration in infra rollout."
+
+[[rules]]
+source = "TransactionEvent"
+target = "GovernanceDataMigration"
+relation = "triggers"
+priority = 64
+notes = "Transaction events trigger governance data migration execution."

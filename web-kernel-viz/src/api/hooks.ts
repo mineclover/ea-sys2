@@ -1,6 +1,15 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from './client';
+import { m1DebugCountQuery } from '@/lib/m1Debug';
+
+const TOPOLOGY_QUERY_DEFAULTS = {
+    staleTime: 20_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+} as const;
 
 // --- Profile Hooks ---
 
@@ -19,11 +28,129 @@ export function useProfileDescription(name: string, opts?: { lang?: string }) {
     });
 }
 
-export function useProfileTopology(name: string, opts?: { cross_layer?: boolean; lang?: string }) {
+export function useProfileTopology(
+    name: string,
+    opts?: {
+        cross_layer?: boolean;
+        lang?: string;
+        max_edges?: number;
+        view_mode?: 'raw' | 'summary' | 'focus';
+        surface_only?: boolean;
+        domain_scope?: 'all' | 'owned' | 'bridge';
+        focus?: 'core' | 'relation' | 'layer' | 'actor' | 'topic';
+        focus_relation?: string;
+        focus_layer?: string;
+        focus_actor?: string;
+        focus_topic?: string;
+        focus_depth?: number;
+        enabled?: boolean;
+    },
+) {
+    const queryOpts = {
+        cross_layer: opts?.cross_layer,
+        lang: opts?.lang,
+        max_edges: opts?.max_edges,
+        view_mode: opts?.view_mode,
+        surface_only: opts?.surface_only,
+        domain_scope: opts?.domain_scope,
+        focus: opts?.focus,
+        focus_relation: opts?.focus_relation,
+        focus_layer: opts?.focus_layer,
+        focus_actor: opts?.focus_actor,
+        focus_topic: opts?.focus_topic,
+        focus_depth: opts?.focus_depth,
+    };
     return useQuery({
-        queryKey: ['profile', name, 'topology', opts],
-        queryFn: () => api.fetchProfileTopology(name, opts),
-        enabled: !!name,
+        queryKey: ['profile', name, 'topology', queryOpts],
+        queryFn: () => {
+            m1DebugCountQuery(
+                `profile.topology:${name}:${queryOpts.view_mode || 'raw'}:${queryOpts.focus || 'none'}`,
+            );
+            return api.fetchProfileTopology(name, queryOpts);
+        },
+        enabled: !!name && (opts?.enabled ?? true),
+        placeholderData: (previous) => previous,
+        ...TOPOLOGY_QUERY_DEFAULTS,
+    });
+}
+
+export function useProfileProjection(
+    name: string,
+    opts?: {
+        level?: 'l0' | 'l1' | 'l2' | 'l3' | 'l4';
+        lens?: 'panorama' | 'overview' | 'capability' | 'interaction' | 'execution' | 'trace';
+        cross_layer?: boolean;
+        domain_scope?: 'all' | 'owned' | 'bridge';
+        lang?: string;
+        actor?: string;
+        depth?: number;
+        max_edges?: number;
+        enabled?: boolean;
+    },
+) {
+    const queryOpts = {
+        level: opts?.level,
+        lens: opts?.lens,
+        cross_layer: opts?.cross_layer,
+        domain_scope: opts?.domain_scope,
+        lang: opts?.lang,
+        actor: opts?.actor,
+        depth: opts?.depth,
+        max_edges: opts?.max_edges,
+    };
+    return useQuery({
+        queryKey: ['profile', name, 'projection', queryOpts],
+        queryFn: () => {
+            m1DebugCountQuery(`profile.projection:${name}:${queryOpts.level || 'l1'}:${queryOpts.domain_scope || 'all'}`);
+            return api.fetchProfileProjection(name, queryOpts);
+        },
+        enabled: !!name && (opts?.enabled ?? true),
+        placeholderData: (previous) => previous,
+        ...TOPOLOGY_QUERY_DEFAULTS,
+    });
+}
+
+export function useProfileComposedTopology(
+    name: string,
+    opts?: {
+        lang?: string;
+        max_edges?: number;
+        surface_only?: boolean;
+        domain_scope?: 'all' | 'owned' | 'bridge';
+        include_profiles?: string[];
+        focus?: 'core' | 'relation' | 'layer' | 'actor' | 'topic';
+        focus_relation?: string;
+        focus_layer?: string;
+        focus_actor?: string;
+        focus_topic?: string;
+        focus_depth?: number;
+        enabled?: boolean;
+    },
+) {
+    const queryOpts = {
+        lang: opts?.lang,
+        max_edges: opts?.max_edges,
+        surface_only: opts?.surface_only,
+        domain_scope: opts?.domain_scope,
+        include_profiles: opts?.include_profiles,
+        focus: opts?.focus,
+        focus_relation: opts?.focus_relation,
+        focus_layer: opts?.focus_layer,
+        focus_actor: opts?.focus_actor,
+        focus_topic: opts?.focus_topic,
+        focus_depth: opts?.focus_depth,
+    };
+    return useQuery({
+        queryKey: ['profile', name, 'composed', queryOpts],
+        queryFn: () => {
+            m1DebugCountQuery(
+                `profile.composed:${name}:${queryOpts.domain_scope || 'all'}:${queryOpts.focus || 'none'}`,
+            );
+            return api.fetchProfileComposedTopology(name, queryOpts);
+        },
+        enabled: !!name && (opts?.enabled ?? true),
+        placeholderData: (previous) => previous,
+        ...TOPOLOGY_QUERY_DEFAULTS,
     });
 }
 
@@ -53,24 +180,27 @@ export function useImpact(name: string, element: string, opts?: { direction?: st
 
 // --- Kernel Schema Hooks ---
 
-export function useKernelEntities(opts?: { lang?: string }) {
+export function useKernelEntities(opts?: { lang?: string; enabled?: boolean }) {
     return useQuery({
         queryKey: ['kernel', 'entities', opts],
-        queryFn: () => api.fetchKernelEntities(opts),
+        queryFn: () => api.fetchKernelEntities({ lang: opts?.lang }),
+        enabled: opts?.enabled ?? true,
     });
 }
 
-export function useKernelRelations(opts?: { lang?: string }) {
+export function useKernelRelations(opts?: { lang?: string; enabled?: boolean }) {
     return useQuery({
         queryKey: ['kernel', 'relations', opts],
-        queryFn: () => api.fetchKernelRelations(opts),
+        queryFn: () => api.fetchKernelRelations({ lang: opts?.lang }),
+        enabled: opts?.enabled ?? true,
     });
 }
 
-export function useKernelRules(opts?: { group?: string; relation?: string }) {
+export function useKernelRules(opts?: { group?: string; relation?: string; enabled?: boolean }) {
     return useQuery({
         queryKey: ['kernel', 'rules', opts],
-        queryFn: () => api.fetchKernelRules(opts),
+        queryFn: () => api.fetchKernelRules({ group: opts?.group, relation: opts?.relation }),
+        enabled: opts?.enabled ?? true,
     });
 }
 
@@ -103,14 +233,22 @@ export function useLayerSchema(layerKey: string, opts?: { lang?: string }) {
         queryKey: ['layer', layerKey, 'schema', opts],
         queryFn: () => api.fetchLayerSchema(layerKey, opts),
         enabled: !!layerKey,
+        ...TOPOLOGY_QUERY_DEFAULTS,
     });
 }
 
-export function useLayerStack(layerKey: string, opts?: { lang?: string; m0_limit?: number }) {
+export function useLayerStack(
+    layerKey: string,
+    opts?: { lang?: string; m0_limit?: number; enabled?: boolean },
+) {
     return useQuery({
         queryKey: ['layer', layerKey, 'stack', opts],
-        queryFn: () => api.fetchLayerStack(layerKey, opts),
-        enabled: !!layerKey,
+        queryFn: () => {
+            m1DebugCountQuery(`layer.stack:${layerKey}`);
+            return api.fetchLayerStack(layerKey, { lang: opts?.lang, m0_limit: opts?.m0_limit });
+        },
+        enabled: !!layerKey && (opts?.enabled ?? true),
+        ...TOPOLOGY_QUERY_DEFAULTS,
     });
 }
 
@@ -183,20 +321,14 @@ export function useDecisionTrace(decisionId: string) {
 export function useRegisterModel() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (body: {
-            profile_toml: string;
-            owner?: string;
-            model_name?: string;
-            activate?: boolean;
-            on_exists?: string;
-        }) => api.registerModel(body),
+        mutationFn: (body: Parameters<typeof api.registerModel>[0]) => api.registerModel(body),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['models'] }),
     });
 }
 
 export function useValidateModel() {
     return useMutation({
-        mutationFn: (body: { model_name: string; version: string }) =>
+        mutationFn: (body: Parameters<typeof api.validateModel>[0]) =>
             api.validateModel(body),
     });
 }
@@ -204,7 +336,7 @@ export function useValidateModel() {
 export function useActivateModel() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (body: { model_name: string; version: string }) =>
+        mutationFn: (body: Parameters<typeof api.activateModel>[0]) =>
             api.activateModel(body),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['models'] }),
     });
@@ -246,7 +378,21 @@ export function useNeedsCatalogDetail(catalogId: string) {
     });
 }
 
-export function useCatalogNeeds(catalogId: string, opts?: { status?: string; priority?: string; stakeholder_id?: string }) {
+export function useCatalogNeeds(
+    catalogId: string,
+    opts?: {
+        status?: string;
+        priority?: string;
+        stakeholder_id?: string;
+        purpose?: string;
+        complexity?: string;
+        use_case_id?: string;
+        cause_type?: string;
+        kernel_change_phase?: string;
+        decision_id?: string;
+        decision_linked?: boolean;
+    },
+) {
     return useQuery({
         queryKey: ['needs', 'catalogs', catalogId, 'needs', opts],
         queryFn: () => api.fetchCatalogNeeds(catalogId, opts),
@@ -267,6 +413,80 @@ export function useCatalogHistory(catalogId: string) {
         queryKey: ['needs', 'catalogs', catalogId, 'history'],
         queryFn: () => api.fetchCatalogHistory(catalogId),
         enabled: !!catalogId,
+    });
+}
+
+export function useExpressNeed() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ catalogId, data }: { catalogId: string; data: Parameters<typeof api.expressNeed>[1] }) =>
+            api.expressNeed(catalogId, data),
+        onSuccess: (_result, vars) => {
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs'] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'needs'] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'history'] });
+        },
+    });
+}
+
+export function useAddNeedsUseCase() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ catalogId, data }: { catalogId: string; data: Parameters<typeof api.addNeedsUseCase>[1] }) =>
+            api.addNeedsUseCase(catalogId, data),
+        onSuccess: (_result, vars) => {
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs'] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'history'] });
+        },
+    });
+}
+
+export function useReviseNeed() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ catalogId, needId, data }: {
+            catalogId: string;
+            needId: string;
+            data: Parameters<typeof api.reviseNeed>[2];
+        }) => api.reviseNeed(catalogId, needId, data),
+        onSuccess: (_result, vars) => {
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs'] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'needs'] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'history'] });
+        },
+    });
+}
+
+export function useAddNeedProcessUnit() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ catalogId, needId, data }: {
+            catalogId: string;
+            needId: string;
+            data: Parameters<typeof api.addNeedProcessUnit>[2];
+        }) => api.addNeedProcessUnit(catalogId, needId, data),
+        onSuccess: (_result, vars) => {
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'needs', vars.needId] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'history'] });
+        },
+    });
+}
+
+export function useInheritNeedDecisionEvidence() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ catalogId, needId, data }: {
+            catalogId: string;
+            needId: string;
+            data: Parameters<typeof api.inheritNeedDecisionEvidence>[2];
+        }) => api.inheritNeedDecisionEvidence(catalogId, needId, data),
+        onSuccess: (_result, vars) => {
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'needs', vars.needId] });
+            qc.invalidateQueries({ queryKey: ['needs', 'catalogs', vars.catalogId, 'history'] });
+        },
     });
 }
 

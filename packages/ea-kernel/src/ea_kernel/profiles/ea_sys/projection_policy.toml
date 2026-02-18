@@ -1,0 +1,280 @@
+[meta]
+version = "1.0.0"
+owner = "ea-kernel"
+description = "Projection policy contract (M2) and layer profile policies (M1)."
+
+[m2.schema]
+levels = ["l0", "l1", "l2", "l3", "l4"]
+lenses = ["panorama", "overview", "capability", "interaction", "execution", "trace"]
+base_view_modes = ["raw", "summary", "focus"]
+focus_modes = ["core", "relation", "layer", "actor", "topic"]
+required_level_fields = [
+  "level",
+  "lens",
+  "description",
+  "base_view_mode",
+  "allowed_relations",
+  "allowed_categories",
+  "default_max_edges",
+  "next_levels",
+]
+
+[m2.schema.lens_to_level]
+panorama = "l0"
+overview = "l0"
+capability = "l1"
+interaction = "l2"
+execution = "l3"
+trace = "l4"
+
+[m2.defaults]
+actor_default_depth = 4
+
+[m2.topic]
+default_depth = 2
+max_scope_nodes_per_depth = 40
+seed_score_ratio = 0.72
+seed_score_floor = 60
+min_token_coverage = 0.5
+max_seed_count = 8
+max_match_count = 16
+max_available_topics = 60
+
+[m2.topic.scoring]
+name_token = 34
+display_token = 22
+description_token = 10
+name_exact = 220
+name_contains = 120
+display_exact = 180
+display_contains = 90
+description_contains = 40
+
+[m1.global.levels.l0]
+level = "L0"
+lens = "panorama"
+description = "Strategic panorama for cross-domain orientation."
+base_view_mode = "focus"
+base_focus = "core"
+allowed_relations = ["contains", "depends_on", "next", "triggers", "constrains"]
+allowed_categories = ["Composite", "Page", "Interface", "Context", "Goal", "Governance"]
+default_max_edges = 180
+next_levels = ["L1"]
+
+[m1.global.levels.l1]
+level = "L1"
+lens = "capability"
+description = "Capability and responsibility map around experiences and interfaces."
+base_view_mode = "summary"
+allowed_relations = ["contains", "depends_on", "next", "triggers", "constrains"]
+allowed_categories = [
+  "Composite",
+  "Page",
+  "Interface",
+  "Context",
+  "Goal",
+  "Governance",
+  "Assessment",
+  "Behavior",
+  "Executable",
+]
+default_max_edges = 320
+next_levels = ["L2"]
+
+[m1.global.levels.l2]
+level = "L2"
+lens = "interaction"
+description = "Actor-centric valid interaction routes."
+base_view_mode = "focus"
+base_focus = "actor"
+allowed_relations = ["available_in", "contains", "depends_on", "coordinates", "next", "triggers", "constrains"]
+allowed_categories = [
+  "Assessment",
+  "Behavior",
+  "Composite",
+  "Context",
+  "Event",
+  "Executable",
+  "Goal",
+  "Governance",
+  "Interface",
+  "Page",
+]
+default_max_edges = 520
+next_levels = ["L3"]
+
+[m1.global.levels.l3]
+level = "L3"
+lens = "execution"
+description = "Execution chain over steps, actions, and triggering events."
+base_view_mode = "summary"
+allowed_relations = ["next", "triggers", "depends_on", "coordinates", "constrains", "produces", "consumes"]
+allowed_categories = ["Behavior", "Executable", "Event", "Interface", "Goal", "Governance", "Assessment", "PassiveStructure"]
+default_max_edges = 760
+next_levels = ["L4"]
+
+[m1.global.levels.l4]
+level = "L4"
+lens = "trace"
+description = "Developer-grade decision/data trace view with detailed flow relations."
+base_view_mode = "summary"
+allowed_relations = ["produces", "consumes", "next", "triggers", "depends_on", "coordinates", "registers", "available_in", "constrains"]
+allowed_categories = [
+  "Behavior",
+  "Executable",
+  "Event",
+  "Interface",
+  "Goal",
+  "Governance",
+  "Assessment",
+  "PassiveStructure",
+  "Context",
+  "Page",
+  "Composite",
+]
+default_max_edges = 980
+next_levels = []
+
+# M1 layer overrides: domain-specific visibility budget tuning.
+[m1.layers.infra.levels.l2]
+default_max_edges = 420
+description = "Infra actor-centric interaction routes with stronger budget guard."
+
+[m1.layers.infra.topic]
+max_scope_nodes_per_depth = 28
+max_seed_count = 6
+max_match_count = 12
+min_token_coverage = 0.6
+
+[m1.layers.governance.levels.l2]
+default_max_edges = 500
+
+[m1.layers.decision.levels.l2]
+default_max_edges = 540
+
+[m1.layers.needs.levels.l2]
+default_max_edges = 560
+
+[m1.layers.kernel.levels.l2]
+default_max_edges = 620
+description = "Kernel actor-centric interaction routes with broader exploration budget."
+
+[m1.layers.kernel.topic]
+max_scope_nodes_per_depth = 48
+max_match_count = 20
+
+[m1.layers.flow.levels.l2]
+default_max_edges = 560
+
+# M1 UI policy: query budget guardrails + exploration presets.
+[m1.ui]
+edge_budget_options = [220, 320, 420, 620, 900, 1200, 1600]
+preset_order = ["overview", "actor_route", "trace"]
+safety_mode_default = true
+surface_only_default = true
+domain_scope_default = "owned"
+
+[m1.ui.safety_caps.topology]
+raw = 700
+summary = 900
+focus = 780
+
+[m1.ui.safety_caps.composed]
+summary = 760
+focus = 700
+
+[m1.ui.safety_caps.projection]
+l0 = 220
+l1 = 320
+l2 = 520
+l3 = 760
+l4 = 900
+
+[m1.ui.presets.overview]
+source_mode = "topology"
+view_mode = "summary"
+focus_mode = "core"
+domain_scope = "owned"
+surface_only = true
+max_edges = 420
+
+[m1.ui.presets.actor_route]
+source_mode = "projection"
+projection_level = "l2"
+focus_depth = 3
+domain_scope = "owned"
+surface_only = true
+max_edges = 620
+
+[m1.ui.presets.trace]
+source_mode = "projection"
+projection_level = "l4"
+domain_scope = "all"
+surface_only = true
+max_edges = 900
+
+[m1.ui.layers.infra.presets.overview]
+max_edges = 320
+
+[m1.ui.layers.infra.presets.actor_route]
+focus_depth = 2
+max_edges = 420
+
+[m1.ui.layers.infra.presets.trace]
+max_edges = 620
+domain_scope = "all"
+
+[m1.ui.layers.governance.presets.overview]
+max_edges = 420
+
+[m1.ui.layers.governance.presets.actor_route]
+focus_depth = 3
+max_edges = 520
+
+[m1.ui.layers.governance.presets.trace]
+max_edges = 760
+domain_scope = "all"
+
+[m1.ui.layers.decision.presets.overview]
+max_edges = 420
+
+[m1.ui.layers.decision.presets.actor_route]
+focus_depth = 3
+max_edges = 520
+
+[m1.ui.layers.decision.presets.trace]
+max_edges = 760
+domain_scope = "all"
+
+[m1.ui.layers.needs.presets.overview]
+max_edges = 360
+
+[m1.ui.layers.needs.presets.actor_route]
+focus_depth = 3
+max_edges = 480
+
+[m1.ui.layers.needs.presets.trace]
+max_edges = 700
+domain_scope = "all"
+
+[m1.ui.layers.kernel.presets.overview]
+max_edges = 420
+
+[m1.ui.layers.kernel.presets.actor_route]
+focus_depth = 4
+max_edges = 620
+
+[m1.ui.layers.kernel.presets.trace]
+max_edges = 900
+domain_scope = "all"
+
+[m1.ui.layers.flow.presets.overview]
+max_edges = 480
+
+[m1.ui.layers.flow.presets.actor_route]
+focus_depth = 4
+max_edges = 620
+
+[m1.ui.layers.flow.presets.trace]
+max_edges = 900
+domain_scope = "all"

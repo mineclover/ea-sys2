@@ -11,6 +11,8 @@ from ea_flow.flow_simulator import (
     AffectedExecution,
     FlowSimulator,
     ImpactLevel,
+    StartConditionKind,
+    StartConditionSpec,
     TopologyChange,
     TopologyChangeType,
     TopologySimulationResult,
@@ -126,6 +128,73 @@ class TestFlowSimulator:
         result = sim.simulate([change])
         assert result.affected_executions == 0
         assert result.impact_level == ImpactLevel.NONE
+
+    def test_start_condition_identifier(self):
+        start = StartConditionSpec(
+            target_step_name="step-c",
+            source_step_name="step-b",
+            workflow_name="validate-model",
+            kind=StartConditionKind.DATA_EDGE,
+            source_field="output.score",
+            target_field="input.score",
+        )
+        assert (
+            start.identifier
+            == "start::validate-model::step-b->step-c::"
+            "data_edge:output.score>input.score"
+        )
+
+    def test_simulate_add_step_with_start_condition_impacts(self):
+        store = _populated_store()
+        sim = FlowSimulator(store)
+
+        change = TopologyChange(
+            change_type=TopologyChangeType.ADD_STEP,
+            step_name="step-review",
+            workflow_name="validate-model",
+            start_condition=StartConditionSpec(
+                target_step_name="step-review",
+                source_step_name="step-b",
+                workflow_name="validate-model",
+                kind=StartConditionKind.CONTROL_EDGE,
+            ),
+        )
+        result = sim.simulate([change])
+        assert result.affected_executions == 8
+        assert result.start_condition_violations == 8
+
+    def test_simulate_start_condition_patch(self):
+        store = _populated_store()
+        sim = FlowSimulator(store)
+
+        result = sim.simulate_start_condition_patch(
+            target_step_name="step-c",
+            source_step_name="step-b",
+            workflow_name="validate-model",
+            kind=StartConditionKind.DATA_EDGE,
+            source_field="output.score",
+            target_field="input.score",
+        )
+        assert result.affected_executions == 8
+        assert result.start_condition_violations == 8
+        assert any(
+            "start::validate-model::step-b->step-c::"
+            "data_edge:output.score>input.score" in detail.impact_description
+            for detail in result.affected_execution_details
+        )
+
+    def test_simulate_start_condition_patch_global_scope(self):
+        store = _populated_store()
+        sim = FlowSimulator(store)
+
+        result = sim.simulate_start_condition_patch(
+            target_step_name="deploy-b",
+            source_step_name="deploy-a",
+            workflow_name="",
+            kind=StartConditionKind.CONTROL_EDGE,
+        )
+        assert result.affected_executions == 3
+        assert result.start_condition_violations == 3
 
     def test_simulate_multiple_removals(self):
         store = _populated_store()

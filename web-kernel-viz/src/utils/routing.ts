@@ -17,16 +17,24 @@ interface NodeHandleConfig {
     left: HandleInfo[];
 }
 
+const MAX_HANDLES_PER_SIDE = 12;
+
 export const routeEdges = (nodes: Node[], edges: Edge[]) => {
     const nodeHandles: Record<string, NodeHandleConfig> = {};
+    const nodeById = new Map<string, Node>();
+    const edgeIndexById = new Map<string, number>();
 
     nodes.forEach(node => {
         nodeHandles[node.id] = { top: [], right: [], bottom: [], left: [] };
+        nodeById.set(node.id, node);
+    });
+    edges.forEach((edge, index) => {
+        edgeIndexById.set(edge.id, index);
     });
 
     edges.forEach((edge) => {
-        const sourceNode = nodes.find(n => n.id === edge.source);
-        const targetNode = nodes.find(n => n.id === edge.target);
+        const sourceNode = nodeById.get(edge.source);
+        const targetNode = nodeById.get(edge.target);
 
         if (!sourceNode || !targetNode || !nodeHandles[sourceNode.id] || !nodeHandles[targetNode.id]) return;
 
@@ -104,26 +112,38 @@ export const routeEdges = (nodes: Node[], edges: Edge[]) => {
             const list = config[side];
             if (list.length === 0) return;
 
-            const step = 100 / (list.length + 1);
+            const applySide = (isSource: boolean) => {
+                const sideList = list.filter((item) => item.isSource === isSource);
+                if (sideList.length === 0) return;
 
-            list.forEach((h, idx) => {
-                const offset = step * (idx + 1);
-                const handleId = `${h.isSource ? 's' : 't'}-${side}-${idx}`;
+                const handleCount = Math.min(sideList.length, MAX_HANDLES_PER_SIDE);
+                const step = 100 / (handleCount + 1);
+                const seen = new Set<string>();
 
-                handlesData[side].push({
-                    id: handleId,
-                    offset
-                });
-
-                const edgeIndex = newEdges.findIndex(e => e.id === h.edgeId);
-                if (edgeIndex >= 0) {
-                    if (h.isSource) {
-                        newEdges[edgeIndex].sourceHandle = handleId;
-                    } else {
-                        newEdges[edgeIndex].targetHandle = handleId;
+                sideList.forEach((h, idx) => {
+                    const slot = idx % handleCount;
+                    const handleId = `${isSource ? 's' : 't'}-${side}-${slot}`;
+                    if (!seen.has(handleId)) {
+                        seen.add(handleId);
+                        handlesData[side].push({
+                            id: handleId,
+                            offset: step * (slot + 1),
+                        });
                     }
-                }
-            });
+
+                    const edgeIndex = edgeIndexById.get(h.edgeId);
+                    if (edgeIndex != null) {
+                        if (isSource) {
+                            newEdges[edgeIndex].sourceHandle = handleId;
+                        } else {
+                            newEdges[edgeIndex].targetHandle = handleId;
+                        }
+                    }
+                });
+            };
+
+            applySide(true);
+            applySide(false);
         });
 
         return {

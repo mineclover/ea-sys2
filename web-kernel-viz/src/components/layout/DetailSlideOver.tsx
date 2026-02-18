@@ -61,9 +61,9 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
             <div style={{
                 width: 380,
                 height: '100%',
-                background: 'var(--bg-primary)',
+                background: 'var(--background)',
                 borderLeft: '1px solid var(--border)',
-                boxShadow: open ? '-4px 0 12px rgba(0,0,0,0.08)' : 'none',
+                boxShadow: open ? '-4px 0 12px var(--shadow-md)' : 'none',
                 display: 'flex',
                 flexDirection: 'column',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -76,7 +76,7 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
                     alignItems: 'center',
                     justifyContent: 'space-between',
                 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)' }}>
                         {title || 'Detail'}
                     </span>
                     <button
@@ -84,8 +84,8 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
                         aria-label="Close detail panel"
                         style={{
                             width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg-card)',
-                            cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)',
+                            border: '1px solid var(--border)', borderRadius: 4, background: 'var(--card)',
+                            cursor: 'pointer', fontSize: 14, color: 'var(--muted-foreground)',
                         }}
                     >
                         ✕
@@ -98,7 +98,7 @@ export default function DetailSlideOver({ open, onClose, title, children }: Deta
                     overflowY: 'auto',
                     padding: '16px',
                     fontSize: 13,
-                    color: 'var(--text-secondary)',
+                    color: 'var(--muted-foreground)',
                 }}>
                     {children}
                 </div>

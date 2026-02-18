@@ -106,6 +106,9 @@ def test_model_registration_records_decision_trace_and_exploration(tmp_path):
     assert register["transaction_id"]
     assert register["decision_trace"]["decision_id"] == decision_id
     assert register["decision_trace"]["warnings"] == []
+    assert register["decision_trace"]["cause_type"] == "decision"
+    assert register["decision_trace"]["cause_id"] == decision_id
+    assert register["decision_trace"]["change_phase"] == "planned"
 
     validate = container.validate_kernel_model(
         "DecisionTraceModel",
@@ -119,6 +122,7 @@ def test_model_registration_records_decision_trace_and_exploration(tmp_path):
     assert validate["transaction_id"]
     assert validate["decision_trace"]["decision_id"] == decision_id
     assert "missing_evidence_refs" in validate["decision_trace"]["warnings"]
+    assert validate["decision_trace"]["change_phase"] == "planned"
 
     activate = container.activate_kernel_model(
         "DecisionTraceModel",
@@ -131,12 +135,16 @@ def test_model_registration_records_decision_trace_and_exploration(tmp_path):
     assert isinstance(activate, dict)
     assert activate["transaction_id"]
     assert activate["decision_trace"]["decision_id"] == decision_id
+    assert activate["decision_trace"]["change_phase"] == "applied"
 
     trace = container.get_model_decision_trace(decision_id)
     assert trace is not None
     assert trace["kind"] == "decision_trace_contract"
     assert trace["contract_version"] == "1.0"
     assert trace["decision_id"] == decision_id
+    assert trace["cause_type"] == "decision"
+    assert trace["cause_id"] == decision_id
+    assert trace["latest_change_phase"] == "applied"
     assert len(trace["operations"]) == 3
     assert "missing_evidence_refs" in trace["warnings"]
 
@@ -147,6 +155,11 @@ def test_model_registration_records_decision_trace_and_exploration(tmp_path):
     assert "validate" in exploration["evidence"]["missing_evidence_operations"]
     assert exploration["impact"]["total_operations"] == 3
     assert "DecisionTraceModel" in exploration["impact"]["models"]
+    assert exploration["causal_context"]["latest_change_phase"] == "applied"
+    assert any(
+        row["cause_type"] == "decision" and row["cause_id"] == decision_id
+        for row in exploration["causal_context"]["causes"]
+    )
     assert any(
         row["event_type"] == "kernel_model_registered"
         for row in exploration["history"]

@@ -3,7 +3,7 @@
 
 [profile]
 name = "EASystemLayerModel"
-version = "0.4.1"
+version = "0.4.2"
 kernel_version = "2.5.0"
 id_prefix = "eas"
 standard = "EA System Layer Contracts"
@@ -399,6 +399,44 @@ layer = "Needs"
 category = "Assessment"
 description = "Need relation type: need supersedes another need."
 
+# -- NeedPurpose taxonomy (user intent goals) --
+
+[[elements]]
+name = "NeedPurposeSafety"
+layer = "Needs"
+category = "Goal"
+description = "User intent: ensure safety and risk minimization outcomes."
+
+[[elements]]
+name = "NeedPurposeEfficiency"
+layer = "Needs"
+category = "Goal"
+description = "User intent: improve efficiency and reduce operational waste."
+
+[[elements]]
+name = "NeedPurposeUsability"
+layer = "Needs"
+category = "Goal"
+description = "User intent: improve usability, accessibility, and ease-of-use."
+
+[[elements]]
+name = "NeedPurposeCompliance"
+layer = "Needs"
+category = "Goal"
+description = "User intent: satisfy policy, audit, and regulatory constraints."
+
+[[elements]]
+name = "NeedPurposeGrowth"
+layer = "Needs"
+category = "Goal"
+description = "User intent: support capability growth and scale expansion."
+
+[[elements]]
+name = "NeedPurposeTrust"
+layer = "Needs"
+category = "Goal"
+description = "User intent: increase user trust through reliability and transparency."
+
 # ══════════════════════════════════════════════════════════════
 # N2 Catalog — Process Stages (Behavior)
 # ══════════════════════════════════════════════════════════════
@@ -793,6 +831,94 @@ target = "NeedStatement"
 relation = "available_in"
 priority = 60
 notes = "Cause-type contexts are available in need statements as root cause classification."
+
+# ══════════════════════════════════════════════════════════════
+# N1 Goal Rules — Purpose Classification on NeedStatement/Need
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedPurposeSafety"
+target = "NeedStatement"
+relation = "available_in"
+priority = 72
+notes = "Purpose classification: safety intent is explicit in need statements."
+
+[[rules]]
+source = "NeedPurposeEfficiency"
+target = "NeedStatement"
+relation = "available_in"
+priority = 72
+notes = "Purpose classification: efficiency intent is explicit in need statements."
+
+[[rules]]
+source = "NeedPurposeUsability"
+target = "NeedStatement"
+relation = "available_in"
+priority = 72
+notes = "Purpose classification: usability intent is explicit in need statements."
+
+[[rules]]
+source = "NeedPurposeCompliance"
+target = "NeedStatement"
+relation = "available_in"
+priority = 72
+notes = "Purpose classification: compliance intent is explicit in need statements."
+
+[[rules]]
+source = "NeedPurposeGrowth"
+target = "NeedStatement"
+relation = "available_in"
+priority = 72
+notes = "Purpose classification: growth intent is explicit in need statements."
+
+[[rules]]
+source = "NeedPurposeTrust"
+target = "NeedStatement"
+relation = "available_in"
+priority = 72
+notes = "Purpose classification: trust intent is explicit in need statements."
+
+[[rules]]
+source = "NeedPurposeSafety"
+target = "Need"
+relation = "constrains"
+priority = 72
+notes = "Safety intent constrains need lifecycle and prioritization decisions."
+
+[[rules]]
+source = "NeedPurposeEfficiency"
+target = "Need"
+relation = "constrains"
+priority = 72
+notes = "Efficiency intent constrains need lifecycle and prioritization decisions."
+
+[[rules]]
+source = "NeedPurposeUsability"
+target = "Need"
+relation = "constrains"
+priority = 72
+notes = "Usability intent constrains need lifecycle and prioritization decisions."
+
+[[rules]]
+source = "NeedPurposeCompliance"
+target = "Need"
+relation = "constrains"
+priority = 72
+notes = "Compliance intent constrains need lifecycle and prioritization decisions."
+
+[[rules]]
+source = "NeedPurposeGrowth"
+target = "Need"
+relation = "constrains"
+priority = 72
+notes = "Growth intent constrains need lifecycle and prioritization decisions."
+
+[[rules]]
+source = "NeedPurposeTrust"
+target = "Need"
+relation = "constrains"
+priority = 72
+notes = "Trust intent constrains need lifecycle and prioritization decisions."
 
 # ══════════════════════════════════════════════════════════════
 # N2 Process Stage Rules — Sequence (IDENTIFY -> QUERY -> MODEL_DETAIL)
@@ -1334,3 +1460,14 @@ target = "FlowProgressFeedback"
 relation = "consumes"
 priority = 72
 notes = "Needs-Flow: refinement step consumes flow progress feedback for backlog updates."
+
+# ══════════════════════════════════════════════════════════════
+# Rules: Dormant Relation Anchors (Coverage Stabilization)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsModelPort"
+relation = "registers"
+priority = 64
+notes = "Needs catalog service registers the needs model port for cross-layer access."

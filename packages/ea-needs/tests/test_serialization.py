@@ -6,7 +6,9 @@ import pytest
 from ea_needs.catalog import NeedCatalog
 from ea_needs.types import (
     JustificationType,
+    NeedKernelChangePhase,
     NeedPriority,
+    NeedPurpose,
     NeedRelationType,
     NeedStatus,
 )
@@ -75,6 +77,7 @@ class TestJsonRoundtrip:
         n1 = restored.needs[0]
         assert n1.status == NeedStatus.ACKNOWLEDGED
         assert n1.priority == NeedPriority.CRITICAL
+        assert n1.kernel_change_phase == NeedKernelChangePhase.PLANNED
         assert n1.statement.desire.action == "migrate"
         assert n1.statement.desire.target == "cloud"
         assert len(n1.statement.justifications) == 2
@@ -85,6 +88,7 @@ class TestJsonRoundtrip:
         n2 = restored.needs[1]
         assert n2.status == NeedStatus.DRAFT
         assert n2.priority == NeedPriority.HIGH
+        assert n2.kernel_change_phase == NeedKernelChangePhase.PLANNED
         assert n2.statement.desire.target is None
 
     def test_roundtrip_preserves_relations(self, populated_catalog: NeedCatalog):
@@ -113,3 +117,11 @@ class TestJsonRoundtrip:
         assert restored.stakeholders == []
         assert restored.needs == []
         assert restored.relations == []
+
+    def test_from_json_normalizes_legacy_unknown_purpose_to_unspecified(
+        self, populated_catalog: NeedCatalog,
+    ):
+        data = json.loads(populated_catalog.to_json())
+        data["needs"][0]["statement"]["purpose"] = "legacy free text purpose"
+        restored = NeedCatalog.from_json(json.dumps(data))
+        assert restored.needs[0].statement.purpose == NeedPurpose.UNSPECIFIED

@@ -86,10 +86,10 @@ const sectionBtnStyle = (active: boolean) => ({
     padding: '6px 14px',
     fontSize: 13,
     fontWeight: (active ? 700 : 500) as number,
-    border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
     borderRadius: 6,
-    background: active ? 'var(--accent-bg)' : 'var(--bg-card)',
-    color: active ? 'var(--accent)' : 'var(--text-secondary)',
+    background: active ? 'var(--muted)' : 'var(--card)',
+    color: active ? 'var(--primary)' : 'var(--muted-foreground)',
     cursor: 'pointer' as const,
 });
 
@@ -98,9 +98,9 @@ const subBtnStyle = (active: boolean) => ({
     fontSize: 12,
     fontWeight: (active ? 600 : 400) as number,
     border: 'none',
-    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    borderBottom: active ? '2px solid var(--primary)' : '2px solid transparent',
     background: 'none',
-    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    color: active ? 'var(--foreground)' : 'var(--muted-foreground)',
     cursor: 'pointer' as const,
 });
 
@@ -119,8 +119,8 @@ function CopyBtn({ value, title }: { value: string; title?: string }) {
             style={{
                 width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: '1px solid var(--border)', borderRadius: 4,
-                background: copied ? 'var(--success-bg)' : 'var(--bg-card)',
-                cursor: 'pointer', fontSize: 12, color: copied ? 'var(--success-text)' : 'var(--text-secondary)',
+                background: copied ? 'var(--status-success-bg)' : 'var(--card)',
+                cursor: 'pointer', fontSize: 12, color: copied ? 'var(--status-success-text)' : 'var(--muted-foreground)',
                 transition: 'background 0.2s, color 0.2s',
             }}
         >
@@ -133,10 +133,10 @@ const langBtnStyle = (active: boolean) => ({
     padding: '3px 8px',
     fontSize: 11,
     fontWeight: (active ? 700 : 400) as number,
-    border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
     borderRadius: 4,
-    background: active ? 'var(--accent-bg)' : 'var(--bg-card)',
-    color: active ? 'var(--accent)' : 'var(--text-muted)',
+    background: active ? 'var(--muted)' : 'var(--card)',
+    color: active ? 'var(--primary)' : 'var(--muted-foreground)',
     cursor: 'pointer' as const,
 });
 
@@ -157,7 +157,7 @@ function HamburgerIcon({ open }: { open: boolean }) {
         display: 'block',
         width: 18,
         height: 2,
-        background: 'var(--text-secondary)',
+        background: 'var(--muted-foreground)',
         borderRadius: 1,
         transition: 'transform 0.2s, opacity 0.2s',
     };
@@ -177,10 +177,10 @@ const mobileSectionStyle = (active: boolean): React.CSSProperties => ({
     padding: '10px 16px',
     fontSize: 14,
     fontWeight: active ? 700 : 500,
-    background: active ? 'var(--accent-bg)' : 'transparent',
-    color: active ? 'var(--accent)' : 'var(--text-primary)',
+    background: active ? 'var(--muted)' : 'transparent',
+    color: active ? 'var(--primary)' : 'var(--foreground)',
     border: 'none',
-    borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent',
+    borderLeft: active ? '3px solid var(--primary)' : '3px solid transparent',
     textAlign: 'left',
     cursor: 'pointer',
 });
@@ -191,8 +191,8 @@ const mobileSubStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px 8px 32px',
     fontSize: 13,
     fontWeight: active ? 600 : 400,
-    background: active ? 'var(--bg-secondary)' : 'transparent',
-    color: active ? 'var(--accent)' : 'var(--text-secondary)',
+    background: active ? 'var(--secondary)' : 'transparent',
+    color: active ? 'var(--primary)' : 'var(--muted-foreground)',
     border: 'none',
     textAlign: 'left',
     cursor: 'pointer',
@@ -249,14 +249,14 @@ export default function TopNav({
                 {/* Top bar */}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                    background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)',
+                    background: 'var(--background)', borderBottom: '1px solid var(--border)',
                 }}>
                     <button
                         onClick={onToggleSidePanel}
                         style={{
                             width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1px solid var(--border)', borderRadius: 6, background: sidePanelOpen ? 'var(--bg-secondary)' : 'var(--bg-card)',
-                            cursor: 'pointer', fontSize: 14, color: 'var(--text-secondary)',
+                            border: '1px solid var(--border)', borderRadius: 6, background: sidePanelOpen ? 'var(--secondary)' : 'var(--card)',
+                            cursor: 'pointer', fontSize: 14, color: 'var(--muted-foreground)',
                         }}
                         title="Toggle side panel"
                     >
@@ -265,7 +265,7 @@ export default function TopNav({
                     <button
                         onClick={handleGoHome}
                         style={{
-                            fontSize: 14, fontWeight: 700, color: 'var(--text-primary)',
+                            fontSize: 14, fontWeight: 700, color: 'var(--foreground)',
                             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                             fontFamily: 'inherit',
                         }}
@@ -275,7 +275,7 @@ export default function TopNav({
 
                     {/* Current section indicator */}
                     {!isDashboard && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
+                        <span style={{ fontSize: 12, color: 'var(--muted-foreground)', fontWeight: 500 }}>
                             / {SECTIONS.find(s => s.key === section)?.label}
                         </span>
                     )}
@@ -289,7 +289,7 @@ export default function TopNav({
                         style={{
                             width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '1px solid var(--border)', borderRadius: 6,
-                            background: menuOpen ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                            background: menuOpen ? 'var(--secondary)' : 'var(--card)',
                             cursor: 'pointer',
                         }}
                         title="Toggle menu"
@@ -303,9 +303,9 @@ export default function TopNav({
                     maxHeight: menuOpen ? 500 : 0,
                     overflow: 'hidden',
                     transition: 'max-height 0.25s ease-in-out',
-                    background: 'var(--bg-primary)',
+                    background: 'var(--background)',
                     borderBottom: menuOpen ? '1px solid var(--border)' : 'none',
-                    boxShadow: menuOpen ? `0 4px 12px var(--shadow)` : 'none',
+                    boxShadow: menuOpen ? `0 4px 12px var(--shadow-md)` : 'none',
                 }}>
                     {/* Section buttons */}
                     {SECTIONS.map((s) => (
@@ -318,7 +318,7 @@ export default function TopNav({
                             </button>
                             {/* Sub-views for active section */}
                             {!isDashboard && section === s.key && (
-                                <div style={{ background: 'var(--bg-secondary)' }}>
+                                <div style={{ background: 'var(--secondary)' }}>
                                     {getViews(s.key).map((v) => (
                                         <button
                                             key={v.key}
@@ -339,14 +339,14 @@ export default function TopNav({
                     {/* Profile selector in mobile menu */}
                     {showProfileSelector && (
                         <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Profile</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>Profile</span>
                             <select
                                 value={selectedProfile}
                                 onChange={(e) => {
                                     onSelectProfile?.(e.target.value);
                                     setMenuOpen(false);
                                 }}
-                                style={{ flex: 1, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                                style={{ flex: 1, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 4, background: 'var(--card)', color: 'var(--foreground)' }}
                             >
                                 {profiles!.map((p) => (
                                     <option key={p.name} value={p.name}>{p.name} (v{p.version})</option>
@@ -364,8 +364,8 @@ export default function TopNav({
                             style={{
                                 width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 border: '1px solid var(--border)', borderRadius: 4,
-                                background: 'var(--bg-card)', cursor: 'pointer',
-                                fontSize: 14, color: 'var(--text-secondary)',
+                                background: 'var(--card)', cursor: 'pointer',
+                                fontSize: 14, color: 'var(--muted-foreground)',
                             }}
                         >
                             {theme === 'dark' ? '\u2600' : '\u263E'}
@@ -393,7 +393,7 @@ export default function TopNav({
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-            background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)',
+            background: 'var(--background)', borderBottom: '1px solid var(--border)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
         }}>
             {/* Primary row */}
@@ -402,8 +402,8 @@ export default function TopNav({
                     onClick={onToggleSidePanel}
                     style={{
                         width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '1px solid var(--border)', borderRadius: 6, background: sidePanelOpen ? 'var(--bg-secondary)' : 'var(--bg-card)',
-                        cursor: 'pointer', fontSize: 14, color: 'var(--text-secondary)',
+                        border: '1px solid var(--border)', borderRadius: 6, background: sidePanelOpen ? 'var(--secondary)' : 'var(--card)',
+                        cursor: 'pointer', fontSize: 14, color: 'var(--muted-foreground)',
                     }}
                     title="Toggle side panel"
                 >
@@ -412,7 +412,7 @@ export default function TopNav({
                 <button
                     onClick={onGoHome}
                     style={{
-                        fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginRight: 8,
+                        fontSize: 14, fontWeight: 700, color: 'var(--foreground)', marginRight: 8,
                         background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                         fontFamily: 'inherit',
                     }}
@@ -434,8 +434,8 @@ export default function TopNav({
                         style={{
                             width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             border: '1px solid var(--border)', borderRadius: 4,
-                            background: 'var(--bg-card)', cursor: 'pointer',
-                            fontSize: 14, color: 'var(--text-secondary)',
+                            background: 'var(--card)', cursor: 'pointer',
+                            fontSize: 14, color: 'var(--muted-foreground)',
                         }}
                     >
                         {theme === 'dark' ? '\u2600' : '\u263E'}
@@ -448,11 +448,11 @@ export default function TopNav({
 
                 {showProfileSelector && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Profile</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>Profile</span>
                         <select
                             value={selectedProfile}
                             onChange={(e) => onSelectProfile?.(e.target.value)}
-                            style={{ padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 4, background: 'var(--bg-card)', color: 'var(--text-primary)', maxWidth: 220 }}
+                            style={{ padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 4, background: 'var(--card)', color: 'var(--foreground)', maxWidth: 220 }}
                         >
                             {profiles!.map((p) => (
                                 <option key={p.name} value={p.name}>{p.name} (v{p.version})</option>

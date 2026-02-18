@@ -33,10 +33,10 @@ export default class ErrorBoundary extends Component<Props, State> {
                     padding: 40,
                     fontFamily: 'system-ui, -apple-system, sans-serif',
                 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--foreground)', marginBottom: 8 }}>
                         Something went wrong
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, maxWidth: 480, textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, color: 'var(--muted-foreground)', marginBottom: 16, maxWidth: 480, textAlign: 'center' }}>
                         {this.state.error?.message || 'An unexpected error occurred.'}
                     </div>
                     <button
@@ -45,10 +45,10 @@ export default class ErrorBoundary extends Component<Props, State> {
                             padding: '8px 20px',
                             fontSize: 13,
                             fontWeight: 600,
-                            border: '1px solid var(--accent)',
+                            border: '1px solid var(--primary)',
                             borderRadius: 6,
-                            background: 'var(--accent)',
-                            color: 'var(--bg-card)',
+                            background: 'var(--primary)',
+                            color: 'var(--card)',
                             cursor: 'pointer',
                         }}
                     >

@@ -365,6 +365,9 @@ class GovernanceContainer:
         actor: str = "governance",
         decision_id: str | None = None,
         evidence_refs: list[str] | tuple[str, ...] | None = None,
+        cause_type: str | None = None,
+        cause_id: str | None = None,
+        change_phase: str | None = None,
         return_transaction: bool = False,
     ) -> dict[str, Any]:
         return self._kernel_model_ops.register_kernel_model(
@@ -378,6 +381,9 @@ class GovernanceContainer:
             actor=actor,
             decision_id=decision_id,
             evidence_refs=evidence_refs,
+            cause_type=cause_type,
+            cause_id=cause_id,
+            change_phase=change_phase,
             return_transaction=return_transaction,
         )
 
@@ -390,6 +396,9 @@ class GovernanceContainer:
         actor: str = "governance",
         decision_id: str | None = None,
         evidence_refs: list[str] | tuple[str, ...] | None = None,
+        cause_type: str | None = None,
+        cause_id: str | None = None,
+        change_phase: str | None = None,
         return_transaction: bool = False,
     ) -> ValidationRunEntry | dict[str, Any]:
         return self._kernel_model_ops.validate_kernel_model(
@@ -399,6 +408,9 @@ class GovernanceContainer:
             actor=actor,
             decision_id=decision_id,
             evidence_refs=evidence_refs,
+            cause_type=cause_type,
+            cause_id=cause_id,
+            change_phase=change_phase,
             return_transaction=return_transaction,
         )
 
@@ -410,6 +422,9 @@ class GovernanceContainer:
         actor: str = "governance",
         decision_id: str | None = None,
         evidence_refs: list[str] | tuple[str, ...] | None = None,
+        cause_type: str | None = None,
+        cause_id: str | None = None,
+        change_phase: str | None = None,
         return_transaction: bool = False,
     ) -> ModelRegistryEntry | dict[str, Any]:
         return self._kernel_model_ops.activate_kernel_model(
@@ -418,6 +433,9 @@ class GovernanceContainer:
             actor=actor,
             decision_id=decision_id,
             evidence_refs=evidence_refs,
+            cause_type=cause_type,
+            cause_id=cause_id,
+            change_phase=change_phase,
             return_transaction=return_transaction,
         )
 
@@ -585,15 +603,17 @@ class GovernanceContainer:
         tags: list[str] | None = None,
         use_case_id: str | None = None,
         cause_types: list[Any] | None = None,
-        purpose: str = "",
+        purpose: str = "unspecified",
         complexity: Any = "procedural",
+        kernel_change_phase: str | None = None,
         actor: str = "governance",
     ) -> dict[str, Any]:
         return self._needs_ops.express_need_in_catalog(
             catalog_id, stakeholder_id=stakeholder_id, action=action, subject=subject,
             target=target, justifications=justifications, priority=priority,
             kernel_refs=kernel_refs, tags=tags, use_case_id=use_case_id,
-            cause_types=cause_types, purpose=purpose, complexity=complexity, actor=actor,
+            cause_types=cause_types, purpose=purpose, complexity=complexity,
+            kernel_change_phase=kernel_change_phase, actor=actor,
         )
 
     def revise_need_in_catalog(
@@ -630,10 +650,16 @@ class GovernanceContainer:
         *,
         decision_id: str,
         evidence_refs: list[str],
+        kernel_change_phase: str | None = None,
         actor: str = "governance",
     ) -> dict[str, str]:
         return self._needs_ops.inherit_need_decision_evidence(
-            catalog_id, need_id, decision_id=decision_id, evidence_refs=evidence_refs, actor=actor,
+            catalog_id,
+            need_id,
+            decision_id=decision_id,
+            evidence_refs=evidence_refs,
+            kernel_change_phase=kernel_change_phase,
+            actor=actor,
         )
 
     def get_needs_catalog(self, catalog_id: str) -> NeedCatalog | None:

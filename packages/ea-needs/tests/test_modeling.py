@@ -7,6 +7,7 @@ from ea_needs.catalog import NeedCatalog
 from ea_needs.types import (
     NeedCauseType,
     NeedPriority,
+    NeedPurpose,
     NeedProcessStage,
     NeedResolutionComplexity,
 )
@@ -39,7 +40,7 @@ class TestUseCaseBoundNeedModeling:
             subject="deployments",
             use_case_id=use_case.id,
             cause_types=[NeedCauseType.EMOTIONAL, "logical"],
-            purpose="prevent weekend incidents",
+            purpose=NeedPurpose.SAFETY,
             complexity=NeedResolutionComplexity.COMPLEX,
             priority=NeedPriority.CRITICAL,
         )
@@ -47,7 +48,7 @@ class TestUseCaseBoundNeedModeling:
         assert need.use_case_id == use_case.id
         assert need.statement.use_case_id == use_case.id
         assert need.statement.cause_types == [NeedCauseType.EMOTIONAL, NeedCauseType.LOGICAL]
-        assert need.statement.purpose == "prevent weekend incidents"
+        assert need.statement.purpose == NeedPurpose.SAFETY
         assert need.statement.complexity == NeedResolutionComplexity.COMPLEX
 
     def test_needs_by_use_case(self, catalog: NeedCatalog):
@@ -105,6 +106,16 @@ class TestNeedVersioningAndIdentification:
         assert latest.id == revised.id
         assert v1 is not None and v1.id == base.id
         assert v2 is not None and v2.id == revised.id
+
+    def test_revise_need_normalizes_m2_style_purpose(self, catalog: NeedCatalog):
+        base = catalog.express_need(_first_stakeholder_id(catalog), "reduce", "error rate")
+        revised = catalog.revise_need(base.id, purpose="NeedPurposeTrust")
+        assert revised.statement.purpose == NeedPurpose.TRUST
+
+    def test_revise_need_rejects_invalid_purpose(self, catalog: NeedCatalog):
+        base = catalog.express_need(_first_stakeholder_id(catalog), "reduce", "error rate")
+        with pytest.raises(ValueError, match="Allowed purpose values"):
+            catalog.revise_need(base.id, purpose="make users happier")
 
 
 class TestProcessUnitModeling:

@@ -14,7 +14,7 @@ export default function SidePanel({ open, children }: SidePanelProps) {
             overflow: open ? 'visible' : 'hidden',
             transition: 'width 0.2s ease, min-width 0.2s ease',
             borderRight: open ? '1px solid var(--border)' : 'none',
-            background: 'var(--bg-secondary)',
+            background: 'var(--secondary)',
             height: '100%',
         }}>
             <div style={{
@@ -22,7 +22,7 @@ export default function SidePanel({ open, children }: SidePanelProps) {
                 padding: open ? '12px 14px' : 0,
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontSize: 13,
-                color: 'var(--text-secondary)',
+                color: 'var(--muted-foreground)',
                 height: '100%',
                 overflowY: 'auto',
             }}>

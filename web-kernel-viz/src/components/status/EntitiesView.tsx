@@ -5,7 +5,8 @@ import { fetchProfileTopology } from '@/api/client';
 import { useProfiles } from '@/api/hooks';
 import type { TopologyNode, I18nString } from '@/api/types';
 import { useAppState } from '@/contexts/AppStateContext';
-import { ErrorBanner, LoadingSpinner } from '@/components/ui';
+import { Badge, ErrorBanner, LoadingSpinner } from '@/components/ui';
+import { PageHeader } from '@/components/layout';
 
 function i18n(v: I18nString | null | undefined, lang: string): string {
     if (!v) return '';
@@ -31,7 +32,12 @@ export default function EntitiesView() {
             const profiles = profilesQuery.data!;
             const results = await Promise.all(
                 profiles.map((p) =>
-                    fetchProfileTopology(p.name, { lang })
+                    fetchProfileTopology(p.name, {
+                        lang,
+                        view_mode: 'summary',
+                        surface_only: true,
+                        max_edges: 320,
+                    })
                         .then((topo) => ({
                             name: p.name,
                             version: p.version,
@@ -70,12 +76,25 @@ export default function EntitiesView() {
 
     return (
         <div style={{ padding: '24px 32px', fontFamily: 'system-ui, -apple-system, sans-serif', overflowY: 'auto', width: '100%' }}>
-            <div style={{ marginBottom: 20 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Elements — All Profiles</h2>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Total: {totalNodes} elements across {data.length} profiles
-                </span>
-            </div>
+            <PageHeader
+                metaKey="status.entities"
+                subtitle={`${totalNodes} elements across ${data.length} profiles`}
+                rightContent={
+                    <>
+                        <Badge
+                            label={lang === 'ko' ? 'M1 요약' : 'M1 summary'}
+                            bg="var(--status-indigo-bg)"
+                            color="var(--status-indigo-text)"
+                        />
+                        <Badge
+                            label={lang === 'ko' ? '표층만' : 'surface-only'}
+                            bg="var(--status-success-bg)"
+                            color="var(--status-success-text)"
+                        />
+                        <Badge label="max:320" />
+                    </>
+                }
+            />
 
             {data.map((profile) => {
                 const open = expanded[profile.name] !== false;
@@ -96,13 +115,13 @@ export default function EntitiesView() {
                                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                                 padding: '10px 14px', fontSize: 13, fontWeight: 600,
                                 border: '1px solid var(--border)', borderRadius: 6,
-                                background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer',
+                                background: 'var(--secondary)', color: 'var(--foreground)', cursor: 'pointer',
                                 textAlign: 'left',
                             }}
                         >
                             <span style={{ fontSize: 10 }}>{open ? '\u25BC' : '\u25B6'}</span>
                             {profile.name}
-                            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted-foreground)', marginLeft: 4 }}>
                                 v{profile.version} — {profile.nodes.length} elements
                             </span>
                         </button>
@@ -111,8 +130,8 @@ export default function EntitiesView() {
                                 {layers.map(([layerName, nodes]) => (
                                     <div key={layerName} style={{ marginBottom: 8 }}>
                                         <div style={{
-                                            fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
-                                            padding: '4px 8px', background: 'var(--bg-hover)', borderRadius: 4,
+                                            fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)',
+                                            padding: '4px 8px', background: 'var(--accent)', borderRadius: 4,
                                             display: 'inline-block', marginBottom: 4,
                                         }}>
                                             {layerName} ({nodes.length})
@@ -128,21 +147,21 @@ export default function EntitiesView() {
                                             </thead>
                                             <tbody>
                                                 {nodes.map((n) => (
-                                                    <tr key={n.name} style={{ borderBottom: '1px solid var(--bg-hover)' }}>
+                                                    <tr key={n.name} style={{ borderBottom: '1px solid var(--accent)' }}>
                                                         <td style={tdStyle}>
                                                             {i18n(n.display_name, lang) || n.name}
                                                             {n.display_name && (
-                                                                <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>({n.name})</span>
+                                                                <span style={{ fontSize: 10, color: 'var(--muted-foreground)', marginLeft: 4 }}>({n.name})</span>
                                                             )}
                                                         </td>
                                                         <td style={tdStyle}>
                                                             <span style={{
                                                                 padding: '1px 6px', fontSize: 10, fontWeight: 600,
-                                                                background: '#ede9fe', color: '#6d28d9', borderRadius: 3,
+                                                                background: 'var(--status-indigo-bg)', color: 'var(--status-indigo-text)', borderRadius: 3,
                                                             }}>{n.kernel_type}</span>
                                                         </td>
-                                                        <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{n.category || '—'}</td>
-                                                        <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{i18n(n.description, lang)}</td>
+                                                        <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{n.category || '—'}</td>
+                                                        <td style={{ ...tdStyle, color: 'var(--muted-foreground)' }}>{i18n(n.description, lang)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -160,9 +179,9 @@ export default function EntitiesView() {
 
 const thStyle: React.CSSProperties = {
     textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 600,
-    color: 'var(--text-muted)', textTransform: 'uppercase',
+    color: 'var(--muted-foreground)', textTransform: 'uppercase',
 };
 
 const tdStyle: React.CSSProperties = {
-    padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)',
+    padding: '6px 8px', fontSize: 12, color: 'var(--foreground)',
 };

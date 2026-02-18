@@ -7,7 +7,9 @@ from ea_needs.types import (
     Desire,
     Justification,
     JustificationType,
+    NeedKernelChangePhase,
     NeedPriority,
+    NeedPurpose,
     NeedRelationType,
     NeedStatement,
     NeedStatus,
@@ -51,12 +53,27 @@ class TestEnums:
         assert NeedPriority.MEDIUM.value == "medium"
         assert NeedPriority.LOW.value == "low"
 
+    def test_need_purpose_values(self):
+        assert NeedPurpose.SAFETY.value == "safety"
+        assert NeedPurpose.EFFICIENCY.value == "efficiency"
+        assert NeedPurpose.USABILITY.value == "usability"
+        assert NeedPurpose.COMPLIANCE.value == "compliance"
+        assert NeedPurpose.GROWTH.value == "growth"
+        assert NeedPurpose.TRUST.value == "trust"
+        assert NeedPurpose.UNSPECIFIED.value == "unspecified"
+
     def test_need_status_values(self):
         assert NeedStatus.DRAFT.value == "draft"
         assert NeedStatus.EXPRESSED.value == "expressed"
         assert NeedStatus.ACKNOWLEDGED.value == "acknowledged"
         assert NeedStatus.ADDRESSED.value == "addressed"
         assert NeedStatus.WITHDRAWN.value == "withdrawn"
+
+    def test_need_kernel_change_phase_values(self):
+        assert NeedKernelChangePhase.PLANNED.value == "planned"
+        assert NeedKernelChangePhase.APPLIED.value == "applied"
+        assert NeedKernelChangePhase.SUPERSEDED.value == "superseded"
+        assert NeedKernelChangePhase.ROLLED_BACK.value == "rolled_back"
 
     def test_need_relation_type_values(self):
         assert NeedRelationType.DEPENDS_ON.value == "depends_on"
@@ -68,7 +85,9 @@ class TestEnums:
     def test_enums_are_str(self):
         """All enums inherit from str for JSON serialization."""
         assert isinstance(NeedStatus.DRAFT, str)
+        assert isinstance(NeedKernelChangePhase.PLANNED, str)
         assert isinstance(NeedPriority.HIGH, str)
+        assert isinstance(NeedPurpose.SAFETY, str)
         assert isinstance(JustificationType.BECAUSE, str)
         assert isinstance(NeedRelationType.SUPPORTS, str)
 
@@ -161,3 +180,4 @@ class TestNeedStatement:
         assert ns.justifications == []
         assert ns.kernel_refs == []
         assert ns.tags == []
+        assert ns.purpose == NeedPurpose.UNSPECIFIED

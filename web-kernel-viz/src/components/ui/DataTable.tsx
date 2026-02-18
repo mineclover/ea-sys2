@@ -18,7 +18,7 @@ interface DataTableProps<T> {
 
 export default function DataTable<T>({ data, columns, keyFn, onRowClick, emptyMessage = 'No items.' }: DataTableProps<T>) {
     if (data.length === 0) {
-        return <div style={{ padding: 16, fontSize: 13, color: 'var(--text-muted)' }}>{emptyMessage}</div>;
+        return <div style={{ padding: 16, fontSize: 13, color: 'var(--muted-foreground)' }}>{emptyMessage}</div>;
     }
 
     return (
@@ -37,7 +37,7 @@ export default function DataTable<T>({ data, columns, keyFn, onRowClick, emptyMe
                                 padding: '8px 12px',
                                 fontSize: 10,
                                 fontWeight: 700,
-                                color: 'var(--text-muted)',
+                                color: 'var(--muted-foreground)',
                                 textTransform: 'uppercase',
                                 borderBottom: '1px solid var(--border)',
                                 width: col.width,
@@ -57,13 +57,13 @@ export default function DataTable<T>({ data, columns, keyFn, onRowClick, emptyMe
                             role={onRowClick ? 'button' : undefined}
                             style={{
                                 cursor: onRowClick ? 'pointer' : 'default',
-                                borderBottom: '1px solid var(--bg-hover)',
+                                borderBottom: '1px solid var(--accent)',
                             }}
-                            onMouseEnter={(e) => { if (onRowClick) (e.currentTarget.style.background = 'var(--bg-secondary)'); }}
+                            onMouseEnter={(e) => { if (onRowClick) (e.currentTarget.style.background = 'var(--secondary)'); }}
                             onMouseLeave={(e) => { if (onRowClick) (e.currentTarget.style.background = ''); }}
                         >
                             {columns.map((col) => (
-                                <td key={col.key} style={{ padding: '10px 12px', color: 'var(--text-primary)' }}>
+                                <td key={col.key} style={{ padding: '10px 12px', color: 'var(--foreground)' }}>
                                     {col.render(item)}
                                 </td>
                             ))}

@@ -8,32 +8,32 @@ interface BadgeProps {
 
 const PRESETS: Record<string, { bg: string; color: string }> = {
     // Status
-    DRAFT: { bg: 'var(--warning-bg)', color: 'var(--warning-text)' },
-    SUBMITTED: { bg: 'var(--indigo-bg)', color: 'var(--indigo-text)' },
-    APPROVED: { bg: 'var(--success-bg)', color: 'var(--success-text)' },
-    ACTIVE: { bg: 'var(--info-bg)', color: 'var(--info-text)' },
-    DEPRECATED: { bg: 'var(--bg-hover)', color: 'var(--text-secondary)' },
-    EXPRESSED: { bg: 'var(--indigo-bg)', color: 'var(--indigo-text)' },
-    ACKNOWLEDGED: { bg: 'var(--info-bg)', color: 'var(--info-text)' },
-    ADDRESSED: { bg: 'var(--success-bg)', color: 'var(--success-text)' },
-    WITHDRAWN: { bg: 'var(--bg-hover)', color: 'var(--text-secondary)' },
+    DRAFT: { bg: 'var(--status-warning-bg)', color: 'var(--status-warning-text)' },
+    SUBMITTED: { bg: 'var(--status-indigo-bg)', color: 'var(--status-indigo-text)' },
+    APPROVED: { bg: 'var(--status-success-bg)', color: 'var(--status-success-text)' },
+    ACTIVE: { bg: 'var(--status-info-bg)', color: 'var(--status-info-text)' },
+    DEPRECATED: { bg: 'var(--accent)', color: 'var(--muted-foreground)' },
+    EXPRESSED: { bg: 'var(--status-indigo-bg)', color: 'var(--status-indigo-text)' },
+    ACKNOWLEDGED: { bg: 'var(--status-info-bg)', color: 'var(--status-info-text)' },
+    ADDRESSED: { bg: 'var(--status-success-bg)', color: 'var(--status-success-text)' },
+    WITHDRAWN: { bg: 'var(--accent)', color: 'var(--muted-foreground)' },
     // Priority
-    LOW: { bg: 'var(--bg-hover)', color: 'var(--text-secondary)' },
-    MEDIUM: { bg: 'var(--warning-bg)', color: 'var(--warning-text)' },
-    HIGH: { bg: 'var(--error-bg)', color: 'var(--error-text)' },
-    CRITICAL: { bg: 'var(--pink-bg)', color: 'var(--pink-text)' },
+    LOW: { bg: 'var(--accent)', color: 'var(--muted-foreground)' },
+    MEDIUM: { bg: 'var(--status-warning-bg)', color: 'var(--status-warning-text)' },
+    HIGH: { bg: 'var(--status-error-bg)', color: 'var(--status-error-text)' },
+    CRITICAL: { bg: 'var(--status-pink-bg)', color: 'var(--status-pink-text)' },
     // Verdicts
-    ALLOW: { bg: 'var(--success-bg)', color: 'var(--success-text)' },
-    DENY: { bg: 'var(--error-bg)', color: 'var(--error-text)' },
+    ALLOW: { bg: 'var(--status-success-bg)', color: 'var(--status-success-text)' },
+    DENY: { bg: 'var(--status-error-bg)', color: 'var(--status-error-text)' },
     // Boolean
-    PASS: { bg: 'var(--success-bg)', color: 'var(--success-text)' },
-    FAIL: { bg: 'var(--error-bg)', color: 'var(--error-text)' },
+    PASS: { bg: 'var(--status-success-bg)', color: 'var(--status-success-text)' },
+    FAIL: { bg: 'var(--status-error-bg)', color: 'var(--status-error-text)' },
 };
 
 export default function Badge({ label, color, bg, size = 'sm' }: BadgeProps) {
     const preset = PRESETS[label.toUpperCase()];
-    const finalBg = bg || preset?.bg || 'var(--bg-secondary)';
-    const finalColor = color || preset?.color || 'var(--text-secondary)';
+    const finalBg = bg || preset?.bg || 'var(--secondary)';
+    const finalColor = color || preset?.color || 'var(--muted-foreground)';
     const fontSize = size === 'sm' ? 10 : 11;
     const padding = size === 'sm' ? '2px 6px' : '3px 8px';
 

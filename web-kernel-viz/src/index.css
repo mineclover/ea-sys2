@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* EA-Sys Layer Colors */
+  /* EA-Sys Layer Colors (theme-independent) */
   --color-layer-infra: #64748b;
   --color-layer-governance: #ef4444;
   --color-layer-decision: #a855f7;
@@ -20,70 +20,120 @@
   --color-layer-flow-bg: #f0fdf4;
 }
 
-/* Light mode (default) CSS custom properties */
+/* ===== shadcn Token Architecture: Light (Slate+Blue) ===== */
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-card: #ffffff;
-  --bg-hover: #f1f5f9;
+  /* Core surfaces */
+  --background: #ffffff;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+
+  /* Primary (interactive / accent actions) */
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+
+  /* Secondary (less prominent surfaces) */
+  --secondary: #f8fafc;
+  --secondary-foreground: #1e293b;
+
+  /* Muted (subtle backgrounds, placeholder text) */
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  /* Accent (hover highlight bg in shadcn convention) */
+  --accent: #f1f5f9;
+  --accent-foreground: #1e293b;
+
+  /* Destructive */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & inputs */
   --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  /* Accent / interactive */
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-bg: #eff6ff;
-  --accent-text: #1e40af;
-  /* Semantic status */
-  --success-bg: #dcfce7;
-  --success-text: #166534;
-  --error-bg: #fee2e2;
-  --error-text: #991b1b;
-  --warning-bg: #fef9c3;
-  --warning-text: #854d0e;
-  --info-bg: #dbeafe;
-  --info-text: #1e40af;
-  --indigo-bg: #e0e7ff;
-  --indigo-text: #3730a3;
-  --pink-bg: #fce7f3;
-  --pink-text: #9d174d;
-  /* Shadow */
+  --input: #cbd5e1;
+  --ring: #3b82f6;
+
+  /* Radius */
+  --radius: 8px;
+
+  /* Status tokens */
+  --status-success-bg: #dcfce7;
+  --status-success-text: #166534;
+  --status-error-bg: #fee2e2;
+  --status-error-text: #991b1b;
+  --status-warning-bg: #fef9c3;
+  --status-warning-text: #854d0e;
+  --status-info-bg: #dbeafe;
+  --status-info-text: #1e40af;
+
+  /* Extended semantic (indigo/pink for presets) */
+  --status-indigo-bg: #e0e7ff;
+  --status-indigo-text: #3730a3;
+  --status-pink-bg: #fce7f3;
+  --status-pink-text: #9d174d;
+
+  /* Shadows */
   --shadow-sm: rgba(0,0,0,0.05);
-  --shadow: rgba(0,0,0,0.08);
+  --shadow-md: rgba(0,0,0,0.08);
   --shadow-lg: rgba(0,0,0,0.12);
 }
 
-/* Dark mode CSS custom properties */
+/* ===== Dark Mode (Slate+Blue) ===== */
 .dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
-  --bg-hover: #334155;
+  /* Core surfaces */
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+
+  /* Primary */
+  --primary: #60a5fa;
+  --primary-foreground: #0f172a;
+
+  /* Secondary */
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+
+  /* Muted */
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+
+  /* Accent */
+  --accent: #334155;
+  --accent-foreground: #f1f5f9;
+
+  /* Destructive */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & inputs */
   --border: #334155;
-  --border-strong: #475569;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent: #60a5fa;
-  --accent-hover: #3b82f6;
-  --accent-bg: #1e3a5f;
-  --accent-text: #93c5fd;
-  --success-bg: #064e3b;
-  --success-text: #6ee7b7;
-  --error-bg: #450a0a;
-  --error-text: #fca5a5;
-  --warning-bg: #451a03;
-  --warning-text: #fcd34d;
-  --info-bg: #172554;
-  --info-text: #93c5fd;
-  --indigo-bg: #1e1b4b;
-  --indigo-text: #a5b4fc;
-  --pink-bg: #500724;
-  --pink-text: #f9a8d4;
+  --input: #475569;
+  --ring: #60a5fa;
+
+  /* Status tokens */
+  --status-success-bg: #064e3b;
+  --status-success-text: #6ee7b7;
+  --status-error-bg: #450a0a;
+  --status-error-text: #fca5a5;
+  --status-warning-bg: #451a03;
+  --status-warning-text: #fcd34d;
+  --status-info-bg: #172554;
+  --status-info-text: #93c5fd;
+
+  /* Extended semantic */
+  --status-indigo-bg: #1e1b4b;
+  --status-indigo-text: #a5b4fc;
+  --status-pink-bg: #500724;
+  --status-pink-text: #f9a8d4;
+
+  /* Shadows */
   --shadow-sm: rgba(0,0,0,0.2);
-  --shadow: rgba(0,0,0,0.3);
+  --shadow-md: rgba(0,0,0,0.3);
   --shadow-lg: rgba(0,0,0,0.4);
 }
 
@@ -103,4 +153,13 @@ code {
 
 html, body, #root {
   height: 100%;
+}
+
+@keyframes edge-dash-flow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }

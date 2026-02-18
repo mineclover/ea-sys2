@@ -16,6 +16,8 @@ from ea_needs.types import (
     JustificationType,
     NeedCauseType,
     NeedPriority,
+    NeedPurpose,
+    NeedKernelChangePhase,
     NeedProcessStage,
     NeedProcessUnit,
     NeedRelationType,
@@ -69,6 +71,80 @@ def _normalize_complexity(
     return NeedResolutionComplexity(value)
 
 
+def _normalize_kernel_change_phase(
+    value: NeedKernelChangePhase | str | None,
+) -> NeedKernelChangePhase:
+    if value is None:
+        return NeedKernelChangePhase.PLANNED
+    if isinstance(value, NeedKernelChangePhase):
+        return value
+    return NeedKernelChangePhase(value)
+
+
+def _default_change_phase_for_status(status: NeedStatus) -> NeedKernelChangePhase:
+    if status == NeedStatus.ADDRESSED:
+        return NeedKernelChangePhase.APPLIED
+    if status == NeedStatus.WITHDRAWN:
+        return NeedKernelChangePhase.SUPERSEDED
+    return NeedKernelChangePhase.PLANNED
+
+
+def _normalize_priority(value: NeedPriority | str | None) -> NeedPriority:
+    if value is None:
+        return NeedPriority.MEDIUM
+    if isinstance(value, NeedPriority):
+        return value
+
+    raw = value.strip()
+    if not raw:
+        return NeedPriority.MEDIUM
+
+    token = raw.lower().replace("-", "_").replace(" ", "_")
+    if token.startswith("need_priority_"):
+        token = token[len("need_priority_"):]
+    elif token.startswith("needpriority"):
+        token = token[len("needpriority"):].lstrip("_")
+
+    try:
+        return NeedPriority(token)
+    except ValueError as err:
+        allowed = ", ".join(item.value for item in NeedPriority)
+        raise ValueError(
+            f"Invalid priority '{value}'. Allowed priority values: {allowed}"
+        ) from err
+
+
+def _normalize_purpose(
+    value: NeedPurpose | str | None,
+    *,
+    allow_legacy_unknown: bool = False,
+) -> NeedPurpose:
+    if value is None:
+        return NeedPurpose.UNSPECIFIED
+    if isinstance(value, NeedPurpose):
+        return value
+
+    raw = value.strip()
+    if not raw:
+        return NeedPurpose.UNSPECIFIED
+
+    token = raw.lower().replace("-", "_").replace(" ", "_")
+    if token.startswith("need_purpose_"):
+        token = token[len("need_purpose_"):]
+    elif token.startswith("needpurpose"):
+        token = token[len("needpurpose"):].lstrip("_")
+
+    try:
+        return NeedPurpose(token)
+    except ValueError as err:
+        if allow_legacy_unknown:
+            return NeedPurpose.UNSPECIFIED
+        allowed = ", ".join(item.value for item in NeedPurpose)
+        raise ValueError(
+            f"Invalid purpose '{value}'. Allowed purpose values: {allowed}"
+        ) from err
+
+
 def _normalize_stage(value: NeedProcessStage | str) -> NeedProcessStage:
     if isinstance(value, NeedProcessStage):
         return value
@@ -103,6 +179,7 @@ class Need:
     statement: NeedStatement
     status: NeedStatus = NeedStatus.DRAFT
     priority: NeedPriority = NeedPriority.MEDIUM
+    kernel_change_phase: NeedKernelChangePhase = NeedKernelChangePhase.PLANNED
     decision_ref: str | None = None  # link to ea-decision topic/report id
     decision_evidence_refs: list[str] = field(default_factory=list)
     inherited_from_decisions: list[str] = field(default_factory=list)
@@ -129,17 +206,27 @@ class Need:
 
     def express(self) -> None:
         self.transition_to(NeedStatus.EXPRESSED)
+        self.kernel_change_phase = NeedKernelChangePhase.PLANNED
+        self.updated_at = _now()
 
     def acknowledge(self) -> None:
         self.transition_to(NeedStatus.ACKNOWLEDGED)
+        self.kernel_change_phase = NeedKernelChangePhase.PLANNED
+        self.updated_at = _now()
 
     def address(self, decision_ref: str | None = None) -> None:
         self.transition_to(NeedStatus.ADDRESSED)
+        self.kernel_change_phase = NeedKernelChangePhase.APPLIED
         if decision_ref:
             self.decision_ref = decision_ref
 
     def withdraw(self) -> None:
         self.transition_to(NeedStatus.WITHDRAWN)
+        self.kernel_change_phase = NeedKernelChangePhase.SUPERSEDED
+
+    def set_kernel_change_phase(self, phase: NeedKernelChangePhase | str) -> None:
+        self.kernel_change_phase = _normalize_kernel_change_phase(phase)
+        self.updated_at = _now()
 
     def inherit_decision_evidence(self, decision_id: str, refs: list[str]) -> None:
         """Merge decision evidence references into this need."""
@@ -238,13 +325,14 @@ class NeedCatalog:
         subject: str,
         target: str | None = None,
         justifications: list[dict[str, str]] | None = None,
-        priority: NeedPriority = NeedPriority.MEDIUM,
+        priority: NeedPriority | str = NeedPriority.MEDIUM,
         kernel_refs: list[str] | None = None,
         tags: list[str] | None = None,
         use_case_id: str | None = None,
         cause_types: list[NeedCauseType | str] | None = None,
-        purpose: str = "",
+        purpose: NeedPurpose | str | None = NeedPurpose.UNSPECIFIED,
         complexity: NeedResolutionComplexity | str = NeedResolutionComplexity.PROCEDURAL,
+        kernel_change_phase: NeedKernelChangePhase | str | None = None,
     ) -> Need:
         """Express a new need from a stakeholder.
 
@@ -277,7 +365,7 @@ class NeedCatalog:
             kernel_refs=list(kernel_refs or []),
             tags=list(tags or []),
             use_case_id=use_case_id,
-            purpose=purpose,
+            purpose=_normalize_purpose(purpose),
             cause_types=_normalize_cause_types(cause_types),
             complexity=_normalize_complexity(complexity),
         )
@@ -285,7 +373,8 @@ class NeedCatalog:
         need = Need(
             id=_generate_id("need"),
             statement=statement,
-            priority=priority,
+            priority=_normalize_priority(priority),
+            kernel_change_phase=_normalize_kernel_change_phase(kernel_change_phase),
             use_case_id=use_case_id,
             lineage_id="",
             version=1,
@@ -302,13 +391,14 @@ class NeedCatalog:
         subject: str | None = None,
         target: str | None | object = _UNSET,
         justifications: list[dict[str, str]] | None | object = _UNSET,
-        priority: NeedPriority | None = None,
+        priority: NeedPriority | str | None = None,
         kernel_refs: list[str] | None | object = _UNSET,
         tags: list[str] | None | object = _UNSET,
         use_case_id: str | None | object = _UNSET,
         cause_types: list[NeedCauseType | str] | None | object = _UNSET,
-        purpose: str | object = _UNSET,
+        purpose: NeedPurpose | str | None | object = _UNSET,
         complexity: NeedResolutionComplexity | str | object = _UNSET,
+        kernel_change_phase: NeedKernelChangePhase | str | None | object = _UNSET,
         clone_process_units: bool = True,
     ) -> Need:
         """Create a new version from an existing need lineage."""
@@ -339,7 +429,12 @@ class NeedCatalog:
         else:
             next_cause_types = cause_types
 
-        next_purpose = current.statement.purpose if purpose is _UNSET else str(purpose)
+        if purpose is _UNSET:
+            next_purpose = current.statement.purpose
+        elif purpose is None or isinstance(purpose, NeedPurpose | str):
+            next_purpose = _normalize_purpose(purpose)
+        else:
+            next_purpose = _normalize_purpose(str(purpose))
 
         if complexity is _UNSET:
             next_complexity = current.statement.complexity
@@ -383,7 +478,10 @@ class NeedCatalog:
             id=_generate_id("need"),
             statement=statement,
             status=NeedStatus.DRAFT,
-            priority=priority or current.priority,
+            priority=_normalize_priority(priority) if priority is not None else current.priority,
+            kernel_change_phase=_normalize_kernel_change_phase(
+                None if kernel_change_phase is _UNSET else kernel_change_phase
+            ),
             decision_ref=current.decision_ref,
             decision_evidence_refs=list(current.decision_evidence_refs),
             inherited_from_decisions=list(current.inherited_from_decisions),
@@ -415,12 +513,15 @@ class NeedCatalog:
         need_id: str,
         decision_id: str,
         evidence_refs: list[str],
+        kernel_change_phase: NeedKernelChangePhase | str | None = None,
     ) -> Need:
         """Inherit rationale/evidence references from a decision artifact."""
         need = self.get_need(need_id)
         if need is None:
             raise ValueError(f"Need {need_id} not found")
         need.inherit_decision_evidence(decision_id=decision_id, refs=evidence_refs)
+        if kernel_change_phase is not None:
+            need.set_kernel_change_phase(kernel_change_phase)
         self.updated_at = _now()
         return need
 
@@ -509,6 +610,7 @@ class NeedCatalog:
             "version": need.version,
             "status": need.status.value,
             "priority": need.priority.value,
+            "kernel_change_phase": need.kernel_change_phase.value,
             "use_case_id": need.use_case_id,
             "purpose": need.statement.purpose,
             "cause_types": [c.value for c in need.statement.cause_types],
@@ -619,6 +721,7 @@ class NeedCatalog:
                     "lineage_id": need.lineage_id,
                     "version": need.version,
                     "status": need.status.value,
+                    "kernel_change_phase": need.kernel_change_phase.value,
                     "action": need.statement.desire.action,
                     "subject": need.statement.desire.subject,
                 }
@@ -684,6 +787,7 @@ class NeedCatalog:
                     "version": n.version,
                     "status": n.status.value,
                     "priority": n.priority.value,
+                    "kernel_change_phase": n.kernel_change_phase.value,
                     "decision_ref": n.decision_ref,
                     "decision_evidence_refs": list(n.decision_evidence_refs),
                     "inherited_from_decisions": list(n.inherited_from_decisions),
@@ -800,17 +904,28 @@ class NeedCatalog:
                 kernel_refs=list(statement_data.get("kernel_refs", [])),
                 tags=list(statement_data.get("tags", [])),
                 use_case_id=statement_data.get("use_case_id"),
-                purpose=statement_data.get("purpose", ""),
+                purpose=_normalize_purpose(
+                    statement_data.get("purpose", NeedPurpose.UNSPECIFIED.value),
+                    allow_legacy_unknown=True,
+                ),
                 cause_types=cause_types,
                 complexity=complexity,
                 expressed_at=statement_data.get("expressed_at", ""),
             )
 
+            status = NeedStatus(need_data.get("status", "draft"))
+            stored_phase = need_data.get("kernel_change_phase")
+            if stored_phase is None:
+                phase = _default_change_phase_for_status(status)
+            else:
+                phase = _normalize_kernel_change_phase(stored_phase)
+
             need = Need(
                 id=need_data["id"],
                 statement=statement,
-                status=NeedStatus(need_data.get("status", "draft")),
+                status=status,
                 priority=NeedPriority(need_data.get("priority", "medium")),
+                kernel_change_phase=phase,
                 decision_ref=need_data.get("decision_ref"),
                 decision_evidence_refs=list(need_data.get("decision_evidence_refs", [])),
                 inherited_from_decisions=list(need_data.get("inherited_from_decisions", [])),

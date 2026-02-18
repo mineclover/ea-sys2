@@ -68,6 +68,11 @@ GOVERNANCE_SCHEMA = GovernanceSchema(
         GovernanceEntity("model_endpoint", description="Model operation endpoint"),
         GovernanceEntity("governance_event", description="Lifecycle event"),
         GovernanceEntity("feedback_loop", description="Iterative correction action"),
+        # Transaction / Event Sourcing
+        GovernanceEntity("transaction_manager", description="SQLite-backed ACID transaction manager with event sourcing"),
+        GovernanceEntity("transaction_unit", description="Transaction unit with status lifecycle (PENDING/IN_PROGRESS/COMMITTED/ROLLED_BACK/FAILED)"),
+        GovernanceEntity("transaction_event", description="Frozen event sourcing record for transaction audit"),
+        GovernanceEntity("execution_service", description="DesignReport/UseCaseSpec to flow runtime bridge with transaction control"),
     ),
     relations=(
         GovernanceRelation("contains", description="Containment relationship"),

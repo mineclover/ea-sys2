@@ -90,37 +90,43 @@ description = "Flow modeling boundary and runtime chain terminal stage."
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "6x6 contract port for infra-layer model interface."
+description = "7x7 contract port for infra-layer model interface."
 
 [[elements]]
 name = "GovernanceModelPort"
 layer = "Governance"
 category = "Interface"
-description = "6x6 contract port for governance-layer model interface."
+description = "7x7 contract port for governance-layer model interface."
 
 [[elements]]
 name = "DecisionModelPort"
 layer = "Decision"
 category = "Interface"
-description = "6x6 contract port for decision-layer model interface."
+description = "7x7 contract port for decision-layer model interface."
 
 [[elements]]
 name = "NeedsModelPort"
 layer = "Needs"
 category = "Interface"
-description = "6x6 contract port for needs-layer model interface."
+description = "7x7 contract port for needs-layer model interface."
 
 [[elements]]
 name = "KernelModelPort"
 layer = "Kernel"
 category = "Interface"
-description = "6x6 contract port for kernel-layer model interface."
+description = "7x7 contract port for kernel-layer model interface."
 
 [[elements]]
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
-description = "6x6 contract port for flow-layer model interface."
+description = "7x7 contract port for flow-layer model interface."
+
+[[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for projection-layer model interface."
 
 [[elements]]
 name = "ContextIngestStep"
@@ -234,7 +240,7 @@ description = "Kernel-contracted plan draft used for execution."
 name = "FlowLayerContractMatrix"
 layer = "Flow"
 category = "PassiveStructure"
-description = "Flow-owned 6x6 cross-layer contract matrix (single owner artifact)."
+description = "Flow-owned 7x7 cross-layer contract matrix (single owner artifact)."
 
 # ─────────────────────────────────────────────────────────────
 # P1 Specification Plane — Declarative Definitions (spec.py)
@@ -1944,49 +1950,56 @@ source = "PersistFlowStateStep"
 target = "FlowLayerContractMatrix"
 relation = "produces"
 priority = 80
-notes = "Flow persistence step publishes 6x6 layer contract matrix."
+notes = "Flow persistence step publishes 7x7 layer contract matrix."
 
 [[rules]]
 source = "PersistFlowStateStep"
 target = "InfraModelPort"
 relation = "coordinates"
 priority = 80
-notes = "6x6 contract: flow -> infra interface contract."
+notes = "7x7 contract: flow -> infra interface contract."
 
 [[rules]]
 source = "PersistFlowStateStep"
 target = "GovernanceModelPort"
 relation = "coordinates"
 priority = 80
-notes = "6x6 contract: flow -> governance interface contract."
+notes = "7x7 contract: flow -> governance interface contract."
 
 [[rules]]
 source = "PersistFlowStateStep"
 target = "DecisionModelPort"
 relation = "coordinates"
 priority = 80
-notes = "6x6 contract: flow -> decision interface contract."
+notes = "7x7 contract: flow -> decision interface contract."
 
 [[rules]]
 source = "PersistFlowStateStep"
 target = "NeedsModelPort"
 relation = "coordinates"
 priority = 80
-notes = "6x6 contract: flow -> needs interface contract."
+notes = "7x7 contract: flow -> needs interface contract."
 
 [[rules]]
 source = "PersistFlowStateStep"
 target = "KernelModelPort"
 relation = "coordinates"
 priority = 80
-notes = "6x6 contract: flow -> kernel interface contract."
+notes = "7x7 contract: flow -> kernel interface contract."
 
 [[rules]]
 source = "PersistFlowStateStep"
 target = "FlowModelPort"
 relation = "coordinates"
 priority = 80
-notes = "6x6 contract: flow -> flow interface contract."
+notes = "7x7 contract: flow -> flow interface contract."
+
+[[rules]]
+source = "PersistFlowStateStep"
+target = "ProjectionModelPort"
+relation = "coordinates"
+priority = 80
+notes = "7x7 contract: flow -> projection interface contract."
 
 # ─────────────────────────────────────────────────────────────
 # 6x6 Cross-Layer Perspectives — Flow → Infra (보강)
@@ -2371,6 +2384,218 @@ priority = 72
 notes = "Kernel execution produces validation result for outcome verification."
 
 # ─────────────────────────────────────────────────────────────
+# S3 Recording — ExecutionStore (execution_store.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowExecutionStoreContract"
+layer = "Flow"
+category = "Interface"
+description = "S3 — Workflow execution record store ABC (ExecutionStore). Defines save_record, get_record, list_records."
+
+[[elements]]
+name = "StoredExecutionRecordData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S3 — Frozen execution record persisted by ExecutionStore. Contains workflow_name, execution_id, success, step_results, timestamp."
+
+[[elements]]
+name = "ExecutionStoreStatsData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S3 — Store statistics: total records, success_rate, unique workflows, date range."
+
+# ─────────────────────────────────────────────────────────────
+# S4 Analysis — FlowAnalyzer (flow_analyzer.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "FlowAnalyzerEngine"
+layer = "Flow"
+category = "ActiveStructure"
+description = "S4 — Step effectiveness, bottleneck detection, and throughput analyzer (FlowAnalyzer)."
+
+[[elements]]
+name = "StepEffectivenessData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S4 — Per-step effectiveness metric: step_name, execution_count, success_rate, avg_duration, bottleneck_score."
+
+[[elements]]
+name = "FlowAnalysisReportData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S4 — Aggregated flow analysis report: step_effectiveness, bottleneck_summary, throughput_trend, recommendations."
+
+# ─────────────────────────────────────────────────────────────
+# S5 Evolution — WorkflowPromotionEngine (workflow_promotion.py)
+# ─────────────────────────────────────────────────────────────
+
+[[elements]]
+name = "WorkflowPromotionEngineService"
+layer = "Flow"
+category = "ActiveStructure"
+description = "S5 — Workflow promotion/deprecation workflow (WorkflowPromotionEngine). Proposal, vote, approve, apply."
+
+[[elements]]
+name = "WorkflowPromotionProposalData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "S5 — Promotion proposal: workflow_name, proposed_action, votes, approval_status."
+
+# =============================================================
+# S3 Recording Rules — ExecutionStore
+# =============================================================
+
+[[rules]]
+source = "FlowExecutionStoreContract"
+target = "StoredExecutionRecordData"
+relation = "produces"
+priority = 70
+notes = "S3: Execution store produces frozen execution records."
+
+[[rules]]
+source = "FlowExecutionStoreContract"
+target = "ExecutionStoreStatsData"
+relation = "produces"
+priority = 70
+notes = "S3: Execution store produces store statistics."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "FlowExecutionStoreContract"
+relation = "coordinates"
+priority = 70
+notes = "S3: Runtime engine coordinates execution store for record persistence."
+
+[[rules]]
+source = "FlowExecutionStoreContract"
+target = "FlowExecutionLogStore"
+relation = "depends_on"
+priority = 72
+notes = "S3: Execution store depends on infra execution log for physical persistence."
+
+[[rules]]
+source = "StoredExecutionRecordData"
+target = "FlowExecutionResultData"
+relation = "depends_on"
+priority = 70
+notes = "S3: Stored record references the source execution result."
+
+[[rules]]
+source = "RealizationPlane"
+target = "FlowExecutionStoreContract"
+relation = "contains"
+priority = 60
+notes = "S3: Realization plane owns the execution store contract."
+
+# =============================================================
+# S4 Analysis Rules — FlowAnalyzer
+# =============================================================
+
+[[rules]]
+source = "FlowAnalyzerEngine"
+target = "FlowExecutionStoreContract"
+relation = "depends_on"
+priority = 70
+notes = "S4: Analyzer depends on execution store for historical data."
+
+[[rules]]
+source = "FlowAnalyzerEngine"
+target = "StepEffectivenessData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces per-step effectiveness metrics."
+
+[[rules]]
+source = "FlowAnalyzerEngine"
+target = "FlowAnalysisReportData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces aggregated analysis reports."
+
+[[rules]]
+source = "FlowAnalysisReportData"
+target = "StepEffectivenessData"
+relation = "contains"
+priority = 70
+notes = "S4: Analysis report contains per-step effectiveness data."
+
+[[rules]]
+source = "RealizationPlane"
+target = "FlowAnalyzerEngine"
+relation = "contains"
+priority = 60
+notes = "S4: Realization plane owns the flow analyzer."
+
+[[rules]]
+source = "StepEffectivenessData"
+target = "StepDefinitionNode"
+relation = "depends_on"
+priority = 70
+notes = "S4: Effectiveness metric references the analyzed step definition."
+
+# =============================================================
+# S5 Evolution Rules — WorkflowPromotionEngine + Simulator links
+# =============================================================
+
+[[rules]]
+source = "WorkflowPromotionEngineService"
+target = "FlowAnalyzerEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion engine depends on analyzer for promotion criteria."
+
+[[rules]]
+source = "WorkflowPromotionEngineService"
+target = "WorkflowPromotionProposalData"
+relation = "produces"
+priority = 70
+notes = "S5: Promotion engine produces promotion proposals."
+
+[[rules]]
+source = "WorkflowPromotionEngineService"
+target = "FlowSimulatorEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion engine depends on simulator for pre-apply safety check."
+
+[[rules]]
+source = "WorkflowPromotionProposalData"
+target = "WorkflowSpecContract"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion proposal references the target workflow spec."
+
+[[rules]]
+source = "RealizationPlane"
+target = "WorkflowPromotionEngineService"
+relation = "contains"
+priority = 60
+notes = "S5: Realization plane owns the workflow promotion engine."
+
+[[rules]]
+source = "FlowSimulatorEngine"
+target = "FlowAnalyzerEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulator depends on analyzer for baseline effectiveness metrics."
+
+[[rules]]
+source = "FlowCompliancePolicy"
+target = "WorkflowPromotionEngineService"
+relation = "constrains"
+priority = 72
+notes = "S5-Gov: Compliance policy constrains workflow promotion workflow."
+
+[[rules]]
+source = "WorkflowPromotionEngineService"
+target = "FlowAuditSubmission"
+relation = "coordinates"
+priority = 72
+notes = "S5-Gov: Promotion engine coordinates audit for promotion decisions."
+
+# ─────────────────────────────────────────────────────────────
 # Coverage anchors for dormant relations
 # ─────────────────────────────────────────────────────────────
 
@@ -2387,3 +2612,67 @@ target = "ContextIngestStep"
 relation = "triggers"
 priority = 64
 notes = "Needs completion notification triggers a new context ingestion cycle."
+
+# ══════════════════════════════════════════════════════════════
+# 7x7 Cross-Layer Rules: Flow ↔ Projection
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProjectionExecutionView"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Projection view of flow execution pipeline state."
+
+[[elements]]
+name = "ProjectionDataLineage"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Data lineage projection tracing flow data paths."
+
+[[elements]]
+name = "ProjectionStepVisibility"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Step visibility configuration for flow projection levels."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionExecutionView"
+relation = "contains"
+priority = 65
+notes = "Flow-Projection: projection model port exposes execution view."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionDataLineage"
+relation = "contains"
+priority = 65
+notes = "Flow-Projection: projection model port exposes data lineage."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionStepVisibility"
+relation = "contains"
+priority = 65
+notes = "Flow-Projection: projection model port exposes step visibility."
+
+[[rules]]
+source = "FlowRuntimeEngine"
+target = "ProjectionExecutionView"
+relation = "produces"
+priority = 72
+notes = "Flow-Projection: runtime engine produces execution view data for projection."
+
+[[rules]]
+source = "ProjectionDataLineage"
+target = "FlowOntologyRegistry"
+relation = "depends_on"
+priority = 72
+notes = "Flow-Projection: data lineage depends on flow ontology for path resolution."
+
+[[rules]]
+source = "ProjectionStepVisibility"
+target = "FlowCompliancePolicy"
+relation = "constrains"
+priority = 72
+notes = "Flow-Projection: compliance policy constrains step visibility in projection."

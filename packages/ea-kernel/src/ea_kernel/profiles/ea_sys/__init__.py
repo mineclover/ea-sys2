@@ -11,6 +11,7 @@ LAYER_FILE_MAP: dict[str, str] = {
     "needs": "30-needs.toml",
     "kernel": "40-kernel.toml",
     "flow": "50-flow.toml",
+    "projection": "70-projection.toml",
     "web-kernel-viz": "60-web-kernel-viz.toml",
     "development": "80-development.toml",
 }
@@ -22,6 +23,7 @@ LAYER_ORDER: tuple[str, ...] = (
     "needs",
     "kernel",
     "flow",
+    "projection",
     "web-kernel-viz",
     "development",
 )

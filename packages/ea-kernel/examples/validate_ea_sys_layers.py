@@ -16,10 +16,11 @@ LAYER_FILE_MAP = {
     "needs": "30-needs.toml",
     "kernel": "40-kernel.toml",
     "flow": "50-flow.toml",
+    "projection": "70-projection.toml",
 }
 
-VALIDATION_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow")
-MODEL_DEFINITION_ORDER = ("infra", "decision", "needs", "kernel", "flow")
+VALIDATION_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow", "projection")
+MODEL_DEFINITION_ORDER = ("infra", "decision", "needs", "kernel", "flow", "projection")
 ENTRYPOINT_ORDER = ("decision", "needs", "kernel", "flow")
 INFRA_ROLE = "row-data-design"
 GOVERNANCE_ROLE = "system-entrypoint-design"
@@ -30,6 +31,7 @@ LAYER_PORTS = {
     "needs": "NeedsModelPort",
     "kernel": "KernelModelPort",
     "flow": "FlowModelPort",
+    "projection": "ProjectionModelPort",
 }
 FLOW_6X6_MATRIX_ELEMENT = "FlowLayerContractMatrix"
 FLOW_6X6_OWNER = "PersistFlowStateStep"

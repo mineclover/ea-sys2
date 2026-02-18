@@ -1,0 +1,1343 @@
+# EA System Layer: Projection
+# Role: 추상화 및 인덱싱 정의
+
+[profile]
+name = "EASystemLayerModel"
+version = "0.4.1"
+kernel_version = "2.5.0"
+id_prefix = "eas"
+standard = "EA System Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+Executable = "action"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Governance = "feature"
+Goal = "state"
+Context = "state"
+Page = "structure"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespace or component containment."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership between components and ports."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration or collaboration linkage."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency on data or policies."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Behavior produces artifacts."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Behavior consumes artifacts."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Execution sequence transition."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Policy or guard constrains execution."
+
+[[relations]]
+name = "available_in"
+kernel_relation = "association"
+description = "Context provides access to an experience or element."
+
+# ============================================================
+# Internal Projection Layer Elements
+# ============================================================
+
+[[elements]]
+name = "ProjectionLayer"
+layer = "Projection"
+category = "Composite"
+description = "Projection/abstraction boundary for view generation."
+
+# --- 7x7 Model Ports ---
+
+[[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for Projection-layer model interface."
+
+[[elements]]
+name = "InfraModelPort"
+layer = "Infra"
+category = "Interface"
+description = "7x7 contract port for Infra-layer model interface."
+
+[[elements]]
+name = "GovernanceModelPort"
+layer = "Governance"
+category = "Interface"
+description = "7x7 contract port for Governance-layer model interface."
+
+[[elements]]
+name = "DecisionModelPort"
+layer = "Decision"
+category = "Interface"
+description = "7x7 contract port for Decision-layer model interface."
+
+[[elements]]
+name = "NeedsModelPort"
+layer = "Needs"
+category = "Interface"
+description = "7x7 contract port for Needs-layer model interface."
+
+[[elements]]
+name = "KernelModelPort"
+layer = "Kernel"
+category = "Interface"
+description = "7x7 contract port for Kernel-layer model interface."
+
+[[elements]]
+name = "FlowModelPort"
+layer = "Flow"
+category = "Interface"
+description = "7x7 contract port for Flow-layer model interface."
+
+# --- Core Internal ActiveStructure Services ---
+
+[[elements]]
+name = "ProjectionPolicyService"
+layer = "Projection"
+category = "ActiveStructure"
+description = "M2 projection policy management and validation service."
+
+[[elements]]
+name = "ProjectionLevelRegistry"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Registry for L0-L4 level specifications and their constraints."
+
+[[elements]]
+name = "ProjectionLensEngine"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Lens selection and application engine for view generation."
+
+[[elements]]
+name = "TopicIndexService"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Topic-based element indexing and navigation service."
+
+[[elements]]
+name = "ActorIndexService"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Actor-based seed/depth indexing for interaction views."
+
+[[elements]]
+name = "ProjectionBudgetController"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Edge budget allocation and enforcement controller."
+
+[[elements]]
+name = "ProjectionFilterEngine"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Filter/reduction engine for topology simplification."
+
+# --- Core Internal Interface Ports ---
+
+[[elements]]
+name = "ProjectionPolicyPort"
+layer = "Projection"
+category = "Interface"
+description = "Policy configuration interface for projection rules."
+
+[[elements]]
+name = "ProjectionQueryPort"
+layer = "Projection"
+category = "Interface"
+description = "Query interface for projection execution."
+
+# --- Governance Elements ---
+
+[[elements]]
+name = "ProjectionPolicy"
+layer = "Projection"
+category = "Governance"
+description = "M2 meta-meta policy constraints for projection."
+
+[[elements]]
+name = "ProjectionBudgetPolicy"
+layer = "Projection"
+category = "Governance"
+description = "Edge budget and reduction ratio policy constraints."
+
+# --- Goal Elements ---
+
+[[elements]]
+name = "ProjectionConsistency"
+layer = "Projection"
+category = "Goal"
+description = "Projection output must be consistent with M1 source topology."
+
+[[elements]]
+name = "ProjectionCompleteness"
+layer = "Projection"
+category = "Goal"
+description = "All levels must provide meaningful coverage of source data."
+
+# --- Behavior Steps ---
+
+[[elements]]
+name = "SelectLevelStep"
+layer = "Projection"
+category = "Behavior"
+description = "Select projection level (L0-L4) based on request context."
+
+[[elements]]
+name = "ApplyLensStep"
+layer = "Projection"
+category = "Behavior"
+description = "Apply lens filter to narrow relation/category scope."
+
+[[elements]]
+name = "ComputeBudgetStep"
+layer = "Projection"
+category = "Behavior"
+description = "Compute edge budget allocation for projection."
+
+[[elements]]
+name = "ExecuteReductionStep"
+layer = "Projection"
+category = "Behavior"
+description = "Execute topology reduction within computed budget."
+
+[[elements]]
+name = "GenerateViewStep"
+layer = "Projection"
+category = "Behavior"
+description = "Generate projected view artifact from reduced topology."
+
+[[elements]]
+name = "ValidateViewStep"
+layer = "Projection"
+category = "Behavior"
+description = "Validate projected view against policy constraints."
+
+# --- Executable Actions ---
+
+[[elements]]
+name = "PublishProjectionAction"
+layer = "Projection"
+category = "Executable"
+description = "Publish projection result to API or cache."
+
+[[elements]]
+name = "RefreshIndexAction"
+layer = "Projection"
+category = "Executable"
+description = "Refresh topic/actor indexes after source topology change."
+
+# --- Events ---
+
+[[elements]]
+name = "ProjectionRequestedEvent"
+layer = "Projection"
+category = "Event"
+description = "Projection request received from API."
+
+[[elements]]
+name = "ProjectionCompletedEvent"
+layer = "Projection"
+category = "Event"
+description = "Projection generation completed successfully."
+
+[[elements]]
+name = "PolicyViolationEvent"
+layer = "Projection"
+category = "Event"
+description = "Projection policy constraint violated."
+
+# --- Passive Structures (Data) ---
+
+[[elements]]
+name = "LevelSpecData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Level specification: allowed_relations, allowed_categories, edge_budget."
+
+[[elements]]
+name = "LensSpecData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Lens specification: relation/category filter rules."
+
+[[elements]]
+name = "ProjectedViewData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "M1P projected view output with metadata."
+
+[[elements]]
+name = "ReductionReportData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Reduction statistics: node/edge counts, compression ratios."
+
+[[elements]]
+name = "DrilldownSpecData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Level transition spec for progressive disclosure."
+
+[[elements]]
+name = "TopicIndexData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Topic index mapping: topic → element sets."
+
+[[elements]]
+name = "ActorSeedData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Actor seed specification for BFS-based view scoping."
+
+[[elements]]
+name = "ProjectionCacheEntry"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Cached projection result with TTL metadata."
+
+# --- Contexts ---
+
+[[elements]]
+name = "ProjectionConsumer"
+layer = "Projection"
+category = "Context"
+description = "API consumer requesting projection views."
+
+[[elements]]
+name = "ProjectionOperator"
+layer = "Projection"
+category = "Context"
+description = "Operator managing projection policies and indexes."
+
+# ============================================================
+# S3/S4/S5 Governance Lifecycle Elements
+# ============================================================
+
+[[elements]]
+name = "ProjectionStoreContract"
+layer = "Projection"
+category = "ActiveStructure"
+description = "S3: Projected view persistence store contract."
+
+[[elements]]
+name = "StoredProjectionSnapshotData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "S3: Stored projection snapshot payload."
+
+[[elements]]
+name = "ProjectionAnalyzerEngine"
+layer = "Projection"
+category = "ActiveStructure"
+description = "S4: View quality, coverage, and performance analysis."
+
+[[elements]]
+name = "ProjectionAnalysisReportData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "S4: Analysis report with quality metrics."
+
+[[elements]]
+name = "ProjectionSimulatorEngine"
+layer = "Projection"
+category = "ActiveStructure"
+description = "S5: Policy change what-if simulation engine."
+
+[[elements]]
+name = "ProjectionSimulationResultData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "S5: Simulation result with delta metrics."
+
+[[elements]]
+name = "ProjectionPromotionEngine"
+layer = "Projection"
+category = "ActiveStructure"
+description = "S5: Policy promotion/deprecation workflow."
+
+[[elements]]
+name = "ProjectionPromotionProposalData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "S5: Promotion proposal with approval state."
+
+# ============================================================
+# Cross-Layer Elements — Projection → Infra
+# ============================================================
+
+[[elements]]
+name = "ProjectionStorageContract"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Storage contract for projection cache and indexes."
+
+[[elements]]
+name = "ProjectionCacheStrategy"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Cache eviction and TTL strategy for projected views."
+
+[[elements]]
+name = "ProjectionIndexStore"
+layer = "Infra"
+category = "PassiveStructure"
+description = "Persistent index store for topic/actor indexes."
+
+# ============================================================
+# Cross-Layer Elements — Projection → Governance
+# ============================================================
+
+[[elements]]
+name = "ProjectionPolicyApproval"
+layer = "Governance"
+category = "Governance"
+description = "Governance approval gate for projection policy changes."
+
+[[elements]]
+name = "ProjectionVersionControl"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Version tracking for projection policy evolution."
+
+[[elements]]
+name = "ProjectionAuditRecord"
+layer = "Governance"
+category = "PassiveStructure"
+description = "Audit trail for projection executions and policy changes."
+
+# ============================================================
+# Cross-Layer Elements — Projection → Decision
+# ============================================================
+
+[[elements]]
+name = "DecisionTraceProjection"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Decision-aware projection for trace-level views."
+
+[[elements]]
+name = "DecisionContextLens"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Decision context lens for filtering decision-relevant elements."
+
+[[elements]]
+name = "DecisionImpactView"
+layer = "Decision"
+category = "PassiveStructure"
+description = "Impact visualization for decision-driven changes."
+
+# ============================================================
+# Cross-Layer Elements — Projection → Needs
+# ============================================================
+
+[[elements]]
+name = "NeedsCoverageProjection"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Needs coverage view projected from topology."
+
+[[elements]]
+name = "NeedsPriorityView"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Priority-weighted needs projection view."
+
+[[elements]]
+name = "NeedsGapAnalysis"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Gap analysis between expressed needs and addressed elements."
+
+# ============================================================
+# Cross-Layer Elements — Projection → Kernel
+# ============================================================
+
+[[elements]]
+name = "KernelTopologyProjection"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Kernel topology source for projection input."
+
+[[elements]]
+name = "KernelRuleVisibility"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Rule visibility settings for projection filtering."
+
+[[elements]]
+name = "KernelSchemaLens"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Schema-aware lens for kernel entity categorization."
+
+# ============================================================
+# Cross-Layer Elements — Projection → Flow
+# ============================================================
+
+[[elements]]
+name = "FlowExecutionProjection"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Flow execution view projected for pipeline analysis."
+
+[[elements]]
+name = "FlowDataLineageView"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Data lineage projection tracing flow data paths."
+
+[[elements]]
+name = "FlowBottleneckLens"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Bottleneck detection lens for flow step analysis."
+
+# ============================================================
+# Category-Level Pattern Rules (priority 60)
+# ============================================================
+
+[[rules]]
+source = "@Behavior"
+target = "@Behavior"
+relation = "next"
+priority = 60
+notes = "Projection step-to-step sequencing."
+
+[[rules]]
+source = "@Behavior"
+target = "@Executable"
+relation = "next"
+priority = 60
+notes = "Projection step transitions into executable action."
+
+[[rules]]
+source = "@Executable"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Executable actions produce artifacts."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 60
+notes = "Behavior steps consume data artifacts."
+
+[[rules]]
+source = "@Behavior"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 60
+notes = "Behavior steps produce data artifacts."
+
+[[rules]]
+source = "@Governance"
+target = "@Behavior"
+relation = "constrains"
+priority = 60
+notes = "Governance policies constrain behavior steps."
+
+[[rules]]
+source = "@Governance"
+target = "@Executable"
+relation = "constrains"
+priority = 60
+notes = "Governance policies constrain executable actions."
+
+[[rules]]
+source = "@Event"
+target = "@Behavior"
+relation = "triggers"
+priority = 60
+notes = "Events trigger behavior steps."
+
+[[rules]]
+source = "@Context"
+target = "@Composite"
+relation = "available_in"
+priority = 60
+notes = "Contexts are available within composite boundaries."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "coordinates"
+priority = 60
+notes = "Active structures coordinate interface ports."
+
+[[rules]]
+source = "@ActiveStructure"
+target = "@Interface"
+relation = "registers"
+priority = 60
+notes = "Active structures register interface ports."
+
+# ============================================================
+# Containment Rules (priority 60)
+# ============================================================
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionPolicyService"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains policy service."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionLevelRegistry"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains level registry."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionLensEngine"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains lens engine."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "TopicIndexService"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains topic index service."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ActorIndexService"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains actor index service."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionBudgetController"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains budget controller."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionFilterEngine"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains filter engine."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionModelPort"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains projection model port."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionPolicy"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains projection policy."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionBudgetPolicy"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains budget policy."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionConsistency"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains consistency goal."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionCompleteness"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains completeness goal."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionPolicyPort"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains policy port."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionQueryPort"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains query port."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionStoreContract"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains store contract."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionAnalyzerEngine"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains analyzer engine."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionSimulatorEngine"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains simulator engine."
+
+[[rules]]
+source = "ProjectionLayer"
+target = "ProjectionPromotionEngine"
+relation = "contains"
+priority = 60
+notes = "Projection boundary contains promotion engine."
+
+# ============================================================
+# Cross-Layer ModelPort Containment Rules (priority 65)
+# ============================================================
+
+[[rules]]
+source = "InfraModelPort"
+target = "ProjectionStorageContract"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains projection storage contract."
+
+[[rules]]
+source = "InfraModelPort"
+target = "ProjectionCacheStrategy"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains projection cache strategy."
+
+[[rules]]
+source = "InfraModelPort"
+target = "ProjectionIndexStore"
+relation = "contains"
+priority = 65
+notes = "InfraModelPort contains projection index store."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "ProjectionPolicyApproval"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains projection policy approval."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "ProjectionVersionControl"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains projection version control."
+
+[[rules]]
+source = "GovernanceModelPort"
+target = "ProjectionAuditRecord"
+relation = "contains"
+priority = 65
+notes = "GovernanceModelPort contains projection audit record."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionTraceProjection"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains decision trace projection."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionContextLens"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains decision context lens."
+
+[[rules]]
+source = "DecisionModelPort"
+target = "DecisionImpactView"
+relation = "contains"
+priority = 65
+notes = "DecisionModelPort contains decision impact view."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsCoverageProjection"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs coverage projection."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsPriorityView"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs priority view."
+
+[[rules]]
+source = "NeedsModelPort"
+target = "NeedsGapAnalysis"
+relation = "contains"
+priority = 65
+notes = "NeedsModelPort contains needs gap analysis."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelTopologyProjection"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel topology projection."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelRuleVisibility"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel rule visibility."
+
+[[rules]]
+source = "KernelModelPort"
+target = "KernelSchemaLens"
+relation = "contains"
+priority = 65
+notes = "KernelModelPort contains kernel schema lens."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowExecutionProjection"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow execution projection."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowDataLineageView"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow data lineage view."
+
+[[rules]]
+source = "FlowModelPort"
+target = "FlowBottleneckLens"
+relation = "contains"
+priority = 65
+notes = "FlowModelPort contains flow bottleneck lens."
+
+# ============================================================
+# Structural/Explicit Rules — Step Sequencing (priority 70)
+# ============================================================
+
+[[rules]]
+source = "SelectLevelStep"
+target = "ApplyLensStep"
+relation = "next"
+priority = 70
+notes = "Projection flow: select level before applying lens."
+
+[[rules]]
+source = "ApplyLensStep"
+target = "ComputeBudgetStep"
+relation = "next"
+priority = 70
+notes = "Projection flow: apply lens before computing budget."
+
+[[rules]]
+source = "ComputeBudgetStep"
+target = "ExecuteReductionStep"
+relation = "next"
+priority = 70
+notes = "Projection flow: compute budget before executing reduction."
+
+[[rules]]
+source = "ExecuteReductionStep"
+target = "GenerateViewStep"
+relation = "next"
+priority = 70
+notes = "Projection flow: execute reduction before generating view."
+
+[[rules]]
+source = "GenerateViewStep"
+target = "ValidateViewStep"
+relation = "next"
+priority = 70
+notes = "Projection flow: generate view before validation."
+
+[[rules]]
+source = "ValidateViewStep"
+target = "PublishProjectionAction"
+relation = "next"
+priority = 70
+notes = "Projection flow: validate view before publishing."
+
+# ============================================================
+# Structural/Explicit Rules — Data Flow (priority 70)
+# ============================================================
+
+[[rules]]
+source = "SelectLevelStep"
+target = "LevelSpecData"
+relation = "consumes"
+priority = 70
+notes = "Level selection consumes level specification data."
+
+[[rules]]
+source = "ApplyLensStep"
+target = "LensSpecData"
+relation = "consumes"
+priority = 70
+notes = "Lens application consumes lens specification data."
+
+[[rules]]
+source = "ComputeBudgetStep"
+target = "LevelSpecData"
+relation = "consumes"
+priority = 70
+notes = "Budget computation consumes level spec for edge budget limits."
+
+[[rules]]
+source = "ExecuteReductionStep"
+target = "ReductionReportData"
+relation = "produces"
+priority = 70
+notes = "Reduction execution produces reduction statistics report."
+
+[[rules]]
+source = "GenerateViewStep"
+target = "ProjectedViewData"
+relation = "produces"
+priority = 70
+notes = "View generation produces projected view artifact."
+
+[[rules]]
+source = "ValidateViewStep"
+target = "ProjectedViewData"
+relation = "consumes"
+priority = 70
+notes = "View validation consumes projected view for policy checking."
+
+[[rules]]
+source = "PublishProjectionAction"
+target = "ProjectionCacheEntry"
+relation = "produces"
+priority = 70
+notes = "Publish action produces cached projection entry."
+
+[[rules]]
+source = "SelectLevelStep"
+target = "DrilldownSpecData"
+relation = "consumes"
+priority = 70
+notes = "Level selection consumes drilldown spec for progressive disclosure."
+
+# ============================================================
+# Structural/Explicit Rules — Service Coordination (priority 70)
+# ============================================================
+
+[[rules]]
+source = "ProjectionPolicyService"
+target = "ProjectionPolicyPort"
+relation = "coordinates"
+priority = 70
+notes = "Policy service coordinates policy configuration port."
+
+[[rules]]
+source = "ProjectionLevelRegistry"
+target = "ProjectionQueryPort"
+relation = "registers"
+priority = 70
+notes = "Level registry registers query port for projection execution."
+
+[[rules]]
+source = "ProjectionLensEngine"
+target = "ProjectionFilterEngine"
+relation = "coordinates"
+priority = 70
+notes = "Lens engine coordinates filter engine for topology reduction."
+
+[[rules]]
+source = "TopicIndexService"
+target = "TopicIndexData"
+relation = "produces"
+priority = 70
+notes = "Topic index service produces topic index mappings."
+
+[[rules]]
+source = "ActorIndexService"
+target = "ActorSeedData"
+relation = "produces"
+priority = 70
+notes = "Actor index service produces actor seed specifications."
+
+[[rules]]
+source = "ProjectionBudgetController"
+target = "ReductionReportData"
+relation = "produces"
+priority = 70
+notes = "Budget controller produces reduction report with budget metrics."
+
+# ============================================================
+# Structural/Explicit Rules — Event Triggers (priority 70)
+# ============================================================
+
+[[rules]]
+source = "ProjectionRequestedEvent"
+target = "SelectLevelStep"
+relation = "triggers"
+priority = 70
+notes = "Projection request event triggers level selection step."
+
+[[rules]]
+source = "ProjectionCompletedEvent"
+target = "RefreshIndexAction"
+relation = "triggers"
+priority = 70
+notes = "Projection completion triggers index refresh action."
+
+[[rules]]
+source = "PolicyViolationEvent"
+target = "ValidateViewStep"
+relation = "triggers"
+priority = 70
+notes = "Policy violation event triggers re-validation step."
+
+# ============================================================
+# Structural/Explicit Rules — Constraints (priority 70)
+# ============================================================
+
+[[rules]]
+source = "ProjectionPolicy"
+target = "ExecuteReductionStep"
+relation = "constrains"
+priority = 70
+notes = "Projection policy constrains reduction execution."
+
+[[rules]]
+source = "ProjectionBudgetPolicy"
+target = "ComputeBudgetStep"
+relation = "constrains"
+priority = 70
+notes = "Budget policy constrains budget computation."
+
+[[rules]]
+source = "ProjectionConsistency"
+target = "KernelTopologyProjection"
+relation = "depends_on"
+priority = 70
+notes = "Consistency goal depends on kernel topology source."
+
+[[rules]]
+source = "ProjectionCompleteness"
+target = "ProjectionAnalysisReportData"
+relation = "depends_on"
+priority = 70
+notes = "Completeness goal depends on analysis report for coverage metrics."
+
+# ============================================================
+# S3/S4/S5 Governance Lifecycle Rules (priority 70)
+# ============================================================
+
+[[rules]]
+source = "ProjectionStoreContract"
+target = "ProjectionStorageContract"
+relation = "depends_on"
+priority = 70
+notes = "S3: Store contract depends on infra storage contract for persistence."
+
+[[rules]]
+source = "ProjectionStoreContract"
+target = "StoredProjectionSnapshotData"
+relation = "produces"
+priority = 70
+notes = "S3: Store contract produces stored projection snapshots."
+
+[[rules]]
+source = "ProjectionAnalyzerEngine"
+target = "StoredProjectionSnapshotData"
+relation = "consumes"
+priority = 70
+notes = "S4: Analyzer consumes stored snapshots for quality analysis."
+
+[[rules]]
+source = "ProjectionAnalyzerEngine"
+target = "ProjectionAnalysisReportData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces analysis reports with quality metrics."
+
+[[rules]]
+source = "ProjectionSimulatorEngine"
+target = "ProjectionAnalysisReportData"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulator depends on analysis reports for baseline metrics."
+
+[[rules]]
+source = "ProjectionSimulatorEngine"
+target = "ProjectionSimulationResultData"
+relation = "produces"
+priority = 70
+notes = "S5: Simulator produces simulation results with delta metrics."
+
+[[rules]]
+source = "ProjectionPromotionEngine"
+target = "ProjectionSimulationResultData"
+relation = "consumes"
+priority = 70
+notes = "S5: Promotion engine consumes simulation results for safety evaluation."
+
+[[rules]]
+source = "ProjectionPromotionEngine"
+target = "ProjectionPromotionProposalData"
+relation = "produces"
+priority = 70
+notes = "S5: Promotion engine produces promotion proposals."
+
+[[rules]]
+source = "ProjectionPromotionEngine"
+target = "ProjectionPolicyApproval"
+relation = "coordinates"
+priority = 70
+notes = "S5: Promotion engine coordinates governance approval gate."
+
+# ============================================================
+# Cross-Layer Dependency Rules (priority 72)
+# ============================================================
+
+[[rules]]
+source = "ProjectionFilterEngine"
+target = "KernelTopologyProjection"
+relation = "depends_on"
+priority = 72
+notes = "Proj-Kernel: filter engine depends on kernel topology source."
+
+[[rules]]
+source = "ProjectionPolicyService"
+target = "ProjectionVersionControl"
+relation = "depends_on"
+priority = 72
+notes = "Proj-Gov: policy service depends on version tracking."
+
+[[rules]]
+source = "TopicIndexService"
+target = "NeedsCoverageProjection"
+relation = "depends_on"
+priority = 72
+notes = "Proj-Needs: topic index depends on needs coverage for seed data."
+
+[[rules]]
+source = "ActorIndexService"
+target = "DecisionTraceProjection"
+relation = "depends_on"
+priority = 72
+notes = "Proj-Decision: actor index depends on decision trace for actor identification."
+
+[[rules]]
+source = "ProjectionStoreContract"
+target = "ProjectionIndexStore"
+relation = "depends_on"
+priority = 72
+notes = "Proj-Infra: store contract depends on persistent index storage."
+
+[[rules]]
+source = "GenerateViewStep"
+target = "FlowExecutionProjection"
+relation = "depends_on"
+priority = 72
+notes = "Proj-Flow: view generation depends on flow execution state."
+
+[[rules]]
+source = "PublishProjectionAction"
+target = "ProjectionAuditRecord"
+relation = "produces"
+priority = 72
+notes = "Proj-Gov: publish action writes audit record."
+
+[[rules]]
+source = "ProjectionPolicyApproval"
+target = "ProjectionPolicyService"
+relation = "constrains"
+priority = 72
+notes = "Gov-Proj: approval gate constrains policy changes."
+
+[[rules]]
+source = "ProjectionAnalyzerEngine"
+target = "ProjectionVersionControl"
+relation = "coordinates"
+priority = 72
+notes = "S4-Gov: analyzer coordinates version tracking for quality baselines."
+
+# ============================================================
+# Dormant Relation Anchors (priority 64)
+# ============================================================
+
+[[rules]]
+source = "ProjectionPolicyService"
+target = "ProjectionModelPort"
+relation = "registers"
+priority = 64
+notes = "Policy service registers projection model port for cross-layer access."
+
+[[rules]]
+source = "ProjectionOperator"
+target = "ProjectionLayer"
+relation = "available_in"
+priority = 64
+notes = "Projection operator is available within the projection layer context."
+
+[[rules]]
+source = "ProjectionConsumer"
+target = "ProjectionLayer"
+relation = "available_in"
+priority = 64
+notes = "Projection consumer is available within the projection layer context."
+
+[[rules]]
+source = "ProjectionLevelRegistry"
+target = "LevelSpecData"
+relation = "registers"
+priority = 64
+notes = "Level registry registers level specification data."
+
+[[rules]]
+source = "ProjectionLensEngine"
+target = "LensSpecData"
+relation = "depends_on"
+priority = 64
+notes = "Lens engine depends on lens specification data."
+
+[[rules]]
+source = "ProjectionBudgetController"
+target = "ProjectionBudgetPolicy"
+relation = "depends_on"
+priority = 64
+notes = "Budget controller depends on budget policy for enforcement rules."
+
+[[rules]]
+source = "ProjectionFilterEngine"
+target = "KernelRuleVisibility"
+relation = "depends_on"
+priority = 64
+notes = "Filter engine depends on kernel rule visibility settings."
+
+[[rules]]
+source = "ProjectionFilterEngine"
+target = "KernelSchemaLens"
+relation = "depends_on"
+priority = 64
+notes = "Filter engine depends on kernel schema lens for categorization."
+
+[[rules]]
+source = "ApplyLensStep"
+target = "FlowDataLineageView"
+relation = "depends_on"
+priority = 64
+notes = "Lens application depends on flow data lineage for path tracing."
+
+[[rules]]
+source = "ApplyLensStep"
+target = "FlowBottleneckLens"
+relation = "depends_on"
+priority = 64
+notes = "Lens application depends on flow bottleneck lens for analysis."
+
+[[rules]]
+source = "ApplyLensStep"
+target = "DecisionContextLens"
+relation = "depends_on"
+priority = 64
+notes = "Lens application depends on decision context lens for filtering."
+
+[[rules]]
+source = "ApplyLensStep"
+target = "DecisionImpactView"
+relation = "depends_on"
+priority = 64
+notes = "Lens application depends on decision impact view for visualization."
+
+[[rules]]
+source = "TopicIndexService"
+target = "NeedsPriorityView"
+relation = "depends_on"
+priority = 64
+notes = "Topic index depends on needs priority view for weighted indexing."
+
+[[rules]]
+source = "TopicIndexService"
+target = "NeedsGapAnalysis"
+relation = "depends_on"
+priority = 64
+notes = "Topic index depends on needs gap analysis for coverage gaps."
+
+[[rules]]
+source = "ProjectionStoreContract"
+target = "ProjectionCacheStrategy"
+relation = "depends_on"
+priority = 64
+notes = "Store contract depends on cache strategy for eviction rules."
+
+[[rules]]
+source = "RefreshIndexAction"
+target = "TopicIndexData"
+relation = "produces"
+priority = 64
+notes = "Index refresh action produces updated topic index data."
+
+[[rules]]
+source = "RefreshIndexAction"
+target = "ActorSeedData"
+relation = "produces"
+priority = 64
+notes = "Index refresh action produces updated actor seed data."

@@ -95,37 +95,43 @@ description = "Maintains normalized needs and prioritization payloads."
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "6x6 contract port for infra-layer model interface."
+description = "7x7 contract port for infra-layer model interface."
 
 [[elements]]
 name = "GovernanceModelPort"
 layer = "Governance"
 category = "Interface"
-description = "6x6 contract port for governance-layer model interface."
+description = "7x7 contract port for governance-layer model interface."
 
 [[elements]]
 name = "DecisionModelPort"
 layer = "Decision"
 category = "Interface"
-description = "6x6 contract port for decision-layer model interface."
+description = "7x7 contract port for decision-layer model interface."
 
 [[elements]]
 name = "NeedsModelPort"
 layer = "Needs"
 category = "Interface"
-description = "6x6 contract port for needs-layer model interface."
+description = "7x7 contract port for needs-layer model interface."
 
 [[elements]]
 name = "KernelModelPort"
 layer = "Kernel"
 category = "Interface"
-description = "6x6 contract port for kernel-layer model interface."
+description = "7x7 contract port for kernel-layer model interface."
 
 [[elements]]
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
-description = "6x6 contract port for flow-layer model interface."
+description = "7x7 contract port for flow-layer model interface."
+
+[[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for projection-layer model interface."
 
 [[elements]]
 name = "UseCaseCatalog"
@@ -1462,6 +1468,345 @@ priority = 72
 notes = "Needs-Flow: refinement step consumes flow progress feedback for backlog updates."
 
 # ══════════════════════════════════════════════════════════════
+# S3 Recording — NeedStore (needs_store.py)
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedStoreContract"
+layer = "Needs"
+category = "Interface"
+description = "S3 — Need snapshot store ABC contract (NeedStore). Defines save_snapshot, get_snapshot, list_snapshots for need persistence."
+
+[[elements]]
+name = "StoredNeedSnapshotData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S3 — Frozen need snapshot record persisted by NeedStore. Contains need_id, status, priority, statement, timestamp."
+
+[[elements]]
+name = "NeedStoreStatsData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S3 — Store statistics summary: total snapshots, unique needs, date range."
+
+# ══════════════════════════════════════════════════════════════
+# S4 Analysis — NeedsAnalyzer (needs_analyzer.py)
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedsAnalyzerEngine"
+layer = "Needs"
+category = "ActiveStructure"
+description = "S4 — Stakeholder coverage, priority distribution, and resolution throughput analyzer (NeedsAnalyzer)."
+
+[[elements]]
+name = "StakeholderCoverageData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S4 — Stakeholder coverage metric: stakeholder_id, expressed_count, addressed_count, coverage_ratio."
+
+[[elements]]
+name = "NeedsAnalysisReportData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S4 — Aggregated analysis report: coverage_summary, priority_distribution, resolution_throughput, recommendations."
+
+# ══════════════════════════════════════════════════════════════
+# S5 Evolution — NeedsSimulator + NeedPromotionEngine
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "NeedsSimulatorEngine"
+layer = "Needs"
+category = "ActiveStructure"
+description = "S5 — Stakeholder/need change what-if simulator (NeedsSimulator). Replays snapshots against change sets."
+
+[[elements]]
+name = "NeedChangeRequestData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S5 — Need change request: change_type (ADD/REMOVE/REPRIORITIZE), need_id, new_priority, new_status."
+
+[[elements]]
+name = "NeedSimulationResultData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S5 — Simulation result: affected_stakeholders, coverage_impact, priority_shift, safe_to_apply."
+
+[[elements]]
+name = "NeedPromotionEngine"
+layer = "Needs"
+category = "ActiveStructure"
+description = "S5 — Need promotion/deprecation workflow (NeedPromotionEngine). Proposal store, vote/approve/reject/apply."
+
+[[elements]]
+name = "NeedPromotionProposalData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "S5 — Promotion proposal record: need_id, proposed_status, justification, votes, approval_status."
+
+# ══════════════════════════════════════════════════════════════
+# S3 Recording Rules — NeedStore
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedStoreContract"
+target = "StoredNeedSnapshotData"
+relation = "produces"
+priority = 70
+notes = "S3: Need store produces frozen need snapshots."
+
+[[rules]]
+source = "NeedStoreContract"
+target = "NeedStoreStatsData"
+relation = "produces"
+priority = 70
+notes = "S3: Need store produces store statistics."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedStoreContract"
+relation = "coordinates"
+priority = 70
+notes = "S3: Catalog service coordinates need store for snapshot persistence."
+
+[[rules]]
+source = "NeedStoreContract"
+target = "NeedsStorageContract"
+relation = "depends_on"
+priority = 72
+notes = "S3: Need store depends on infra storage contract for physical persistence."
+
+[[rules]]
+source = "NeedStatusTransitionEvent"
+target = "NeedStoreContract"
+relation = "triggers"
+priority = 70
+notes = "S3: Status transition triggers snapshot recording."
+
+[[rules]]
+source = "NeedExpressedEvent"
+target = "NeedStoreContract"
+relation = "triggers"
+priority = 70
+notes = "S3: Need expression triggers initial snapshot recording."
+
+[[rules]]
+source = "NeedRevisedEvent"
+target = "NeedStoreContract"
+relation = "triggers"
+priority = 70
+notes = "S3: Need revision triggers updated snapshot recording."
+
+[[rules]]
+source = "StoredNeedSnapshotData"
+target = "Need"
+relation = "depends_on"
+priority = 70
+notes = "S3: Stored snapshot references the source need."
+
+[[rules]]
+source = "NeedStoreStatsData"
+target = "NeedStoreContract"
+relation = "depends_on"
+priority = 70
+notes = "S3: Store stats depend on the store for aggregation."
+
+# ══════════════════════════════════════════════════════════════
+# S4 Analysis Rules — NeedsAnalyzer
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsAnalyzerEngine"
+target = "NeedStoreContract"
+relation = "depends_on"
+priority = 70
+notes = "S4: Analyzer depends on need store for historical snapshot access."
+
+[[rules]]
+source = "NeedsAnalyzerEngine"
+target = "StakeholderCoverageData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces stakeholder coverage metrics."
+
+[[rules]]
+source = "NeedsAnalyzerEngine"
+target = "NeedsAnalysisReportData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces aggregated analysis reports."
+
+[[rules]]
+source = "NeedsAnalyzerEngine"
+target = "NeedCatalog"
+relation = "depends_on"
+priority = 70
+notes = "S4: Analyzer depends on catalog for current state queries."
+
+[[rules]]
+source = "StakeholderCoverageData"
+target = "Stakeholder"
+relation = "depends_on"
+priority = 70
+notes = "S4: Coverage metric references the stakeholder being analyzed."
+
+[[rules]]
+source = "NeedsAnalysisReportData"
+target = "StakeholderCoverageData"
+relation = "contains"
+priority = 70
+notes = "S4: Analysis report contains per-stakeholder coverage data."
+
+[[rules]]
+source = "NeedsQueryService"
+target = "NeedsAnalyzerEngine"
+relation = "coordinates"
+priority = 70
+notes = "S4: Query service coordinates analyzer for on-demand analysis."
+
+# ══════════════════════════════════════════════════════════════
+# S5 Evolution Rules — NeedsSimulator + NeedPromotionEngine
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsSimulatorEngine"
+target = "NeedStoreContract"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulator depends on need store for historical replay data."
+
+[[rules]]
+source = "NeedsSimulatorEngine"
+target = "NeedChangeRequestData"
+relation = "consumes"
+priority = 70
+notes = "S5: Simulator consumes change requests as simulation input."
+
+[[rules]]
+source = "NeedsSimulatorEngine"
+target = "NeedSimulationResultData"
+relation = "produces"
+priority = 70
+notes = "S5: Simulator produces simulation results with impact assessment."
+
+[[rules]]
+source = "NeedsSimulatorEngine"
+target = "NeedsAnalyzerEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulator depends on analyzer for baseline coverage metrics."
+
+[[rules]]
+source = "NeedChangeRequestData"
+target = "Need"
+relation = "depends_on"
+priority = 70
+notes = "S5: Change request references the target need."
+
+[[rules]]
+source = "NeedSimulationResultData"
+target = "NeedChangeRequestData"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulation result records the change requests applied."
+
+[[rules]]
+source = "NeedSimulationResultData"
+target = "StakeholderCoverageData"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulation result references projected coverage impact."
+
+[[rules]]
+source = "NeedPromotionEngine"
+target = "NeedsAnalyzerEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion engine depends on analyzer for promotion criteria evaluation."
+
+[[rules]]
+source = "NeedPromotionEngine"
+target = "NeedPromotionProposalData"
+relation = "produces"
+priority = 70
+notes = "S5: Promotion engine produces promotion proposals."
+
+[[rules]]
+source = "NeedPromotionEngine"
+target = "NeedsSimulatorEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion engine depends on simulator for pre-apply safety check."
+
+[[rules]]
+source = "NeedPromotionProposalData"
+target = "Need"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion proposal references the target need."
+
+[[rules]]
+source = "NeedPromotionEngine"
+target = "NeedStatusTransitionEvent"
+relation = "produces"
+priority = 70
+notes = "S5: Promotion engine produces status transition events on apply."
+
+[[rules]]
+source = "NeedPromotionEngine"
+target = "NeedStoreContract"
+relation = "coordinates"
+priority = 70
+notes = "S5: Promotion engine coordinates store for post-apply snapshot."
+
+# ══════════════════════════════════════════════════════════════
+# S3/S4/S5 Cross-Cutting — Service Integration
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsAnalyzerEngine"
+relation = "coordinates"
+priority = 70
+notes = "S4: Catalog service coordinates analyzer for catalog-level analysis."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedsSimulatorEngine"
+relation = "coordinates"
+priority = 70
+notes = "S5: Catalog service coordinates simulator for what-if queries."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "NeedPromotionEngine"
+relation = "coordinates"
+priority = 70
+notes = "S5: Catalog service coordinates promotion engine for lifecycle decisions."
+
+[[rules]]
+source = "NeedsApprovalGate"
+target = "NeedPromotionEngine"
+relation = "constrains"
+priority = 72
+notes = "S5-Gov: Governance approval gate constrains promotion workflow."
+
+[[rules]]
+source = "NeedsChangePolicy"
+target = "NeedPromotionEngine"
+relation = "constrains"
+priority = 72
+notes = "S5-Gov: Change policy constrains promotion criteria."
+
+[[rules]]
+source = "NeedPromotionEngine"
+target = "NeedsAuditPort"
+relation = "coordinates"
+priority = 72
+notes = "S5-Gov: Promotion engine coordinates audit submission for promotion decisions."
+
+# ══════════════════════════════════════════════════════════════
 # Rules: Dormant Relation Anchors (Coverage Stabilization)
 # ══════════════════════════════════════════════════════════════
 
@@ -1471,3 +1816,67 @@ target = "NeedsModelPort"
 relation = "registers"
 priority = 64
 notes = "Needs catalog service registers the needs model port for cross-layer access."
+
+# ══════════════════════════════════════════════════════════════
+# 7x7 Cross-Layer Rules: Needs ↔ Projection
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProjectionNeedsCoverage"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Projection view of needs coverage across topology."
+
+[[elements]]
+name = "ProjectionPriorityLens"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Priority-weighted lens for needs-aware projection."
+
+[[elements]]
+name = "ProjectionGapDetection"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Gap detection data between needs and addressed elements."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionNeedsCoverage"
+relation = "contains"
+priority = 65
+notes = "Needs-Projection: projection model port exposes needs coverage."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionPriorityLens"
+relation = "contains"
+priority = 65
+notes = "Needs-Projection: projection model port exposes priority lens."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionGapDetection"
+relation = "contains"
+priority = 65
+notes = "Needs-Projection: projection model port exposes gap detection."
+
+[[rules]]
+source = "NeedsCatalogService"
+target = "ProjectionNeedsCoverage"
+relation = "produces"
+priority = 72
+notes = "Needs-Projection: catalog service produces needs coverage data for projection."
+
+[[rules]]
+source = "ProjectionPriorityLens"
+target = "NeedsQueryService"
+relation = "depends_on"
+priority = 72
+notes = "Needs-Projection: priority lens depends on needs query service for priority data."
+
+[[rules]]
+source = "ProjectionGapDetection"
+target = "NeedsCatalogService"
+relation = "consumes"
+priority = 72
+notes = "Needs-Projection: gap detection consumes catalog data for coverage analysis."

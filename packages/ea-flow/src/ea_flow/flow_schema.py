@@ -78,6 +78,16 @@ FLOW_SCHEMA = FlowSchema(
         FlowEntity("flow_runtime", description="Workflow interpreter with sequential execution"),
         FlowEntity("execution_result", description="Full workflow execution result"),
         FlowEntity("flow_profile", description="Domain-specific meta-step collection"),
+        # S3 Recording
+        FlowEntity("execution_store", description="S3 workflow execution record store (ABC/InMemory/SQLite)"),
+        # S4 Analysis
+        FlowEntity("flow_analyzer", description="S4 step effectiveness, bottleneck detection, throughput analyzer"),
+        # S5 Evolution
+        FlowEntity("flow_simulator", description="S5 topology change what-if simulator"),
+        FlowEntity("workflow_promotion_engine", description="S5 workflow promotion/deprecation workflow engine"),
+        # S3/S4 Data Types
+        FlowEntity("step_effectiveness", description="S4 per-step effectiveness metric data"),
+        FlowEntity("flow_analysis_report", description="S4 aggregated flow analysis report"),
     ),
     relations=(
         FlowRelation("contains", description="Namespace or component containment"),

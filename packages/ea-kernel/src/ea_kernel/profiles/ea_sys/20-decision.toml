@@ -143,37 +143,43 @@ description = "Bridges decision outputs to kernel modeling actions via lazy ea_k
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "6x6 contract port for infra-layer model interface."
+description = "7x7 contract port for infra-layer model interface."
 
 [[elements]]
 name = "GovernanceModelPort"
 layer = "Governance"
 category = "Interface"
-description = "6x6 contract port for governance-layer model interface."
+description = "7x7 contract port for governance-layer model interface."
 
 [[elements]]
 name = "DecisionModelPort"
 layer = "Decision"
 category = "Interface"
-description = "6x6 contract port for decision-layer model interface."
+description = "7x7 contract port for decision-layer model interface."
 
 [[elements]]
 name = "NeedsModelPort"
 layer = "Needs"
 category = "Interface"
-description = "6x6 contract port for needs-layer model interface."
+description = "7x7 contract port for needs-layer model interface."
 
 [[elements]]
 name = "KernelModelPort"
 layer = "Kernel"
 category = "Interface"
-description = "6x6 contract port for kernel-layer model interface."
+description = "7x7 contract port for kernel-layer model interface."
 
 [[elements]]
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
-description = "6x6 contract port for flow-layer model interface."
+description = "7x7 contract port for flow-layer model interface."
+
+[[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for projection-layer model interface."
 
 # --- Assessment Models ---
 
@@ -1845,3 +1851,350 @@ target = "DecisionFlowSchemaService"
 relation = "coordinates"
 priority = 72
 notes = "Flow decision hook coordinates schema service for mid-execution evaluation."
+
+# ============================================================
+# S3 Recording — TopicStore (topic_store.py)
+# ============================================================
+
+[[elements]]
+name = "TopicStoreContract"
+layer = "Decision"
+category = "Interface"
+description = "S3 — Topic snapshot store ABC contract (TopicStore). Defines save_snapshot, get_snapshot, list_snapshots."
+
+[[elements]]
+name = "StoredTopicSnapshotData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S3 — Frozen topic snapshot persisted by TopicStore. Contains topic_id, status, report, timestamp."
+
+[[elements]]
+name = "TopicStoreStatsData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S3 — Store statistics: total snapshots, unique topics, date range."
+
+# ============================================================
+# S4 Analysis — DecisionAnalyzer (decision_analyzer.py)
+# ============================================================
+
+[[elements]]
+name = "DecisionAnalyzerEngine"
+layer = "Decision"
+category = "ActiveStructure"
+description = "S4 — Pattern effectiveness, evaluation consistency, and throughput analyzer (DecisionAnalyzer)."
+
+[[elements]]
+name = "PatternEffectivenessData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S4 — Per-pattern effectiveness metric: pattern_name, usage_count, success_rate, avg_duration."
+
+[[elements]]
+name = "DecisionAnalysisReportData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S4 — Aggregated analysis report: pattern_effectiveness, evaluation_consistency, throughput."
+
+# ============================================================
+# S5 Evolution — DecisionSimulator + PatternPromotionEngine
+# ============================================================
+
+[[elements]]
+name = "DecisionSimulatorEngine"
+layer = "Decision"
+category = "ActiveStructure"
+description = "S5 — Pattern change what-if simulator (DecisionSimulator). Replays topics against pattern changes."
+
+[[elements]]
+name = "PatternChangeRequestData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S5 — Pattern change request: change_type, pattern_name, new_heuristics, new_complexity."
+
+[[elements]]
+name = "PatternSimulationResultData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S5 — Simulation result: affected_topics, effectiveness_impact, safe_to_apply."
+
+[[elements]]
+name = "PatternPromotionEngineService"
+layer = "Decision"
+category = "ActiveStructure"
+description = "S5 — Pattern promotion/deprecation workflow (PatternPromotionEngine). Proposal, vote, approve, apply."
+
+[[elements]]
+name = "PatternPromotionProposalData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "S5 — Promotion proposal: pattern_name, proposed_action (promote/deprecate), votes, status."
+
+# ============================================================
+# S3 Recording Rules — TopicStore
+# ============================================================
+
+[[rules]]
+source = "TopicStoreContract"
+target = "StoredTopicSnapshotData"
+relation = "produces"
+priority = 70
+notes = "S3: Topic store produces frozen topic snapshots."
+
+[[rules]]
+source = "TopicStoreContract"
+target = "TopicStoreStatsData"
+relation = "produces"
+priority = 70
+notes = "S3: Topic store produces store statistics."
+
+[[rules]]
+source = "DecisionRepositoryService"
+target = "TopicStoreContract"
+relation = "coordinates"
+priority = 70
+notes = "S3: Repository service coordinates topic store for snapshot persistence."
+
+[[rules]]
+source = "TopicStoreContract"
+target = "DecisionStorageContract"
+relation = "depends_on"
+priority = 72
+notes = "S3: Topic store depends on infra storage contract for physical persistence."
+
+[[rules]]
+source = "DecisionFinalizedEvent"
+target = "TopicStoreContract"
+relation = "triggers"
+priority = 70
+notes = "S3: Decision finalization triggers topic snapshot recording."
+
+[[rules]]
+source = "DecisionRevisedEvent"
+target = "TopicStoreContract"
+relation = "triggers"
+priority = 70
+notes = "S3: Decision revision triggers updated topic snapshot recording."
+
+[[rules]]
+source = "StoredTopicSnapshotData"
+target = "TopicAggregate"
+relation = "depends_on"
+priority = 70
+notes = "S3: Stored snapshot references the source topic aggregate."
+
+# ============================================================
+# S4 Analysis Rules — DecisionAnalyzer
+# ============================================================
+
+[[rules]]
+source = "DecisionAnalyzerEngine"
+target = "TopicStoreContract"
+relation = "depends_on"
+priority = 70
+notes = "S4: Analyzer depends on topic store for historical snapshot access."
+
+[[rules]]
+source = "DecisionAnalyzerEngine"
+target = "PatternEffectivenessData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces per-pattern effectiveness metrics."
+
+[[rules]]
+source = "DecisionAnalyzerEngine"
+target = "DecisionAnalysisReportData"
+relation = "produces"
+priority = 70
+notes = "S4: Analyzer produces aggregated analysis reports."
+
+[[rules]]
+source = "DecisionAnalyzerEngine"
+target = "DecisionPatternRegistryService"
+relation = "depends_on"
+priority = 70
+notes = "S4: Analyzer depends on pattern registry for pattern metadata."
+
+[[rules]]
+source = "DecisionAnalysisReportData"
+target = "PatternEffectivenessData"
+relation = "contains"
+priority = 70
+notes = "S4: Analysis report contains per-pattern effectiveness data."
+
+[[rules]]
+source = "PatternEffectivenessData"
+target = "DecisionPatternRecord"
+relation = "depends_on"
+priority = 70
+notes = "S4: Effectiveness metric references the analyzed pattern."
+
+# ============================================================
+# S5 Evolution Rules — DecisionSimulator + PatternPromotionEngine
+# ============================================================
+
+[[rules]]
+source = "DecisionSimulatorEngine"
+target = "TopicStoreContract"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulator depends on topic store for historical replay data."
+
+[[rules]]
+source = "DecisionSimulatorEngine"
+target = "PatternChangeRequestData"
+relation = "consumes"
+priority = 70
+notes = "S5: Simulator consumes pattern change requests as input."
+
+[[rules]]
+source = "DecisionSimulatorEngine"
+target = "PatternSimulationResultData"
+relation = "produces"
+priority = 70
+notes = "S5: Simulator produces simulation results with impact assessment."
+
+[[rules]]
+source = "DecisionSimulatorEngine"
+target = "DecisionAnalyzerEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulator depends on analyzer for baseline effectiveness metrics."
+
+[[rules]]
+source = "PatternSimulationResultData"
+target = "PatternChangeRequestData"
+relation = "depends_on"
+priority = 70
+notes = "S5: Simulation result records the change requests applied."
+
+[[rules]]
+source = "PatternPromotionEngineService"
+target = "DecisionAnalyzerEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion engine depends on analyzer for promotion criteria evaluation."
+
+[[rules]]
+source = "PatternPromotionEngineService"
+target = "PatternPromotionProposalData"
+relation = "produces"
+priority = 70
+notes = "S5: Promotion engine produces promotion proposals."
+
+[[rules]]
+source = "PatternPromotionEngineService"
+target = "DecisionSimulatorEngine"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion engine depends on simulator for pre-apply safety check."
+
+[[rules]]
+source = "PatternPromotionProposalData"
+target = "DecisionPatternRecord"
+relation = "depends_on"
+priority = 70
+notes = "S5: Promotion proposal references the target pattern."
+
+[[rules]]
+source = "PatternPromotionEngineService"
+target = "TopicStoreContract"
+relation = "coordinates"
+priority = 70
+notes = "S5: Promotion engine coordinates store for post-apply snapshot."
+
+[[rules]]
+source = "DecisionPolicyConstraint"
+target = "PatternPromotionEngineService"
+relation = "constrains"
+priority = 72
+notes = "S5-Gov: Governance policy constrains pattern promotion workflow."
+
+[[rules]]
+source = "PatternPromotionEngineService"
+target = "DecisionAuditSubmission"
+relation = "coordinates"
+priority = 72
+notes = "S5-Gov: Promotion engine coordinates audit for promotion decisions."
+
+# ============================================================
+# S3/S4/S5 Lifecycle State Transition Rules
+# ============================================================
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "TopicStoreContract"
+relation = "coordinates"
+priority = 70
+notes = "S3: Schema service coordinates topic store for schema-aware snapshot queries."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "DecisionAnalyzerEngine"
+relation = "coordinates"
+priority = 70
+notes = "S4: Schema service coordinates analyzer for schema consistency analysis."
+
+# ══════════════════════════════════════════════════════════════
+# 7x7 Cross-Layer Rules: Decision ↔ Projection
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProjectionDecisionLens"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Decision-aware lens for projection filtering of decision elements."
+
+[[elements]]
+name = "ProjectionContextInput"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Projection context input for decision-relevant view generation."
+
+[[elements]]
+name = "ProjectionFeedbackChannel"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Feedback channel from projection views to decision revision."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionDecisionLens"
+relation = "contains"
+priority = 65
+notes = "Decision-Projection: projection model port exposes decision lens."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionContextInput"
+relation = "contains"
+priority = 65
+notes = "Decision-Projection: projection model port exposes context input."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionFeedbackChannel"
+relation = "contains"
+priority = 65
+notes = "Decision-Projection: projection model port exposes feedback channel."
+
+[[rules]]
+source = "DecisionFlowSchemaService"
+target = "ProjectionDecisionLens"
+relation = "produces"
+priority = 72
+notes = "Decision-Projection: decision schema service produces projection decision lens spec."
+
+[[rules]]
+source = "KernelBridgeService"
+target = "ProjectionContextInput"
+relation = "depends_on"
+priority = 72
+notes = "Decision-Projection: kernel bridge depends on projection context for decision scoping."
+
+[[rules]]
+source = "ProjectionFeedbackChannel"
+target = "DecisionPatternRegistryService"
+relation = "consumes"
+priority = 72
+notes = "Decision-Projection: pattern registry consumes projection feedback for pattern refinement."

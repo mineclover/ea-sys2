@@ -119,37 +119,43 @@ description = "Port for reading kernel contract snapshots."
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "6x6 contract port for infra-layer model interface."
+description = "7x7 contract port for infra-layer model interface."
 
 [[elements]]
 name = "GovernanceModelPort"
 layer = "Governance"
 category = "Interface"
-description = "6x6 contract port for governance-layer model interface."
+description = "7x7 contract port for governance-layer model interface."
 
 [[elements]]
 name = "DecisionModelPort"
 layer = "Decision"
 category = "Interface"
-description = "6x6 contract port for decision-layer model interface."
+description = "7x7 contract port for decision-layer model interface."
 
 [[elements]]
 name = "NeedsModelPort"
 layer = "Needs"
 category = "Interface"
-description = "6x6 contract port for needs-layer model interface."
+description = "7x7 contract port for needs-layer model interface."
 
 [[elements]]
 name = "KernelModelPort"
 layer = "Kernel"
 category = "Interface"
-description = "6x6 contract port for kernel-layer model interface."
+description = "7x7 contract port for kernel-layer model interface."
 
 [[elements]]
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
 description = "Flow model port used as downstream handoff target from kernel."
+
+[[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for projection-layer model interface."
 
 [[elements]]
 name = "KernelCapabilityModel"
@@ -2268,3 +2274,87 @@ target = "I18nStore"
 relation = "coordinates"
 priority = 70
 notes = "Governance system coordinates i18n audit during corpus updates."
+
+# ══════════════════════════════════════════════════════════════
+# 7x7 Cross-Layer Rules: Kernel ↔ Projection
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProjectionTopologyContract"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Contract defining kernel topology data available for projection."
+
+[[elements]]
+name = "ProjectionLevelMapping"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Mapping between kernel entity types and projection levels."
+
+[[elements]]
+name = "ProjectionBudgetConstraint"
+layer = "Projection"
+category = "Governance"
+description = "Budget constraints for projection over kernel topology."
+
+[[elements]]
+name = "ProjectionSchemaValidation"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Schema validation rules for projection outputs against kernel schema."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionTopologyContract"
+relation = "contains"
+priority = 65
+notes = "Kernel-Projection: projection model port exposes topology contract."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionLevelMapping"
+relation = "contains"
+priority = 65
+notes = "Kernel-Projection: projection model port exposes level mapping."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionBudgetConstraint"
+relation = "contains"
+priority = 65
+notes = "Kernel-Projection: projection model port exposes budget constraint."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionSchemaValidation"
+relation = "contains"
+priority = 65
+notes = "Kernel-Projection: projection model port exposes schema validation."
+
+[[rules]]
+source = "KernelContractService"
+target = "ProjectionTopologyContract"
+relation = "produces"
+priority = 72
+notes = "Kernel-Projection: contract service produces topology contract for projection consumption."
+
+[[rules]]
+source = "KernelValidationService"
+target = "ProjectionSchemaValidation"
+relation = "depends_on"
+priority = 72
+notes = "Kernel-Projection: validation service defines schema validation rules used by projection."
+
+[[rules]]
+source = "ProjectionBudgetConstraint"
+target = "KernelRuleCompiler"
+relation = "constrains"
+priority = 72
+notes = "Kernel-Projection: budget constraint limits kernel topology exposure to projection."
+
+[[rules]]
+source = "ProjectionLevelMapping"
+target = "KernelProfileRegistry"
+relation = "depends_on"
+priority = 72
+notes = "Kernel-Projection: level mapping depends on profile registry for entity type resolution."

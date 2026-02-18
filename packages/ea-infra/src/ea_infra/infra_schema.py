@@ -75,6 +75,7 @@ INFRA_SCHEMA = InfraSchema(
         InfraEntity("data_migration", description="Schema migration definition for version transitions"),
         InfraEntity("index_strategy", description="Index strategy for data access optimization"),
         InfraEntity("retention_policy", description="Data retention and archival policy"),
+        InfraEntity("resource_indexer", description="Directory scanner and file metadata collector for resource indexing"),
     ),
     relations=(
         InfraRelation("contains", description="Namespace or component containment"),

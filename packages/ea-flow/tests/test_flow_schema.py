@@ -11,7 +11,7 @@ class TestFlowSchemaPort:
         assert isinstance(FLOW_SCHEMA, SchemaPort)
 
     def test_entity_count(self):
-        assert len(FLOW_SCHEMA.entities) == 21
+        assert len(FLOW_SCHEMA.entities) == 27
 
     def test_relation_count(self):
         assert len(FLOW_SCHEMA.relations) == 10
@@ -63,6 +63,10 @@ class TestFlowSchemaPort:
             "data_contract", "data_catalog",
             "step_implementer", "flow_runtime", "execution_result",
             "flow_profile",
+            # S3/S4/S5
+            "execution_store", "flow_analyzer", "flow_simulator",
+            "workflow_promotion_engine", "step_effectiveness",
+            "flow_analysis_report",
         }
         assert names == expected
 

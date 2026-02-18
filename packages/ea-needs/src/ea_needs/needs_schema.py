@@ -63,6 +63,21 @@ NEEDS_SCHEMA = NeedsSchema(
         NeedsEntity("process_unit", description="Modeling unit for need processes"),
         NeedsEntity("need", description="Mutable need wrapper with lifecycle"),
         NeedsEntity("need_relation", description="Directed relationship between two needs"),
+        # N1 Enums
+        NeedsEntity("need_status", description="Need lifecycle state enum (DRAFT/EXPRESSED/ACKNOWLEDGED/ADDRESSED/WITHDRAWN)"),
+        NeedsEntity("need_priority", description="Need priority level enum (CRITICAL/HIGH/MEDIUM/LOW)"),
+        NeedsEntity("need_purpose", description="User intent taxonomy enum (SAFETY/EFFICIENCY/USABILITY/COMPLIANCE/GROWTH/TRUST)"),
+        NeedsEntity("need_cause_type", description="Root cause domain enum (EMOTIONAL/SITUATIONAL/PHYSICAL/LOGICAL/MENTAL/PHILOSOPHICAL)"),
+        NeedsEntity("need_resolution_complexity", description="Resolution complexity enum (SIMPLE/PROCEDURAL/COMPLEX)"),
+        NeedsEntity("need_process_stage", description="Process stage enum (IDENTIFY/QUERY/MODEL_DETAIL)"),
+        NeedsEntity("justification_type", description="Justification type enum (BECAUSE/IN_ORDER_TO)"),
+        # S3 Recording
+        NeedsEntity("need_store", description="S3 need snapshot store (ABC/InMemory/SQLite)"),
+        # S4 Analysis
+        NeedsEntity("needs_analyzer", description="S4 stakeholder coverage and priority distribution analyzer"),
+        # S5 Evolution
+        NeedsEntity("needs_simulator", description="S5 stakeholder/need change what-if simulator"),
+        NeedsEntity("need_promotion_engine", description="S5 need promotion/deprecation workflow engine"),
     ),
     relations=(
         # NeedRelationType relations (5)
@@ -75,5 +90,8 @@ NEEDS_SCHEMA = NeedsSchema(
         NeedsRelation("contains", description="Catalog contains needs/stakeholders"),
         NeedsRelation("expresses", description="Stakeholder expresses a desire"),
         NeedsRelation("justifies", description="Justification justifies a desire"),
+        # Additional semantic relations (2)
+        NeedsRelation("addresses", description="Need addresses a stakeholder desire or use case"),
+        NeedsRelation("withdraws", description="Need withdrawal supersedes an active need"),
     ),
 )

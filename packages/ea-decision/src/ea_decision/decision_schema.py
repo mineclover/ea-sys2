@@ -68,6 +68,19 @@ DECISION_SCHEMA = DecisionSchema(
         DecisionEntity("pattern_schema", description="Meta-model for decision patterns with phases and types"),
         DecisionEntity("decision_lifecycle", description="State machine for decision lifecycle transitions"),
         DecisionEntity("rationale", description="Explainability schema for decision justification"),
+        # N1 Enums
+        DecisionEntity("decision_type", description="Decision type enum (TRADE_OFF/COMPLIANCE/ARCHITECTURE/PROCESS)"),
+        DecisionEntity("decision_phase", description="Design Thinking phase enum (DIVERGE/CONVERGE/UTILIZE)"),
+        DecisionEntity("decision_status", description="Decision status enum (PROPOSED/ACCEPTED/REJECTED/DEPRECATED)"),
+        DecisionEntity("decision_lifecycle_state", description="Lifecycle state enum (DRAFT/PROPOSED/ACCEPTED/REJECTED/DEPRECATED/SUPERSEDED)"),
+        DecisionEntity("decision_complexity", description="Pattern complexity enum (TRIVIAL/STRUCTURAL/STRATEGIC)"),
+        # S3 Recording
+        DecisionEntity("topic_store", description="S3 topic snapshot store (ABC/InMemory/SQLite)"),
+        # S4 Analysis
+        DecisionEntity("decision_analyzer", description="S4 pattern effectiveness and evaluation consistency analyzer"),
+        # S5 Evolution
+        DecisionEntity("decision_simulator", description="S5 pattern change what-if simulator"),
+        DecisionEntity("pattern_promotion_engine", description="S5 pattern promotion/deprecation workflow engine"),
     ),
     relations=(
         DecisionRelation("evaluates", description="Evaluation dimension evaluates an option"),

@@ -11,7 +11,7 @@ class TestDecisionSchemaPort:
         assert isinstance(DECISION_SCHEMA, SchemaPort)
 
     def test_entity_count(self):
-        assert len(DECISION_SCHEMA.entities) == 14
+        assert len(DECISION_SCHEMA.entities) == 23
 
     def test_relation_count(self):
         assert len(DECISION_SCHEMA.relations) == 10
@@ -57,6 +57,12 @@ class TestDecisionSchemaPort:
             "decision_result", "evidence", "evidence_collection",
             "evaluation_dimension", "evaluation_result", "decision_pattern",
             "pattern_schema", "decision_lifecycle", "rationale",
+            # N1 Enums
+            "decision_type", "decision_phase", "decision_status",
+            "decision_lifecycle_state", "decision_complexity",
+            # S3/S4/S5
+            "topic_store", "decision_analyzer", "decision_simulator",
+            "pattern_promotion_engine",
         }
         assert names == expected
 

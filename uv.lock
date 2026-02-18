@@ -17,6 +17,7 @@ members = [
     "ea-kernel-self",
     "ea-needs",
     "ea-profile",
+    "ea-projection",
     "ea-sys2",
 ]
 
@@ -554,6 +555,28 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [[package]]
+name = "ea-projection"
+version = "0.1.0"
+source = { editable = "packages/ea-projection" }
+dependencies = [
+    { name = "ea-profile" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "ea-sys2"
 version = "0.1.0"
 source = { virtual = "." }
@@ -567,6 +590,7 @@ dependencies = [
     { name = "ea-kernel-self" },
     { name = "ea-needs" },
     { name = "ea-profile" },
+    { name = "ea-projection" },
 ]
 
 [package.optional-dependencies]
@@ -601,6 +625,7 @@ requires-dist = [
     { name = "ea-kernel-self", editable = "packages/ea-kernel-self" },
     { name = "ea-needs", editable = "packages/ea-needs" },
     { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "ea-projection", editable = "packages/ea-projection" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },

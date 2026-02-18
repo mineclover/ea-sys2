@@ -16,10 +16,11 @@ from ea_profile.types import KernelProfile
 
 # ── Core layers (exclude web-kernel-viz for M1 pipeline tests) ──
 
-CORE_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow")
+CORE_LAYERS = ("infra", "governance", "decision", "needs", "kernel", "flow", "projection")
 MODEL_PORT_NAMES = {
     "InfraModelPort", "GovernanceModelPort", "DecisionModelPort",
     "NeedsModelPort", "KernelModelPort", "FlowModelPort",
+    "ProjectionModelPort",
 }
 
 # 10 shared relations across ea_sys profiles
@@ -34,7 +35,7 @@ SHARED_RELATIONS = {
 
 @pytest.fixture(scope="module")
 def loaded_profiles() -> dict[str, KernelProfile]:
-    """Load all 6 core ea_sys profiles once."""
+    """Load all 7 core ea_sys profiles once."""
     profiles = {}
     for layer in CORE_LAYERS:
         path = PROFILE_DIR / LAYER_FILE_MAP[layer]
@@ -47,7 +48,7 @@ def loaded_profiles() -> dict[str, KernelProfile]:
 # ============================================================
 
 class TestProfileLoading:
-    """All 6 core ea_sys profiles load via load_profile(path, KERNEL_SPEC)."""
+    """All 7 core ea_sys profiles load via load_profile(path, KERNEL_SPEC)."""
 
     @pytest.mark.parametrize("layer", CORE_LAYERS)
     def test_load_profile_succeeds(self, loaded_profiles, layer):
@@ -90,6 +91,13 @@ class TestProfileLoading:
         profile = load_infra_profile(path, validate=False)
         assert isinstance(profile, KernelProfile)
 
+    def test_projection_bridge_loading(self):
+        """Projection bridge loads ea_sys profile (validate=False: ea_sys uses kernel vocabulary)."""
+        from ea_projection.profile_bridge import load_projection_profile
+        path = PROFILE_DIR / LAYER_FILE_MAP["projection"]
+        profile = load_projection_profile(path, validate=False)
+        assert isinstance(profile, KernelProfile)
+
     def test_all_profiles_share_10_relations(self, loaded_profiles):
         """Every core profile defines the same 10 relation names."""
         for layer, profile in loaded_profiles.items():
@@ -123,8 +131,8 @@ class TestRuleCompilation:
 class TestCrossProfileConsistency:
     """Structural consistency across all core profiles."""
 
-    def test_all_profiles_have_6_model_ports(self, loaded_profiles):
-        """Each profile contains all 6 ModelPort elements."""
+    def test_all_profiles_have_7_model_ports(self, loaded_profiles):
+        """Each profile contains all 7 ModelPort elements."""
         for layer, profile in loaded_profiles.items():
             element_names = {e.name for e in profile.elements}
             missing = MODEL_PORT_NAMES - element_names
@@ -148,6 +156,7 @@ class TestCrossProfileConsistency:
             "NeedsModelPort": "Needs",
             "KernelModelPort": "Kernel",
             "FlowModelPort": "Flow",
+            "ProjectionModelPort": "Projection",
         }
         for layer, profile in loaded_profiles.items():
             for elem in profile.elements:
@@ -243,6 +252,16 @@ class TestPipelineSmoke:
         assert result.stats.source_rule_count > 0
         assert result.stats.compiled_rule_count >= result.stats.source_rule_count
 
+    def test_projection_pipeline(self):
+        """Projection bridge load → compile (validate=False: ea_sys uses kernel vocabulary)."""
+        from ea_projection.profile_bridge import load_projection_profile
+        from ea_kernel.profile_rule_compiler import compile_profile_rules_for_runtime
+
+        profile = load_projection_profile(PROFILE_DIR / LAYER_FILE_MAP["projection"], validate=False)
+        result = compile_profile_rules_for_runtime(profile)
+        assert result.stats.source_rule_count > 0
+        assert result.stats.compiled_rule_count >= result.stats.source_rule_count
+
 
 # ============================================================
 # Group 5 — Condition Registry
@@ -287,6 +306,12 @@ class TestConditionRegistry:
         reg = infra_condition_registry()
         assert len(reg._map) == 8  # 5 kernel + 3 infra
 
+    def test_projection_condition_count(self):
+        from ea_projection.condition_registry import projection_condition_registry
+
+        reg = projection_condition_registry()
+        assert len(reg._map) == 8  # 5 kernel + 3 projection
+
     def test_kernel_defaults_preserved_in_layer_registries(self):
         from ea_profile.types import ConditionRegistry
         from ea_needs.condition_registry import needs_condition_registry
@@ -294,6 +319,7 @@ class TestConditionRegistry:
         from ea_decision.condition_registry import decision_condition_registry
         from ea_flow.condition_registry import flow_condition_registry
         from ea_infra.condition_registry import infra_condition_registry
+        from ea_projection.condition_registry import projection_condition_registry
 
         kernel_reg = ConditionRegistry.kernel_default()
         kernel_keys = set(kernel_reg._map.keys())
@@ -304,6 +330,7 @@ class TestConditionRegistry:
             ("decision", decision_condition_registry),
             ("flow", flow_condition_registry),
             ("infra", infra_condition_registry),
+            ("projection", projection_condition_registry),
         ]:
             layer_reg = factory()
             for key in kernel_keys:
@@ -313,3 +340,72 @@ class TestConditionRegistry:
                 assert layer_reg._map[key] == kernel_reg._map[key], (
                     f"{name} registry has different value for kernel key: {key}"
                 )
+
+
+# ============================================================
+# Group 6 — Schema-Profile Alignment
+# ============================================================
+
+class TestSchemaProfileAlignment:
+    """SchemaPort↔TOML mapping verification for 6 layers."""
+
+    SCHEMA_MAP = {
+        "infra": None,
+        "governance": None,
+        "decision": None,
+        "needs": None,
+        "flow": None,
+        "projection": None,
+    }
+
+    @staticmethod
+    def _get_schema(layer_key):
+        if layer_key == "infra":
+            from ea_infra.infra_schema import INFRA_SCHEMA
+            return INFRA_SCHEMA
+        elif layer_key == "governance":
+            from ea_governance.governance_schema import GOVERNANCE_SCHEMA
+            return GOVERNANCE_SCHEMA
+        elif layer_key == "decision":
+            from ea_decision.decision_schema import DECISION_SCHEMA
+            return DECISION_SCHEMA
+        elif layer_key == "needs":
+            from ea_needs.needs_schema import NEEDS_SCHEMA
+            return NEEDS_SCHEMA
+        elif layer_key == "flow":
+            from ea_flow.flow_schema import FLOW_SCHEMA
+            return FLOW_SCHEMA
+        elif layer_key == "projection":
+            from ea_projection.projection_schema import PROJECTION_SCHEMA
+            return PROJECTION_SCHEMA
+        raise ValueError(f"Unknown layer: {layer_key}")
+
+    @pytest.mark.parametrize("layer_key", ["infra", "governance", "decision", "needs", "flow", "projection"])
+    def test_shared_relations_used_in_rules(self, loaded_profiles, layer_key):
+        """Schema relations that overlap with profile relations appear in rules."""
+        schema = self._get_schema(layer_key)
+        profile = loaded_profiles[layer_key]
+
+        profile_relation_names = {r.name for r in profile.relations}
+        schema_relation_names = {rel.name for rel in schema.relations}
+        shared = schema_relation_names & profile_relation_names
+
+        used_relations = {r.relationship_name for r in profile.validity_rules}
+        unused = shared - used_relations
+
+        assert not unused, (
+            f"{layer_key}: shared relations not used in rules: {unused}"
+        )
+
+    @pytest.mark.parametrize("layer_key", ["infra", "governance", "decision", "needs", "flow", "projection"])
+    def test_rule_density_above_minimum(self, loaded_profiles, layer_key):
+        """Rule density (rules/elements) >= 0.9 for all layers."""
+        profile = loaded_profiles[layer_key]
+        num_elements = len(profile.elements)
+        num_rules = len(profile.validity_rules)
+
+        density = num_rules / num_elements if num_elements else 0
+        assert density >= 0.9, (
+            f"{layer_key}: rule density {density:.2f} "
+            f"({num_rules}/{num_elements}) below 0.9"
+        )

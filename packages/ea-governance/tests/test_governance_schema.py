@@ -11,7 +11,7 @@ class TestGovernanceSchemaPort:
         assert isinstance(GOVERNANCE_SCHEMA, SchemaPort)
 
     def test_entity_count(self):
-        assert len(GOVERNANCE_SCHEMA.entities) == 14
+        assert len(GOVERNANCE_SCHEMA.entities) == 18
 
     def test_relation_count(self):
         assert len(GOVERNANCE_SCHEMA.relations) == 10
@@ -57,6 +57,9 @@ class TestGovernanceSchemaPort:
             "coordinator", "policy", "governance_goal", "governance_step",
             "governance_action", "governance_record", "entry_port",
             "model_port", "model_endpoint", "governance_event", "feedback_loop",
+            # Transaction / Event Sourcing
+            "transaction_manager", "transaction_unit", "transaction_event",
+            "execution_service",
         }
         assert names == expected
 

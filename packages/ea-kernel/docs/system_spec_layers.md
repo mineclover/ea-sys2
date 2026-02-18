@@ -4,7 +4,7 @@
 
 핵심 원칙:
 
-- `infra > decision > needs > kernel > flow`는 메인 모델 정의 순서다.
+- `infra > decision > needs > kernel > flow > projection`은 메인 모델 정의 순서다.
 - `governance`는 위 레이어들을 관리하는 별도 시스템이다.
 - 모든 레이어는 정형 모델을 표현한다.
 - 각 레이어는 자기 관점의 전문성과 검증 규칙을 가진 독립 시스템으로 동작한다.
@@ -14,7 +14,7 @@
 
 ## 1. 메인 모델 순서
 
-`infra > decision > needs > kernel > flow`
+`infra > decision > needs > kernel > flow > projection`
 
 이 순서는 구현 호출 순서가 아니라, 모델 정의 책임의 상위-하위 체계다.
 
@@ -27,8 +27,9 @@
 | **Needs** | 요구 모델 정의 | 목표/요구/백로그/컨텍스트의 정형 표현 |
 | **Kernel** | 도메인 핵심 모델 정의 | 존재론(요소/관계)과 유효성 규칙 |
 | **Flow** | 실행/데이터 흐름 모델 정의 | 단계 순서, 입출력 소비/생산, 트리거/전이 |
+| **Projection** | 추상화 및 인덱싱 정의 | 레벨/렌즈/뷰모드/토픽/액터 기반 토폴로지 프로젝션 |
 
-`Governance`는 위 5개 레이어 전체를 관리하는 별도 관리 시스템으로 동작한다.
+`Governance`는 위 6개 레이어 전체를 관리하는 별도 관리 시스템으로 동작한다.
 - 모델 등록/버전/활성 상태 관리
 - 검증 실행 이력 및 진화(승격/폐기) 관리
 - `Infra`가 메타-메타 계약(예: 저장 포트/스키마 계약)을 정의할 수 있고, 그 계약 위 제어 구현은 `Governance`가 담당한다.
@@ -42,16 +43,17 @@
 
 ### 3.1 모델 정의 흐름
 
-`infra -> decision -> needs -> kernel -> flow`
+`infra -> decision -> needs -> kernel -> flow -> projection`
 
 - `infra`가 데이터 관리 모델을 제공한다.
 - `decision`이 의사결정 흐름의 메타-메타 구조를 정형화하고 `needs`가 요구를 정형화한다.
 - `kernel`이 핵심 의미 체계를 고정한다.
 - `flow`가 실행 가능한 절차/데이터 전이를 표현한다.
+- `projection`이 완성된 토폴로지에 대한 추상화 뷰와 인덱싱을 정의한다.
 
 ### 3.2 거버넌스 관리 흐름 (Management Plane)
 
-`governance -> {infra, decision, needs, kernel, flow}`
+`governance -> {infra, decision, needs, kernel, flow, projection}`
 
 - 각 레이어 모델의 등록/검증/활성 상태를 관리한다.
 - 레이어 진화 이력을 추적하고 기준 버전을 통제한다.
@@ -91,22 +93,23 @@
 | **Rules** | `specs/kernel_rules.toml` | 유효성 규칙: 67 explicit + 14 fallback = 81 total. priority 체계(1/40-50/60/70/80-90)와 조건 시스템(LAYER_ORDER, SAME_BRANCH)으로 관계 허용/금지 판단 |
 | **Profiles** | `profiles/ea_sys/*.toml` | 도메인 매핑: 스키마의 추상 타입을 도메인 요소로 구체화. 카테고리 매핑 + 도메인 관계 + 도메인 규칙 3단계 |
 
-### 5.2 6x6 포트 구조에서 Kernel의 역할
+### 5.2 7x7 포트 구조에서 Kernel의 역할
 
-Kernel은 다른 5개 레이어를 **도메인 제약 관점**으로 정의한다:
+Kernel은 다른 6개 레이어를 **도메인 제약 관점**으로 정의한다:
 
 - **Infra**: 커널 아티팩트(spec/rule/profile/audit)의 영속화 계약. 무엇을 어떤 형태로 저장하는가
 - **Governance**: 커널 모델의 등록/승인/변경 추적 게이트. 모델 진화가 어떤 절차를 거치는가
 - **Decision**: 의사결정 결과가 커널 제약으로 변환되는 경로. 결정이 어떻게 도메인 규칙이 되는가
 - **Needs**: 요구사항이 커널 도메인 요소로 매핑되는 경로. 요구가 어떻게 모델로 표현되는가
 - **Flow**: 커널 계약이 실행 단계에서 소비/검증되는 경로. 모델이 런타임에 어떻게 사용되는가
+- **Projection**: 커널 토폴로지가 추상화 뷰로 변환되는 경로. 레벨/렌즈/버짓 제약이 어떻게 적용되는가
 
-각 레이어에 대해 `*ModelPort` 인터페이스 요소를 두고, 해당 포트 아래 4-5개 교차 요소 + 관련 규칙을 배치.
+각 레이어에 대해 `*ModelPort` 인터페이스 요소를 두고, 해당 포트 아래 3-5개 교차 요소 + 관련 규칙을 배치.
 
 ### 5.3 40-kernel.toml 프로파일 구성
 
 | 구간 | 내용 |
 |:-----|:-----|
 | **내부 구현 요소** | KernelLayer(경계), 4개 서비스(Contract/RuleCompiler/Validation/ProfileRegistry), 3개 아티팩트(CapabilityModel/RuleSet/SpecSnapshot), Goal/Step/Action/Event, Context/Experience/Page/Endpoint |
-| **6x6 교차 요소** | 5개 레이어 × 4-5개 요소 = 21개. 각 레이어의 `*ModelPort` 아래 배치 |
+| **7x7 교차 요소** | 6개 레이어 × 3-5개 요소. 각 레이어의 `*ModelPort` 아래 배치 |
 | **규칙 3단계** | Pattern 규칙(priority 60, 카테고리 기반) → Explicit 규칙(priority 70, 이름 기반) → Cross-layer 규칙(priority 65/72, 포트-요소 간 구조+행위) |

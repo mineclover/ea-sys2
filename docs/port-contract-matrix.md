@@ -1,19 +1,20 @@
-# 6x6 포트 계약 명세
+# 7x7 포트 계약 명세
 
 > 현재 EA-Sys TOML 프로파일에 정의된 포트를 정리하고, 각 포트의 런타임 계약을 구체화
 
-## 1. 6x6 매트릭스 개요
+## 1. 7x7 매트릭스 개요
 
-각 레이어(행)는 6개 `*ModelPort`를 선언하여 다른 5개 레이어 + 자기 자신에 대한 계약을 **자기 전문성 관점에서** 정의한다.
+각 레이어(행)는 7개 `*ModelPort`를 선언하여 다른 6개 레이어 + 자기 자신에 대한 계약을 **자기 전문성 관점에서** 정의한다.
 
-| | Infra 대상 | Governance 대상 | Decision 대상 | Needs 대상 | Kernel 대상 | Flow 대상 |
-|---|---|---|---|---|---|---|
-| **Infra 관점** | 내부 요소 | GovernanceStorage* | DecisionData* | NeedsData* | KernelSpec* | FlowExecution* |
-| **Governance 관점** | InfraSchema* | 내부 요소 | DecisionProcess* | NeedsRegistration* | KernelContract* | FlowExecution* |
-| **Decision 관점** | DecisionData* | DecisionApproval* | 내부 요소 | NeedsDecision* | KernelConstraint* | FlowDecision* |
-| **Needs 관점** | NeedsStorage* | NeedsApproval* | DecisionOutcome* | 내부 요소 | KernelDomain* | FlowFulfillment* |
-| **Kernel 관점** | KernelSpec* | KernelModel* | DecisionConstraint* | NeedsDomain* | 내부 요소 | FlowContract* |
-| **Flow 관점** | FlowState* | FlowApproval* | FlowDecision* | NeedsFulfillment* | KernelContract* | 내부 요소 |
+| | Infra 대상 | Governance 대상 | Decision 대상 | Needs 대상 | Kernel 대상 | Flow 대상 | Projection 대상 |
+|---|---|---|---|---|---|---|---|
+| **Infra 관점** | 내부 요소 | GovernanceStorage* | DecisionData* | NeedsData* | KernelSpec* | FlowExecution* | ProjectionCache* |
+| **Governance 관점** | InfraSchema* | 내부 요소 | DecisionProcess* | NeedsRegistration* | KernelContract* | FlowExecution* | ProjectionPolicy* |
+| **Decision 관점** | DecisionData* | DecisionApproval* | 내부 요소 | NeedsDecision* | KernelConstraint* | FlowDecision* | ProjectionDecision* |
+| **Needs 관점** | NeedsStorage* | NeedsApproval* | DecisionOutcome* | 내부 요소 | KernelDomain* | FlowFulfillment* | ProjectionNeeds* |
+| **Kernel 관점** | KernelSpec* | KernelModel* | DecisionConstraint* | NeedsDomain* | 내부 요소 | FlowContract* | ProjectionTopology* |
+| **Flow 관점** | FlowState* | FlowApproval* | FlowDecision* | NeedsFulfillment* | KernelContract* | 내부 요소 | ProjectionExecution* |
+| **Projection 관점** | ProjectionStorage* | ProjectionPolicy* | DecisionTrace* | NeedsCoverage* | KernelTopology* | FlowLineage* | 내부 요소 |
 
 ---
 
@@ -21,7 +22,7 @@
 
 ### 2.1 Infra 관점 (00-infra.toml)
 
-**소유 포트**: `InfraModelPort` + 5개 cross-layer ModelPort
+**소유 포트**: `InfraModelPort` + 6개 cross-layer ModelPort
 
 Infra는 **row 데이터 설계** 관점에서 각 레이어의 저장소·스키마·인덱싱·보존 계약을 정의한다.
 
@@ -83,13 +84,21 @@ Infra는 **row 데이터 설계** 관점에서 각 레이어의 저장소·스�
 | FlowEventLogStore | 이벤트 로그 저장소 |
 | FlowDataRetentionPolicy | 데이터 보존 정책 |
 
+#### Infra → Projection
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionCacheSchema | 프로젝션 뷰 캐시 스키마 정의 |
+| ProjectionIndexSchema | 프로젝션 인덱스 스키마 정의 |
+| ProjectionRetentionPolicy | 프로젝션 데이터 보존 정책 |
+
 ---
 
 ### 2.2 Governance 관점 (10-governance.toml)
 
-**소유 포트**: `GovernanceEntryPort` + `GovernanceModelPort` + 5개 cross-layer ModelPort
+**소유 포트**: `GovernanceEntryPort` + `GovernanceModelPort` + 6개 cross-layer ModelPort
 
-Governance는 **5개 레이어 통합 관리** 관점에서 등록·버전·검증·활성·변경 통제를 정의한다.
+Governance는 **6개 레이어 통합 관리** 관점에서 등록·버전·검증·활성·변경 통제를 정의한다.
 
 #### Governance → Governance (내부 핵심 요소)
 
@@ -156,11 +165,20 @@ Governance는 **5개 레이어 통합 관리** 관점에서 등록·버전·검�
 | FlowGovernancePolicy | 흐름 거버넌스 정책 |
 | FlowComplianceRecord | 흐름 규정 준수 기록 |
 
+#### Governance → Projection
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionPolicyGovernance | 프로젝션 정책 거버넌스 |
+| ProjectionLevelAudit | 프로젝션 레벨 감사 |
+| ProjectionCompliancePolicy | 프로젝션 규정 준수 정책 |
+| ProjectionChangeRecord | 프로젝션 변경 기록 |
+
 ---
 
 ### 2.3 Decision 관점 (20-decision.toml)
 
-**소유 포트**: `DecisionModelPort` + 5개 cross-layer ModelPort
+**소유 포트**: `DecisionModelPort` + 6개 cross-layer ModelPort
 
 Decision은 **의사결정 메타-메타 모델** 관점에서 활동·상태·옵션·평가·결론 구조를 정의한다.
 
@@ -230,11 +248,19 @@ Decision은 **의사결정 메타-메타 모델** 관점에서 활동·상태·�
 | FlowResultFeedback | 흐름 결과 피드백 |
 | FlowDecisionHook | 흐름 의사결정 훅 |
 
+#### Decision → Projection
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionDecisionLens | 프로젝션 의사결정 렌즈 |
+| ProjectionContextInput | 프로젝션 컨텍스트 입력 |
+| ProjectionFeedbackChannel | 프로젝션 피드백 채널 |
+
 ---
 
 ### 2.4 Needs 관점 (30-needs.toml)
 
-**소유 포트**: `NeedsModelPort` + 5개 cross-layer ModelPort
+**소유 포트**: `NeedsModelPort` + 6개 cross-layer ModelPort
 
 Needs는 **요구 모델 정의** 관점에서 이해관계자·요구·정당화·컨텍스트의 정형 표현을 정의한다.
 
@@ -298,11 +324,19 @@ Needs는 **요구 모델 정의** 관점에서 이해관계자·요구·정당�
 | FlowProgressFeedback | 흐름 진행 피드백 |
 | FlowCompletionEvent | 흐름 완료 이벤트 |
 
+#### Needs → Projection
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionNeedsCoverage | 프로젝션 요구 커버리지 |
+| ProjectionPriorityLens | 프로젝션 우선순위 렌즈 |
+| ProjectionGapDetection | 프로젝션 갭 탐지 |
+
 ---
 
 ### 2.5 Kernel 관점 (40-kernel.toml)
 
-**소유 포트**: `KernelContractPort` + `KernelModelPort` + 5개 cross-layer ModelPort
+**소유 포트**: `KernelContractPort` + `KernelModelPort` + 6개 cross-layer ModelPort
 
 Kernel은 **도메인 핵심 모델** 관점에서 존재론(요소/관계)과 유효성 규칙을 정의한다.
 
@@ -377,11 +411,20 @@ Kernel은 **도메인 핵심 모델** 관점에서 존재론(요소/관계)과 �
 | FlowExecutionFeedback | 흐름 실행 피드백 |
 | FlowConstraintViolationEvent | 흐름 제약 위반 이벤트 |
 
+#### Kernel → Projection
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionTopologyContract | 프로젝션 토폴로지 계약 |
+| ProjectionLevelMapping | 프로젝션 레벨 매핑 |
+| ProjectionBudgetConstraint | 프로젝션 엣지 버짓 제약 |
+| ProjectionSchemaValidation | 프로젝션 스키마 검증 |
+
 ---
 
 ### 2.6 Flow 관점 (50-flow.toml)
 
-**소유 포트**: `FlowModelPort` + 5개 cross-layer ModelPort
+**소유 포트**: `FlowModelPort` + 6개 cross-layer ModelPort
 
 Flow는 **실행/데이터 흐름 모델** 관점에서 단계 순서, 입출력 소비/생산, 트리거/전이를 정의한다.
 
@@ -441,7 +484,7 @@ Flow는 **실행/데이터 흐름 모델** 관점에서 단계 순서, 입출력
 | PersistFlowStateStep | 흐름 상태 영속화 |
 | PublishFlowOutcomeAction | 흐름 결과 발행 |
 
-**FlowLayerContractMatrix**: 6x6 전체 계약을 소유하는 핵심 요소.
+**FlowLayerContractMatrix**: 7x7 전체 계약을 소유하는 핵심 요소.
 
 #### Flow → Infra
 
@@ -484,13 +527,112 @@ Flow는 **실행/데이터 흐름 모델** 관점에서 단계 순서, 입출력
 | KernelSpecVersion | 커널 스펙 버전 |
 | KernelConstraintHook | 커널 제약 훅 |
 
+#### Flow → Projection
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionExecutionView | 프로젝션 실행 뷰 |
+| ProjectionDataLineage | 프로젝션 데이터 리니지 |
+| ProjectionStepVisibility | 프로젝션 단계 가시성 |
+
+---
+
+### 2.7 Projection 관점 (70-projection.toml)
+
+**소유 포트**: `ProjectionModelPort` + 6개 cross-layer ModelPort
+
+Projection은 **추상화 및 인덱싱** 관점에서 레벨/렌즈/뷰모드/토픽/액터 기반 토폴로지 프로젝션을 정의한다.
+
+#### Projection → Projection (내부 핵심 요소)
+
+| 요소 | 카테고리 | 설명 |
+|------|---------|------|
+| ProjectionLayer | Composite | 프로젝션/추상화 경계 |
+| ProjectionPolicyService | ActiveStructure | M2 정책 로딩 및 검증 |
+| ProjectionFilterService | ActiveStructure | 관계/카테고리 필터링 엔진 |
+| BudgetAllocationService | ActiveStructure | 엣지 버짓 할당 서비스 |
+| ProjectionServicePort | Interface | 프로젝션 실행 포트 |
+| ProjectionPolicyPort | Interface | 정책 로딩 포트 |
+| ProjectionModelPort | Interface | 자기 모델 인터페이스 |
+| ProjectionPolicy | Governance | M2 정책 제약 |
+| LevelSpec | PassiveStructure | L0-L4 레벨 스펙 |
+| LensSpec | PassiveStructure | 렌즈 스펙 |
+| ViewModeSpec | PassiveStructure | 뷰 모드 스펙 |
+| FocusModeSpec | PassiveStructure | 포커스 모드 스펙 |
+| TopicIndex | PassiveStructure | 토픽 기반 인덱스 |
+| ActorSeed | PassiveStructure | 액터 시드 데이터 |
+| EdgeBudget | PassiveStructure | 엣지 버짓 데이터 |
+| ProjectedView | PassiveStructure | M1P 프로젝션 결과 |
+| ReductionReport | PassiveStructure | 리덕션 메타데이터 |
+| DrilldownSpec | PassiveStructure | 레벨 전이 스펙 |
+
+**6단계 파이프라인**:
+
+| 요소 | 설명 |
+|------|------|
+| SelectLevelStep | 레벨 선택 |
+| ApplyLensStep | 렌즈 적용 |
+| ComputeBudgetStep | 버짓 계산 |
+| ExecuteReductionStep | 리덕션 실행 |
+| GenerateViewStep | 뷰 생성 |
+| ValidateViewStep | 뷰 검증 |
+| PublishProjectionAction | 프로젝션 발행 |
+
+#### Projection → Infra
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionStorageContract | 프로젝션 저장 계약 |
+| ProjectionCacheStrategy | 프로젝션 캐시 전략 |
+| ProjectionIndexStore | 프로젝션 인덱스 저장소 |
+
+#### Projection → Governance
+
+| 요소 | 설명 |
+|------|------|
+| ProjectionPolicyApproval | 프로젝션 정책 승인 |
+| ProjectionVersionControl | 프로젝션 버전 관리 |
+| ProjectionAuditRecord | 프로젝션 감사 기록 |
+
+#### Projection → Decision
+
+| 요소 | 설명 |
+|------|------|
+| DecisionTraceProjection | 의사결정 추적 프로젝션 |
+| DecisionContextLens | 의사결정 컨텍스트 렌즈 |
+| DecisionImpactView | 의사결정 영향 뷰 |
+
+#### Projection → Needs
+
+| 요소 | 설명 |
+|------|------|
+| NeedsCoverageProjection | 요구 커버리지 프로젝션 |
+| NeedsPriorityView | 요구 우선순위 뷰 |
+| NeedsGapAnalysis | 요구 갭 분석 |
+
+#### Projection → Kernel
+
+| 요소 | 설명 |
+|------|------|
+| KernelTopologyProjection | 커널 토폴로지 프로젝션 |
+| KernelRuleVisibility | 커널 규칙 가시성 |
+| KernelSchemaLens | 커널 스키마 렌즈 |
+
+#### Projection → Flow
+
+| 요소 | 설명 |
+|------|------|
+| FlowExecutionProjection | 흐름 실행 프로젝션 |
+| FlowDataLineageView | 흐름 데이터 리니지 뷰 |
+| FlowBottleneckLens | 흐름 병목 렌즈 |
+
 ---
 
 ## 3. 계약 소유권 규칙
 
 ### 3.1 Flow의 FlowLayerContractMatrix 소유
 
-Flow가 `FlowLayerContractMatrix`를 소유하며, 6x6 전체 계약의 **조정** 책임을 갖는다. 이는 Flow가 런타임 실행 시 모든 레이어 간 데이터 흐름을 조율하기 때문이다.
+Flow가 `FlowLayerContractMatrix`를 소유하며, 7x7 전체 계약의 **조정** 책임을 갖는다. 이는 Flow가 런타임 실행 시 모든 레이어 간 데이터 흐름을 조율하기 때문이다.
 
 ### 3.2 자기 포트 수정 규칙
 

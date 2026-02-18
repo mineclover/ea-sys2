@@ -433,6 +433,12 @@ category = "Interface"
 description = "Flow model port; terminal runtime chain stage."
 
 [[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for projection-layer model interface."
+
+[[elements]]
 name = "GovernanceDbPort"
 layer = "Infra"
 category = "Interface"
@@ -2854,3 +2860,80 @@ target = "GovernanceLayer"
 relation = "available_in"
 priority = 64
 notes = "Governance schema records are available within the governance layer boundary."
+
+# ══════════════════════════════════════════════════════════════
+# 7x7 Cross-Layer Rules: Governance ↔ Projection
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProjectionPolicyGovernance"
+layer = "Projection"
+category = "Governance"
+description = "Governance oversight of projection policy lifecycle."
+
+[[elements]]
+name = "ProjectionLevelAudit"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Audit records for projection level changes."
+
+[[elements]]
+name = "ProjectionCompliancePolicy"
+layer = "Projection"
+category = "Governance"
+description = "Compliance policy for projection outputs."
+
+[[elements]]
+name = "ProjectionChangeRecord"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Change record for projection policy evolution."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionPolicyGovernance"
+relation = "contains"
+priority = 65
+notes = "Gov-Projection: projection model port exposes policy governance."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionLevelAudit"
+relation = "contains"
+priority = 65
+notes = "Gov-Projection: projection model port exposes level audit."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionCompliancePolicy"
+relation = "contains"
+priority = 65
+notes = "Gov-Projection: projection model port exposes compliance policy."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionChangeRecord"
+relation = "contains"
+priority = 65
+notes = "Gov-Projection: projection model port exposes change record."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "ProjectionModelPort"
+relation = "registers"
+priority = 72
+notes = "Gov-Projection: layer model registry registers projection model port."
+
+[[rules]]
+source = "ValidationCoordinator"
+target = "ProjectionCompliancePolicy"
+relation = "constrains"
+priority = 72
+notes = "Gov-Projection: validation coordinator enforces projection compliance."
+
+[[rules]]
+source = "LayerModelRegistry"
+target = "ProjectionChangeRecord"
+relation = "depends_on"
+priority = 72
+notes = "Gov-Projection: layer model registry depends on projection change history."

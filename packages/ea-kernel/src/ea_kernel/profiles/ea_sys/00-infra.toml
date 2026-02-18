@@ -109,37 +109,43 @@ description = "Row-data append port for immutable event/audit writes."
 name = "InfraModelPort"
 layer = "Infra"
 category = "Interface"
-description = "6x6 contract port for infra-layer model interface."
+description = "7x7 contract port for infra-layer model interface."
 
 [[elements]]
 name = "GovernanceModelPort"
 layer = "Governance"
 category = "Interface"
-description = "6x6 contract port for governance-layer model interface."
+description = "7x7 contract port for governance-layer model interface."
 
 [[elements]]
 name = "DecisionModelPort"
 layer = "Decision"
 category = "Interface"
-description = "6x6 contract port for decision-layer model interface."
+description = "7x7 contract port for decision-layer model interface."
 
 [[elements]]
 name = "NeedsModelPort"
 layer = "Needs"
 category = "Interface"
-description = "6x6 contract port for needs-layer model interface."
+description = "7x7 contract port for needs-layer model interface."
 
 [[elements]]
 name = "KernelModelPort"
 layer = "Kernel"
 category = "Interface"
-description = "6x6 contract port for kernel-layer model interface."
+description = "7x7 contract port for kernel-layer model interface."
 
 [[elements]]
 name = "FlowModelPort"
 layer = "Flow"
 category = "Interface"
-description = "6x6 contract port for flow-layer model interface."
+description = "7x7 contract port for flow-layer model interface."
+
+[[elements]]
+name = "ProjectionModelPort"
+layer = "Projection"
+category = "Interface"
+description = "7x7 contract port for projection-layer model interface."
 
 [[elements]]
 name = "LayerVersionStore"
@@ -1212,3 +1218,67 @@ target = "GovernanceDataMigration"
 relation = "triggers"
 priority = 64
 notes = "Transaction events trigger governance data migration execution."
+
+# ══════════════════════════════════════════════════════════════
+# 7x7 Cross-Layer Rules: Infra ↔ Projection
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProjectionCacheSchema"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Cache schema definition for projection view storage."
+
+[[elements]]
+name = "ProjectionIndexSchema"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Index schema definition for topic/actor index persistence."
+
+[[elements]]
+name = "ProjectionRetentionPolicy"
+layer = "Projection"
+category = "Governance"
+description = "Data retention policy for cached projection views."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionCacheSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Projection: projection model port exposes cache schema."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionIndexSchema"
+relation = "contains"
+priority = 65
+notes = "Infra-Projection: projection model port exposes index schema."
+
+[[rules]]
+source = "ProjectionModelPort"
+target = "ProjectionRetentionPolicy"
+relation = "contains"
+priority = 65
+notes = "Infra-Projection: projection model port exposes retention policy."
+
+[[rules]]
+source = "DataPlatformService"
+target = "ProjectionCacheSchema"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Projection: data platform depends on projection cache schema for storage allocation."
+
+[[rules]]
+source = "StorageLifecycleService"
+target = "ProjectionRetentionPolicy"
+relation = "constrains"
+priority = 72
+notes = "Infra-Projection: storage lifecycle service enforces projection data retention."
+
+[[rules]]
+source = "ProjectionIndexSchema"
+target = "DataPlatformService"
+relation = "depends_on"
+priority = 72
+notes = "Infra-Projection: projection index schema depends on data platform service for index storage allocation."

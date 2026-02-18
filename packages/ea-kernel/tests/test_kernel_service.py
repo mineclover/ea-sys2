@@ -648,6 +648,186 @@ class TestProfileProjection:
         assert "error" in result
         assert "valid_levels" in result
 
+    # --- Tier tests ---
+
+    def test_projection_tier_ui_filters_categories(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            tier="ui",
+        )
+        assert "error" not in result
+        assert "projection" in result
+        tier_meta = result["projection"].get("tier")
+        assert isinstance(tier_meta, dict)
+        assert tier_meta["name"] == "ui"
+        assert set(tier_meta["categories"]) == {"Page", "Interface", "Context"}
+        # All returned nodes must be in ui tier categories
+        for node in result.get("nodes", []):
+            assert node["category"] in {"Page", "Interface", "Context"}, (
+                f"Node {node['name']} has category {node['category']} not in ui tier"
+            )
+
+    def test_projection_tier_function(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            tier="function",
+        )
+        assert "error" not in result
+        tier_meta = result["projection"].get("tier")
+        assert isinstance(tier_meta, dict)
+        assert tier_meta["name"] == "function"
+        allowed = {"ActiveStructure", "Behavior", "Executable", "Governance"}
+        for node in result.get("nodes", []):
+            assert node["category"] in allowed, (
+                f"Node {node['name']} has category {node['category']} not in function tier"
+            )
+
+    def test_projection_tier_evidence_name_pattern(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            tier="evidence",
+        )
+        assert "error" not in result
+        tier_meta = result["projection"].get("tier")
+        assert isinstance(tier_meta, dict)
+        assert tier_meta["name"] == "evidence"
+        evidence_patterns = {"evidence", "provenance", "rationale", "audit", "analysisreport", "compliance"}
+        for node in result.get("nodes", []):
+            assert node["category"] == "PassiveStructure", (
+                f"Evidence node {node['name']} has wrong category {node['category']}"
+            )
+            name_lower = node["name"].lower()
+            assert any(pat in name_lower for pat in evidence_patterns), (
+                f"Evidence node {node['name']} doesn't match evidence name patterns"
+            )
+
+    def test_projection_tier_data_excludes_evidence(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            tier="data",
+        )
+        assert "error" not in result
+        tier_meta = result["projection"].get("tier")
+        assert isinstance(tier_meta, dict)
+        assert tier_meta["name"] == "data"
+        evidence_patterns = {"evidence", "provenance", "rationale", "audit", "analysisreport", "compliance"}
+        for node in result.get("nodes", []):
+            name_lower = node["name"].lower()
+            if node["category"] == "PassiveStructure":
+                assert not any(pat in name_lower for pat in evidence_patterns), (
+                    f"Data tier should exclude evidence-patterned node: {node['name']}"
+                )
+
+    def test_projection_tier_overrides_level_categories(self):
+        # L0 normally only shows 6 categories; tier=function should show its own set
+        result_l0_no_tier = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l0",
+        )
+        result_l0_with_tier = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l0",
+            tier="function",
+        )
+        assert "error" not in result_l0_no_tier
+        assert "error" not in result_l0_with_tier
+        # With tier, the category filter should come from the tier definition
+        tier_meta = result_l0_with_tier["projection"].get("tier")
+        assert isinstance(tier_meta, dict)
+        assert tier_meta["name"] == "function"
+
+    def test_projection_tier_next_tiers(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            tier="ui",
+        )
+        assert "error" not in result
+        tier_meta = result["projection"].get("tier")
+        assert isinstance(tier_meta, dict)
+        next_tiers = tier_meta.get("next_tiers", [])
+        assert isinstance(next_tiers, list)
+        assert "function" in next_tiers
+        valid_tiers = {"ui", "function", "data", "decision", "evidence"}
+        for t in next_tiers:
+            assert t in valid_tiers, f"Invalid next_tier: {t}"
+
+    def test_projection_invalid_tier(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l0",
+            tier="nonexistent_tier",
+        )
+        assert "error" in result
+        assert "valid_tiers" in result
+
+    # --- Seed tests ---
+
+    def test_projection_seed_element_bfs(self):
+        # First get a known element name from l4
+        base = profile_projection(profile_name="EASystem-Kernel", level="l4")
+        assert "error" not in base
+        assert base["nodes"], "expected nodes from l4"
+        sample_name = base["nodes"][0]["name"]
+
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            seed=sample_name,
+            depth=1,
+        )
+        assert "error" not in result
+        assert result["node_count"] <= base["node_count"]
+        seed_meta = result["projection"].get("seed")
+        assert isinstance(seed_meta, dict)
+        assert seed_meta["element"] == sample_name
+        assert seed_meta["depth"] == 1
+        assert seed_meta["scope_size"] >= 1
+
+    def test_projection_seed_plus_tier(self):
+        base = profile_projection(profile_name="EASystem-Kernel", level="l4")
+        assert "error" not in base
+        assert base["nodes"]
+        sample_name = base["nodes"][0]["name"]
+
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l4",
+            seed=sample_name,
+            depth=2,
+            tier="function",
+        )
+        assert "error" not in result
+        # Should have both tier and seed metadata
+        assert result["projection"].get("tier") is not None
+        assert result["projection"].get("seed") is not None
+
+    def test_projection_invalid_seed(self):
+        result = profile_projection(
+            profile_name="EASystem-Kernel",
+            level="l0",
+            seed="__nonexistent_element__",
+        )
+        assert "error" in result
+        assert "available_elements" in result or "seed" in str(result["error"]).lower()
+
+    def test_tier_definitions_in_policy(self):
+        from ea_kernel.kernel_service import (
+            _resolve_tier_definitions,
+            _resolve_projection_policy,
+        )
+        policy = _resolve_projection_policy("EASystem-Kernel")
+        tier_defs = _resolve_tier_definitions(policy)
+        assert len(tier_defs) == 5
+        assert set(tier_defs.keys()) == {"ui", "function", "data", "decision", "evidence"}
+        for tier_name, tier_def in tier_defs.items():
+            assert tier_def["categories"], f"Tier {tier_name} has empty categories"
+            assert isinstance(tier_def["transitions"], list)
+
 
 class TestProfileComposedTopology:
     """Cross-profile composed M1 topology helpers."""

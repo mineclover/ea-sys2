@@ -7,7 +7,7 @@ description = "Projection policy contract (M2) and layer profile policies (M1)."
 levels = ["l0", "l1", "l2", "l3", "l4"]
 lenses = ["panorama", "overview", "capability", "interaction", "execution", "trace"]
 base_view_modes = ["raw", "summary", "focus"]
-focus_modes = ["core", "relation", "layer", "actor", "topic"]
+focus_modes = ["core", "relation", "layer", "actor", "topic", "seed"]
 required_level_fields = [
   "level",
   "lens",
@@ -49,6 +49,40 @@ name_contains = 120
 display_exact = 180
 display_contains = 90
 description_contains = 40
+
+[m2.tiers]
+names = ["ui", "function", "data", "decision", "evidence"]
+default_seed_depth = 2
+
+[m2.tiers.definitions.ui]
+categories = ["Page", "Interface", "Context"]
+name_patterns = []
+name_exclude_patterns = []
+transitions = ["function"]
+
+[m2.tiers.definitions.function]
+categories = ["ActiveStructure", "Behavior", "Executable", "Governance"]
+name_patterns = []
+name_exclude_patterns = []
+transitions = ["data", "decision"]
+
+[m2.tiers.definitions.data]
+categories = ["PassiveStructure", "Composite"]
+name_patterns = []
+name_exclude_patterns = ["Evidence", "Provenance", "Rationale", "Audit", "AnalysisReport", "Compliance"]
+transitions = ["evidence"]
+
+[m2.tiers.definitions.decision]
+categories = ["Assessment", "Goal", "Event"]
+name_patterns = []
+name_exclude_patterns = []
+transitions = ["evidence"]
+
+[m2.tiers.definitions.evidence]
+categories = ["PassiveStructure"]
+name_patterns = ["Evidence", "Provenance", "Rationale", "Audit", "AnalysisReport", "Compliance"]
+name_exclude_patterns = []
+transitions = []
 
 [m1.global.levels.l0]
 level = "L0"

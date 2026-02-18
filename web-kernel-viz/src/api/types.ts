@@ -101,7 +101,7 @@ export interface ProfileTopologyResponse {
     edges: TopologyEdge[];
     view_mode?: 'raw' | 'summary' | 'focus';
     focus?: {
-        mode: 'core' | 'relation' | 'layer' | 'actor' | 'topic';
+        mode: 'core' | 'relation' | 'layer' | 'actor' | 'topic' | 'seed';
         relation?: string;
         layer?: string;
         actor?: string;
@@ -175,6 +175,18 @@ export interface ProfileTopologyResponse {
     composition?: ProfileCompositionView;
 }
 
+export interface TierMeta {
+    name: string;
+    categories: string[];
+    next_tiers: string[];
+}
+
+export interface SeedMeta {
+    element: string;
+    depth: number;
+    scope_size: number;
+}
+
 export interface ProfileProjectionMeta {
     level: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
     lens: 'panorama' | 'capability' | 'interaction' | 'execution' | 'trace';
@@ -193,7 +205,7 @@ export interface ProfileProjectionMeta {
     };
     source: {
         view_mode: 'raw' | 'summary' | 'focus';
-        focus?: 'core' | 'relation' | 'layer' | 'actor' | 'topic' | null;
+        focus?: 'core' | 'relation' | 'layer' | 'actor' | 'topic' | 'seed' | null;
         node_count: number;
         edge_count: number;
         edge_total_raw: number;
@@ -227,6 +239,7 @@ export interface ProfileProjectionMeta {
         drop_reasons?: {
             node_without_name?: number;
             node_category_filtered?: number;
+            node_tier_filtered?: number;
             node_disconnected?: number;
             edge_invalid_endpoint?: number;
             edge_node_scope_filtered?: number;
@@ -240,7 +253,8 @@ export interface ProfileProjectionMeta {
             unmatched?: string[];
         };
     };
-    seed?: {
+    tier?: TierMeta;
+    seed?: SeedMeta | {
         actor?: string;
         depth?: number;
         actor_candidates?: {

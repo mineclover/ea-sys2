@@ -172,6 +172,8 @@ export function fetchProfileProjection(
         actor?: string;
         depth?: number;
         max_edges?: number;
+        tier?: string;
+        seed?: string;
     },
 ): Promise<ProfileProjectionResponse> {
     const params = new URLSearchParams();
@@ -183,6 +185,8 @@ export function fetchProfileProjection(
     if (opts?.actor) params.set('actor', opts.actor);
     if (opts?.depth != null) params.set('depth', String(opts.depth));
     if (opts?.max_edges != null) params.set('max_edges', String(opts.max_edges));
+    if (opts?.tier) params.set('tier', opts.tier);
+    if (opts?.seed) params.set('seed', opts.seed);
     const qs = params.toString();
     return fetchJson(`/profiles/${encodeURIComponent(name)}/projection${qs ? `?${qs}` : ''}`);
 }

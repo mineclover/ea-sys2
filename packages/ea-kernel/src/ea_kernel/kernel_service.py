@@ -273,8 +273,42 @@ _PROJECTION_LENS_TO_LEVEL: dict[str, str] = {
     "trace": "l4",
 }
 _PROJECTION_BASE_VIEW_MODES: frozenset[str] = frozenset({"raw", "summary", "focus"})
-_PROJECTION_FOCUS_MODES: frozenset[str] = frozenset({"core", "relation", "layer", "actor", "topic"})
+_PROJECTION_FOCUS_MODES: frozenset[str] = frozenset({"core", "relation", "layer", "actor", "topic", "seed"})
 _PROJECTION_DEFAULT_ACTOR_DEPTH = 4
+_PROJECTION_DEFAULT_SEED_DEPTH = 2
+_PROJECTION_TIER_DEFINITIONS: dict[str, dict[str, Any]] = {
+    "ui": {
+        "categories": ["Page", "Interface", "Context"],
+        "name_patterns": [],
+        "name_exclude_patterns": [],
+        "transitions": ["function"],
+    },
+    "function": {
+        "categories": ["ActiveStructure", "Behavior", "Executable", "Governance"],
+        "name_patterns": [],
+        "name_exclude_patterns": [],
+        "transitions": ["data", "decision"],
+    },
+    "data": {
+        "categories": ["PassiveStructure", "Composite"],
+        "name_patterns": [],
+        "name_exclude_patterns": ["Evidence", "Provenance", "Rationale", "Audit", "AnalysisReport", "Compliance"],
+        "transitions": ["evidence"],
+    },
+    "decision": {
+        "categories": ["Assessment", "Goal", "Event"],
+        "name_patterns": [],
+        "name_exclude_patterns": [],
+        "transitions": ["evidence"],
+    },
+    "evidence": {
+        "categories": ["PassiveStructure"],
+        "name_patterns": ["Evidence", "Provenance", "Rationale", "Audit", "AnalysisReport", "Compliance"],
+        "name_exclude_patterns": [],
+        "transitions": [],
+    },
+}
+_PROJECTION_TIER_NAMES: tuple[str, ...] = ("ui", "function", "data", "decision", "evidence")
 _PROJECTION_POLICY_FILE_NAME = "projection_policy.toml"
 _TOPIC_QUERY_POLICY_DEFAULT: dict[str, Any] = {
     "default_depth": 2,
@@ -970,6 +1004,40 @@ def _validate_projection_policy_document(policy_doc: dict[str, Any]) -> list[str
         spec=m2.get("topic"),
         issues=issues,
     )
+
+    # Validate tier definitions (optional section)
+    tiers = m2.get("tiers")
+    if tiers is not None:
+        if not isinstance(tiers, dict):
+            issues.append("m2.tiers must be a table when provided")
+        else:
+            tier_names = tiers.get("names")
+            if tier_names is not None:
+                if not isinstance(tier_names, (list, tuple)) or not tier_names:
+                    issues.append("m2.tiers.names must be a non-empty list")
+            definitions = tiers.get("definitions")
+            if definitions is not None:
+                if not isinstance(definitions, dict):
+                    issues.append("m2.tiers.definitions must be a table when provided")
+                else:
+                    valid_tier_names = set(str(n) for n in (tier_names or []))
+                    for tier_key, tier_def in definitions.items():
+                        if not isinstance(tier_def, dict):
+                            issues.append(f"m2.tiers.definitions.{tier_key} must be a table")
+                            continue
+                        cats = tier_def.get("categories")
+                        if not isinstance(cats, (list, tuple)) or not cats:
+                            issues.append(
+                                f"m2.tiers.definitions.{tier_key}.categories must be a non-empty list"
+                            )
+                        transitions = tier_def.get("transitions")
+                        if isinstance(transitions, (list, tuple)):
+                            for t in transitions:
+                                t_str = str(t).strip()
+                                if valid_tier_names and t_str not in valid_tier_names:
+                                    issues.append(
+                                        f"m2.tiers.definitions.{tier_key}.transitions references unknown tier: {t_str}"
+                                    )
 
     m1 = policy_doc.get("m1")
     if not isinstance(m1, dict):
@@ -2215,6 +2283,93 @@ def _expand_actor_scope(
     return scope
 
 
+def _classify_element_tier(
+    name: str,
+    category: str,
+    tier_definitions: dict[str, dict[str, Any]],
+) -> str | None:
+    """Classify an element into a tier based on its category and name patterns.
+
+    Evidence tier is checked first because it shares PassiveStructure with data.
+    """
+    name_lower = name.lower()
+    # Evidence-first: check if PassiveStructure + name pattern match
+    evidence_def = tier_definitions.get("evidence")
+    if evidence_def and category in evidence_def.get("categories", []):
+        patterns = evidence_def.get("name_patterns", [])
+        if patterns and any(pat.lower() in name_lower for pat in patterns):
+            return "evidence"
+
+    for tier_name, tier_def in tier_definitions.items():
+        if tier_name == "evidence":
+            continue
+        categories = tier_def.get("categories", [])
+        if category not in categories:
+            continue
+        exclude_patterns = tier_def.get("name_exclude_patterns", [])
+        if exclude_patterns and any(pat.lower() in name_lower for pat in exclude_patterns):
+            continue
+        include_patterns = tier_def.get("name_patterns", [])
+        if include_patterns and not any(pat.lower() in name_lower for pat in include_patterns):
+            continue
+        return tier_name
+    return None
+
+
+def _resolve_tier_node_set(
+    nodes: list[dict[str, Any]],
+    tier: str,
+    tier_definitions: dict[str, dict[str, Any]],
+) -> tuple[set[str], dict[str, str]]:
+    """Return (node names matching tier, {name: tier} for all classified nodes)."""
+    matched: set[str] = set()
+    classification: dict[str, str] = {}
+    for node in nodes:
+        name = str(node.get("name", ""))
+        category = str(node.get("category", ""))
+        if not name:
+            continue
+        classified = _classify_element_tier(name, category, tier_definitions)
+        if classified:
+            classification[name] = classified
+        if classified == tier:
+            matched.add(name)
+    return matched, classification
+
+
+def _resolve_tier_definitions(policy: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Load tier definitions from resolved policy or fall back to hardcoded defaults."""
+    policy_doc_loaded = _load_projection_policy_document()
+    if str(policy_doc_loaded.get("status", "")) != "ok":
+        return dict(_PROJECTION_TIER_DEFINITIONS)
+    doc = policy_doc_loaded.get("document")
+    if not isinstance(doc, dict):
+        return dict(_PROJECTION_TIER_DEFINITIONS)
+    m2 = doc.get("m2")
+    if not isinstance(m2, dict):
+        return dict(_PROJECTION_TIER_DEFINITIONS)
+    tiers = m2.get("tiers")
+    if not isinstance(tiers, dict):
+        return dict(_PROJECTION_TIER_DEFINITIONS)
+    definitions = tiers.get("definitions")
+    if not isinstance(definitions, dict) or not definitions:
+        return dict(_PROJECTION_TIER_DEFINITIONS)
+    result: dict[str, dict[str, Any]] = {}
+    for tier_name, tier_def in definitions.items():
+        if not isinstance(tier_def, dict):
+            continue
+        cats = tier_def.get("categories")
+        if not isinstance(cats, (list, tuple)) or not cats:
+            continue
+        result[str(tier_name)] = {
+            "categories": [str(c) for c in cats],
+            "name_patterns": [str(p) for p in (tier_def.get("name_patterns") or [])],
+            "name_exclude_patterns": [str(p) for p in (tier_def.get("name_exclude_patterns") or [])],
+            "transitions": [str(t) for t in (tier_def.get("transitions") or [])],
+        }
+    return result if result else dict(_PROJECTION_TIER_DEFINITIONS)
+
+
 def _i18n_search_text(value: Any, *, lang: str | None = None) -> str:
     if isinstance(value, str):
         return value.lower()
@@ -2554,6 +2709,7 @@ def profile_topology(
     focus_layer: str | None = None,
     focus_actor: str | None = None,
     focus_topic: str | None = None,
+    focus_seed: str | None = None,
     focus_depth: int | None = None,
     include_rule_provenance: bool = False,
 ) -> dict[str, Any]:
@@ -2780,9 +2936,9 @@ def profile_topology(
         all_edges = _summarize_edges(all_edges)
     elif normalized_view == "focus":
         normalized_focus = (focus or "core").strip().lower()
-        if normalized_focus not in {"core", "relation", "layer", "actor", "topic"}:
+        if normalized_focus not in {"core", "relation", "layer", "actor", "topic", "seed"}:
             return {
-                "error": f"Invalid focus: {focus}. Use one of: core, relation, layer, actor, topic",
+                "error": f"Invalid focus: {focus}. Use one of: core, relation, layer, actor, topic, seed",
             }
 
         focus_payload = {
@@ -3001,6 +3157,48 @@ def profile_topology(
             focus_payload["actor_candidates"] = actor_candidates
             focus_payload["selected_relations"] = selected_relations
             focus_payload["actor_seed_strategy"] = "highest_interaction_degree"
+        elif normalized_focus == "seed":
+            requested_seed = (focus_seed or "").strip()
+            if not requested_seed:
+                return {"error": "focus_seed is required when focus=seed"}
+            # Case-insensitive element name lookup
+            element_name_lookup: dict[str, str] = {
+                str(elem.name).lower(): str(elem.name)
+                for elem in profile.elements
+                if str(elem.name)
+            }
+            resolved_seed_name = element_name_lookup.get(requested_seed.lower())
+            if resolved_seed_name is None:
+                return {
+                    "error": f"Unknown seed element: {focus_seed}",
+                    "available_elements": sorted(element_name_lookup.values())[:60],
+                }
+            # Build full adjacency from ALL relations (unlike actor which uses interaction only)
+            seed_adjacency: dict[str, set[str]] = {}
+            for edge in all_edges:
+                src = str(edge.get("source", ""))
+                tgt = str(edge.get("target", ""))
+                if src and tgt:
+                    seed_adjacency.setdefault(src, set()).add(tgt)
+                    seed_adjacency.setdefault(tgt, set()).add(src)
+            resolved_depth = focus_depth if focus_depth is not None else _PROJECTION_DEFAULT_SEED_DEPTH
+            if resolved_depth <= 0:
+                return {"error": "focus_depth must be greater than zero"}
+            scope = _expand_actor_scope(
+                seed_actor=resolved_seed_name,
+                depth=resolved_depth,
+                adjacency=seed_adjacency,
+            )
+            node_scope = scope
+            all_edges = [
+                edge
+                for edge in all_edges
+                if str(edge.get("source", "")) in scope
+                and str(edge.get("target", "")) in scope
+            ]
+            focus_payload["seed"] = resolved_seed_name
+            focus_payload["seed_depth"] = resolved_depth
+            focus_payload["scope_size"] = len(scope)
         else:
             selected_relations = [
                 relation
@@ -3125,6 +3323,7 @@ def profile_composed_topology(
     focus_layer: str | None = None,
     focus_actor: str | None = None,
     focus_topic: str | None = None,
+    focus_seed: str | None = None,
     focus_depth: int | None = None,
     include_rule_provenance: bool = False,
 ) -> dict[str, Any]:
@@ -3145,8 +3344,8 @@ def profile_composed_topology(
         }
     if focus is not None:
         normalized_focus = focus.strip().lower()
-        if normalized_focus not in {"core", "relation", "layer", "actor", "topic"}:
-            return {"error": f"Invalid focus: {focus}. Use one of: core, relation, layer, actor, topic"}
+        if normalized_focus not in {"core", "relation", "layer", "actor", "topic", "seed"}:
+            return {"error": f"Invalid focus: {focus}. Use one of: core, relation, layer, actor, topic, seed"}
     elif (
         focus_relation is not None
         or focus_layer is not None
@@ -3611,6 +3810,46 @@ def profile_composed_topology(
             focus_payload["actor_candidates"] = actor_candidates
             focus_payload["selected_relations"] = selected_relations
             focus_payload["actor_seed_strategy"] = "highest_interaction_degree"
+        elif normalized_focus == "seed":
+            requested_seed = (focus_seed or "").strip()
+            if not requested_seed:
+                return {"error": "focus_seed is required when focus=seed"}
+            composed_name_lookup: dict[str, str] = {
+                str(node.get("name", "")).lower(): str(node.get("name", ""))
+                for node in node_map.values()
+                if isinstance(node, dict) and str(node.get("name", ""))
+            }
+            resolved_seed_name = composed_name_lookup.get(requested_seed.lower())
+            if resolved_seed_name is None:
+                return {
+                    "error": f"Unknown seed element: {focus_seed}",
+                    "available_elements": sorted(composed_name_lookup.values())[:60],
+                }
+            seed_adjacency_c: dict[str, set[str]] = {}
+            for edge in merged_edges:
+                src = str(edge.get("source", ""))
+                tgt = str(edge.get("target", ""))
+                if src and tgt:
+                    seed_adjacency_c.setdefault(src, set()).add(tgt)
+                    seed_adjacency_c.setdefault(tgt, set()).add(src)
+            resolved_depth = focus_depth if focus_depth is not None else _PROJECTION_DEFAULT_SEED_DEPTH
+            if resolved_depth <= 0:
+                return {"error": "focus_depth must be greater than zero"}
+            scope = _expand_actor_scope(
+                seed_actor=resolved_seed_name,
+                depth=resolved_depth,
+                adjacency=seed_adjacency_c,
+            )
+            node_scope = scope
+            merged_edges = [
+                edge
+                for edge in merged_edges
+                if str(edge.get("source", "")) in scope
+                and str(edge.get("target", "")) in scope
+            ]
+            focus_payload["seed"] = resolved_seed_name
+            focus_payload["seed_depth"] = resolved_depth
+            focus_payload["scope_size"] = len(scope)
         else:
             selected_relations = [
                 relation
@@ -3778,6 +4017,8 @@ def _apply_projection_filters(
     allowed_categories: tuple[str, ...] | None,
     max_edges: int | None,
     preserve_nodes: set[str] | None = None,
+    tier: str | None = None,
+    tier_definitions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     nodes_in = list(topology.get("nodes", []))
     edges_in = list(topology.get("edges", []))
@@ -3785,8 +4026,15 @@ def _apply_projection_filters(
 
     relation_allow_set = set(allowed_relations or ())
     category_allow_set = set(allowed_categories or ())
-    category_filter_enabled = len(category_allow_set) > 0
     relation_filter_enabled = len(relation_allow_set) > 0
+
+    # Tier filtering: compute tier node set if tier is specified
+    tier_node_set: set[str] | None = None
+    node_tier_filtered = 0
+    if tier and tier_definitions:
+        tier_node_set, _ = _resolve_tier_node_set(nodes_in, tier, tier_definitions)
+    tier_filter_enabled = tier_node_set is not None
+    category_filter_enabled = len(category_allow_set) > 0 and not tier_filter_enabled
 
     category_of: dict[str, str] = {}
     candidate_node_names: set[str] = set()
@@ -3801,7 +4049,12 @@ def _apply_projection_filters(
             continue
         all_named_nodes.add(name)
         category_of[name] = category
-        if not category_filter_enabled or category in category_allow_set:
+        if tier_filter_enabled:
+            if name in tier_node_set:  # type: ignore[operator]
+                candidate_node_names.add(name)
+            else:
+                node_tier_filtered += 1
+        elif not category_filter_enabled or category in category_allow_set:
             candidate_node_names.add(name)
         else:
             node_category_filtered += 1
@@ -3896,6 +4149,7 @@ def _apply_projection_filters(
         "drop_reasons": {
             "node_without_name": node_without_name,
             "node_category_filtered": node_category_filtered,
+            "node_tier_filtered": node_tier_filtered,
             "node_disconnected": node_disconnected,
             "edge_invalid_endpoint": edge_invalid_endpoint,
             "edge_node_scope_filtered": edge_node_scope_filtered,
@@ -3949,6 +4203,8 @@ def profile_projection(
     actor: str | None = None,
     depth: int | None = None,
     max_edges: int | None = None,
+    tier: str | None = None,
+    seed: str | None = None,
 ) -> dict[str, Any]:
     """Projection layer view (L0~L4) for abstraction-first exploration."""
     normalized_lens = (lens or "").strip().lower()
@@ -3994,21 +4250,44 @@ def profile_projection(
             "error": "depth must be greater than zero",
         }
 
+    # Tier validation
+    resolved_tier: str | None = None
+    resolved_tier_definitions: dict[str, dict[str, Any]] | None = None
+    if tier:
+        normalized_tier = tier.strip().lower()
+        resolved_tier_definitions = _resolve_tier_definitions(policy)
+        if normalized_tier not in resolved_tier_definitions:
+            return {
+                "error": f"Unknown projection tier: {tier}",
+                "valid_tiers": sorted(resolved_tier_definitions.keys()),
+            }
+        resolved_tier = normalized_tier
+
     base_view_mode = str(spec.get("base_view_mode", "summary"))
     base_focus = spec.get("base_focus")
+    effective_focus = str(base_focus) if base_focus is not None else None
     effective_depth = depth
-    if base_focus == "actor" and effective_depth is None:
+    effective_view_mode = base_view_mode
+
+    # Seed overrides focus to "seed" and requires focus view mode
+    if seed:
+        effective_focus = "seed"
+        effective_view_mode = "focus"
+        if effective_depth is None:
+            effective_depth = _PROJECTION_DEFAULT_SEED_DEPTH
+    elif base_focus == "actor" and effective_depth is None:
         effective_depth = int(policy.get("actor_default_depth", _PROJECTION_DEFAULT_ACTOR_DEPTH))
 
     topology = profile_topology(
         profile_name=profile_name,
         cross_layer=cross_layer,
         lang=lang,
-        view_mode=base_view_mode,
+        view_mode=effective_view_mode,
         domain_scope=domain_scope,
-        focus=str(base_focus) if base_focus is not None else None,
-        focus_actor=actor if base_focus == "actor" else None,
-        focus_depth=effective_depth if base_focus == "actor" else None,
+        focus=effective_focus,
+        focus_actor=actor if effective_focus == "actor" else None,
+        focus_seed=seed if effective_focus == "seed" else None,
+        focus_depth=effective_depth if effective_focus in ("actor", "seed") else None,
         max_edges=None,
     )
     if "error" in topology:
@@ -4016,7 +4295,7 @@ def profile_projection(
 
     preserve_nodes: set[str] = set()
     actor_seed_payload: dict[str, Any] | None = None
-    if base_focus == "actor":
+    if effective_focus == "actor":
         focus_payload = topology.get("focus")
         if isinstance(focus_payload, dict):
             resolved_actor = focus_payload.get("actor")
@@ -4028,14 +4307,36 @@ def profile_projection(
                 "actor_candidates": focus_payload.get("actor_candidates", []),
             }
 
+    # Seed preserve
+    seed_meta_payload: dict[str, Any] | None = None
+    if effective_focus == "seed":
+        focus_payload = topology.get("focus")
+        if isinstance(focus_payload, dict):
+            resolved_seed_elem = focus_payload.get("seed")
+            if resolved_seed_elem:
+                preserve_nodes.add(str(resolved_seed_elem))
+            seed_meta_payload = {
+                "element": focus_payload.get("seed"),
+                "depth": focus_payload.get("seed_depth"),
+                "scope_size": focus_payload.get("scope_size"),
+            }
+
     default_max_edges = int(spec.get("default_max_edges", 600))
     effective_max_edges = max_edges if max_edges is not None else default_max_edges
+
+    # When tier is specified, it overrides level's allowed_categories
+    filter_categories: tuple[str, ...] | None = None
+    if resolved_tier is None:
+        filter_categories = tuple(spec.get("allowed_categories", ()))
+
     projected = _apply_projection_filters(
         topology=topology,
         allowed_relations=tuple(spec.get("allowed_relations", ())),
-        allowed_categories=tuple(spec.get("allowed_categories", ())),
+        allowed_categories=filter_categories,
         max_edges=effective_max_edges,
         preserve_nodes=preserve_nodes,
+        tier=resolved_tier,
+        tier_definitions=resolved_tier_definitions,
     )
     projection_filter_meta = projected.pop("projection_filter", {})
 
@@ -4073,8 +4374,8 @@ def profile_projection(
             "next_levels": list(spec.get("next_levels", ())),
         },
         "source": {
-            "view_mode": base_view_mode,
-            "focus": base_focus,
+            "view_mode": effective_view_mode,
+            "focus": effective_focus,
             "node_count": source_node_count,
             "edge_count": source_edge_count,
             "edge_total_raw": source_edge_total_raw,
@@ -4112,6 +4413,19 @@ def profile_projection(
         projection_meta["policy"]["schema"] = schema_contract
     if actor_seed_payload is not None:
         projection_meta["seed"] = actor_seed_payload
+
+    # Tier metadata
+    if resolved_tier and resolved_tier_definitions:
+        tier_def = resolved_tier_definitions.get(resolved_tier, {})
+        projection_meta["tier"] = {
+            "name": resolved_tier,
+            "categories": tier_def.get("categories", []),
+            "next_tiers": tier_def.get("transitions", []),
+        }
+
+    # Seed metadata
+    if seed_meta_payload is not None:
+        projection_meta["seed"] = seed_meta_payload
 
     projected["projection"] = projection_meta
     return projected

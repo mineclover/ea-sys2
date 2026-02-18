@@ -60,6 +60,7 @@ class ProfileRegistry(_ProfileRegistry):
             "needs": "EASystem-Needs",
             "kernel": "EASystem-Kernel",
             "flow": "EASystem-Flow",
+            "projection": "EASystem-Projection",
             "web-kernel-viz": "EASystem-WebKernelViz",
             "development": "EASystem-Development",
         }

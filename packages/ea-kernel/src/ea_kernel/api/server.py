@@ -1168,6 +1168,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
         actor: str | None = None,
         depth: int | None = None,
         max_edges: int | None = None,
+        tier: str | None = None,
+        seed: str | None = None,
     ) -> dict[str, Any]:
         """Get projection-layer topology view (L0~L4 abstraction levels)."""
         from ea_kernel.kernel_service import profile_projection
@@ -1182,6 +1184,8 @@ def create_app(data_dir: Path, schema: KernelSchema) -> FastAPI:
             actor=actor,
             depth=depth,
             max_edges=max_edges,
+            tier=tier,
+            seed=seed,
         )
         if "error" in result:
             message = str(result["error"]).lower()

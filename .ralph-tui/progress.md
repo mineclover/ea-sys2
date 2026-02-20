@@ -14,6 +14,7 @@ after each iteration and it's included in prompts for context.
 - 정적 Enum을 프로파일 기반 레지스트리로 치환할 때는 `profile load(lru_cache) -> normalize/duplicate guard -> ensure()` 경로를 단일화하고, `dataclass.__post_init__`에서 `ensure()`를 공통 호출하면 기본 규칙/커스텀 규칙 모두에서 미정의 타입을 일관되게 차단할 수 있다.
 - 독립 레이어 스택 선언은 `전용 TOML(00-layer-stack) -> cached loader -> validate_layer_stack(순환/참조) + order 방향 검증` 조합으로 분리하면 기존 대형 프로파일과 독립적으로 M1 구조 계약을 안정 검증할 수 있다.
 - 거버넌스 통합 validator에서는 상태전이 토큰(`DRAFT`)과 상태 요소명(`NeedStatusDraft`)이 다를 수 있으므로, `validate_state_transitions`에서 상태형 요소명의 `Status/State` suffix alias를 canonical token으로 추출하면 레이어별 네이밍 차이를 흡수하면서 동일 검증 규칙을 재사용할 수 있다.
+- 도메인 대칭 레이어 스택은 `기존 flow skeleton(정의/런타임/피드백) 유지 + 레이어 이름/책임/관점만 도메인 치환 + 전용 layer_stack.py 재사용`으로 구성하면, 새 도메인 온보딩 시 validator/테스트 템플릿을 그대로 재활용할 수 있다.
 
 ---
 
@@ -237,4 +238,24 @@ after each iteration and it's included in prompts for context.
     - 전이 토큰 검증은 단순 exact-name 매칭보다 `canonical token + state alias`를 함께 지원해야 다중 레이어 프로파일의 표현 차이(예: `NeedStatus*` vs `DRAFT`)를 통합 게이트에서 안정적으로 수용할 수 있다.
   - Gotchas encountered
     - 개별 레이어 기준 artifact pattern 검증은 오탐이 날 수 있어, 통합 게이트에서는 거버넌스 도메인 전체 프로파일을 합성한 뒤 validator를 적용해야 실제 운영 문맥과 일치한다.
+---
+
+## 2026-02-20 - US-011
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/00-layer-stack.toml`를 추가해 SDLC 대칭 레이어 6개(`DevInfra`, `ArchDecision`, `Requirements`, `DomainModel`, `Pipeline`, `DevGovernance`)의 `order/depends_on/responsibility/model_perspective`를 선언했다.
+  - 같은 TOML에 거버넌스 도메인과 동일한 패턴의 `definition_flow/runtime_flow/feedback_flow`를 SDLC 레이어명으로 매핑해 명시했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`, `packages/ea-kernel/src/ea_kernel/profiles/sdlc/layer_stack.py`를 추가해 SDLC 레이어 스택 전용 로드/검증 진입점(`load_layer_stack_profile`, `validate_loaded_layer_stack`)을 구성했다.
+  - `packages/ea-kernel/tests/test_sdlc_layer_stack_profile.py`를 추가해 레이어 순서, 의존 방향, 순환/validator 통과를 자동 검증했다.
+  - 품질 검증: `.venv/bin/ruff check packages/ea-kernel/src/ea_kernel/profiles/sdlc packages/ea-kernel/tests/test_sdlc_layer_stack_profile.py`, `.venv/bin/mypy packages/ea-kernel/src/ea_kernel/profiles/sdlc/layer_stack.py packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py packages/ea-kernel/tests/test_sdlc_layer_stack_profile.py`, `uv run pytest packages/ea-kernel/tests/test_sdlc_layer_stack_profile.py -q`, `uv run pytest packages/ -x -q` (3118 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/00-layer-stack.toml`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/layer_stack.py`
+  - `packages/ea-kernel/tests/test_sdlc_layer_stack_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - 레이어 스택 대칭 매핑은 기존 도메인의 flow/의존성 골격을 유지한 채 레이어명과 책임만 치환하면 validator/테스트 재사용성이 높아진다.
+  - Gotchas encountered
+    - 대칭 매핑에서도 `DevGovernance` 같은 관리 레이어를 포함하지 않으면 runtime/feedback flow 패턴이 기존 거버넌스 도메인과 어긋나므로, 5 core + 1 governance 구성을 유지해야 패턴 일치성이 보장된다.
 ---

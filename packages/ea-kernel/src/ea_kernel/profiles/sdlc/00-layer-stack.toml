@@ -1,0 +1,56 @@
+# SDLC Layer Stack (symmetric mapping to governance domain)
+
+[profile]
+name = "SDLC-Symmetric-LayerStack"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlc"
+standard = "EA System SDLC Layer Stack"
+organization = "ea-sys"
+
+[layer_stack]
+definition_flow = "DevInfra -> ArchDecision -> Requirements -> DomainModel -> Pipeline"
+runtime_flow = "DevGovernance -> ArchDecision -> Requirements -> DomainModel -> Pipeline"
+feedback_flow = "Pipeline -> DevGovernance -> ArchDecision -> Requirements -> DomainModel -> DevInfra"
+
+[[layer_stack.layers]]
+name = "DevInfra"
+order = 0
+depends_on = []
+responsibility = "Source-control and engineering platform baseline for delivery."
+model_perspective = "development-infra-design"
+
+[[layer_stack.layers]]
+name = "ArchDecision"
+order = 20
+depends_on = ["DevInfra"]
+responsibility = "Architecture decision record and technical option governance."
+model_perspective = "architecture-decision-model"
+
+[[layer_stack.layers]]
+name = "Requirements"
+order = 30
+depends_on = ["ArchDecision"]
+responsibility = "Requirement intent, scope, and acceptance criteria management."
+model_perspective = "requirements-model"
+
+[[layer_stack.layers]]
+name = "DomainModel"
+order = 40
+depends_on = ["Requirements"]
+responsibility = "Core software domain model and API contract definition."
+model_perspective = "domain-core-model"
+
+[[layer_stack.layers]]
+name = "Pipeline"
+order = 50
+depends_on = ["DomainModel"]
+responsibility = "Build-test-deploy pipeline execution and release orchestration."
+model_perspective = "delivery-flow-model"
+
+[[layer_stack.layers]]
+name = "DevGovernance"
+order = 60
+depends_on = ["DevInfra", "ArchDecision", "Requirements", "DomainModel", "Pipeline"]
+responsibility = "Cross-layer delivery governance and control-plane policy."
+model_perspective = "development-control-plane"

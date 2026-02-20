@@ -8,6 +8,12 @@ from sdlc_domain.sdlc_analyzer import (
     SDLCProfileDimension,
     SDLCProfileMetric,
 )
+from sdlc_domain.sdlc_projection import (
+    SurfaceLevelProjection,
+    SurfaceProjectionReport,
+    project_governance_surface,
+    project_sdlc_surface,
+)
 from sdlc_domain.sdlc_store import (
     InMemorySDLCStore,
     SDLCQueryOptions,
@@ -22,6 +28,10 @@ __all__ = [
     "SDLCAnalyzer",
     "SDLCProfileDimension",
     "SDLCProfileMetric",
+    "SurfaceLevelProjection",
+    "SurfaceProjectionReport",
+    "project_governance_surface",
+    "project_sdlc_surface",
     "SDLCQueryOptions",
     "SDLCStore",
     "SQLiteSDLCStore",

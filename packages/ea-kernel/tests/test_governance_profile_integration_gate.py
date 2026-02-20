@@ -110,7 +110,7 @@ def test_projection_artifact_types_are_profile_derived() -> None:
     declared = {artifact_type.name for artifact_type in profile.artifact_types}
     runtime = set(ArtifactType.names())
 
-    assert runtime == declared
+    assert declared <= runtime
 
 
 def test_layer_stack_is_loaded_from_toml() -> None:

@@ -9,6 +9,7 @@ from ea_projection.artifacts import (
     ArtifactType,
     SurfaceArtifact,
     extract_artifacts,
+    extraction_rules_from_profile,
     summarize_artifacts,
 )
 
@@ -54,14 +55,22 @@ class TestArtifactType:
         assert "identifier" in names
         assert "contract" in names
 
-    def test_types_loaded_from_projection_profile(self):
+    def test_types_loaded_from_projection_profiles(self):
         from ea_kernel.profiles.ea_sys import layer_path
+        from ea_kernel.profiles.sdlc import profile_path as sdlc_profile_path
         from ea_projection.profile_bridge import load_projection_profile
 
-        profile = load_projection_profile(layer_path("projection"), validate=False)
-        declared = {artifact_type.name for artifact_type in profile.artifact_types}
+        ea_sys_profile = load_projection_profile(layer_path("projection"), validate=False)
+        sdlc_profile = load_projection_profile(sdlc_profile_path("projection"), validate=False)
+        declared = {
+            artifact_type.name for artifact_type in ea_sys_profile.artifact_types
+        } | {
+            artifact_type.name for artifact_type in sdlc_profile.artifact_types
+        }
         loaded = {artifact_type.value for artifact_type in ArtifactType}
-        assert loaded == declared
+        assert declared <= loaded
+        assert "repository" in loaded
+        assert "pull_request" in loaded
 
 
 # ── extract_artifacts ─────────────────────────────────────────────────
@@ -235,6 +244,40 @@ class TestExtractArtifacts:
         assert len(artifacts) == 1
         assert artifacts[0].name == "PublicModel"
 
+    def test_kernel_element_pattern_filters_node(self):
+        custom_rules = (
+            ArtifactExtractionRule(
+                tier="decision",
+                categories=(),
+                artifact_type=ArtifactType.PULL_REQUEST,
+                kernel_element_pattern="@Assessment",
+            ),
+        )
+        nodes = [
+            {
+                "name": "PullRequestReview",
+                "category": "Assessment",
+                "layer": "Projection",
+                "kernel_type": "expression",
+            },
+            {
+                "name": "RepositorySnapshot",
+                "category": "PassiveStructure",
+                "layer": "Projection",
+                "kernel_type": "item",
+            },
+        ]
+        tiers = {
+            "PullRequestReview": "decision",
+            "RepositorySnapshot": "decision",
+        }
+
+        artifacts = extract_artifacts(nodes, tiers, rules=custom_rules)
+
+        assert len(artifacts) == 1
+        assert artifacts[0].artifact_type == ArtifactType.PULL_REQUEST
+        assert artifacts[0].name == "PullRequestReview"
+
     def test_undefined_artifact_type_raises_error(self):
         with pytest.raises(ValueError, match="Unknown projection artifact type"):
             ArtifactExtractionRule(
@@ -303,3 +346,39 @@ class TestDefaultExtractionRules:
     def test_rules_are_frozen(self):
         for rule in DEFAULT_EXTRACTION_RULES:
             assert isinstance(rule, ArtifactExtractionRule)
+
+
+class TestExtractionRulesFromProfile:
+
+    def test_sdlc_profile_rules_generate_sdlc_artifacts(self):
+        from ea_kernel.profiles.sdlc import profile_path as sdlc_profile_path
+
+        rules = extraction_rules_from_profile(sdlc_profile_path("projection"))
+        nodes = [
+            {
+                "name": "RepositorySnapshot",
+                "category": "PassiveStructure",
+                "layer": "Projection",
+                "kernel_type": "item",
+            },
+            {
+                "name": "PullRequestReview",
+                "category": "Assessment",
+                "layer": "Projection",
+                "kernel_type": "expression",
+            },
+        ]
+        tiers = {
+            "RepositorySnapshot": "data",
+            "PullRequestReview": "decision",
+        }
+
+        artifacts = extract_artifacts(
+            nodes,
+            tiers,
+            rules=rules,
+            profile_name="sdlc",
+        )
+        by_name = {artifact.name: artifact for artifact in artifacts}
+        assert by_name["RepositorySnapshot"].artifact_type == ArtifactType.REPOSITORY
+        assert by_name["PullRequestReview"].artifact_type == ArtifactType.PULL_REQUEST

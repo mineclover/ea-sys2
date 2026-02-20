@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "ea-kernel>=2.5.0",
     "ea-profile>=0.1.0",
+    "ea-projection>=0.1.0",
 ]
 
 [project.optional-dependencies]

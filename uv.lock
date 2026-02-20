@@ -1418,6 +1418,7 @@ source = { editable = "packages/sdlc-domain" }
 dependencies = [
     { name = "ea-kernel" },
     { name = "ea-profile" },
+    { name = "ea-projection" },
 ]
 
 [package.optional-dependencies]
@@ -1430,6 +1431,7 @@ dev = [
 requires-dist = [
     { name = "ea-kernel", editable = "packages/ea-kernel" },
     { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "ea-projection", editable = "packages/ea-projection" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]

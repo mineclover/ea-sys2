@@ -21,6 +21,7 @@ after each iteration and it's included in prompts for context.
 - 중간 계층 강제 아키텍처 규칙(예: `Service -> Repository -> DataModel`)은 `허용 경로 allow rules`와 `직접 경로 deny rules`를 함께 선언하고 테스트에서도 allow/deny pair를 같이 검증하면, 우회 접근 금지를 명확하게 보장할 수 있다.
 - 파이프라인 프로파일에서 실행 순서와 통제 포인트를 함께 표현할 때는 `next`를 단계 체인(Build/Test/Stage/Deploy)에만 할당하고, 승인/복구는 `constrains`/`triggers`로 분리하면 규칙 의도와 테스트 검증 포인트가 명확해진다.
 - 도메인 Projection 프로파일 차별성 검증은 `artifact_types 이름집합 disjoint 비교 + 신규 도메인 프로파일 validate_profile 통과` 조합으로 구성하면, 기존 도메인 제약에 영향 없이 동일 M2 메타모델 확장을 안정적으로 증명할 수 있다.
+- Projection 표층 생성 공통화는 `artifact_types -> extraction_rules_from_profile(kernel_element_pattern) -> extract_artifacts -> summarize_artifacts(by_tier/by_type)` 파이프라인으로 구성하면, 엔진 코드는 고정하고 도메인별 출력 아티팩트만 프로파일 선언으로 바꿀 수 있다.
 - 프로파일 기반 상태 검증이 필요한 Store는 `profile_id + lineage_id`를 전이 검증 키로 고정하고 `store()` 직전에 `latest(lineage) -> ensure_profile_transition`를 호출하면, InMemory/SQLite 양쪽 구현에서 동일 전이 규칙을 일관되게 강제할 수 있다.
 - S4 Analyzer를 도메인 확장할 때는 `profile elements(카테고리/alias) + state_transitions(depth/terminal/success)`를 먼저 컴파일해 차원을 만들고, Store snapshot 집계를 그 차원에 투영하면 지표(throughput/success/effectiveness) 하드코딩을 제거하면서도 리포트 포맷을 유지할 수 있다.
 
@@ -445,4 +446,38 @@ after each iteration and it's included in prompts for context.
     - Analyzer 차원은 프로파일에서 직접 계산한 상태 graph(depth/terminal/success)와 요소 분류(active/passive/behavior/governance)를 결합하면 도메인별 하드코딩 없이도 동일 분석 파이프라인을 재사용할 수 있다.
   - Gotchas encountered
     - SDLC `arch-decision`은 상태 요소명(`ArchDecisionStatus*`)과 전이 토큰(`PROPOSED/REVIEW/...`)이 달라, 분석기에서도 상태 alias canonicalization을 적용해야 전이 기반 지표가 정확히 계산된다.
+---
+
+## 2026-02-20 - US-020
+- What was implemented
+  - `ea_projection.artifacts`를 확장해 projection artifact registry를 단일 거버넌스 프로파일이 아닌 다중 projection 프로파일(ea_sys + sdlc)에서 동적으로 로드하도록 변경했다.
+  - `ArtifactExtractionRule`에 `kernel_element_pattern` 매칭을 추가하고, `extraction_rules_from_profile(profile_path)`를 구현해 SDLC `[[artifact_types]]` 선언에서 바로 표층 추출 규칙을 생성하도록 구성했다.
+  - `packages/sdlc-domain/src/sdlc_domain/sdlc_projection.py`를 추가해 SDLC 도메인 표층 projector를 구현했다:
+    - SDLC DomainModel + SDLC Projection 프로파일을 결합한 소스 토폴로지 구성
+    - depth L0~L3별 `apply_projection_filters` 실행
+    - profile-driven artifact extraction + `surface_summary(by_tier/by_type)` 집계
+    - 동일 엔진으로 거버넌스 surface projection도 생성하는 비교 진입점 제공
+  - `sdlc_domain.__init__` export 및 `packages/sdlc-domain/pyproject.toml` 의존성(`ea-projection`)을 갱신했다.
+  - 테스트를 추가/갱신해 수용조건을 검증했다:
+    - SDLC artifact_types 동적 로드
+    - SDLC L0~L3 표층 생성
+    - `surface_summary` by_tier/by_type 집계
+    - 거버넌스/SDLC 동일 엔진 + 상이한 artifact type 생성
+    - 기존 거버넌스 integration gate가 다중 도메인 registry 확장에도 통과하도록 회귀 보정
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-projection/tests/test_artifacts.py packages/sdlc-domain/tests/test_sdlc_projection.py -q`, `uv run pytest packages/ -x -q` (3158 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/tests/test_governance_profile_integration_gate.py`
+  - `packages/ea-projection/src/ea_projection/artifacts.py`
+  - `packages/ea-projection/tests/test_artifacts.py`
+  - `packages/sdlc-domain/pyproject.toml`
+  - `packages/sdlc-domain/src/sdlc_domain/__init__.py`
+  - `packages/sdlc-domain/src/sdlc_domain/sdlc_projection.py`
+  - `packages/sdlc-domain/tests/test_sdlc_projection.py`
+  - `uv.lock`
+- **Learnings:**
+  - Patterns discovered
+    - 도메인별 projection 확장은 공통 필터/티어 엔진은 유지하고 artifact rule만 profile metadata(`artifact_types`, `kernel_element_pattern`)에서 컴파일하면, 도메인 추가 시 런타임 로직 변경 없이 표층 타입만 교체할 수 있다.
+  - Gotchas encountered
+    - 기존 거버넌스 게이트 테스트가 runtime artifact set `==` 비교를 사용하면 다중 도메인 registry 확장 시 false negative가 발생하므로, 도메인 확장 이후에는 `declared <= runtime` 형태의 포함 관계 검증이 안전했다.
 ---

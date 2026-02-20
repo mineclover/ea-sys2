@@ -1,25 +1,17 @@
-"""Surface Artifact Definitions — identifiable externally-visible outputs.
+"""Surface artifact extraction for projection outputs.
 
 Projection exposes kernel/flow elements as concrete surface-level artifacts:
-API endpoints, pages, tools, identifiers, contracts, etc.
-
-This module provides:
-- ArtifactType: profile-driven artifact type registry/token
-- SurfaceArtifact: frozen dataclass representing one identifiable surface output
-- ArtifactExtractionRule: tier→artifact_type mapping rules
-- extract_artifacts(): extract surface artifacts from projection nodes
-- DEFAULT_EXTRACTION_RULES: built-in tier→artifact mappings
-
-References:
-- ea_projection/tier/resolver.py: tier classification
-- ea_projection/surface.py: surface relation profile
+API endpoints, pages, repositories, pull requests, and other externally-visible
+outputs. Artifact declarations are loaded from projection profiles at runtime.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+from fnmatch import fnmatchcase
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, ClassVar
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -30,31 +22,93 @@ def _normalize_artifact_type_name(value: str) -> str:
     return value.strip().lower()
 
 
-@lru_cache(maxsize=1)
-def _artifact_type_tier_registry() -> dict[str, str]:
-    """Load artifact type declarations from projection profile metadata."""
-    from ea_kernel.profiles.ea_sys import layer_path
+def _normalize_tier_name(value: str) -> str:
+    return str(value).strip().lower()
 
+
+def _projection_artifact_profile_paths() -> tuple[Path, ...]:
+    """Return projection profile paths that declare artifact types."""
+    paths: list[Path] = []
+
+    try:
+        from ea_kernel.profiles.ea_sys import layer_path
+
+        paths.append(layer_path("projection"))
+    except Exception:
+        pass
+
+    try:
+        from ea_kernel.profiles.sdlc import profile_path as sdlc_profile_path
+
+        paths.append(sdlc_profile_path("projection"))
+    except Exception:
+        pass
+
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        token = str(path)
+        if token in seen:
+            continue
+        seen.add(token)
+        deduped.append(path)
+    return tuple(deduped)
+
+
+@lru_cache(maxsize=32)
+def _profile_artifact_type_entries(
+    profile_path: str,
+) -> tuple[tuple[str, str, str], ...]:
+    """Load normalized artifact type entries from a projection profile path."""
     from ea_projection.profile_bridge import load_projection_profile
 
-    profile = load_projection_profile(layer_path("projection"), validate=False)
+    profile = load_projection_profile(Path(profile_path), validate=False)
     if not profile.artifact_types:
         raise RuntimeError(
-            "Projection profile has no [[artifact_types]] entries. "
-            "Define artifact types in 70-projection.toml."
+            f"Projection profile '{profile_path}' has no [[artifact_types]] entries."
+        )
+
+    entries: list[tuple[str, str, str]] = []
+    seen_names: set[str] = set()
+    for artifact_type in profile.artifact_types:
+        name = _normalize_artifact_type_name(artifact_type.name)
+        tier = _normalize_tier_name(artifact_type.tier)
+        pattern = str(artifact_type.kernel_element_pattern).strip()
+
+        if not name:
+            raise RuntimeError(
+                f"Projection profile '{profile_path}' artifact type name cannot be empty."
+            )
+        if name in seen_names:
+            raise RuntimeError(
+                f"Projection profile '{profile_path}' has duplicate artifact type "
+                f"declaration: '{name}'."
+            )
+        seen_names.add(name)
+        entries.append((name, tier, pattern))
+
+    return tuple(entries)
+
+
+@lru_cache(maxsize=1)
+def _artifact_type_tier_registry() -> dict[str, str]:
+    """Load artifact type declarations from all available projection profiles."""
+    profile_paths = _projection_artifact_profile_paths()
+    if not profile_paths:
+        raise RuntimeError(
+            "No projection profiles with artifact type declarations were found."
         )
 
     registry: dict[str, str] = {}
-    for artifact_type in profile.artifact_types:
-        name = _normalize_artifact_type_name(artifact_type.name)
-        tier = str(artifact_type.tier).strip().lower()
-        if not name:
-            raise RuntimeError("Projection profile artifact type name cannot be empty.")
-        if name in registry:
-            raise RuntimeError(
-                f"Projection profile has duplicate artifact type declaration: '{name}'."
-            )
-        registry[name] = tier
+    for path in profile_paths:
+        for name, tier, _pattern in _profile_artifact_type_entries(str(path)):
+            existing_tier = registry.get(name)
+            if existing_tier is not None and existing_tier != tier:
+                raise RuntimeError(
+                    "Conflicting artifact type tier declaration for "
+                    f"'{name}': '{existing_tier}' vs '{tier}'."
+                )
+            registry[name] = tier
     return registry
 
 
@@ -175,13 +229,36 @@ class ArtifactExtractionRule:
     When a node's tier and category match, produce an artifact of the given type.
     """
     tier: str
-    categories: tuple[str, ...]  # Profile categories that match
+    categories: tuple[str, ...]  # Optional category allow-list
     artifact_type: ArtifactType
+    kernel_element_pattern: str = ""  # Optional profile pattern (@Category/#Layer/name)
     name_patterns: tuple[str, ...] = ()  # If non-empty, name must contain one
     name_exclude_patterns: tuple[str, ...] = ()  # Exclude names containing these
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "tier", _normalize_tier_name(self.tier))
         object.__setattr__(self, "artifact_type", ArtifactType.ensure(self.artifact_type))
+
+
+@lru_cache(maxsize=16)
+def extraction_rules_from_profile(
+    profile_path: Path,
+) -> tuple[ArtifactExtractionRule, ...]:
+    """Build extraction rules from profile [[artifact_types]] declarations."""
+    rules: list[ArtifactExtractionRule] = []
+    for name, tier, pattern in _profile_artifact_type_entries(str(profile_path)):
+        categories: tuple[str, ...] = ()
+        if pattern.startswith("@") and len(pattern) > 1:
+            categories = (pattern[1:],)
+        rules.append(
+            ArtifactExtractionRule(
+                tier=tier,
+                categories=categories,
+                artifact_type=ArtifactType.ensure(name),
+                kernel_element_pattern=pattern,
+            )
+        )
+    return tuple(rules)
 
 
 DEFAULT_EXTRACTION_RULES: tuple[ArtifactExtractionRule, ...] = (
@@ -238,23 +315,50 @@ DEFAULT_EXTRACTION_RULES: tuple[ArtifactExtractionRule, ...] = (
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _matches_rule(
-    name: str,
-    category: str,
+    node: dict[str, Any],
     tier: str,
     rule: ArtifactExtractionRule,
 ) -> bool:
     """Check if a node matches an extraction rule."""
-    if rule.tier != tier:
-        return False
-    if category not in rule.categories:
+    if rule.tier != _normalize_tier_name(tier):
         return False
 
+    category = str(node.get("category", ""))
+    if rule.categories and category not in rule.categories:
+        return False
+    if rule.kernel_element_pattern and not _matches_kernel_element_pattern(
+        node,
+        rule.kernel_element_pattern,
+    ):
+        return False
+
+    name = str(node.get("name", ""))
     name_lower = name.lower()
     if rule.name_exclude_patterns and any(p.lower() in name_lower for p in rule.name_exclude_patterns):
         return False
     if rule.name_patterns:
         return any(p.lower() in name_lower for p in rule.name_patterns)
     return True
+
+
+def _matches_kernel_element_pattern(node: dict[str, Any], pattern: str) -> bool:
+    """Match node attributes against a profile kernel_element_pattern."""
+    token = str(pattern).strip()
+    if token == "" or token == "*":
+        return True
+
+    name = str(node.get("name", ""))
+    category = str(node.get("category", ""))
+    layer = str(node.get("layer", ""))
+    kernel_type = str(node.get("kernel_type", ""))
+
+    if token.startswith("@"):
+        return category == token[1:]
+    if token.startswith("#"):
+        return layer == token[1:]
+    if any(char in token for char in "*?["):
+        return fnmatchcase(name, token) or fnmatchcase(kernel_type, token)
+    return name == token or kernel_type == token
 
 
 def extract_artifacts(
@@ -280,7 +384,6 @@ def extract_artifacts(
 
     for node in nodes:
         name = str(node.get("name", ""))
-        category = str(node.get("category", ""))
         if not name:
             continue
 
@@ -289,7 +392,7 @@ def extract_artifacts(
             continue
 
         for rule in rules:
-            if not _matches_rule(name, category, tier, rule):
+            if not _matches_rule(node, tier, rule):
                 continue
 
             artifact_id = f"{tier}:{rule.artifact_type.value}:{name}"
@@ -341,3 +444,12 @@ def summarize_artifacts(
         by_type=tuple(sorted(type_counts.items(), key=lambda x: -x[1])),
         by_tier=tuple(sorted(tier_counts.items(), key=lambda x: -x[1])),
     )
+
+
+def summary_to_dict(summary: ArtifactSummary) -> dict[str, Any]:
+    """Convert ArtifactSummary into an API-friendly dict payload."""
+    return {
+        "total_artifacts": summary.total_artifacts,
+        "by_type": dict(summary.by_type),
+        "by_tier": dict(summary.by_tier),
+    }

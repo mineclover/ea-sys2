@@ -8,6 +8,7 @@ PROFILE_FILE_MAP: dict[str, str] = {
     "layer-stack": "00-layer-stack.toml",
     "arch-decision": "20-arch-decision.toml",
     "requirements": "30-requirements.toml",
+    "domain-model": "40-domain-model.toml",
 }
 
 PROFILE_DIR = Path(__file__).resolve().parent

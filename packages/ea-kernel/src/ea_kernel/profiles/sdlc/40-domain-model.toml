@@ -1,0 +1,163 @@
+# SDLC Layer: Domain Model
+# Role: SDLC software domain model metamodel
+
+[profile]
+name = "SDLC-DomainModel"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlc"
+standard = "EA System SDLC Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Behavior = "step"
+PassiveStructure = "item"
+Interface = "port"
+
+[[relations]]
+name = "implements"
+kernel_relation = "association"
+description = "Service implementations satisfy interface contracts."
+
+[[relations]]
+name = "calls"
+kernel_relation = "association"
+description = "Runtime invocation between endpoints and services."
+
+[[relations]]
+name = "stores"
+kernel_relation = "association"
+description = "Repository persists and loads domain data models."
+
+[[relations]]
+name = "exposes"
+kernel_relation = "association"
+description = "Modules and interfaces expose API surfaces."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency between domain model components."
+
+# --- SDLC domain model elements ---
+
+[[elements]]
+name = "DomainModelLayer"
+layer = "DomainModel"
+category = "Composite"
+description = "SDLC domain-model boundary."
+
+[[elements]]
+name = "Module"
+layer = "DomainModel"
+category = "Composite"
+description = "Deployable or build-level module boundary."
+
+[[elements]]
+name = "Interface"
+layer = "DomainModel"
+category = "Interface"
+description = "Abstract contract implemented by services."
+
+[[elements]]
+name = "Endpoint"
+layer = "DomainModel"
+category = "Behavior"
+description = "Addressable API endpoint that triggers domain behavior."
+
+[[elements]]
+name = "DataModel"
+layer = "DomainModel"
+category = "PassiveStructure"
+description = "Domain entity/value schema persisted by repositories."
+
+[[elements]]
+name = "Repository"
+layer = "DomainModel"
+category = "ActiveStructure"
+description = "Persistence adapter mediating data-model access."
+
+[[elements]]
+name = "Service"
+layer = "DomainModel"
+category = "ActiveStructure"
+description = "Application service orchestrating domain use cases."
+
+# --- SDLC domain model validity rules ---
+
+[[rules]]
+id = "sdlc-dm-allow-01"
+source = "Service"
+target = "Interface"
+relation = "implements"
+priority = 70
+notes = "Services implement interface contracts."
+
+[[rules]]
+id = "sdlc-dm-allow-02"
+source = "Endpoint"
+target = "Service"
+relation = "calls"
+priority = 70
+notes = "Endpoints call services."
+
+[[rules]]
+id = "sdlc-dm-allow-03"
+source = "Service"
+target = "Repository"
+relation = "depends_on"
+priority = 70
+notes = "Services depend on repositories for persistence."
+
+[[rules]]
+id = "sdlc-dm-allow-04"
+source = "Repository"
+target = "DataModel"
+relation = "stores"
+priority = 70
+notes = "Repositories are the only data-model access boundary."
+
+[[rules]]
+id = "sdlc-dm-allow-05"
+source = "Module"
+target = "Interface"
+relation = "exposes"
+priority = 70
+notes = "Modules expose domain interfaces."
+
+[[rules]]
+id = "sdlc-dm-allow-06"
+source = "Interface"
+target = "Endpoint"
+relation = "exposes"
+priority = 70
+notes = "Interfaces expose endpoint-level API contracts."
+
+[[rules]]
+id = "sdlc-dm-deny-01"
+source = "Service"
+target = "DataModel"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Service must not directly depend on DataModel; use Repository."
+
+[[rules]]
+id = "sdlc-dm-deny-02"
+source = "Service"
+target = "DataModel"
+relation = "calls"
+valid = false
+priority = 80
+notes = "Service must not directly call DataModel; use Repository."
+
+[[rules]]
+id = "sdlc-dm-deny-03"
+source = "Service"
+target = "DataModel"
+relation = "stores"
+valid = false
+priority = 80
+notes = "Service must not directly store DataModel; use Repository."

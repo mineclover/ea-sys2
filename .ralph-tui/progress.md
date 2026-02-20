@@ -18,6 +18,7 @@ after each iteration and it's included in prompts for context.
 - 동일 커널 M2에서 복수 도메인 레이어 스택 공존을 증명할 때는 `도메인별 독립 layer_stack 패키지 + 공통 validate_profile/validate_layer_stack` 조합을 병렬 검증하면, 레이어 수/의존 그래프가 달라도 M2 적합성을 일관되게 확인할 수 있다.
 - 도메인별 상태머신 변형(예: REVIEW 단계 추가) 검증은 `전이 edge-set 비교 + 각 프로파일 validate_profile 동시 통과 확인`으로 구성하면, 규칙 차별성과 동일 M2 적합성을 한 번에 증명할 수 있다.
 - 상태토큰에 underscore가 포함된 전이(`IN_PROGRESS`)를 쓸 때는 상태 alias 추출(`Status/State` suffix)만으로는 누락될 수 있으므로, 해당 토큰을 프로파일 elements에 동일 문자열로 선언하면 validator를 안정적으로 통과시킬 수 있다.
+- 중간 계층 강제 아키텍처 규칙(예: `Service -> Repository -> DataModel`)은 `허용 경로 allow rules`와 `직접 경로 deny rules`를 함께 선언하고 테스트에서도 allow/deny pair를 같이 검증하면, 우회 접근 금지를 명확하게 보장할 수 있다.
 
 ---
 
@@ -329,4 +330,25 @@ after each iteration and it's included in prompts for context.
     - SDLC/거버넌스처럼 도메인이 달라도 상태머신 차별성은 `상태 수 + edge-set 비교`, M2 적합성은 `validate_profile 동시 통과`로 분리 검증하면 회귀 포인트가 명확해진다.
   - Gotchas encountered
     - `IN_PROGRESS` 같은 underscore 토큰은 상태명 alias 추출이 단어 마지막 토큰만 잡는 케이스가 있어, transition token과 동일한 상태 element를 명시해 validator unknown-state를 방지해야 했다.
+---
+
+## 2026-02-20 - US-015
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/40-domain-model.toml`을 추가해 SDLC DomainModel 프로파일을 정의했다.
+  - SDLC 도메인 핵심 요소 `Module`, `Interface`, `Endpoint`, `DataModel`, `Repository`, `Service`를 선언했다.
+  - 요구 관계 `implements`, `calls`, `stores`, `exposes`, `depends_on`를 선언했다.
+  - 아키텍처 규칙으로 `Service -> Repository -> DataModel` 경로를 allow하고, `Service -> DataModel` 직접 접근(`depends_on/calls/stores`)을 explicit deny로 정의했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`에 `domain-model` 프로파일 매핑을 추가했다.
+  - `packages/ea-kernel/tests/test_sdlc_domain_model_profile.py`를 추가해 필수 요소/관계 선언, repository 매개 접근 규칙, `validate_profile + check_profile_quality` 통과를 검증했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-kernel/tests/test_sdlc_domain_model_profile.py -q`, `uv run pytest packages/ -x -q` (3131 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/40-domain-model.toml`
+  - `packages/ea-kernel/tests/test_sdlc_domain_model_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - 도메인 모델 접근 제약은 단일 deny 규칙보다 `허용 경로 + 우회 deny`를 함께 선언하고 테스트로 쌍 검증할 때 의도(중간 계층 강제)가 더 명확히 고정된다.
+  - Gotchas encountered
+    - `ea_kernel.profile_quality_gate` 재-export는 mypy에서 `attr-defined`가 날 수 있어, 테스트에서는 `ea_profile.quality_gate`를 직접 import하는 편이 타입 안정적이었다.
 ---

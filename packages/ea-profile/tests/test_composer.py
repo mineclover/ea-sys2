@@ -8,6 +8,8 @@ from ea_profile.builder import ProfileBuilder
 from ea_profile.composer import extend, subset
 from ea_profile.types import (
     KernelProfile,
+    LayerDefinition,
+    LayerStack,
     ProfileArtifactType,
     ProfileElement,
     ProfileMetadata,
@@ -123,6 +125,42 @@ class TestExtend:
         )
         assert len(extended.artifact_types) == 1
         assert extended.artifact_types[0] == artifact_type
+
+    def test_extend_preserves_layer_stack(self):
+        base = (
+            ProfileBuilder("Base", version="1.0", kernel_version="1.0")
+            .element("ElemA", kernel_type="structure", layer="Business", category="Structure")
+            .relation("Rel1", kernel_relation="association")
+            .set_layer_stack(
+                definition_flow="top_down",
+                runtime_flow="bottom_up",
+                feedback_flow="closed_loop",
+            )
+            .add_layer_definition("Domain", 1)
+            .add_layer_definition("Application", 2, depends_on=("Domain",))
+            .build()
+        )
+        extended = extend(base, name="Extended", version="2.0")
+        assert extended.layer_stack == base.layer_stack
+
+    def test_extend_overrides_layer_stack(self):
+        base = _make_profile()
+        new_stack = LayerStack(
+            layers=(
+                LayerDefinition(name="Context", order=1),
+                LayerDefinition(name="Runtime", order=2, depends_on=("Context",)),
+            ),
+            definition_flow="outside_in",
+            runtime_flow="inside_out",
+            feedback_flow="single_loop",
+        )
+        extended = extend(
+            base,
+            name="Extended",
+            version="2.0",
+            layer_stack=new_stack,
+        )
+        assert extended.layer_stack == new_stack
 
     def test_extend_overrides_existing_rules_by_id(self):
         base = _make_profile()
@@ -266,6 +304,26 @@ class TestSubset:
             version="1.0-subset",
         )
         assert sub.artifact_types == base.artifact_types
+
+    def test_subset_preserves_layer_stack(self):
+        base = (
+            ProfileBuilder("Base", version="1.0", kernel_version="1.0")
+            .element("ElemA", kernel_type="structure", layer="Business", category="Structure")
+            .relation("Rel1", kernel_relation="association")
+            .set_layer_stack(
+                definition_flow="top_down",
+                runtime_flow="bottom_up",
+                feedback_flow="closed_loop",
+            )
+            .add_layer_definition("Domain", 1)
+            .build()
+        )
+        sub = subset(
+            base,
+            name="Subset",
+            version="1.0-subset",
+        )
+        assert sub.layer_stack == base.layer_stack
 
     def test_subset_preserves_metadata_and_kernel_version(self):
         base = _make_profile()

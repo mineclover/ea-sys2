@@ -11,6 +11,8 @@ from typing import Any
 
 from ea_profile.types import (
     KernelProfile,
+    LayerDefinition,
+    LayerStack,
     ProfileArtifactType,
     ProfileElement,
     ProfileMetadata,
@@ -71,6 +73,24 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
             "extra": profile.metadata.extra,
         }
 
+    layer_stack = None
+    if profile.layer_stack is not None:
+        layer_stack = {
+            "layers": [
+                {
+                    "name": layer.name,
+                    "order": layer.order,
+                    "depends_on": list(layer.depends_on),
+                    "responsibility": layer.responsibility,
+                    "model_perspective": layer.model_perspective,
+                }
+                for layer in profile.layer_stack.layers
+            ],
+            "definition_flow": profile.layer_stack.definition_flow,
+            "runtime_flow": profile.layer_stack.runtime_flow,
+            "feedback_flow": profile.layer_stack.feedback_flow,
+        }
+
     return {
         "name": profile.name,
         "version": profile.version,
@@ -81,6 +101,7 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
         "state_transitions": state_transitions,
         "artifact_types": artifact_types,
         "metadata": metadata,
+        "layer_stack": layer_stack,
     }
 
 
@@ -135,6 +156,25 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
             extra=md.get("extra"),
         )
 
+    layer_stack = None
+    ls = data.get("layer_stack")
+    if ls is not None:
+        layer_stack = LayerStack(
+            layers=tuple(
+                LayerDefinition(
+                    name=layer["name"],
+                    order=layer["order"],
+                    depends_on=tuple(layer.get("depends_on", [])),
+                    responsibility=layer.get("responsibility", ""),
+                    model_perspective=layer.get("model_perspective", ""),
+                )
+                for layer in ls.get("layers", [])
+            ),
+            definition_flow=ls.get("definition_flow", ""),
+            runtime_flow=ls.get("runtime_flow", ""),
+            feedback_flow=ls.get("feedback_flow", ""),
+        )
+
     return KernelProfile(
         name=data["name"],
         version=data["version"],
@@ -145,6 +185,7 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
         metadata=metadata,
         state_transitions=state_transitions,
         artifact_types=artifact_types,
+        layer_stack=layer_stack,
     )
 
 

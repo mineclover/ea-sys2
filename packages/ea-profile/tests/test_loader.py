@@ -125,6 +125,125 @@ kernel_element_pattern = "*Endpoint*"
         assert artifact_type.description == "HTTP endpoint artifact"
         assert artifact_type.kernel_element_pattern == "*Endpoint*"
 
+    def test_layer_stack_5_layer_loaded(self):
+        toml = """\
+[profile]
+name = "LayerStack5"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[layer_stack]
+definition_flow = "top_down"
+runtime_flow = "bottom_up"
+feedback_flow = "closed_loop"
+
+[[layer_stack.layers]]
+name = "Context"
+order = 1
+depends_on = []
+responsibility = "Define strategic context"
+model_perspective = "why"
+
+[[layer_stack.layers]]
+name = "Concept"
+order = 2
+depends_on = ["Context"]
+responsibility = "Define conceptual model"
+model_perspective = "what"
+
+[[layer_stack.layers]]
+name = "Logical"
+order = 3
+depends_on = ["Concept"]
+responsibility = "Design logical architecture"
+model_perspective = "how"
+
+[[layer_stack.layers]]
+name = "Physical"
+order = 4
+depends_on = ["Logical"]
+responsibility = "Map to implementation constraints"
+model_perspective = "where"
+
+[[layer_stack.layers]]
+name = "Runtime"
+order = 5
+depends_on = ["Physical"]
+responsibility = "Operate and observe systems"
+model_perspective = "when"
+"""
+        p = load_profile_from_content(toml)
+        assert p.layer_stack is not None
+        assert len(p.layer_stack.layers) == 5
+        assert p.layer_stack.definition_flow == "top_down"
+        assert p.layer_stack.runtime_flow == "bottom_up"
+        assert p.layer_stack.feedback_flow == "closed_loop"
+        assert p.layer_stack.layers[0].name == "Context"
+        assert p.layer_stack.layers[-1].depends_on == ("Physical",)
+
+    def test_layer_stack_3_layer_loaded(self):
+        toml = """\
+[profile]
+name = "LayerStack3"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[layer_stack]
+definition_flow = "inside_out"
+runtime_flow = "outside_in"
+feedback_flow = "single_loop"
+
+[[layer_stack.layers]]
+name = "Domain"
+order = 1
+depends_on = []
+responsibility = "Define domain intent"
+model_perspective = "why"
+
+[[layer_stack.layers]]
+name = "Application"
+order = 2
+depends_on = ["Domain"]
+responsibility = "Coordinate use cases"
+model_perspective = "how"
+
+[[layer_stack.layers]]
+name = "Infrastructure"
+order = 3
+depends_on = ["Application"]
+responsibility = "Provide technical capabilities"
+model_perspective = "where"
+"""
+        p = load_profile_from_content(toml)
+        assert p.layer_stack is not None
+        assert len(p.layer_stack.layers) == 3
+        assert [layer.name for layer in p.layer_stack.layers] == [
+            "Domain",
+            "Application",
+            "Infrastructure",
+        ]
+        assert p.layer_stack.layers[1].depends_on == ("Domain",)
+
 
 class TestLoadFromFile:
     def test_valid_file(self, tmp_path):
@@ -304,6 +423,58 @@ kernel_relation = "association"
 name = "api_endpoint"
 """
         with pytest.raises(ProfileLoadError, match="missing required field: tier"):
+            load_profile_from_content(toml)
+
+    def test_missing_layer_definition_name(self):
+        toml = """\
+[profile]
+name = "X"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[layer_stack]
+definition_flow = "top_down"
+
+[[layer_stack.layers]]
+order = 1
+"""
+        with pytest.raises(ProfileLoadError, match="Layer definition missing required field: name"):
+            load_profile_from_content(toml)
+
+    def test_missing_layer_definition_order(self):
+        toml = """\
+[profile]
+name = "X"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[layer_stack]
+definition_flow = "top_down"
+
+[[layer_stack.layers]]
+name = "Context"
+"""
+        with pytest.raises(ProfileLoadError, match="missing required field: order"):
             load_profile_from_content(toml)
 
 

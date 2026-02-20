@@ -53,9 +53,10 @@
         "uv run pytest packages/ -x -q passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 1: M2 프레임워크 확장",
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-004",
@@ -447,6 +448,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-20T18:40:11.489Z"
+    "updatedAt": "2026-02-20T18:46:10.573Z"
   }
 }

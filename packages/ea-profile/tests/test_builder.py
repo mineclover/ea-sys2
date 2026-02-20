@@ -133,6 +133,36 @@ class TestFluentAPI:
         assert artifact_type.description == "HTTP endpoint artifact"
         assert artifact_type.kernel_element_pattern == "*Endpoint*"
 
+    def test_layer_stack_metadata(self):
+        p = (
+            _minimal_builder()
+            .set_layer_stack(
+                definition_flow="top_down",
+                runtime_flow="bottom_up",
+                feedback_flow="closed_loop",
+            )
+            .add_layer_definition(
+                "M2",
+                1,
+                responsibility="Schema definitions",
+                model_perspective="Meta",
+            )
+            .add_layer_definition(
+                "M1",
+                2,
+                depends_on=("M2",),
+                responsibility="Design models",
+                model_perspective="Design",
+            )
+            .build()
+        )
+        assert p.layer_stack is not None
+        assert p.layer_stack.definition_flow == "top_down"
+        assert p.layer_stack.runtime_flow == "bottom_up"
+        assert p.layer_stack.feedback_flow == "closed_loop"
+        assert len(p.layer_stack.layers) == 2
+        assert p.layer_stack.layers[1].depends_on == ("M2",)
+
 
 # ---------------------------------------------------------------------------
 # Element / Relation
@@ -330,5 +360,14 @@ class TestBuildErrors:
                 .element("A", layer="L", category="C", kernel_type="structure")
                 .relation("r", kernel_relation="association")
                 .allow("A", "A", "nonexistent")
+                .build()
+            )
+
+    def test_layer_definition_unknown_dependency_raises(self):
+        with pytest.raises(ProfileBuildError, match="depends on unknown layers"):
+            (
+                _minimal_builder()
+                .set_layer_stack(definition_flow="top_down")
+                .add_layer_definition("M1", 1, depends_on=("M2",))
                 .build()
             )

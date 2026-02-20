@@ -180,6 +180,42 @@ def load_profile_from_content(
             kernel_element_pattern=artifact_type.get("kernel_element_pattern", ""),
         )
 
+    # Layer stack
+    layer_stack = doc.get("layer_stack")
+    if layer_stack:
+        builder.set_layer_stack(
+            definition_flow=layer_stack.get("definition_flow", ""),
+            runtime_flow=layer_stack.get("runtime_flow", ""),
+            feedback_flow=layer_stack.get("feedback_flow", ""),
+        )
+
+        for layer in layer_stack.get("layers", []):
+            if "name" not in layer:
+                raise ProfileLoadError("Layer definition missing required field: name")
+            if "order" not in layer:
+                raise ProfileLoadError(
+                    f"Layer definition '{layer['name']}' missing required field: order"
+                )
+
+            depends_on_raw = layer.get("depends_on", [])
+            depends_on: tuple[str, ...]
+            if isinstance(depends_on_raw, str):
+                depends_on = (depends_on_raw,)
+            elif isinstance(depends_on_raw, list):
+                depends_on = tuple(str(dep) for dep in depends_on_raw)
+            else:
+                raise ProfileLoadError(
+                    f"Layer definition '{layer['name']}' has invalid depends_on type"
+                )
+
+            builder.add_layer_definition(
+                layer["name"],
+                int(layer["order"]),
+                depends_on=depends_on,
+                responsibility=layer.get("responsibility", ""),
+                model_perspective=layer.get("model_perspective", ""),
+            )
+
     # Rules
     for rule in doc.get("rules", []):
         source = rule.get("source")

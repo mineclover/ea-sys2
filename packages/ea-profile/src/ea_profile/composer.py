@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ea_profile.types import (
     KernelProfile,
+    LayerStack,
     ProfileArtifactType,
     ProfileElement,
     ProfileRelation,
@@ -21,6 +22,7 @@ def extend(
     add_relations: tuple[ProfileRelation, ...] = (),
     add_state_transitions: tuple[ProfileStateTransition, ...] = (),
     add_artifact_types: tuple[ProfileArtifactType, ...] = (),
+    layer_stack: LayerStack | None = None,
     add_rules: tuple[ProfileRule, ...] = (),
     override_rules: tuple[ProfileRule, ...] = (),
 ) -> KernelProfile:
@@ -40,6 +42,8 @@ def extend(
 
     # Merge artifact types (base + added)
     artifact_types = base.artifact_types + add_artifact_types
+
+    merged_layer_stack = layer_stack if layer_stack is not None else base.layer_stack
 
     # Merge rules: override matching IDs, then add new
     override_ids = {r.id for r in override_rules}
@@ -62,6 +66,7 @@ def extend(
         metadata=base.metadata,
         state_transitions=state_transitions,
         artifact_types=artifact_types,
+        layer_stack=merged_layer_stack,
     )
 
 
@@ -111,4 +116,5 @@ def subset(
         metadata=profile.metadata,
         state_transitions=profile.state_transitions,
         artifact_types=profile.artifact_types,
+        layer_stack=profile.layer_stack,
     )

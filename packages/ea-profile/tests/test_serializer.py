@@ -19,6 +19,7 @@ def _sample_profile(
     with_metadata: bool = True,
     with_state_transitions: bool = False,
     with_artifact_types: bool = False,
+    with_layer_stack: bool = False,
 ):
     b = (
         ProfileBuilder("Ser", version="1.0", kernel_version="2.0")
@@ -40,6 +41,25 @@ def _sample_profile(
             "function",
             description="HTTP endpoint artifact",
             kernel_element_pattern="*Endpoint*",
+        )
+    if with_layer_stack:
+        b.set_layer_stack(
+            definition_flow="top_down",
+            runtime_flow="bottom_up",
+            feedback_flow="closed_loop",
+        )
+        b.add_layer_definition(
+            "Domain",
+            1,
+            responsibility="Define intent",
+            model_perspective="why",
+        )
+        b.add_layer_definition(
+            "Application",
+            2,
+            depends_on=("Domain",),
+            responsibility="Coordinate use cases",
+            model_perspective="how",
         )
     if with_metadata:
         b.metadata(standard="StdX", organization="OrgX")
@@ -96,6 +116,17 @@ class TestDictRoundTrip:
         assert artifact_type.tier == "function"
         assert artifact_type.description == "HTTP endpoint artifact"
         assert artifact_type.kernel_element_pattern == "*Endpoint*"
+
+    def test_layer_stack_round_trip(self):
+        original = _sample_profile(with_layer_stack=True)
+        d = profile_to_dict(original)
+        restored = dict_to_profile(d)
+        assert restored.layer_stack is not None
+        assert restored.layer_stack.definition_flow == "top_down"
+        assert restored.layer_stack.runtime_flow == "bottom_up"
+        assert restored.layer_stack.feedback_flow == "closed_loop"
+        assert len(restored.layer_stack.layers) == 2
+        assert restored.layer_stack.layers[1].depends_on == ("Domain",)
 
 
 # ---------------------------------------------------------------------------

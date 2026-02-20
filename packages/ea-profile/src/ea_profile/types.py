@@ -204,6 +204,25 @@ class ProfileArtifactType:
 
 
 @dataclass(frozen=True)
+class LayerDefinition:
+    """A declarative layer definition inside a layer stack."""
+    name: str
+    order: int
+    depends_on: tuple[str, ...] = ()
+    responsibility: I18nString = ""
+    model_perspective: str = ""
+
+
+@dataclass(frozen=True)
+class LayerStack:
+    """A declarative layer stack definition for profile metadata."""
+    layers: tuple[LayerDefinition, ...] = ()
+    definition_flow: str = ""
+    runtime_flow: str = ""
+    feedback_flow: str = ""
+
+
+@dataclass(frozen=True)
 class ProfileMetadata:
     """Typed metadata for a kernel profile."""
     standard: str          # "ArchiMate 3.2", "TOGAF 10"
@@ -223,6 +242,7 @@ class KernelProfile:
     metadata: ProfileMetadata | None = None
     state_transitions: tuple[ProfileStateTransition, ...] = ()
     artifact_types: tuple[ProfileArtifactType, ...] = ()
+    layer_stack: LayerStack | None = None
 
     def get_element(self, name: str) -> ProfileElement | None:
         for e in self.elements:

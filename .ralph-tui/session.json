@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T18:40:11.490Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-02-20T18:46:10.574Z",
+  "currentIteration": 2,
   "maxIterations": 0,
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -24,6 +24,16 @@
       "durationMs": 372960,
       "startedAt": "2026-02-20T18:29:23.943Z",
       "endedAt": "2026-02-20T18:35:36.903Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-002",
+      "taskTitle": "ArtifactType 프로파일 정의 스키마",
+      "taskCompleted": true,
+      "durationMs": 273464,
+      "startedAt": "2026-02-20T18:35:38.025Z",
+      "endedAt": "2026-02-20T18:40:11.489Z"
     }
   ],
   "skippedTaskIds": [],

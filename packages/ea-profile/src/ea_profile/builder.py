@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, cast
 from ea_profile.types import (
     I18nString,
     KernelProfile,
+    LayerDefinition,
+    LayerStack,
     PatternType,
     ProfileArtifactType,
     ProfileBuildError,
@@ -68,6 +70,7 @@ class ProfileBuilder:
         self._relations: list[ProfileRelation] = []
         self._state_transitions: list[ProfileStateTransition] = []
         self._artifact_types: list[ProfileArtifactType] = []
+        self._layer_stack: LayerStack | None = None
         self._rules: list[ProfileRule] = []
         self._rule_metadata: dict[str, RuleMetadata] = {}
         self._rule_counter = 0
@@ -258,6 +261,50 @@ class ProfileBuilder:
             description=description,
             kernel_element_pattern=kernel_element_pattern,
         ))
+        return self
+
+    def set_layer_stack(
+        self,
+        *,
+        definition_flow: str = "",
+        runtime_flow: str = "",
+        feedback_flow: str = "",
+    ) -> ProfileBuilder:
+        """Set layer stack-level flow metadata."""
+        layers = self._layer_stack.layers if self._layer_stack is not None else ()
+        self._layer_stack = LayerStack(
+            layers=layers,
+            definition_flow=definition_flow,
+            runtime_flow=runtime_flow,
+            feedback_flow=feedback_flow,
+        )
+        return self
+
+    def add_layer_definition(
+        self,
+        name: str,
+        order: int,
+        *,
+        depends_on: tuple[str, ...] = (),
+        responsibility: I18nString = "",
+        model_perspective: str = "",
+    ) -> ProfileBuilder:
+        """Add a layer definition entry to the layer stack metadata."""
+        if self._layer_stack is None:
+            self._layer_stack = LayerStack()
+        layer = LayerDefinition(
+            name=name,
+            order=order,
+            depends_on=depends_on,
+            responsibility=responsibility,
+            model_perspective=model_perspective,
+        )
+        self._layer_stack = LayerStack(
+            layers=self._layer_stack.layers + (layer,),
+            definition_flow=self._layer_stack.definition_flow,
+            runtime_flow=self._layer_stack.runtime_flow,
+            feedback_flow=self._layer_stack.feedback_flow,
+        )
         return self
 
     # ── Composite validation ─────────────────────────────────────
@@ -515,6 +562,7 @@ class ProfileBuilder:
             metadata=md,
             state_transitions=tuple(self._state_transitions),
             artifact_types=tuple(self._artifact_types),
+            layer_stack=self._layer_stack,
         )
 
     # ── Internal validation ───────────────────────────────────────
@@ -605,6 +653,31 @@ class ProfileBuilder:
                     f"Rule '{rule.id}': references unknown relation "
                     f"'{rule.relationship_name}'"
                 )
+
+        # 6. Layer stack metadata consistency
+        if self._layer_stack is not None:
+            layer_names = [layer.name for layer in self._layer_stack.layers]
+            dup_layer_names = [name for name in layer_names if layer_names.count(name) > 1]
+            if dup_layer_names:
+                errors.append(
+                    f"Duplicate layer names in layer_stack: {sorted(set(dup_layer_names))}"
+                )
+
+            layer_orders = [layer.order for layer in self._layer_stack.layers]
+            dup_layer_orders = [order for order in layer_orders if layer_orders.count(order) > 1]
+            if dup_layer_orders:
+                errors.append(
+                    f"Duplicate layer order values in layer_stack: {sorted(set(dup_layer_orders))}"
+                )
+
+            known_layers = set(layer_names)
+            for layer_def in self._layer_stack.layers:
+                unknown = [dep for dep in layer_def.depends_on if dep not in known_layers]
+                if unknown:
+                    errors.append(
+                        f"Layer '{layer_def.name}' depends on unknown layers: "
+                        f"{sorted(set(unknown))}"
+                    )
 
         if errors:
             raise ProfileBuildError(errors)

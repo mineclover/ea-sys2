@@ -5,6 +5,8 @@ import pytest
 from ea_profile.types import (
     ConditionRegistry,
     KernelProfile,
+    LayerDefinition,
+    LayerStack,
     PatternType,
     ProfileArtifactType,
     ProfileBuildError,
@@ -60,6 +62,33 @@ class TestFrozenTypes:
         assert a.tier == "function"
         assert a.description == "HTTP endpoint artifact"
         assert a.kernel_element_pattern == "*Endpoint*"
+
+    def test_layer_definition_creation(self):
+        layer = LayerDefinition(
+            name="M1",
+            order=1,
+            depends_on=("M0",),
+            responsibility="Modeling",
+            model_perspective="Conceptual",
+        )
+        assert layer.name == "M1"
+        assert layer.order == 1
+        assert layer.depends_on == ("M0",)
+        assert layer.responsibility == "Modeling"
+        assert layer.model_perspective == "Conceptual"
+
+    def test_layer_stack_creation(self):
+        stack = LayerStack(
+            layers=(LayerDefinition(name="M1", order=1),),
+            definition_flow="top_down",
+            runtime_flow="bottom_up",
+            feedback_flow="closed_loop",
+        )
+        assert len(stack.layers) == 1
+        assert stack.layers[0].name == "M1"
+        assert stack.definition_flow == "top_down"
+        assert stack.runtime_flow == "bottom_up"
+        assert stack.feedback_flow == "closed_loop"
 
     def test_profile_rule_creation(self):
         rule = ProfileRule(
@@ -164,6 +193,9 @@ class TestKernelProfile:
 
     def test_artifact_types_default_empty(self, profile):
         assert profile.artifact_types == ()
+
+    def test_layer_stack_default_none(self, profile):
+        assert profile.layer_stack is None
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,193 @@
+# SDLC Layer: Pipeline
+# Role: SDLC CI/CD pipeline execution metamodel
+
+[profile]
+name = "SDLC-Pipeline"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlc"
+standard = "EA System SDLC Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Behavior = "step"
+PassiveStructure = "item"
+Governance = "feature"
+Goal = "state"
+Context = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Pipeline container owns execution steps and targets."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Pipeline entities can depend on artifacts or control points."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Pipeline execution ordering between stages."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Execution outcome triggers follow-up procedures."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "Governance gate constrains deployment promotion."
+
+# --- SDLC pipeline state transitions ---
+
+[[state_transitions]]
+from_state = "QUEUED"
+to_state = "BUILDING"
+description = "Pipeline run is accepted and enters build."
+
+[[state_transitions]]
+from_state = "BUILDING"
+to_state = "TESTING"
+description = "Build artifacts are sent to automated test execution."
+
+[[state_transitions]]
+from_state = "TESTING"
+to_state = "STAGING"
+description = "Validated artifacts are promoted to staging."
+
+[[state_transitions]]
+from_state = "STAGING"
+to_state = "PRODUCTION"
+description = "Staged release is promoted to production deployment."
+
+[[state_transitions]]
+from_state = "PRODUCTION"
+to_state = "ROLLED_BACK"
+description = "Production deployment is reverted via rollback procedure."
+
+# --- SDLC pipeline elements ---
+
+[[elements]]
+name = "PipelineLayer"
+layer = "Pipeline"
+category = "Composite"
+description = "SDLC pipeline boundary for CI/CD execution flow."
+
+[[elements]]
+name = "BuildStep"
+layer = "Pipeline"
+category = "Behavior"
+description = "Compiles source and produces deployment-ready build artifacts."
+
+[[elements]]
+name = "TestSuite"
+layer = "Pipeline"
+category = "Behavior"
+description = "Runs automated verification suites for the current build."
+
+[[elements]]
+name = "StageStep"
+layer = "Pipeline"
+category = "Behavior"
+description = "Promotes tested artifacts into a staging environment."
+
+[[elements]]
+name = "DeployTarget"
+layer = "Pipeline"
+category = "Behavior"
+description = "Executes final production deployment for approved artifacts."
+
+[[elements]]
+name = "RollbackProcedure"
+layer = "Pipeline"
+category = "Behavior"
+description = "Reverts production deployment when release health checks fail."
+
+[[elements]]
+name = "ApprovalGate"
+layer = "Pipeline"
+category = "Governance"
+description = "Manual or policy gate required before production promotion."
+
+[[elements]]
+name = "QUEUED"
+layer = "Pipeline"
+category = "Goal"
+description = "State token for runs waiting for executor capacity."
+
+[[elements]]
+name = "BUILDING"
+layer = "Pipeline"
+category = "Goal"
+description = "State token for active build execution."
+
+[[elements]]
+name = "TESTING"
+layer = "Pipeline"
+category = "Goal"
+description = "State token for active test execution."
+
+[[elements]]
+name = "STAGING"
+layer = "Pipeline"
+category = "Goal"
+description = "State token for staged deployment verification."
+
+[[elements]]
+name = "PRODUCTION"
+layer = "Pipeline"
+category = "Goal"
+description = "State token for live production release."
+
+[[elements]]
+name = "ROLLED_BACK"
+layer = "Pipeline"
+category = "Goal"
+description = "State token for rollback completion after release failure."
+
+# --- SDLC pipeline validity rules ---
+
+[[rules]]
+id = "sdlc-pipeline-allow-next-01"
+source = "BuildStep"
+target = "TestSuite"
+relation = "next"
+priority = 70
+notes = "Pipeline succession: Build -> Test."
+
+[[rules]]
+id = "sdlc-pipeline-allow-next-02"
+source = "TestSuite"
+target = "StageStep"
+relation = "next"
+priority = 70
+notes = "Pipeline succession: Test -> Stage."
+
+[[rules]]
+id = "sdlc-pipeline-allow-next-03"
+source = "StageStep"
+target = "DeployTarget"
+relation = "next"
+priority = 70
+notes = "Pipeline succession: Stage -> Deploy."
+
+[[rules]]
+id = "sdlc-pipeline-allow-constraint-01"
+source = "ApprovalGate"
+target = "DeployTarget"
+relation = "constrains"
+priority = 70
+notes = "Approval gate constrains production deployment execution."
+
+[[rules]]
+id = "sdlc-pipeline-allow-trigger-01"
+source = "DeployTarget"
+target = "RollbackProcedure"
+relation = "triggers"
+priority = 70
+notes = "Deployment failure can trigger rollback procedure."

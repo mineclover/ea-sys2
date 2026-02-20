@@ -9,6 +9,7 @@ PROFILE_FILE_MAP: dict[str, str] = {
     "arch-decision": "20-arch-decision.toml",
     "requirements": "30-requirements.toml",
     "domain-model": "40-domain-model.toml",
+    "pipeline": "50-pipeline.toml",
 }
 
 PROFILE_DIR = Path(__file__).resolve().parent

@@ -9,6 +9,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from ea_decision.lifecycle import ensure_profile_transition
 from ea_decision.pattern import DecisionComplexity, DecisionPattern
 from ea_decision.types import (
     DecisionStatus,
@@ -108,6 +109,7 @@ class DesignDecision:
     id: str = field(default_factory=lambda: _generate_id("decision"))
 
     def approve(self, approver: str) -> None:
+        ensure_profile_transition(self.status, DecisionStatus.ACCEPTED)
         self.status = DecisionStatus.ACCEPTED
         self.approver = approver
         self.approved_at = _now()
@@ -168,10 +170,9 @@ class DesignReport:
         self.execution_log.extend(execution_log)
         self.transaction_id = transaction_id
 
-        if success:
-            self.decision.status = DecisionStatus.ACCEPTED
-        else:
-            self.decision.status = DecisionStatus.REJECTED
+        target_status = DecisionStatus.ACCEPTED if success else DecisionStatus.REJECTED
+        ensure_profile_transition(self.decision.status, target_status)
+        self.decision.status = target_status
 
 @dataclass
 class Topic:
@@ -318,6 +319,7 @@ class Topic:
         """Creates the formal Design Report (Plan) based on the process."""
         # Archive existing report if any
         if self.report:
+            ensure_profile_transition(self.report.decision.status, DecisionStatus.DEPRECATED)
             self.report.decision.status = DecisionStatus.DEPRECATED
             self.report_history.append(self.report)
 
@@ -361,6 +363,7 @@ class Topic:
     def revise_report(self) -> None:
         """Re-opens the topic for further discussion, archiving the current report."""
         if self.report:
+            ensure_profile_transition(self.report.decision.status, DecisionStatus.DEPRECATED)
             self.report.decision.status = DecisionStatus.DEPRECATED
             self.report_history.append(self.report)
             self.report = None

@@ -75,6 +75,33 @@ name = "available_in"
 kernel_relation = "association"
 description = "Context provides access to an experience or element."
 
+# --- Decision state transitions (M2 profile metadata) ---
+
+[[state_transitions]]
+from_state = "DRAFT"
+to_state = "PROPOSED"
+description = "Decision draft advances to proposed for review."
+
+[[state_transitions]]
+from_state = "PROPOSED"
+to_state = "ACCEPTED"
+description = "Proposed decision is approved."
+
+[[state_transitions]]
+from_state = "PROPOSED"
+to_state = "REJECTED"
+description = "Proposed decision is rejected."
+
+[[state_transitions]]
+from_state = "ACCEPTED"
+to_state = "SUPERSEDED"
+description = "Accepted decision is superseded by a newer one."
+
+[[state_transitions]]
+from_state = "*"
+to_state = "DEPRECATED"
+description = "Any known decision state can be deprecated."
+
 # ============================================================
 # Internal Decision Layer Elements
 # ============================================================
@@ -238,6 +265,44 @@ name = "DecisionLifecycleStateCatalog"
 layer = "Decision"
 category = "PassiveStructure"
 description = "Catalog of DecisionLifecycleState values — DRAFT → PROPOSED → ACCEPTED/REJECTED → DEPRECATED/SUPERSEDED — frozen state machine with transition validation."
+
+# --- Concrete lifecycle states for transition validation ---
+
+[[elements]]
+name = "DRAFT"
+layer = "Decision"
+category = "Context"
+description = "Decision lifecycle state token: draft."
+
+[[elements]]
+name = "PROPOSED"
+layer = "Decision"
+category = "Context"
+description = "Decision lifecycle state token: proposed."
+
+[[elements]]
+name = "ACCEPTED"
+layer = "Decision"
+category = "Context"
+description = "Decision lifecycle state token: accepted."
+
+[[elements]]
+name = "REJECTED"
+layer = "Decision"
+category = "Context"
+description = "Decision lifecycle state token: rejected."
+
+[[elements]]
+name = "DEPRECATED"
+layer = "Decision"
+category = "Context"
+description = "Decision lifecycle state token: deprecated."
+
+[[elements]]
+name = "SUPERSEDED"
+layer = "Decision"
+category = "Context"
+description = "Decision lifecycle state token: superseded."
 
 # --- Instance Records (PassiveStructure) ---
 

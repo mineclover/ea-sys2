@@ -7,9 +7,9 @@ DesignDecision, DesignReport, and the Topic aggregate root.
 from __future__ import annotations
 
 import json
+from typing import cast
 
 import pytest
-
 from ea_decision.pattern import DecisionComplexity, DecisionPattern
 from ea_decision.topic import (
     DesignDecision,
@@ -17,7 +17,6 @@ from ea_decision.topic import (
     Evaluation,
     ModelingAction,
     Option,
-    ProjectionCoverageAssessment,
     Question,
     ResearchNote,
     Topic,
@@ -196,6 +195,16 @@ class TestDesignDecision:
         assert decision.approver == "charlie"
         assert decision.approved_at.endswith("Z")
         assert original_status == DecisionStatus.PROPOSED
+
+    def test_approve_decision_invalid_transition_raises(self):
+        decision = DesignDecision(
+            selected_option_id="opt-abc123",
+            rationale="Good choice",
+            status=DecisionStatus.REJECTED,
+        )
+
+        with pytest.raises(ValueError, match="Invalid transition"):
+            decision.approve("charlie")
 
 
 class TestDesignReport:
@@ -386,6 +395,29 @@ class TestTopic:
         assert topic.report_history[0] == report1
         assert report1.decision.status == DecisionStatus.DEPRECATED
         assert report2.decision.status == DecisionStatus.PROPOSED
+
+    def test_finalize_plan_rejects_unknown_existing_decision_state(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.add_option("Option A", "Description A")
+        topic.add_option("Option B", "Description B")
+        option_a_id = topic.options[0].id
+        option_b_id = topic.options[1].id
+
+        topic.finalize_plan(
+            title="Plan v1",
+            summary="First plan",
+            selected_option_id=option_a_id,
+            rationale="Initial choice",
+        )
+        topic.report.decision.status = cast(DecisionStatus, "UNKNOWN_STATE")
+
+        with pytest.raises(ValueError, match="source state"):
+            topic.finalize_plan(
+                title="Plan v2",
+                summary="Second plan",
+                selected_option_id=option_b_id,
+                rationale="Changed our mind",
+            )
 
     def test_revise_report(self):
         topic = Topic(title="Test", description="Test topic")

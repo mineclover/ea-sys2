@@ -115,12 +115,13 @@
         "uv run pytest packages/ -x -q passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 2: 기존 M1 승격 — Decision",
       "dependsOn": [
         "US-001",
         "US-005"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-007",
@@ -450,6 +451,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-20T18:55:46.740Z"
+    "updatedAt": "2026-02-20T19:04:55.196Z"
   }
 }

@@ -9,6 +9,7 @@ after each iteration and it's included in prompts for context.
 - 중첩 TOML 배열 테이블(`[[layer_stack.layers]]`)은 loader에서 `doc["layer_stack"]["layers"]`로 파싱되므로, builder에서 stack 메타(`set_*`)와 항목 누적(`add_*`)을 분리하면 확장 스키마를 안정적으로 수용할 수 있다.
 - TOML의 문자열 목록 필드(`input_artifacts`, `output_artifacts`)는 loader에서 `str | list[str]`를 모두 허용해 tuple로 정규화하면 축약 표기와 배열 표기를 동시에 지원하면서 builder/serializer 타입 일관성을 유지할 수 있다.
 - 프로파일 정적 검증은 builder 내부 강제 검증과 분리된 `validate_* -> validate_profile` 순수 함수 계층으로 두면, 로드 시점 강제/선택 검증 정책을 유연하게 바꾸면서 동일 검증 규칙을 재사용할 수 있다.
+- 상태머신 M1 로직을 M2 프로파일로 승격할 때는 `lifecycle`에 프로파일 전이 검증 단일 진입점(`ensure_profile_transition`)을 두고 도메인 mutator(approve/finalize/revise)에서 공통 호출하면 하드코딩 제거와 에러 메시지 일관성을 동시에 확보할 수 있다.
 
 ---
 
@@ -134,4 +135,25 @@ after each iteration and it's included in prompts for context.
     - 정적 validator를 pure function으로 분리하고 통합 리포트 타입(`ProfileValidationResult`)을 두면 호출자가 실패 정책(즉시 예외/누적 리포트)을 선택할 수 있어 이후 도메인 확장에 유리하다.
   - Gotchas encountered
     - Mypy strict 환경에서는 새 테스트 함수에도 `-> None` 반환 타입 주석이 필요해, 테스트 파일도 구현 코드와 동일한 타입 엄격도를 맞춰야 한다.
+---
+
+## 2026-02-20 - US-006
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/20-decision.toml`에 `[[state_transitions]]` 섹션을 추가해 Decision 상태전이를 선언형으로 정의했다(`PROPOSED→ACCEPTED`, `PROPOSED→REJECTED`, `*→DEPRECATED` 포함, lifecycle 호환 전이도 함께 선언).
+  - `ea_decision/lifecycle.py`의 하드코딩 전이 맵을 제거하고, decision 프로파일(`layer_path("decision")`)에서 상태전이를 로드/캐시해 검증하는 `ensure_profile_transition` 기반 로직으로 교체했다.
+  - `DesignDecision.approve()`, `DesignReport.finalize_execution()`, `Topic.finalize_plan()`, `Topic.revise_report()`가 모두 프로파일 전이 검증을 거치도록 변경했다.
+  - 테스트를 보강해 프로파일 기반 전이(와일드카드 deprecate), 금지 전이 에러, unknown 상태 에러를 검증했다.
+  - 품질 검증: `uv run pytest packages/ -x -q` 전체 통과(3101 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/20-decision.toml`
+  - `packages/ea-decision/src/ea_decision/lifecycle.py`
+  - `packages/ea-decision/src/ea_decision/topic.py`
+  - `packages/ea-decision/tests/test_lifecycle.py`
+  - `packages/ea-decision/tests/test_topic.py`
+- **Learnings:**
+  - Patterns discovered
+    - 상태전이 검증을 lifecycle 모듈의 단일 함수로 중앙화하면, aggregate 내부 여러 메서드가 동일 규칙/동일 에러 포맷을 공유해 회귀 테스트 작성이 쉬워진다.
+  - Gotchas encountered
+    - 전이 상태 토큰은 Enum 값(`accepted`)과 프로파일 토큰(`ACCEPTED`)의 대소문자/표현이 다를 수 있어, 비교 전에 공통 정규화(upper-case canonicalization)가 필요했다.
 ---

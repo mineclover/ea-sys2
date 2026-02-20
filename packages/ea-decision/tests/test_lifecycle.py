@@ -16,3 +16,10 @@ def test_invalid_transition_raises_value_error() -> None:
 
     with pytest.raises(ValueError, match="Invalid transition"):
         lifecycle.transition(DecisionLifecycleState.ACCEPTED)
+
+
+def test_wildcard_deprecation_transition_is_allowed() -> None:
+    lifecycle = DecisionLifecycle(state=DecisionLifecycleState.PROPOSED)
+    deprecated = lifecycle.transition(DecisionLifecycleState.DEPRECATED)
+
+    assert deprecated.state == DecisionLifecycleState.DEPRECATED

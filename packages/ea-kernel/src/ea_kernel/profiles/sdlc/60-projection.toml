@@ -1,0 +1,131 @@
+# SDLC Layer: Projection
+# Role: SDLC surface artifact projection metamodel
+
+[profile]
+name = "SDLC-Projection"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlc"
+standard = "EA System SDLC Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Interface = "port"
+Behavior = "step"
+PassiveStructure = "item"
+Event = "event"
+Assessment = "expression"
+Context = "state"
+Page = "structure"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Projection boundary contains SDLC surface elements."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Projected surfaces can depend on upstream SDLC assets."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Projection logic produces surfaced SDLC artifacts."
+
+# --- SDLC projection artifact types (M2 metadata) ---
+
+[[artifact_types]]
+name = "repository"
+tier = "data"
+description = "Source repository artifact surfaced for SDLC data context."
+kernel_element_pattern = "@PassiveStructure"
+
+[[artifact_types]]
+name = "pull_request"
+tier = "decision"
+description = "Pull request artifact surfaced for review and approval decisions."
+kernel_element_pattern = "@Assessment"
+
+[[artifact_types]]
+name = "ci_pipeline"
+tier = "function"
+description = "CI pipeline artifact surfaced for execution status visibility."
+kernel_element_pattern = "@Behavior"
+
+[[artifact_types]]
+name = "deployment"
+tier = "function"
+description = "Deployment artifact surfaced for runtime release operations."
+kernel_element_pattern = "@ActiveStructure"
+
+[[artifact_types]]
+name = "api_doc"
+tier = "evidence"
+description = "API documentation artifact surfaced as technical evidence."
+kernel_element_pattern = "@Interface"
+
+[[artifact_types]]
+name = "test_report"
+tier = "evidence"
+description = "Automated test report artifact surfaced as quality evidence."
+kernel_element_pattern = "@Event"
+
+[[artifact_types]]
+name = "monitoring_dashboard"
+tier = "ui"
+description = "Monitoring dashboard artifact surfaced for UI-level observability."
+kernel_element_pattern = "@Page"
+
+# --- SDLC projection elements used by artifact mappings ---
+
+[[elements]]
+name = "SDLCProjectionLayer"
+layer = "Projection"
+category = "Composite"
+description = "SDLC projection boundary for repository-to-monitoring visibility."
+
+[[elements]]
+name = "RepositorySnapshot"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Versioned repository snapshot metadata for projection views."
+
+[[elements]]
+name = "PullRequestReview"
+layer = "Projection"
+category = "Assessment"
+description = "Pull request review decision state captured by projection."
+
+[[elements]]
+name = "CIPipelineExecution"
+layer = "Projection"
+category = "Behavior"
+description = "CI pipeline execution step surfaced as function-tier artifact."
+
+[[elements]]
+name = "DeploymentController"
+layer = "Projection"
+category = "ActiveStructure"
+description = "Deployment orchestration component exposed to projection consumers."
+
+[[elements]]
+name = "APIDocumentationPort"
+layer = "Projection"
+category = "Interface"
+description = "Published API documentation contract for external consumers."
+
+[[elements]]
+name = "TestReportEvent"
+layer = "Projection"
+category = "Event"
+description = "Test run summary event emitted after verification execution."
+
+[[elements]]
+name = "MonitoringDashboardPage"
+layer = "Projection"
+category = "Page"
+description = "UI dashboard page for service and release health monitoring."

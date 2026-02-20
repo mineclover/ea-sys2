@@ -20,6 +20,7 @@ after each iteration and it's included in prompts for context.
 - 상태토큰에 underscore가 포함된 전이(`IN_PROGRESS`)를 쓸 때는 상태 alias 추출(`Status/State` suffix)만으로는 누락될 수 있으므로, 해당 토큰을 프로파일 elements에 동일 문자열로 선언하면 validator를 안정적으로 통과시킬 수 있다.
 - 중간 계층 강제 아키텍처 규칙(예: `Service -> Repository -> DataModel`)은 `허용 경로 allow rules`와 `직접 경로 deny rules`를 함께 선언하고 테스트에서도 allow/deny pair를 같이 검증하면, 우회 접근 금지를 명확하게 보장할 수 있다.
 - 파이프라인 프로파일에서 실행 순서와 통제 포인트를 함께 표현할 때는 `next`를 단계 체인(Build/Test/Stage/Deploy)에만 할당하고, 승인/복구는 `constrains`/`triggers`로 분리하면 규칙 의도와 테스트 검증 포인트가 명확해진다.
+- 도메인 Projection 프로파일 차별성 검증은 `artifact_types 이름집합 disjoint 비교 + 신규 도메인 프로파일 validate_profile 통과` 조합으로 구성하면, 기존 도메인 제약에 영향 없이 동일 M2 메타모델 확장을 안정적으로 증명할 수 있다.
 
 ---
 
@@ -374,4 +375,24 @@ after each iteration and it's included in prompts for context.
     - 파이프라인 도메인에서는 순차 실행(`next`)과 통제/복구(`constrains`/`triggers`)를 분리 선언하면 상태전이/규칙/요소 테스트를 각각 안정적으로 고정할 수 있다.
   - Gotchas encountered
     - 수용조건의 Stage 단계는 필수 요소 목록에 직접 포함되지 않아, `StageStep`을 별도 요소로 명시해 `Build→Test→Stage→Deploy` 체인 검증의 모호성을 제거했다.
+---
+
+## 2026-02-20 - US-017
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/60-projection.toml`를 추가해 SDLC Projection 프로파일을 정의했다.
+  - `[[artifact_types]]`에 `repository`, `pull_request`, `ci_pipeline`, `deployment`, `api_doc`, `test_report`, `monitoring_dashboard`를 선언했다.
+  - tier 매핑을 `repository -> data`, `ci_pipeline -> function`, `monitoring_dashboard -> ui`를 포함한 SDLC 관점으로 정의하고, 각 `kernel_element_pattern`이 매칭될 projection 요소를 함께 선언했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`에 `projection` 프로파일 매핑을 추가했다.
+  - `packages/ea-kernel/tests/test_sdlc_projection_profile.py`를 추가해 필수 artifact type/tier 매핑, 거버넌스 projection 대비 disjoint artifact set, SDLC projection `validate_profile` 통과를 검증했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-kernel/tests/test_sdlc_projection_profile.py -q`, `uv run pytest packages/ -x -q` (3137 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/60-projection.toml`
+  - `packages/ea-kernel/tests/test_sdlc_projection_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - Projection 도메인 확장 검증은 artifact set 차별성(disjoint)과 신규 도메인 validator 통과를 분리 검증하면, 기존 프로파일 제약과 독립적으로 M2 적합성을 안정적으로 증명할 수 있다.
+  - Gotchas encountered
+    - 기존 거버넌스 `70-projection.toml`은 단일 프로파일 기준 `@Page`, `@Assessment` 패턴 검증에서 실패할 수 있어, 이번 스토리 테스트는 수용조건에 맞춰 SDLC validator 통과와 cross-domain artifact set 차별성에 초점을 맞췄다.
 ---

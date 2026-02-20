@@ -10,6 +10,7 @@ PROFILE_FILE_MAP: dict[str, str] = {
     "requirements": "30-requirements.toml",
     "domain-model": "40-domain-model.toml",
     "pipeline": "50-pipeline.toml",
+    "projection": "60-projection.toml",
 }
 
 PROFILE_DIR = Path(__file__).resolve().parent

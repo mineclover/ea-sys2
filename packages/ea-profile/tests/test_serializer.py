@@ -18,6 +18,7 @@ from ea_profile.types import RuleCondition
 def _sample_profile(
     with_metadata: bool = True,
     with_state_transitions: bool = False,
+    with_artifact_types: bool = False,
 ):
     b = (
         ProfileBuilder("Ser", version="1.0", kernel_version="2.0")
@@ -32,6 +33,13 @@ def _sample_profile(
             "approved",
             guard_condition="has_review",
             description="Review complete",
+        )
+    if with_artifact_types:
+        b.add_artifact_type(
+            "api_endpoint",
+            "function",
+            description="HTTP endpoint artifact",
+            kernel_element_pattern="*Endpoint*",
         )
     if with_metadata:
         b.metadata(standard="StdX", organization="OrgX")
@@ -77,6 +85,17 @@ class TestDictRoundTrip:
         assert transition.from_state == "draft"
         assert transition.to_state == "approved"
         assert transition.guard_condition == "has_review"
+
+    def test_artifact_types_round_trip(self):
+        original = _sample_profile(with_artifact_types=True)
+        d = profile_to_dict(original)
+        restored = dict_to_profile(d)
+        assert len(restored.artifact_types) == 1
+        artifact_type = restored.artifact_types[0]
+        assert artifact_type.name == "api_endpoint"
+        assert artifact_type.tier == "function"
+        assert artifact_type.description == "HTTP endpoint artifact"
+        assert artifact_type.kernel_element_pattern == "*Endpoint*"
 
 
 # ---------------------------------------------------------------------------

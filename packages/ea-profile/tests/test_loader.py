@@ -94,6 +94,37 @@ description = "Review complete"
         assert transition.guard_condition == "has_review"
         assert transition.description == "Review complete"
 
+    def test_artifact_types_loaded(self):
+        toml = """\
+[profile]
+name = "ArtifactProfile"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "Core"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[artifact_types]]
+name = "api_endpoint"
+tier = "function"
+description = "HTTP endpoint artifact"
+kernel_element_pattern = "*Endpoint*"
+"""
+        p = load_profile_from_content(toml)
+        assert len(p.artifact_types) == 1
+        artifact_type = p.artifact_types[0]
+        assert artifact_type.name == "api_endpoint"
+        assert artifact_type.tier == "function"
+        assert artifact_type.description == "HTTP endpoint artifact"
+        assert artifact_type.kernel_element_pattern == "*Endpoint*"
+
 
 class TestLoadFromFile:
     def test_valid_file(self, tmp_path):
@@ -227,6 +258,52 @@ kernel_relation = "association"
 from_state = "draft"
 """
         with pytest.raises(ProfileLoadError, match="to_state"):
+            load_profile_from_content(toml)
+
+    def test_missing_artifact_type_name(self):
+        toml = """\
+[profile]
+name = "X"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[artifact_types]]
+tier = "function"
+"""
+        with pytest.raises(ProfileLoadError, match="Artifact type missing required field: name"):
+            load_profile_from_content(toml)
+
+    def test_missing_artifact_type_tier(self):
+        toml = """\
+[profile]
+name = "X"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[artifact_types]]
+name = "api_endpoint"
+"""
+        with pytest.raises(ProfileLoadError, match="missing required field: tier"):
             load_profile_from_content(toml)
 
 

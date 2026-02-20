@@ -8,6 +8,7 @@ from ea_profile.builder import ProfileBuilder
 from ea_profile.composer import extend, subset
 from ea_profile.types import (
     KernelProfile,
+    ProfileArtifactType,
     ProfileElement,
     ProfileMetadata,
     ProfileRelation,
@@ -105,6 +106,23 @@ class TestExtend:
         )
         assert len(extended.state_transitions) == 1
         assert extended.state_transitions[0] == transition
+
+    def test_extend_adds_artifact_types(self):
+        base = _make_profile()
+        artifact_type = ProfileArtifactType(
+            name="api_endpoint",
+            tier="function",
+            description="HTTP endpoint artifact",
+            kernel_element_pattern="*Endpoint*",
+        )
+        extended = extend(
+            base,
+            name="Extended",
+            version="2.0",
+            add_artifact_types=(artifact_type,),
+        )
+        assert len(extended.artifact_types) == 1
+        assert extended.artifact_types[0] == artifact_type
 
     def test_extend_overrides_existing_rules_by_id(self):
         base = _make_profile()
@@ -229,6 +247,25 @@ class TestSubset:
             version="1.0-subset",
         )
         assert sub.state_transitions == base.state_transitions
+
+    def test_subset_preserves_artifact_types(self):
+        base = (
+            ProfileBuilder("Base", version="1.0", kernel_version="1.0")
+            .element("ElemA", kernel_type="structure", layer="Business", category="Structure")
+            .relation("Rel1", kernel_relation="association")
+            .add_artifact_type(
+                "api_endpoint",
+                "function",
+                kernel_element_pattern="*Endpoint*",
+            )
+            .build()
+        )
+        sub = subset(
+            base,
+            name="Subset",
+            version="1.0-subset",
+        )
+        assert sub.artifact_types == base.artifact_types
 
     def test_subset_preserves_metadata_and_kernel_version(self):
         base = _make_profile()

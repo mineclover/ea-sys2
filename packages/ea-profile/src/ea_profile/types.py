@@ -195,6 +195,15 @@ class ProfileStateTransition:
 
 
 @dataclass(frozen=True)
+class ProfileArtifactType:
+    """A declarative surface artifact type definition for a profile."""
+    name: str
+    tier: str
+    description: I18nString = ""
+    kernel_element_pattern: str = ""
+
+
+@dataclass(frozen=True)
 class ProfileMetadata:
     """Typed metadata for a kernel profile."""
     standard: str          # "ArchiMate 3.2", "TOGAF 10"
@@ -213,6 +222,7 @@ class KernelProfile:
     validity_rules: tuple[ProfileRule, ...] = ()
     metadata: ProfileMetadata | None = None
     state_transitions: tuple[ProfileStateTransition, ...] = ()
+    artifact_types: tuple[ProfileArtifactType, ...] = ()
 
     def get_element(self, name: str) -> ProfileElement | None:
         for e in self.elements:

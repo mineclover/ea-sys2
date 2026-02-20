@@ -163,6 +163,23 @@ def load_profile_from_content(
             description=transition.get("description", ""),
         )
 
+    # Artifact types
+    for artifact_type in doc.get("artifact_types", []):
+        if "name" not in artifact_type:
+            raise ProfileLoadError(
+                "Artifact type missing required field: name"
+            )
+        if "tier" not in artifact_type:
+            raise ProfileLoadError(
+                f"Artifact type '{artifact_type['name']}' missing required field: tier"
+            )
+        builder.add_artifact_type(
+            artifact_type["name"],
+            artifact_type["tier"],
+            description=artifact_type.get("description", ""),
+            kernel_element_pattern=artifact_type.get("kernel_element_pattern", ""),
+        )
+
     # Rules
     for rule in doc.get("rules", []):
         source = rule.get("source")

@@ -34,3 +34,29 @@ after each iteration and it's included in prompts for context.
   - Gotchas encountered
     - `uv run`으로 lint/typecheck 실행 시 캐시/환경 이슈가 발생해, 품질 점검은 `.venv/bin/ruff`, `.venv/bin/mypy`로 직접 실행해 검증했다.
 ---
+
+## 2026-02-20 - US-002
+- What was implemented
+  - `ProfileArtifactType` frozen dataclass를 추가하고, `KernelProfile`에 `artifact_types` 필드를 기본값 `()`로 확장.
+  - `ProfileBuilder`에 내부 누적 저장소와 `add_artifact_type(name, tier, description, kernel_element_pattern)` 메서드를 추가.
+  - TOML loader가 `[[artifact_types]]` 섹션을 파싱해 builder로 전달하도록 확장(필수 필드 `name`, `tier` 검증 포함).
+  - serializer/composer 경로도 `artifact_types`를 보존하도록 갱신해 dict/json round-trip 및 compose 경로 데이터 유실 방지.
+  - 테스트 추가: TOML artifact type 로드 검증, builder API 검증, serializer/composer 보존 검증, 기본값 검증.
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-profile/src/ea_profile/types.py`
+  - `packages/ea-profile/src/ea_profile/builder.py`
+  - `packages/ea-profile/src/ea_profile/loader.py`
+  - `packages/ea-profile/src/ea_profile/serializer.py`
+  - `packages/ea-profile/src/ea_profile/composer.py`
+  - `packages/ea-profile/tests/test_loader.py`
+  - `packages/ea-profile/tests/test_builder.py`
+  - `packages/ea-profile/tests/test_types.py`
+  - `packages/ea-profile/tests/test_serializer.py`
+  - `packages/ea-profile/tests/test_composer.py`
+- **Learnings:**
+  - Patterns discovered
+    - Projection artifact type 같은 선언형 tuple 확장도 기존 패턴(`types -> builder -> loader -> serializer -> composer`)을 그대로 적용해야 round-trip/compose 일관성이 유지된다.
+  - Gotchas encountered
+    - 루트 워크스페이스에서 `uv run ruff/mypy`는 샌드박스에서 `~/.cache/uv` 접근 오류가 날 수 있어 `.venv/bin/ruff`, `.venv/bin/mypy`로 대체 검증이 안정적이었다.
+---

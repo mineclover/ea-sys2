@@ -115,6 +115,24 @@ class TestFluentAPI:
         assert transition.guard_condition == "has_review"
         assert transition.description == "Review complete"
 
+    def test_add_artifact_type(self):
+        p = (
+            _minimal_builder()
+            .add_artifact_type(
+                "api_endpoint",
+                "function",
+                description="HTTP endpoint artifact",
+                kernel_element_pattern="*Endpoint*",
+            )
+            .build()
+        )
+        assert len(p.artifact_types) == 1
+        artifact_type = p.artifact_types[0]
+        assert artifact_type.name == "api_endpoint"
+        assert artifact_type.tier == "function"
+        assert artifact_type.description == "HTTP endpoint artifact"
+        assert artifact_type.kernel_element_pattern == "*Endpoint*"
+
 
 # ---------------------------------------------------------------------------
 # Element / Relation

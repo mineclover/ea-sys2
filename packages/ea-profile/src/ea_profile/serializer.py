@@ -11,6 +11,7 @@ from typing import Any
 
 from ea_profile.types import (
     KernelProfile,
+    ProfileArtifactType,
     ProfileElement,
     ProfileMetadata,
     ProfileRelation,
@@ -52,6 +53,15 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
         }
         for t in profile.state_transitions
     ]
+    artifact_types = [
+        {
+            "name": a.name,
+            "tier": a.tier,
+            "description": a.description,
+            "kernel_element_pattern": a.kernel_element_pattern,
+        }
+        for a in profile.artifact_types
+    ]
 
     metadata = None
     if profile.metadata is not None:
@@ -69,6 +79,7 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
         "relations": relations,
         "validity_rules": rules,
         "state_transitions": state_transitions,
+        "artifact_types": artifact_types,
         "metadata": metadata,
     }
 
@@ -105,6 +116,15 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
         )
         for t in data.get("state_transitions", [])
     )
+    artifact_types = tuple(
+        ProfileArtifactType(
+            name=a["name"],
+            tier=a["tier"],
+            description=a.get("description", ""),
+            kernel_element_pattern=a.get("kernel_element_pattern", ""),
+        )
+        for a in data.get("artifact_types", [])
+    )
 
     metadata = None
     md = data.get("metadata")
@@ -124,6 +144,7 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
         validity_rules=rules,
         metadata=metadata,
         state_transitions=state_transitions,
+        artifact_types=artifact_types,
     )
 
 

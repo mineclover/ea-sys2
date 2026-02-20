@@ -17,6 +17,7 @@ from ea_profile.types import (
     I18nString,
     KernelProfile,
     PatternType,
+    ProfileArtifactType,
     ProfileBuildError,
     ProfileElement,
     ProfileMetadata,
@@ -66,6 +67,7 @@ class ProfileBuilder:
         self._elements: list[ProfileElement] = []
         self._relations: list[ProfileRelation] = []
         self._state_transitions: list[ProfileStateTransition] = []
+        self._artifact_types: list[ProfileArtifactType] = []
         self._rules: list[ProfileRule] = []
         self._rule_metadata: dict[str, RuleMetadata] = {}
         self._rule_counter = 0
@@ -238,6 +240,23 @@ class ProfileBuilder:
             to_state=to_state,
             guard_condition=guard_condition,
             description=description,
+        ))
+        return self
+
+    def add_artifact_type(
+        self,
+        name: str,
+        tier: str,
+        *,
+        description: I18nString = "",
+        kernel_element_pattern: str = "",
+    ) -> ProfileBuilder:
+        """Add a declarative artifact type definition to the profile."""
+        self._artifact_types.append(ProfileArtifactType(
+            name=name,
+            tier=tier,
+            description=description,
+            kernel_element_pattern=kernel_element_pattern,
         ))
         return self
 
@@ -495,6 +514,7 @@ class ProfileBuilder:
             validity_rules=tuple(rules),
             metadata=md,
             state_transitions=tuple(self._state_transitions),
+            artifact_types=tuple(self._artifact_types),
         )
 
     # ── Internal validation ───────────────────────────────────────

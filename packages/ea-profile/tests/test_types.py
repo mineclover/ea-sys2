@@ -6,6 +6,7 @@ from ea_profile.types import (
     ConditionRegistry,
     KernelProfile,
     PatternType,
+    ProfileArtifactType,
     ProfileBuildError,
     ProfileElement,
     ProfileRelation,
@@ -47,6 +48,18 @@ class TestFrozenTypes:
         assert t.to_state == "approved"
         assert t.guard_condition == "has_review"
         assert t.description == "Review complete"
+
+    def test_profile_artifact_type_creation(self):
+        a = ProfileArtifactType(
+            name="api_endpoint",
+            tier="function",
+            description="HTTP endpoint artifact",
+            kernel_element_pattern="*Endpoint*",
+        )
+        assert a.name == "api_endpoint"
+        assert a.tier == "function"
+        assert a.description == "HTTP endpoint artifact"
+        assert a.kernel_element_pattern == "*Endpoint*"
 
     def test_profile_rule_creation(self):
         rule = ProfileRule(
@@ -148,6 +161,9 @@ class TestKernelProfile:
 
     def test_state_transitions_default_empty(self, profile):
         assert profile.state_transitions == ()
+
+    def test_artifact_types_default_empty(self, profile):
+        assert profile.artifact_types == ()
 
 
 # ---------------------------------------------------------------------------

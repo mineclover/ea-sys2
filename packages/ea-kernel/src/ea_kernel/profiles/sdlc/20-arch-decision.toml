@@ -1,0 +1,118 @@
+# SDLC Layer: Architecture Decision
+# Role: SDLC domain architecture decision metamodel
+
+[profile]
+name = "SDLC-ArchDecision"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlc"
+standard = "EA System SDLC Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Behavior = "step"
+PassiveStructure = "item"
+Governance = "feature"
+Goal = "state"
+Context = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Namespaces or containers own decision assets."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Decision artifacts can depend on prior context."
+
+[[relations]]
+name = "supersedes"
+kernel_relation = "association"
+description = "A newer ADR supersedes an older architecture decision."
+
+# --- SDLC architecture decision state transitions ---
+
+[[state_transitions]]
+from_state = "PROPOSED"
+to_state = "REVIEW"
+description = "An ADR proposal enters architecture review."
+
+[[state_transitions]]
+from_state = "REVIEW"
+to_state = "ACCEPTED"
+description = "Reviewed architecture decision is accepted."
+
+[[state_transitions]]
+from_state = "ACCEPTED"
+to_state = "SUPERSEDED"
+description = "Accepted ADR is replaced by a newer decision."
+
+[[state_transitions]]
+from_state = "SUPERSEDED"
+to_state = "DEPRECATED"
+description = "Superseded ADR is deprecated and archived."
+
+# --- SDLC architecture decision elements ---
+
+[[elements]]
+name = "ArchDecisionLayer"
+layer = "ArchDecision"
+category = "Composite"
+description = "SDLC architecture decision boundary."
+
+[[elements]]
+name = "ArchDecisionRecord"
+layer = "ArchDecision"
+category = "PassiveStructure"
+description = "Architecture Decision Record (ADR) capturing context and rationale."
+
+[[elements]]
+name = "TechRadarEntry"
+layer = "ArchDecision"
+category = "PassiveStructure"
+description = "Technology radar entry used to track adopt/trial/assess/hold outcomes."
+
+[[elements]]
+name = "DesignReviewItem"
+layer = "ArchDecision"
+category = "PassiveStructure"
+description = "Actionable design-review checklist item with owner and due date."
+
+[[elements]]
+name = "ArchitectureReviewBoard"
+layer = "ArchDecision"
+category = "ActiveStructure"
+description = "Architecture review board coordinating decision review and acceptance."
+
+[[elements]]
+name = "ArchDecisionStatusProposed"
+layer = "ArchDecision"
+category = "Goal"
+description = "State token for proposed architecture decisions."
+
+[[elements]]
+name = "ArchDecisionStatusReview"
+layer = "ArchDecision"
+category = "Goal"
+description = "State token for architecture decisions currently under review."
+
+[[elements]]
+name = "ArchDecisionStatusAccepted"
+layer = "ArchDecision"
+category = "Goal"
+description = "State token for accepted architecture decisions."
+
+[[elements]]
+name = "ArchDecisionStatusSuperseded"
+layer = "ArchDecision"
+category = "Goal"
+description = "State token for superseded architecture decisions."
+
+[[elements]]
+name = "ArchDecisionStatusDeprecated"
+layer = "ArchDecision"
+category = "Goal"
+description = "State token for deprecated architecture decisions."

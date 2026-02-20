@@ -16,6 +16,7 @@ after each iteration and it's included in prompts for context.
 - 거버넌스 통합 validator에서는 상태전이 토큰(`DRAFT`)과 상태 요소명(`NeedStatusDraft`)이 다를 수 있으므로, `validate_state_transitions`에서 상태형 요소명의 `Status/State` suffix alias를 canonical token으로 추출하면 레이어별 네이밍 차이를 흡수하면서 동일 검증 규칙을 재사용할 수 있다.
 - 도메인 대칭 레이어 스택은 `기존 flow skeleton(정의/런타임/피드백) 유지 + 레이어 이름/책임/관점만 도메인 치환 + 전용 layer_stack.py 재사용`으로 구성하면, 새 도메인 온보딩 시 validator/테스트 템플릿을 그대로 재활용할 수 있다.
 - 동일 커널 M2에서 복수 도메인 레이어 스택 공존을 증명할 때는 `도메인별 독립 layer_stack 패키지 + 공통 validate_profile/validate_layer_stack` 조합을 병렬 검증하면, 레이어 수/의존 그래프가 달라도 M2 적합성을 일관되게 확인할 수 있다.
+- 도메인별 상태머신 변형(예: REVIEW 단계 추가) 검증은 `전이 edge-set 비교 + 각 프로파일 validate_profile 동시 통과 확인`으로 구성하면, 규칙 차별성과 동일 M2 적합성을 한 번에 증명할 수 있다.
 
 ---
 
@@ -279,4 +280,28 @@ after each iteration and it's included in prompts for context.
     - 동일 M2에서 다중 도메인 레이어 스택(대칭/고유)을 공존시키려면 각 도메인을 독립 `layer_stack` 패키지로 분리하고, 공통 validator를 재사용해 적합성만 교차 검증하는 방식이 확장성과 회귀 안정성 모두에 유리하다.
   - Gotchas encountered
     - `거버넌스 대비 다른 의존 방향`은 상위→하위 역방향이 아니라, `order 제약(낮은 순서 의존)`을 지키면서도 그래프 형태(팬인/팬아웃, 관리 레이어 유무)를 명확히 다르게 설계해야 validator를 통과하면서 차별성을 확보할 수 있다.
+---
+
+## 2026-02-20 - US-013
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/20-arch-decision.toml`을 추가해 SDLC 아키텍처 의사결정 프로파일을 정의했다.
+  - SDLC 의사결정 요소 `ArchDecisionRecord`(ADR), `TechRadarEntry`, `DesignReviewItem`을 포함하고, 상태형 요소(`ArchDecisionStatus*`)를 함께 선언해 전이 토큰을 M2 validator에서 해석 가능하게 구성했다.
+  - 상태전이를 `PROPOSED -> REVIEW -> ACCEPTED -> SUPERSEDED -> DEPRECATED` 체인으로 선언했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`에 `arch-decision` 프로파일 매핑을 추가했다.
+  - `packages/ea-kernel/tests/test_sdlc_arch_decision_profile.py`를 추가해
+    - 필수 SDLC decision 요소/전이 선언 확인
+    - 거버넌스 decision 대비 REVIEW 단계 추가 차이 검증
+    - 두 프로파일이 동일 `validate_profile`(M2)에서 모두 통과함을 검증
+    을 자동화했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-kernel/tests/test_sdlc_arch_decision_profile.py -q`, `uv run pytest packages/ -x -q` (3125 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/20-arch-decision.toml`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`
+  - `packages/ea-kernel/tests/test_sdlc_arch_decision_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - 상태전이 차별 검증은 프로파일 간 전이 edge-set을 직접 비교하고, 동시에 동일 `validate_profile` 통과를 확인하면 도메인별 특화와 공통 M2 적합성을 함께 보장할 수 있다.
+  - Gotchas encountered
+    - 전이 토큰을 `PROPOSED/REVIEW/...`처럼 별도 표기로 쓸 때는 이를 해석할 상태형 요소(`*StatusProposed` 등)를 프로파일 요소에 함께 선언해야 상태전이 validator에서 unknown 상태 오류를 피할 수 있다.
 ---

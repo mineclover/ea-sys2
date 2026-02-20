@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T21:22:06.832Z",
-  "currentIteration": 21,
+  "updatedAt": "2026-02-20T21:25:20.356Z",
+  "currentIteration": 22,
   "maxIterations": 0,
-  "tasksCompleted": 21,
+  "tasksCompleted": 22,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -224,6 +224,16 @@
       "durationMs": 520790,
       "startedAt": "2026-02-20T21:06:46.363Z",
       "endedAt": "2026-02-20T21:15:27.153Z"
+    },
+    {
+      "iteration": 22,
+      "status": "completed",
+      "taskId": "US-022",
+      "taskTitle": "M2 표현력 한계 문서화",
+      "taskCompleted": true,
+      "durationMs": 398588,
+      "startedAt": "2026-02-20T21:15:28.242Z",
+      "endedAt": "2026-02-20T21:22:06.830Z"
     }
   ],
   "skippedTaskIds": [],

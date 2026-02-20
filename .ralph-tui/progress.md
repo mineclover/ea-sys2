@@ -26,6 +26,7 @@ after each iteration and it's included in prompts for context.
 - S4 Analyzer를 도메인 확장할 때는 `profile elements(카테고리/alias) + state_transitions(depth/terminal/success)`를 먼저 컴파일해 차원을 만들고, Store snapshot 집계를 그 차원에 투영하면 지표(throughput/success/effectiveness) 하드코딩을 제거하면서도 리포트 포맷을 유지할 수 있다.
 - 동일 커널에서 복수 도메인 프로파일 공존을 검증할 때는 `raw profile_id overlap 확인 -> domain namespace 키(governance:/sdlc:)로 동시 로드 -> domain별 compose(validate_profile)` 순서를 쓰면 `projection` 같은 동명 프로파일이 있어도 검증 간섭 없이 격리를 안정적으로 증명할 수 있다.
 - M2 표현력 한계 문서화는 `US별 하드코딩 지점(file/function) -> 한계 분류(a~d) -> 해소 방향(M2 확장/M1 허용/도구 개선)` 3열 매트릭스로 기록하면, 후속 확장 백로그 우선순위를 일관되게 정할 수 있다.
+- 레이어 자유도 비교는 `대안별 layer_stack TOML 수집 -> dependency/flow rule 차이 비교 -> 공통 validator 동시 통과 확인` 3단으로 구성하면, 구조 차별성과 동일 M2 적합성을 한 번에 증명할 수 있다.
 
 ---
 
@@ -517,4 +518,20 @@ after each iteration and it's included in prompts for context.
     - 표현력 한계는 구현 단위(US)로 분해해 `불가 항목 -> 코드 워크어라운드 -> 해소 방향`을 함께 기록해야, 단순 회고가 아니라 실행 가능한 M2 확장 백로그로 전환된다.
   - Gotchas encountered
     - 한계의 원인이 모델 자체인지((a)/(b)) 도구/운영 경계인지((c)/(d))가 혼재하므로, 분류를 섞어 쓰면 우선순위가 흐려진다. 항목 단위로 1차 원인을 고정해 기록해야 후속 의사결정이 쉬워진다.
+---
+
+## 2026-02-20 - US-023
+- What was implemented
+  - `US-011`(SDLC 대칭 매핑)과 `US-012`(SDLC 고유 계층)을 근거 파일 기준으로 비교 분석한 문서 `docs/layer-freedom-analysis.md`를 작성했다.
+  - 대칭/고유 각각에 대해 `표현 가능한 항목`과 `표현 불가능(또는 약한 표현) 항목`을 분리해 장점/한계를 정리했다.
+  - 동일 도메인의 2개 레이어 구조를 `레이어 수`, `의존 그래프 형태`, `flow 규칙`, `검증 결과` 축으로 표 비교해 profile rule 차이를 명시했다.
+  - 결론 섹션에서 M2 제약을 `구조 건전성 제약(강함)`과 `아키텍처 의미론 제약(약함)`으로 분해해 실질적 제약 범위를 명시했다.
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `docs/layer-freedom-analysis.md`
+- **Learnings:**
+  - Patterns discovered
+    - 레이어 자유도 분석은 `대안별 선언(rule) 차이`와 `공통 validator 통과 여부`를 분리해 동시에 기록해야, "차별성"과 "동일 M2 적합성"을 함께 증명할 수 있다.
+  - Gotchas encountered
+    - `definition/runtime/feedback` flow는 문자열 필드라 정적 검증기가 의미를 보장하지 못하므로, 분석 문서에서 구조 검증 결과와 의미 해석(설계 의도)을 구분해 서술해야 혼동이 줄어든다.
 ---

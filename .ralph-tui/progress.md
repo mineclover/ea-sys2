@@ -15,6 +15,7 @@ after each iteration and it's included in prompts for context.
 - 독립 레이어 스택 선언은 `전용 TOML(00-layer-stack) -> cached loader -> validate_layer_stack(순환/참조) + order 방향 검증` 조합으로 분리하면 기존 대형 프로파일과 독립적으로 M1 구조 계약을 안정 검증할 수 있다.
 - 거버넌스 통합 validator에서는 상태전이 토큰(`DRAFT`)과 상태 요소명(`NeedStatusDraft`)이 다를 수 있으므로, `validate_state_transitions`에서 상태형 요소명의 `Status/State` suffix alias를 canonical token으로 추출하면 레이어별 네이밍 차이를 흡수하면서 동일 검증 규칙을 재사용할 수 있다.
 - 도메인 대칭 레이어 스택은 `기존 flow skeleton(정의/런타임/피드백) 유지 + 레이어 이름/책임/관점만 도메인 치환 + 전용 layer_stack.py 재사용`으로 구성하면, 새 도메인 온보딩 시 validator/테스트 템플릿을 그대로 재활용할 수 있다.
+- 동일 커널 M2에서 복수 도메인 레이어 스택 공존을 증명할 때는 `도메인별 독립 layer_stack 패키지 + 공통 validate_profile/validate_layer_stack` 조합을 병렬 검증하면, 레이어 수/의존 그래프가 달라도 M2 적합성을 일관되게 확인할 수 있다.
 
 ---
 
@@ -258,4 +259,24 @@ after each iteration and it's included in prompts for context.
     - 레이어 스택 대칭 매핑은 기존 도메인의 flow/의존성 골격을 유지한 채 레이어명과 책임만 치환하면 validator/테스트 재사용성이 높아진다.
   - Gotchas encountered
     - 대칭 매핑에서도 `DevGovernance` 같은 관리 레이어를 포함하지 않으면 runtime/feedback flow 패턴이 기존 거버넌스 도메인과 어긋나므로, 5 core + 1 governance 구성을 유지해야 패턴 일치성이 보장된다.
+---
+
+## 2026-02-20 - US-012
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc_native/00-layer-stack.toml`을 추가해 SDLC 고유 5계층(`Planning`, `Implementation`, `Verification`, `Deployment`, `Monitoring`)의 `order/depends_on/responsibility/model_perspective`를 선언했다.
+  - 동일 TOML에 대칭 매핑과 다른 `definition_flow/runtime_flow/feedback_flow`를 정의해 SDLC native 도메인 구조가 별도 의존 그래프를 갖도록 구성했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc_native/__init__.py`, `packages/ea-kernel/src/ea_kernel/profiles/sdlc_native/layer_stack.py`를 추가해 native 레이어 스택 전용 로드/검증 진입점(`load_layer_stack_profile`, `validate_loaded_layer_stack`)을 구성했다.
+  - `packages/ea-kernel/tests/test_sdlc_native_layer_stack_profile.py`를 추가해 native 레이어 로드/의존 방향 검증, 거버넌스 도메인 대비 레이어 수/의존 그래프 차이, 그리고 대칭 SDLC + native SDLC가 동일 커널 M2 검증기에서 모두 유효함을 검증했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-kernel/tests/test_sdlc_native_layer_stack_profile.py -q`, `uv run pytest packages/ -x -q`.
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc_native/00-layer-stack.toml`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc_native/__init__.py`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc_native/layer_stack.py`
+  - `packages/ea-kernel/tests/test_sdlc_native_layer_stack_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - 동일 M2에서 다중 도메인 레이어 스택(대칭/고유)을 공존시키려면 각 도메인을 독립 `layer_stack` 패키지로 분리하고, 공통 validator를 재사용해 적합성만 교차 검증하는 방식이 확장성과 회귀 안정성 모두에 유리하다.
+  - Gotchas encountered
+    - `거버넌스 대비 다른 의존 방향`은 상위→하위 역방향이 아니라, `order 제약(낮은 순서 의존)`을 지키면서도 그래프 형태(팬인/팬아웃, 관리 레이어 유무)를 명확히 다르게 설계해야 validator를 통과하면서 차별성을 확보할 수 있다.
 ---

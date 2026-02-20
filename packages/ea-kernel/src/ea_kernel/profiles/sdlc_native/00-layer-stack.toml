@@ -1,0 +1,49 @@
+# SDLC Layer Stack (native domain mapping)
+
+[profile]
+name = "SDLC-Native-LayerStack"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlcn"
+standard = "EA System SDLC Native Layer Stack"
+organization = "ea-sys"
+
+[layer_stack]
+definition_flow = "Planning -> Implementation -> Verification -> Deployment"
+runtime_flow = "Implementation -> Verification -> Deployment -> Monitoring"
+feedback_flow = "Monitoring -> Planning -> Implementation -> Verification"
+
+[[layer_stack.layers]]
+name = "Planning"
+order = 0
+depends_on = []
+responsibility = "Product goals, scope boundaries, and delivery plans."
+model_perspective = "planning-intent-model"
+
+[[layer_stack.layers]]
+name = "Implementation"
+order = 20
+depends_on = ["Planning"]
+responsibility = "Feature implementation, code structure, and integration work."
+model_perspective = "implementation-architecture-model"
+
+[[layer_stack.layers]]
+name = "Verification"
+order = 40
+depends_on = ["Planning", "Implementation"]
+responsibility = "Quality assurance strategy, test evidence, and release readiness."
+model_perspective = "verification-evidence-model"
+
+[[layer_stack.layers]]
+name = "Deployment"
+order = 60
+depends_on = ["Implementation", "Verification"]
+responsibility = "Release rollout orchestration and environment promotion control."
+model_perspective = "deployment-orchestration-model"
+
+[[layer_stack.layers]]
+name = "Monitoring"
+order = 80
+depends_on = ["Deployment", "Verification"]
+responsibility = "Operational telemetry, incident signals, and improvement triggers."
+model_perspective = "operations-observability-model"

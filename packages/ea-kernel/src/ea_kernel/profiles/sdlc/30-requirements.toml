@@ -1,0 +1,152 @@
+# SDLC Layer: Requirements
+# Role: SDLC domain requirements metamodel
+
+[profile]
+name = "SDLC-Requirements"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "sdlc"
+standard = "EA System SDLC Layer Contracts"
+organization = "ea-sys"
+
+[categories]
+Composite = "package"
+ActiveStructure = "structure"
+Behavior = "step"
+PassiveStructure = "item"
+Governance = "feature"
+Goal = "state"
+Context = "state"
+
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Requirement containers own requirement artifacts."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Requirement artifacts may depend on other artifacts."
+
+[[relations]]
+name = "refines"
+kernel_relation = "association"
+description = "Requirements are refined into implementation-ready units."
+
+# --- SDLC requirements state transitions ---
+
+[[state_transitions]]
+from_state = "BACKLOG"
+to_state = "GROOMED"
+description = "Backlog requirement is groomed for sprint planning."
+
+[[state_transitions]]
+from_state = "GROOMED"
+to_state = "SPRINT"
+description = "Groomed requirement is committed to a sprint."
+
+[[state_transitions]]
+from_state = "SPRINT"
+to_state = "IN_PROGRESS"
+description = "Sprint item starts active implementation."
+
+[[state_transitions]]
+from_state = "IN_PROGRESS"
+to_state = "REVIEW"
+description = "Implemented requirement enters review."
+
+[[state_transitions]]
+from_state = "REVIEW"
+to_state = "DONE"
+description = "Reviewed requirement is completed."
+
+[[state_transitions]]
+from_state = "DONE"
+to_state = "CLOSED"
+description = "Completed requirement is closed."
+
+# --- SDLC requirements elements ---
+
+[[elements]]
+name = "RequirementsLayer"
+layer = "Requirements"
+category = "Composite"
+description = "SDLC requirements boundary."
+
+[[elements]]
+name = "RequirementManager"
+layer = "Requirements"
+category = "ActiveStructure"
+description = "Role responsible for requirement triage and refinement."
+
+[[elements]]
+name = "Epic"
+layer = "Requirements"
+category = "PassiveStructure"
+description = "High-level SDLC requirement grouping related user stories."
+
+[[elements]]
+name = "UserStory"
+layer = "Requirements"
+category = "PassiveStructure"
+description = "User-centric requirement statement in agile format."
+
+[[elements]]
+name = "AcceptanceCriteria"
+layer = "Requirements"
+category = "PassiveStructure"
+description = "Verifiable acceptance conditions for a user story."
+
+[[elements]]
+name = "TechnicalDebt"
+layer = "Requirements"
+category = "PassiveStructure"
+description = "Deferred engineering work tracked as a requirement."
+
+[[elements]]
+name = "BugReport"
+layer = "Requirements"
+category = "PassiveStructure"
+description = "Defect report that feeds requirement prioritization."
+
+[[elements]]
+name = "BACKLOG"
+layer = "Requirements"
+category = "Goal"
+description = "State token for backlog requirement items."
+
+[[elements]]
+name = "GROOMED"
+layer = "Requirements"
+category = "Goal"
+description = "State token for groomed requirement items."
+
+[[elements]]
+name = "SPRINT"
+layer = "Requirements"
+category = "Goal"
+description = "State token for requirements committed to sprint scope."
+
+[[elements]]
+name = "IN_PROGRESS"
+layer = "Requirements"
+category = "Goal"
+description = "State token for requirements under active implementation."
+
+[[elements]]
+name = "REVIEW"
+layer = "Requirements"
+category = "Goal"
+description = "State token for requirements in review."
+
+[[elements]]
+name = "DONE"
+layer = "Requirements"
+category = "Goal"
+description = "State token for completed requirements."
+
+[[elements]]
+name = "CLOSED"
+layer = "Requirements"
+category = "Goal"
+description = "State token for closed requirements."

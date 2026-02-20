@@ -17,6 +17,7 @@ after each iteration and it's included in prompts for context.
 - 도메인 대칭 레이어 스택은 `기존 flow skeleton(정의/런타임/피드백) 유지 + 레이어 이름/책임/관점만 도메인 치환 + 전용 layer_stack.py 재사용`으로 구성하면, 새 도메인 온보딩 시 validator/테스트 템플릿을 그대로 재활용할 수 있다.
 - 동일 커널 M2에서 복수 도메인 레이어 스택 공존을 증명할 때는 `도메인별 독립 layer_stack 패키지 + 공통 validate_profile/validate_layer_stack` 조합을 병렬 검증하면, 레이어 수/의존 그래프가 달라도 M2 적합성을 일관되게 확인할 수 있다.
 - 도메인별 상태머신 변형(예: REVIEW 단계 추가) 검증은 `전이 edge-set 비교 + 각 프로파일 validate_profile 동시 통과 확인`으로 구성하면, 규칙 차별성과 동일 M2 적합성을 한 번에 증명할 수 있다.
+- 상태토큰에 underscore가 포함된 전이(`IN_PROGRESS`)를 쓸 때는 상태 alias 추출(`Status/State` suffix)만으로는 누락될 수 있으므로, 해당 토큰을 프로파일 elements에 동일 문자열로 선언하면 validator를 안정적으로 통과시킬 수 있다.
 
 ---
 
@@ -304,4 +305,28 @@ after each iteration and it's included in prompts for context.
     - 상태전이 차별 검증은 프로파일 간 전이 edge-set을 직접 비교하고, 동시에 동일 `validate_profile` 통과를 확인하면 도메인별 특화와 공통 M2 적합성을 함께 보장할 수 있다.
   - Gotchas encountered
     - 전이 토큰을 `PROPOSED/REVIEW/...`처럼 별도 표기로 쓸 때는 이를 해석할 상태형 요소(`*StatusProposed` 등)를 프로파일 요소에 함께 선언해야 상태전이 validator에서 unknown 상태 오류를 피할 수 있다.
+---
+
+## 2026-02-20 - US-014
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/30-requirements.toml`을 추가해 SDLC Requirements 프로파일을 정의했다.
+  - 요구 요소 `UserStory`, `AcceptanceCriteria`, `Epic`, `TechnicalDebt`, `BugReport`를 포함했다.
+  - 상태전이를 `BACKLOG -> GROOMED -> SPRINT -> IN_PROGRESS -> REVIEW -> DONE -> CLOSED` 체인으로 선언했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`에 `requirements` 프로파일 매핑을 추가했다.
+  - `packages/ea-kernel/tests/test_sdlc_requirements_profile.py`를 추가해
+    - SDLC requirements 필수 요소/전이 검증
+    - 거버넌스 Needs(5상태) 대비 SDLC requirements(7상태) 차이 검증
+    - 두 프로파일이 동일 `validate_profile`(M2)에서 모두 통과함을 검증
+    을 자동화했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-kernel/tests/test_sdlc_requirements_profile.py -q`, `uv run pytest packages/ -x -q` (3128 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/30-requirements.toml`
+  - `packages/ea-kernel/src/ea_kernel/profiles/sdlc/__init__.py`
+  - `packages/ea-kernel/tests/test_sdlc_requirements_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - SDLC/거버넌스처럼 도메인이 달라도 상태머신 차별성은 `상태 수 + edge-set 비교`, M2 적합성은 `validate_profile 동시 통과`로 분리 검증하면 회귀 포인트가 명확해진다.
+  - Gotchas encountered
+    - `IN_PROGRESS` 같은 underscore 토큰은 상태명 alias 추출이 단어 마지막 토큰만 잡는 케이스가 있어, transition token과 동일한 상태 element를 명시해 validator unknown-state를 방지해야 했다.
 ---

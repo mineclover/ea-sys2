@@ -7,6 +7,7 @@ from pathlib import Path
 PROFILE_FILE_MAP: dict[str, str] = {
     "layer-stack": "00-layer-stack.toml",
     "arch-decision": "20-arch-decision.toml",
+    "requirements": "30-requirements.toml",
 }
 
 PROFILE_DIR = Path(__file__).resolve().parent

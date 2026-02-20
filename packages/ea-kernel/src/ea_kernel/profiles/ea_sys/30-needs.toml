@@ -75,6 +75,38 @@ name = "available_in"
 kernel_relation = "association"
 description = "Context provides access to an experience or element."
 
+# --- Needs state transitions (M2 profile metadata) ---
+
+[[state_transitions]]
+from_state = "DRAFT"
+to_state = "EXPRESSED"
+description = "Need draft is formally expressed."
+
+[[state_transitions]]
+from_state = "DRAFT"
+to_state = "WITHDRAWN"
+description = "Need draft can be withdrawn before expression."
+
+[[state_transitions]]
+from_state = "EXPRESSED"
+to_state = "ACKNOWLEDGED"
+description = "Expressed need is acknowledged."
+
+[[state_transitions]]
+from_state = "EXPRESSED"
+to_state = "WITHDRAWN"
+description = "Expressed need can be withdrawn."
+
+[[state_transitions]]
+from_state = "ACKNOWLEDGED"
+to_state = "ADDRESSED"
+description = "Acknowledged need is addressed."
+
+[[state_transitions]]
+from_state = "ACKNOWLEDGED"
+to_state = "WITHDRAWN"
+description = "Acknowledged need can be withdrawn."
+
 # ══════════════════════════════════════════════════════════════
 # Needs Layer Internal Elements
 # ══════════════════════════════════════════════════════════════

@@ -10,16 +10,17 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+from ea_needs.lifecycle import allowed_profile_targets, ensure_profile_transition
 from ea_needs.types import (
     Desire,
     Justification,
     JustificationType,
     NeedCauseType,
-    NeedPriority,
-    NeedPurpose,
     NeedKernelChangePhase,
+    NeedPriority,
     NeedProcessStage,
     NeedProcessUnit,
+    NeedPurpose,
     NeedRelationType,
     NeedResolutionComplexity,
     NeedStatement,
@@ -29,18 +30,6 @@ from ea_needs.types import (
     _generate_id,
     _now,
 )
-
-# ---------------------------------------------------------------------------
-# Valid state transitions
-# ---------------------------------------------------------------------------
-
-_VALID_TRANSITIONS: dict[NeedStatus, list[NeedStatus]] = {
-    NeedStatus.DRAFT: [NeedStatus.EXPRESSED, NeedStatus.WITHDRAWN],
-    NeedStatus.EXPRESSED: [NeedStatus.ACKNOWLEDGED, NeedStatus.WITHDRAWN],
-    NeedStatus.ACKNOWLEDGED: [NeedStatus.ADDRESSED, NeedStatus.WITHDRAWN],
-    NeedStatus.ADDRESSED: [],
-    NeedStatus.WITHDRAWN: [],
-}
 
 _UNSET = object()
 
@@ -195,12 +184,14 @@ class Need:
 
     def transition_to(self, new_status: NeedStatus) -> None:
         """Transition to a new status, enforcing valid transitions."""
-        allowed = _VALID_TRANSITIONS.get(self.status, [])
-        if new_status not in allowed:
+        try:
+            ensure_profile_transition(self.status, new_status)
+        except ValueError as err:
+            allowed = [state.lower() for state in allowed_profile_targets(self.status)]
             raise ValueError(
                 f"Cannot transition from {self.status.value} to {new_status.value}. "
-                f"Allowed: {[s.value for s in allowed]}"
-            )
+                f"Allowed: {allowed}"
+            ) from err
         self.status = new_status
         self.updated_at = _now()
 

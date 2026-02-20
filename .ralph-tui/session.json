@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T19:04:55.198Z",
-  "currentIteration": 5,
+  "updatedAt": "2026-02-20T19:10:06.065Z",
+  "currentIteration": 6,
   "maxIterations": 0,
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -64,6 +64,16 @@
       "durationMs": 295599,
       "startedAt": "2026-02-20T18:50:51.141Z",
       "endedAt": "2026-02-20T18:55:46.740Z"
+    },
+    {
+      "iteration": 6,
+      "status": "completed",
+      "taskId": "US-006",
+      "taskTitle": "Decision 상태전이 프로파일화",
+      "taskCompleted": true,
+      "durationMs": 547371,
+      "startedAt": "2026-02-20T18:55:47.824Z",
+      "endedAt": "2026-02-20T19:04:55.195Z"
     }
   ],
   "skippedTaskIds": [],

@@ -10,6 +10,7 @@ after each iteration and it's included in prompts for context.
 - TOML의 문자열 목록 필드(`input_artifacts`, `output_artifacts`)는 loader에서 `str | list[str]`를 모두 허용해 tuple로 정규화하면 축약 표기와 배열 표기를 동시에 지원하면서 builder/serializer 타입 일관성을 유지할 수 있다.
 - 프로파일 정적 검증은 builder 내부 강제 검증과 분리된 `validate_* -> validate_profile` 순수 함수 계층으로 두면, 로드 시점 강제/선택 검증 정책을 유연하게 바꾸면서 동일 검증 규칙을 재사용할 수 있다.
 - 상태머신 M1 로직을 M2 프로파일로 승격할 때는 `lifecycle`에 프로파일 전이 검증 단일 진입점(`ensure_profile_transition`)을 두고 도메인 mutator(approve/finalize/revise)에서 공통 호출하면 하드코딩 제거와 에러 메시지 일관성을 동시에 확보할 수 있다.
+- 상태 Enum 값(`draft`)과 프로파일 전이 토큰(`DRAFT`) 표현이 다를 수 있으므로, lifecycle 검증 진입점에서 공통 canonicalization(upper-case 정규화)을 적용하면 레이어 간 전이 검증 로직을 재사용하기 쉽다.
 
 ---
 
@@ -156,4 +157,24 @@ after each iteration and it's included in prompts for context.
     - 상태전이 검증을 lifecycle 모듈의 단일 함수로 중앙화하면, aggregate 내부 여러 메서드가 동일 규칙/동일 에러 포맷을 공유해 회귀 테스트 작성이 쉬워진다.
   - Gotchas encountered
     - 전이 상태 토큰은 Enum 값(`accepted`)과 프로파일 토큰(`ACCEPTED`)의 대소문자/표현이 다를 수 있어, 비교 전에 공통 정규화(upper-case canonicalization)가 필요했다.
+---
+
+## 2026-02-20 - US-007
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/30-needs.toml`에 `[[state_transitions]]` 섹션을 추가해 Needs 상태전이(`DRAFT→EXPRESSED→ACKNOWLEDGED→ADDRESSED`, 그리고 각 단계의 `→WITHDRAWN`)를 선언형으로 정의했다.
+  - `ea_needs/lifecycle.py`를 추가해 needs 프로파일(`layer_path("needs")`)에서 상태전이를 로드/캐시하고 검증하는 `ensure_profile_transition`/`allowed_profile_targets` 단일 진입점을 구현했다.
+  - `ea_needs/catalog.py`의 하드코딩 `_VALID_TRANSITIONS`를 제거하고 `Need.transition_to()`가 프로파일 기반 검증을 사용하도록 교체해 기존 에러 메시지 포맷(`Cannot transition ...`)을 유지했다.
+  - `ea-needs/tests/test_lifecycle.py`를 추가해 프로파일 기반 허용/금지 전이 동작을 검증했다.
+  - 품질 검증: `uv run pytest packages/ea-needs/tests/test_catalog.py packages/ea-needs/tests/test_lifecycle.py -q`, `uv run pytest packages/ -x -q` 통과(3104 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/30-needs.toml`
+  - `packages/ea-needs/src/ea_needs/lifecycle.py`
+  - `packages/ea-needs/src/ea_needs/catalog.py`
+  - `packages/ea-needs/tests/test_lifecycle.py`
+- **Learnings:**
+  - Patterns discovered
+    - Needs 상태머신도 Decision과 동일하게 `profile -> lifecycle(single entry) -> domain mutator` 구조를 쓰면 M1 하드코딩 제거와 규칙 중앙화가 동시에 가능하다.
+  - Gotchas encountered
+    - `catalog.py`는 기존에 strict mypy 이슈가 누적된 파일이라, 신규 변경 영향 검증은 새 모듈/테스트 단위 mypy + 전체 pytest 통과로 분리해 확인하는 것이 현실적이었다.
 ---

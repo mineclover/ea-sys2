@@ -92,14 +92,15 @@
         "uv run pytest packages/ -x -q passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 1: M2 프레임워크 확장 — 모든 스키마 정의 후 검증기 구현",
       "dependsOn": [
         "US-001",
         "US-002",
         "US-003",
         "US-004"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-006",
@@ -449,6 +450,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-20T18:50:50.048Z"
+    "updatedAt": "2026-02-20T18:55:46.740Z"
   }
 }

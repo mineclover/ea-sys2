@@ -8,6 +8,7 @@ after each iteration and it's included in prompts for context.
 - KernelProfile에 새 tuple 필드를 추가할 때는 `types -> builder -> loader(TOML) -> serializer(dict/json) -> composer` 경로를 함께 갱신해야 값 손실 없이 round-trip/compose가 유지된다.
 - 중첩 TOML 배열 테이블(`[[layer_stack.layers]]`)은 loader에서 `doc["layer_stack"]["layers"]`로 파싱되므로, builder에서 stack 메타(`set_*`)와 항목 누적(`add_*`)을 분리하면 확장 스키마를 안정적으로 수용할 수 있다.
 - TOML의 문자열 목록 필드(`input_artifacts`, `output_artifacts`)는 loader에서 `str | list[str]`를 모두 허용해 tuple로 정규화하면 축약 표기와 배열 표기를 동시에 지원하면서 builder/serializer 타입 일관성을 유지할 수 있다.
+- 프로파일 정적 검증은 builder 내부 강제 검증과 분리된 `validate_* -> validate_profile` 순수 함수 계층으로 두면, 로드 시점 강제/선택 검증 정책을 유연하게 바꾸면서 동일 검증 규칙을 재사용할 수 있다.
 
 ---
 
@@ -113,4 +114,24 @@ after each iteration and it's included in prompts for context.
     - 프로세스 유닛처럼 입력/출력 아티팩트 배열을 갖는 선언형 스키마는 loader에서 `str/list` 정규화를 먼저 수행하면 builder/dataclass 타입을 단순 tuple로 유지할 수 있다.
   - Gotchas encountered
     - 패키지 전체 `ruff`는 기존 테스트 코드의 선행 lint 이슈로 실패할 수 있어, 스토리 변경 파일 단위 검증과 전체 `pytest` 통과를 분리해 확인하는 것이 안정적이었다.
+---
+
+## 2026-02-20 - US-005
+- What was implemented
+  - `ea_profile/profile_validator.py` 모듈을 추가하고 `validate_state_transitions`, `validate_artifact_types`, `validate_layer_stack`, `validate_process_units`, `validate_profile`를 구현했다.
+  - `ProfileValidationResult` dataclass를 추가해 4개 검증 결과를 통합 반환하도록 구성했다.
+  - 상태전이 검증에서 `from_state`/`to_state`가 프로파일 `elements`에 존재하는지 검사하고, wildcard `*`는 허용했다.
+  - artifact type 검증에서 `kernel_element_pattern`이 프로파일 elements(이름/커널타입, @Category/#Layer/글롭 패턴 포함) 중 최소 1개와 매칭되는지 검사했다.
+  - layer stack 검증에서 `order` 중복, unknown dependency, depends_on 순환(DFS)을 검출하도록 구현했다.
+  - process unit 검증에서 `input_artifacts`/`output_artifacts`가 `artifact_types.name`에 존재하는지 검사했다.
+  - 테스트를 추가해 유효 프로파일 통과, 레이어 순환 의존 실패, 없는 상태 참조 실패 및 artifact/process unit 참조 실패 케이스를 검증했다.
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-profile/src/ea_profile/profile_validator.py`
+  - `packages/ea-profile/tests/test_profile_validator.py`
+- **Learnings:**
+  - Patterns discovered
+    - 정적 validator를 pure function으로 분리하고 통합 리포트 타입(`ProfileValidationResult`)을 두면 호출자가 실패 정책(즉시 예외/누적 리포트)을 선택할 수 있어 이후 도메인 확장에 유리하다.
+  - Gotchas encountered
+    - Mypy strict 환경에서는 새 테스트 함수에도 `-> None` 반환 타입 주석이 필요해, 테스트 파일도 구현 코드와 동일한 타입 엄격도를 맞춰야 한다.
 ---

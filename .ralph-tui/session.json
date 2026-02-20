@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T18:50:50.053Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-02-20T18:55:46.741Z",
+  "currentIteration": 4,
   "maxIterations": 0,
-  "tasksCompleted": 3,
+  "tasksCompleted": 4,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -44,6 +44,16 @@
       "durationMs": 357983,
       "startedAt": "2026-02-20T18:40:12.590Z",
       "endedAt": "2026-02-20T18:46:10.573Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "US-004",
+      "taskTitle": "프로세스 유닛 프로파일 스키마",
+      "taskCompleted": true,
+      "durationMs": 278386,
+      "startedAt": "2026-02-20T18:46:11.661Z",
+      "endedAt": "2026-02-20T18:50:50.047Z"
     }
   ],
   "skippedTaskIds": [],

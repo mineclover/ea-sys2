@@ -13,6 +13,7 @@ after each iteration and it's included in prompts for context.
 - 상태 Enum 값(`draft`)과 프로파일 전이 토큰(`DRAFT`) 표현이 다를 수 있으므로, lifecycle 검증 진입점에서 공통 canonicalization(upper-case 정규화)을 적용하면 레이어 간 전이 검증 로직을 재사용하기 쉽다.
 - 정적 Enum을 프로파일 기반 레지스트리로 치환할 때는 `profile load(lru_cache) -> normalize/duplicate guard -> ensure()` 경로를 단일화하고, `dataclass.__post_init__`에서 `ensure()`를 공통 호출하면 기본 규칙/커스텀 규칙 모두에서 미정의 타입을 일관되게 차단할 수 있다.
 - 독립 레이어 스택 선언은 `전용 TOML(00-layer-stack) -> cached loader -> validate_layer_stack(순환/참조) + order 방향 검증` 조합으로 분리하면 기존 대형 프로파일과 독립적으로 M1 구조 계약을 안정 검증할 수 있다.
+- 거버넌스 통합 validator에서는 상태전이 토큰(`DRAFT`)과 상태 요소명(`NeedStatusDraft`)이 다를 수 있으므로, `validate_state_transitions`에서 상태형 요소명의 `Status/State` suffix alias를 canonical token으로 추출하면 레이어별 네이밍 차이를 흡수하면서 동일 검증 규칙을 재사용할 수 있다.
 
 ---
 
@@ -218,4 +219,22 @@ after each iteration and it's included in prompts for context.
     - 레이어 스택은 커널 도메인 로직과 분리된 독립 프로파일로 두고 전용 로더 모듈에서 재사용하면, ProfileGraph/API가 필요할 때 동일 메타를 안정적으로 참조할 수 있다.
   - Gotchas encountered
     - `ea_kernel.profile_loader`는 `ea_profile.loader` 재-export라 mypy에서 속성 추론이 실패할 수 있어, 새 모듈에서는 정적 타입 안정성을 위해 `ea_profile.loader.load_profile`를 직접 import하는 편이 안전했다.
+---
+
+## 2026-02-20 - US-010
+- What was implemented
+  - `ea_profile.profile_validator.validate_state_transitions`를 확장해 상태 토큰 canonicalization과 상태형 요소명 alias(`NeedStatusDraft` -> `DRAFT`)를 함께 인식하도록 구현해, Needs/Decision 전이 네이밍 차이를 통합 검증에서 흡수했다.
+  - `packages/ea-kernel/tests/test_governance_profile_integration_gate.py`를 추가해 US-010 수용조건(Decision/Needs 전이 프로파일 유래, Projection ArtifactType 프로파일 유래, LayerStack TOML 로드, 전체 거버넌스 도메인 프로파일 validator 통과)을 단일 통합 게이트로 검증했다.
+  - `packages/ea-profile/tests/test_profile_validator.py`에 상태 alias 인식 회귀 테스트를 추가했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-profile/tests/test_profile_validator.py packages/ea-kernel/tests/test_governance_profile_integration_gate.py -q`, `uv run pytest packages/ -x -q` (3115 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-profile/src/ea_profile/profile_validator.py`
+  - `packages/ea-profile/tests/test_profile_validator.py`
+  - `packages/ea-kernel/tests/test_governance_profile_integration_gate.py`
+- **Learnings:**
+  - Patterns discovered
+    - 전이 토큰 검증은 단순 exact-name 매칭보다 `canonical token + state alias`를 함께 지원해야 다중 레이어 프로파일의 표현 차이(예: `NeedStatus*` vs `DRAFT`)를 통합 게이트에서 안정적으로 수용할 수 있다.
+  - Gotchas encountered
+    - 개별 레이어 기준 artifact pattern 검증은 오탐이 날 수 있어, 통합 게이트에서는 거버넌스 도메인 전체 프로파일을 합성한 뒤 validator를 적용해야 실제 운영 문맥과 일치한다.
 ---

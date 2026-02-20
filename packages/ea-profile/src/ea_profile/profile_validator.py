@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 
 from ea_profile.types import KernelProfile
+
+_STATE_ALIAS_SUFFIX_RE = re.compile(
+    r"(?:status|state)([A-Za-z0-9_]+)$",
+    flags=re.IGNORECASE,
+)
+_STATE_ALIAS_SPLIT_RE = re.compile(r"[_\-\s]+")
+_CAMEL_CASE_TOKEN_RE = re.compile(r"[A-Z]+(?=[A-Z][a-z]|$)|[A-Z]?[a-z]+|\d+")
+_STATE_ALIAS_CATEGORIES = frozenset({"Goal", "Context", "State"})
 
 
 @dataclass(frozen=True)
@@ -32,16 +41,19 @@ class ProfileValidationResult:
 def validate_state_transitions(profile: KernelProfile) -> tuple[str, ...]:
     """Validate that state transition references resolve to profile elements."""
 
-    element_names = {element.name for element in profile.elements}
+    known_state_tokens = _collect_known_state_tokens(profile)
     errors: list[str] = []
 
     for transition in profile.state_transitions:
-        if transition.from_state != "*" and transition.from_state not in element_names:
+        from_state = _normalize_state_token(transition.from_state)
+        to_state = _normalize_state_token(transition.to_state)
+
+        if transition.from_state != "*" and from_state not in known_state_tokens:
             errors.append(
                 "State transition references unknown from_state "
                 f"'{transition.from_state}'"
             )
-        if transition.to_state != "*" and transition.to_state not in element_names:
+        if transition.to_state != "*" and to_state not in known_state_tokens:
             errors.append(
                 "State transition references unknown to_state "
                 f"'{transition.to_state}'"
@@ -160,6 +172,51 @@ def _matches_kernel_element_pattern(profile: KernelProfile, pattern: str) -> boo
     if profile.get_element(pattern) is not None:
         return True
     return any(element.kernel_type == pattern for element in profile.elements)
+
+
+def _normalize_state_token(token: str) -> str:
+    """Normalize state token comparisons across enum/value representations."""
+
+    normalized = str(token).strip()
+    if "." in normalized:
+        normalized = normalized.rsplit(".", 1)[-1]
+    return normalized.upper()
+
+
+def _state_alias_from_element_name(name: str) -> str:
+    """Extract canonical state alias from element names like NeedStatusDraft."""
+
+    match = _STATE_ALIAS_SUFFIX_RE.search(name)
+    if match is None:
+        return ""
+
+    suffix = match.group(1).strip()
+    if not suffix:
+        return ""
+
+    split_tokens = [token for token in _STATE_ALIAS_SPLIT_RE.split(suffix) if token]
+    if split_tokens:
+        return _normalize_state_token(split_tokens[-1])
+
+    camel_tokens = _CAMEL_CASE_TOKEN_RE.findall(suffix)
+    if camel_tokens:
+        return _normalize_state_token(camel_tokens[-1])
+
+    return _normalize_state_token(suffix)
+
+
+def _collect_known_state_tokens(profile: KernelProfile) -> set[str]:
+    """Collect transition-reference tokens from state-like profile elements."""
+
+    tokens: set[str] = set()
+    for element in profile.elements:
+        tokens.add(_normalize_state_token(element.name))
+        if element.category not in _STATE_ALIAS_CATEGORIES:
+            continue
+        alias = _state_alias_from_element_name(element.name)
+        if alias:
+            tokens.add(alias)
+    return tokens
 
 
 def _detect_layer_cycles(graph: dict[str, tuple[str, ...]]) -> tuple[str, ...]:

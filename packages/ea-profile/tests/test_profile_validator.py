@@ -89,6 +89,20 @@ def test_validate_profile_fails_on_missing_state_reference() -> None:
     assert any("MissingState" in error for error in result.state_transition_errors)
 
 
+def test_validate_state_transitions_accepts_status_alias_elements() -> None:
+    profile = (
+        _base_builder()
+        .element("NeedStatusDraft", layer="Needs", category="Goal", kernel_type="state")
+        .element("NeedStatusExpressed", layer="Needs", category="Goal", kernel_type="state")
+        .add_state_transition("DRAFT", "EXPRESSED")
+        .build()
+    )
+
+    errors = validate_state_transitions(profile)
+
+    assert errors == ()
+
+
 def test_validate_artifact_types_fails_on_unmatched_pattern() -> None:
     profile = (
         _base_builder()

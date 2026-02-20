@@ -75,6 +75,56 @@ name = "available_in"
 kernel_relation = "association"
 description = "Context provides access to an experience or element."
 
+# --- Projection surface artifact types (M2 profile metadata) ---
+
+[[artifact_types]]
+name = "api_endpoint"
+tier = "function"
+description = "API endpoint artifact exposed by projection function tier."
+kernel_element_pattern = "@ActiveStructure"
+
+[[artifact_types]]
+name = "page"
+tier = "ui"
+description = "Page-level surface artifact for user-facing views."
+kernel_element_pattern = "@Page"
+
+[[artifact_types]]
+name = "tool"
+tier = "function"
+description = "Interactive tool artifact surfaced from context/function elements."
+kernel_element_pattern = "@Context"
+
+[[artifact_types]]
+name = "identifier"
+tier = "evidence"
+description = "Identifier artifact used for traceable references."
+kernel_element_pattern = "@PassiveStructure"
+
+[[artifact_types]]
+name = "contract"
+tier = "decision"
+description = "Contract artifact describing decision-level commitments."
+kernel_element_pattern = "@Assessment"
+
+[[artifact_types]]
+name = "event"
+tier = "decision"
+description = "Event artifact emitted or observed by projected nodes."
+kernel_element_pattern = "@Event"
+
+[[artifact_types]]
+name = "data_schema"
+tier = "data"
+description = "Data schema artifact for structured payload contracts."
+kernel_element_pattern = "@PassiveStructure"
+
+[[artifact_types]]
+name = "configuration"
+tier = "function"
+description = "Configuration artifact for policy and runtime behavior controls."
+kernel_element_pattern = "@Governance"
+
 # ============================================================
 # Internal Projection Layer Elements
 # ============================================================

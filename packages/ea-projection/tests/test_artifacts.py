@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
+import pytest
 from ea_projection.artifacts import (
-    ArtifactExtractionRule,
-    ArtifactSummary,
-    ArtifactType,
     DEFAULT_EXTRACTION_RULES,
+    ArtifactExtractionRule,
+    ArtifactType,
     SurfaceArtifact,
     extract_artifacts,
     summarize_artifacts,
 )
-
 
 # ── SurfaceArtifact ──────────────────────────────────────────────────
 
@@ -54,6 +53,15 @@ class TestArtifactType:
         assert "tool" in names
         assert "identifier" in names
         assert "contract" in names
+
+    def test_types_loaded_from_projection_profile(self):
+        from ea_kernel.profiles.ea_sys import layer_path
+        from ea_projection.profile_bridge import load_projection_profile
+
+        profile = load_projection_profile(layer_path("projection"), validate=False)
+        declared = {artifact_type.name for artifact_type in profile.artifact_types}
+        loaded = {artifact_type.value for artifact_type in ArtifactType}
+        assert loaded == declared
 
 
 # ── extract_artifacts ─────────────────────────────────────────────────
@@ -226,6 +234,14 @@ class TestExtractArtifacts:
 
         assert len(artifacts) == 1
         assert artifacts[0].name == "PublicModel"
+
+    def test_undefined_artifact_type_raises_error(self):
+        with pytest.raises(ValueError, match="Unknown projection artifact type"):
+            ArtifactExtractionRule(
+                tier="data",
+                categories=("PassiveStructure",),
+                artifact_type="unknown_type",
+            )
 
     def test_empty_nodes(self):
         artifacts = extract_artifacts([], {})

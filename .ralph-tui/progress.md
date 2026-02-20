@@ -11,6 +11,7 @@ after each iteration and it's included in prompts for context.
 - 프로파일 정적 검증은 builder 내부 강제 검증과 분리된 `validate_* -> validate_profile` 순수 함수 계층으로 두면, 로드 시점 강제/선택 검증 정책을 유연하게 바꾸면서 동일 검증 규칙을 재사용할 수 있다.
 - 상태머신 M1 로직을 M2 프로파일로 승격할 때는 `lifecycle`에 프로파일 전이 검증 단일 진입점(`ensure_profile_transition`)을 두고 도메인 mutator(approve/finalize/revise)에서 공통 호출하면 하드코딩 제거와 에러 메시지 일관성을 동시에 확보할 수 있다.
 - 상태 Enum 값(`draft`)과 프로파일 전이 토큰(`DRAFT`) 표현이 다를 수 있으므로, lifecycle 검증 진입점에서 공통 canonicalization(upper-case 정규화)을 적용하면 레이어 간 전이 검증 로직을 재사용하기 쉽다.
+- 정적 Enum을 프로파일 기반 레지스트리로 치환할 때는 `profile load(lru_cache) -> normalize/duplicate guard -> ensure()` 경로를 단일화하고, `dataclass.__post_init__`에서 `ensure()`를 공통 호출하면 기본 규칙/커스텀 규칙 모두에서 미정의 타입을 일관되게 차단할 수 있다.
 
 ---
 
@@ -177,4 +178,24 @@ after each iteration and it's included in prompts for context.
     - Needs 상태머신도 Decision과 동일하게 `profile -> lifecycle(single entry) -> domain mutator` 구조를 쓰면 M1 하드코딩 제거와 규칙 중앙화가 동시에 가능하다.
   - Gotchas encountered
     - `catalog.py`는 기존에 strict mypy 이슈가 누적된 파일이라, 신규 변경 영향 검증은 새 모듈/테스트 단위 mypy + 전체 pytest 통과로 분리해 확인하는 것이 현실적이었다.
+---
+
+## 2026-02-20 - US-008
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/70-projection.toml`에 `[[artifact_types]]` 선언을 추가해 `api_endpoint`, `page`, `tool`, `identifier`, `contract`, `event`, `data_schema`, `configuration`을 프로파일 메타데이터로 정의했다.
+  - `packages/ea-projection/src/ea_projection/artifacts.py`의 `ArtifactType` 정적 `StrEnum`을 프로파일 로드 기반 동적 레지스트리로 교체했다(`lru_cache` 로드, 중복/빈 이름 가드, enum-like 메타클래스 facade).
+  - `SurfaceArtifact`/`ArtifactExtractionRule`의 `__post_init__`에서 `ArtifactType.ensure()`를 공통 호출하도록 해, 프로파일에 없는 artifact type 사용 시 즉시 `ValueError`가 발생하도록 강제했다.
+  - 기본 추출 규칙(`DEFAULT_EXTRACTION_RULES`)은 프로파일 registry를 통해 artifact type을 resolve하도록 갱신해 기존 추출 동작을 유지했다.
+  - `packages/ea-projection/tests/test_artifacts.py`를 확장해 레지스트리가 projection 프로파일 선언과 동기화되는지, 미정의 artifact type 사용 시 에러가 나는지 검증했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-projection/tests/test_artifacts.py -q`, `uv run pytest packages/ -x -q` (3106 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/70-projection.toml`
+  - `packages/ea-projection/src/ea_projection/artifacts.py`
+  - `packages/ea-projection/tests/test_artifacts.py`
+- **Learnings:**
+  - Patterns discovered
+    - 프로파일 기반 레지스트리 치환 시 기존 enum 사용감(`ArtifactType.PAGE`, iteration)을 메타클래스 facade로 보존하면 호출부 수정을 최소화하면서 선언적 스키마 전환이 가능하다.
+  - Gotchas encountered
+    - 샌드박스에서 `uv run ruff/mypy`는 `~/.cache/uv` 접근 오류가 발생할 수 있어 `.venv/bin/ruff`, `.venv/bin/mypy`로 대체 실행이 필요했다.
 ---

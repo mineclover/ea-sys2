@@ -155,12 +155,13 @@
         "uv run pytest packages/ -x -q passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 2: 기존 M1 승격 — Projection",
       "dependsOn": [
         "US-002",
         "US-005"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-009",
@@ -452,6 +453,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-20T19:10:06.064Z"
+    "updatedAt": "2026-02-20T19:17:06.006Z"
   }
 }

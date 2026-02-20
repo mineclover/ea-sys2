@@ -19,6 +19,7 @@ members = [
     "ea-profile",
     "ea-projection",
     "ea-sys2",
+    "sdlc-domain",
 ]
 
 [[package]]
@@ -593,6 +594,7 @@ dependencies = [
     { name = "ea-needs" },
     { name = "ea-profile" },
     { name = "ea-projection" },
+    { name = "sdlc-domain" },
 ]
 
 [package.optional-dependencies]
@@ -633,6 +635,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "sdlc-domain", editable = "packages/sdlc-domain" },
 ]
 provides-extras = ["dev"]
 
@@ -1407,6 +1410,30 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/51/ad/f813b6e2c97e9b4598be25e94a9147b9af7e60523b0cb5d94d307c15229d/ruff-0.15.0-py3-none-win_amd64.whl", hash = "sha256:dd5e4d3301dc01de614da3cdffc33d4b1b96fb89e45721f1598e5532ccf78b18", size = 11564657, upload-time = "2026-02-03T17:52:51.893Z" },
     { url = "https://files.pythonhosted.org/packages/f6/b0/2d823f6e77ebe560f4e397d078487e8d52c1516b331e3521bc75db4272ca/ruff-0.15.0-py3-none-win_arm64.whl", hash = "sha256:c480d632cc0ca3f0727acac8b7d053542d9e114a462a145d0b00e7cd658c515a", size = 10865753, upload-time = "2026-02-03T17:53:03.014Z" },
 ]
+
+[[package]]
+name = "sdlc-domain"
+version = "0.1.0"
+source = { editable = "packages/sdlc-domain" }
+dependencies = [
+    { name = "ea-kernel" },
+    { name = "ea-profile" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ea-kernel", editable = "packages/ea-kernel" },
+    { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "sse-starlette"

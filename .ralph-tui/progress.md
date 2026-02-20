@@ -21,6 +21,7 @@ after each iteration and it's included in prompts for context.
 - 중간 계층 강제 아키텍처 규칙(예: `Service -> Repository -> DataModel`)은 `허용 경로 allow rules`와 `직접 경로 deny rules`를 함께 선언하고 테스트에서도 allow/deny pair를 같이 검증하면, 우회 접근 금지를 명확하게 보장할 수 있다.
 - 파이프라인 프로파일에서 실행 순서와 통제 포인트를 함께 표현할 때는 `next`를 단계 체인(Build/Test/Stage/Deploy)에만 할당하고, 승인/복구는 `constrains`/`triggers`로 분리하면 규칙 의도와 테스트 검증 포인트가 명확해진다.
 - 도메인 Projection 프로파일 차별성 검증은 `artifact_types 이름집합 disjoint 비교 + 신규 도메인 프로파일 validate_profile 통과` 조합으로 구성하면, 기존 도메인 제약에 영향 없이 동일 M2 메타모델 확장을 안정적으로 증명할 수 있다.
+- 프로파일 기반 상태 검증이 필요한 Store는 `profile_id + lineage_id`를 전이 검증 키로 고정하고 `store()` 직전에 `latest(lineage) -> ensure_profile_transition`를 호출하면, InMemory/SQLite 양쪽 구현에서 동일 전이 규칙을 일관되게 강제할 수 있다.
 
 ---
 
@@ -395,4 +396,28 @@ after each iteration and it's included in prompts for context.
     - Projection 도메인 확장 검증은 artifact set 차별성(disjoint)과 신규 도메인 validator 통과를 분리 검증하면, 기존 프로파일 제약과 독립적으로 M2 적합성을 안정적으로 증명할 수 있다.
   - Gotchas encountered
     - 기존 거버넌스 `70-projection.toml`은 단일 프로파일 기준 `@Page`, `@Assessment` 패턴 검증에서 실패할 수 있어, 이번 스토리 테스트는 수용조건에 맞춰 SDLC validator 통과와 cross-domain artifact set 차별성에 초점을 맞췄다.
+---
+
+## 2026-02-20 - US-018
+- What was implemented
+  - `packages/sdlc-domain` 신규 워크스페이스 패키지를 생성하고 `ea-kernel`, `ea-profile` 의존을 연결했다.
+  - `sdlc_store.py`에 `SDLCStore` ABC, `InMemorySDLCStore`, `SQLiteSDLCStore`를 구현해 S3 Recording 3-tier 패턴을 SDLC 도메인으로 인스턴스화했다.
+  - 저장 시점에 SDLC 프로파일(`ea_kernel.profiles.sdlc.profile_path`)의 `[[state_transitions]]`를 로드/캐시하고, `profile_id + lineage_id`의 직전 스냅샷 상태와의 전이를 검증하도록 구현했다.
+  - CRUD 기능(`store/get/query/count/delete`)과 query 필터/페이지네이션을 InMemory/SQLite 모두에 제공했다.
+  - 테스트를 추가해 CRUD, 유효/무효 전이, unknown 상태 거부, 전이 정의가 없는 프로파일 거부를 검증했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/sdlc-domain/tests/test_sdlc_store.py -q`, `uv run pytest packages/ -x -q` (3149 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `pyproject.toml`
+  - `uv.lock`
+  - `packages/sdlc-domain/README.md`
+  - `packages/sdlc-domain/pyproject.toml`
+  - `packages/sdlc-domain/src/sdlc_domain/__init__.py`
+  - `packages/sdlc-domain/src/sdlc_domain/sdlc_store.py`
+  - `packages/sdlc-domain/tests/test_sdlc_store.py`
+- **Learnings:**
+  - Patterns discovered
+    - 상태전이 검증은 라이프사이클 객체 밖(Store 경계)에서도 프로파일 로드 + canonicalization + 직전 상태 조회 조합으로 동일하게 재사용할 수 있다.
+  - Gotchas encountered
+    - `ea_profile.loader.load_profile`는 `validate` 인자를 받지 않으므로, 검증 정책 분리는 호출자가 아닌 후속 validator/전이 검증 로직에서 처리해야 했다.
 ---

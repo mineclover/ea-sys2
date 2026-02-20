@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T21:15:27.155Z",
-  "currentIteration": 20,
+  "updatedAt": "2026-02-20T21:22:06.832Z",
+  "currentIteration": 21,
   "maxIterations": 0,
-  "tasksCompleted": 20,
+  "tasksCompleted": 21,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -214,6 +214,16 @@
       "durationMs": 928113,
       "startedAt": "2026-02-20T20:51:17.138Z",
       "endedAt": "2026-02-20T21:06:45.251Z"
+    },
+    {
+      "iteration": 21,
+      "status": "completed",
+      "taskId": "US-021",
+      "taskTitle": "동일 커널 위 멀티 도메인 공존 검증",
+      "taskCompleted": true,
+      "durationMs": 520790,
+      "startedAt": "2026-02-20T21:06:46.363Z",
+      "endedAt": "2026-02-20T21:15:27.153Z"
     }
   ],
   "skippedTaskIds": [],

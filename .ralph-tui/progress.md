@@ -25,6 +25,7 @@ after each iteration and it's included in prompts for context.
 - 프로파일 기반 상태 검증이 필요한 Store는 `profile_id + lineage_id`를 전이 검증 키로 고정하고 `store()` 직전에 `latest(lineage) -> ensure_profile_transition`를 호출하면, InMemory/SQLite 양쪽 구현에서 동일 전이 규칙을 일관되게 강제할 수 있다.
 - S4 Analyzer를 도메인 확장할 때는 `profile elements(카테고리/alias) + state_transitions(depth/terminal/success)`를 먼저 컴파일해 차원을 만들고, Store snapshot 집계를 그 차원에 투영하면 지표(throughput/success/effectiveness) 하드코딩을 제거하면서도 리포트 포맷을 유지할 수 있다.
 - 동일 커널에서 복수 도메인 프로파일 공존을 검증할 때는 `raw profile_id overlap 확인 -> domain namespace 키(governance:/sdlc:)로 동시 로드 -> domain별 compose(validate_profile)` 순서를 쓰면 `projection` 같은 동명 프로파일이 있어도 검증 간섭 없이 격리를 안정적으로 증명할 수 있다.
+- M2 표현력 한계 문서화는 `US별 하드코딩 지점(file/function) -> 한계 분류(a~d) -> 해소 방향(M2 확장/M1 허용/도구 개선)` 3열 매트릭스로 기록하면, 후속 확장 백로그 우선순위를 일관되게 정할 수 있다.
 
 ---
 
@@ -501,4 +502,19 @@ after each iteration and it's included in prompts for context.
     - 다중 도메인 공존 검증은 도메인별 네임스페이스 키로 로드한 뒤, domain compose 결과를 독립 validator에 각각 넣어 `same-result under coexistence`를 비교하면 비간섭성을 명시적으로 증명할 수 있다.
   - Gotchas encountered
     - 거버넌스 `projection` 단일 프로파일은 validator에서 실패할 수 있어, 비간섭 검증은 단일 프로파일이 아닌 도메인 합성 프로파일 단위로 수행해야 false negative를 피할 수 있었다.
+---
+
+## 2026-02-20 - US-022
+- What was implemented
+  - SDLC 인스턴스화 구간(`US-011`~`US-021`)을 대상으로 `M2로 직접 표현 불가해 Python 하드코딩이 필요했던 항목`을 전수 정리한 표현력 한계 보고서를 작성했다.
+  - 한계 항목을 4분류 `(a) M2 어휘 부족, (b) M2 규칙 표현력 부족, (c) 런타임 제약, (d) 도구 미지원`으로 태깅하고, 각 항목마다 해소 방향(`M2 확장`, `M1 허용`, `도구 개선`)을 제안했다.
+  - US별 근거 코드를 파일/라인 단위로 연결해 후속 확장 작업 시 추적 가능한 형태로 문서화했다.
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `docs/m2-expressiveness-report.md`
+- **Learnings:**
+  - Patterns discovered
+    - 표현력 한계는 구현 단위(US)로 분해해 `불가 항목 -> 코드 워크어라운드 -> 해소 방향`을 함께 기록해야, 단순 회고가 아니라 실행 가능한 M2 확장 백로그로 전환된다.
+  - Gotchas encountered
+    - 한계의 원인이 모델 자체인지((a)/(b)) 도구/운영 경계인지((c)/(d))가 혼재하므로, 분류를 섞어 쓰면 우선순위가 흐려진다. 항목 단위로 1차 원인을 고정해 기록해야 후속 의사결정이 쉬워진다.
 ---

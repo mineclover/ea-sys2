@@ -15,6 +15,7 @@ from ea_profile.types import (
     ProfileMetadata,
     ProfileRelation,
     ProfileRule,
+    ProfileStateTransition,
     RuleCondition,
 )
 
@@ -42,6 +43,15 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
     ]
 
     rules = [_rule_to_dict(r) for r in profile.validity_rules]
+    state_transitions = [
+        {
+            "from_state": t.from_state,
+            "to_state": t.to_state,
+            "guard_condition": t.guard_condition,
+            "description": t.description,
+        }
+        for t in profile.state_transitions
+    ]
 
     metadata = None
     if profile.metadata is not None:
@@ -58,6 +68,7 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
         "elements": elements,
         "relations": relations,
         "validity_rules": rules,
+        "state_transitions": state_transitions,
         "metadata": metadata,
     }
 
@@ -85,6 +96,15 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
     )
 
     rules = tuple(_dict_to_rule(r) for r in data.get("validity_rules", []))
+    state_transitions = tuple(
+        ProfileStateTransition(
+            from_state=t["from_state"],
+            to_state=t["to_state"],
+            guard_condition=t.get("guard_condition", ""),
+            description=t.get("description", ""),
+        )
+        for t in data.get("state_transitions", [])
+    )
 
     metadata = None
     md = data.get("metadata")
@@ -103,6 +123,7 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
         relations=relations,
         validity_rules=rules,
         metadata=metadata,
+        state_transitions=state_transitions,
     )
 
 

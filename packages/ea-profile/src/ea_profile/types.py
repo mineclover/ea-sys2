@@ -186,6 +186,15 @@ class ProfileRelation:
 
 
 @dataclass(frozen=True)
+class ProfileStateTransition:
+    """A declarative state machine transition for a profile."""
+    from_state: str
+    to_state: str
+    guard_condition: str = ""
+    description: I18nString = ""
+
+
+@dataclass(frozen=True)
 class ProfileMetadata:
     """Typed metadata for a kernel profile."""
     standard: str          # "ArchiMate 3.2", "TOGAF 10"
@@ -203,6 +212,7 @@ class KernelProfile:
     relations: tuple[ProfileRelation, ...]
     validity_rules: tuple[ProfileRule, ...] = ()
     metadata: ProfileMetadata | None = None
+    state_transitions: tuple[ProfileStateTransition, ...] = ()
 
     def get_element(self, name: str) -> ProfileElement | None:
         for e in self.elements:

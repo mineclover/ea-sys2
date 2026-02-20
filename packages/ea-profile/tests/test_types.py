@@ -10,6 +10,7 @@ from ea_profile.types import (
     ProfileElement,
     ProfileRelation,
     ProfileRule,
+    ProfileStateTransition,
     RuleCondition,
     SchemaPort,
     classify_pattern,
@@ -34,6 +35,18 @@ class TestFrozenTypes:
         assert r.name == "uses"
         assert r.kernel_relation == "association"
         assert r.direction == ""
+
+    def test_profile_state_transition_creation(self):
+        t = ProfileStateTransition(
+            from_state="draft",
+            to_state="approved",
+            guard_condition="has_review",
+            description="Review complete",
+        )
+        assert t.from_state == "draft"
+        assert t.to_state == "approved"
+        assert t.guard_condition == "has_review"
+        assert t.description == "Review complete"
 
     def test_profile_rule_creation(self):
         rule = ProfileRule(
@@ -132,6 +145,9 @@ class TestKernelProfile:
     def test_matching_elements_exact(self, profile):
         assert len(profile.matching_elements("A")) == 1
         assert len(profile.matching_elements("Z")) == 0
+
+    def test_state_transitions_default_empty(self, profile):
+        assert profile.state_transitions == ()
 
 
 # ---------------------------------------------------------------------------

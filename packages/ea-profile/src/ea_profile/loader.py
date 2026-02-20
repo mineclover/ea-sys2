@@ -146,6 +146,23 @@ def load_profile_from_content(
             direction=rel.get("direction", ""),
         )
 
+    # State transitions
+    for transition in doc.get("state_transitions", []):
+        if "from_state" not in transition:
+            raise ProfileLoadError(
+                "State transition missing required field: from_state"
+            )
+        if "to_state" not in transition:
+            raise ProfileLoadError(
+                "State transition missing required field: to_state"
+            )
+        builder.add_state_transition(
+            transition["from_state"],
+            transition["to_state"],
+            guard_condition=transition.get("guard_condition", ""),
+            description=transition.get("description", ""),
+        )
+
     # Rules
     for rule in doc.get("rules", []):
         source = rule.get("source")

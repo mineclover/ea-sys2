@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from ea_profile.types import KernelProfile, ProfileElement, ProfileRelation, ProfileRule
+from ea_profile.types import (
+    KernelProfile,
+    ProfileElement,
+    ProfileRelation,
+    ProfileRule,
+    ProfileStateTransition,
+)
 
 
 def extend(
@@ -12,6 +18,7 @@ def extend(
     version: str,
     add_elements: tuple[ProfileElement, ...] = (),
     add_relations: tuple[ProfileRelation, ...] = (),
+    add_state_transitions: tuple[ProfileStateTransition, ...] = (),
     add_rules: tuple[ProfileRule, ...] = (),
     override_rules: tuple[ProfileRule, ...] = (),
 ) -> KernelProfile:
@@ -25,6 +32,9 @@ def extend(
 
     # Merge relations (base + added)
     relations = base.relations + add_relations
+
+    # Merge state transitions (base + added)
+    state_transitions = base.state_transitions + add_state_transitions
 
     # Merge rules: override matching IDs, then add new
     override_ids = {r.id for r in override_rules}
@@ -45,6 +55,7 @@ def extend(
         relations=relations,
         validity_rules=tuple(merged_rules),
         metadata=base.metadata,
+        state_transitions=state_transitions,
     )
 
 
@@ -92,4 +103,5 @@ def subset(
         relations=filtered_relations,
         validity_rules=filtered_rules,
         metadata=profile.metadata,
+        state_transitions=profile.state_transitions,
     )

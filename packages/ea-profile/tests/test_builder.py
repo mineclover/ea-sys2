@@ -97,6 +97,24 @@ class TestFluentAPI:
                 .element("X", layer="L", category="Unknown")
             )
 
+    def test_add_state_transition(self):
+        p = (
+            _minimal_builder()
+            .add_state_transition(
+                "draft",
+                "approved",
+                guard_condition="has_review",
+                description="Review complete",
+            )
+            .build()
+        )
+        assert len(p.state_transitions) == 1
+        transition = p.state_transitions[0]
+        assert transition.from_state == "draft"
+        assert transition.to_state == "approved"
+        assert transition.guard_condition == "has_review"
+        assert transition.description == "Review complete"
+
 
 # ---------------------------------------------------------------------------
 # Element / Relation

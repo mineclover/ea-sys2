@@ -15,7 +15,10 @@ from ea_profile.types import RuleCondition
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _sample_profile(with_metadata: bool = True):
+def _sample_profile(
+    with_metadata: bool = True,
+    with_state_transitions: bool = False,
+):
     b = (
         ProfileBuilder("Ser", version="1.0", kernel_version="2.0")
         .element("A", layer="L", category="C", kernel_type="structure")
@@ -23,6 +26,13 @@ def _sample_profile(with_metadata: bool = True):
         .relation("r", kernel_relation="association")
         .allow("A", "B", "r", conditions=(RuleCondition("same_layer"),))
     )
+    if with_state_transitions:
+        b.add_state_transition(
+            "draft",
+            "approved",
+            guard_condition="has_review",
+            description="Review complete",
+        )
     if with_metadata:
         b.metadata(standard="StdX", organization="OrgX")
     return b.build()
@@ -57,6 +67,16 @@ class TestDictRoundTrip:
         d = profile_to_dict(original)
         restored = dict_to_profile(d)
         assert restored.metadata is None
+
+    def test_state_transitions_round_trip(self):
+        original = _sample_profile(with_state_transitions=True)
+        d = profile_to_dict(original)
+        restored = dict_to_profile(d)
+        assert len(restored.state_transitions) == 1
+        transition = restored.state_transitions[0]
+        assert transition.from_state == "draft"
+        assert transition.to_state == "approved"
+        assert transition.guard_condition == "has_review"
 
 
 # ---------------------------------------------------------------------------

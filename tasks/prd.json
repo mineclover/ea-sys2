@@ -1,7 +1,7 @@
 {
   "name": "M2 승격 및 SDLC 도메인 인스턴스화 검증",
-  "branchName": "ralph/m2-promotion-sdlc-validation",
   "description": "M1 하드코딩(상태전이, ArtifactType, 레이어 구조, 프로세스 유닛)을 커널 M2 프로파일 선언형으로 승격하고, SDLC 도메인을 풀스택 인스턴스화하여 M2 범용성을 구조적으로 증명한다.",
+  "branchName": "ralph/m2-promotion-sdlc-validation",
   "userStories": [
     {
       "id": "US-001",
@@ -17,9 +17,10 @@
         "uv run pytest packages/ -x -q passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 1: M2 프레임워크 확장",
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-002",
@@ -90,7 +91,12 @@
       "priority": 2,
       "passes": false,
       "notes": "Phase 1: M2 프레임워크 확장 — 모든 스키마 정의 후 검증기 구현",
-      "dependsOn": ["US-001", "US-002", "US-003", "US-004"]
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003",
+        "US-004"
+      ]
     },
     {
       "id": "US-006",
@@ -107,7 +113,10 @@
       "priority": 3,
       "passes": false,
       "notes": "Phase 2: 기존 M1 승격 — Decision",
-      "dependsOn": ["US-001", "US-005"]
+      "dependsOn": [
+        "US-001",
+        "US-005"
+      ]
     },
     {
       "id": "US-007",
@@ -123,7 +132,10 @@
       "priority": 3,
       "passes": false,
       "notes": "Phase 2: 기존 M1 승격 — Needs",
-      "dependsOn": ["US-001", "US-005"]
+      "dependsOn": [
+        "US-001",
+        "US-005"
+      ]
     },
     {
       "id": "US-008",
@@ -139,7 +151,10 @@
       "priority": 3,
       "passes": false,
       "notes": "Phase 2: 기존 M1 승격 — Projection",
-      "dependsOn": ["US-002", "US-005"]
+      "dependsOn": [
+        "US-002",
+        "US-005"
+      ]
     },
     {
       "id": "US-009",
@@ -155,7 +170,10 @@
       "priority": 3,
       "passes": false,
       "notes": "Phase 2: 기존 M1 승격 — Layer Structure",
-      "dependsOn": ["US-003", "US-005"]
+      "dependsOn": [
+        "US-003",
+        "US-005"
+      ]
     },
     {
       "id": "US-010",
@@ -172,7 +190,12 @@
       "priority": 4,
       "passes": false,
       "notes": "Phase 2: 통합 검증 게이트",
-      "dependsOn": ["US-006", "US-007", "US-008", "US-009"]
+      "dependsOn": [
+        "US-006",
+        "US-007",
+        "US-008",
+        "US-009"
+      ]
     },
     {
       "id": "US-011",
@@ -188,7 +211,9 @@
       "priority": 5,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — 대칭 매핑",
-      "dependsOn": ["US-009"]
+      "dependsOn": [
+        "US-009"
+      ]
     },
     {
       "id": "US-012",
@@ -204,7 +229,9 @@
       "priority": 5,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — 고유 계층",
-      "dependsOn": ["US-009"]
+      "dependsOn": [
+        "US-009"
+      ]
     },
     {
       "id": "US-013",
@@ -221,7 +248,10 @@
       "priority": 6,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Decision",
-      "dependsOn": ["US-006", "US-011"]
+      "dependsOn": [
+        "US-006",
+        "US-011"
+      ]
     },
     {
       "id": "US-014",
@@ -238,7 +268,10 @@
       "priority": 6,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Requirements",
-      "dependsOn": ["US-007", "US-011"]
+      "dependsOn": [
+        "US-007",
+        "US-011"
+      ]
     },
     {
       "id": "US-015",
@@ -255,7 +288,9 @@
       "priority": 6,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Kernel",
-      "dependsOn": ["US-011"]
+      "dependsOn": [
+        "US-011"
+      ]
     },
     {
       "id": "US-016",
@@ -272,7 +307,10 @@
       "priority": 6,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Flow",
-      "dependsOn": ["US-011", "US-015"]
+      "dependsOn": [
+        "US-011",
+        "US-015"
+      ]
     },
     {
       "id": "US-017",
@@ -288,7 +326,10 @@
       "priority": 6,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Projection",
-      "dependsOn": ["US-008", "US-011"]
+      "dependsOn": [
+        "US-008",
+        "US-011"
+      ]
     },
     {
       "id": "US-018",
@@ -304,7 +345,12 @@
       "priority": 7,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Store 구현",
-      "dependsOn": ["US-013", "US-014", "US-015", "US-016"]
+      "dependsOn": [
+        "US-013",
+        "US-014",
+        "US-015",
+        "US-016"
+      ]
     },
     {
       "id": "US-019",
@@ -319,7 +365,9 @@
       "priority": 8,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Analyzer 구현",
-      "dependsOn": ["US-018"]
+      "dependsOn": [
+        "US-018"
+      ]
     },
     {
       "id": "US-020",
@@ -335,7 +383,10 @@
       "priority": 9,
       "passes": false,
       "notes": "Phase 3: SDLC 도메인 — Projection 풀스택",
-      "dependsOn": ["US-017", "US-019"]
+      "dependsOn": [
+        "US-017",
+        "US-019"
+      ]
     },
     {
       "id": "US-021",
@@ -352,7 +403,10 @@
       "priority": 10,
       "passes": false,
       "notes": "Phase 4: 교차 검증 — 핵심 증명",
-      "dependsOn": ["US-010", "US-020"]
+      "dependsOn": [
+        "US-010",
+        "US-020"
+      ]
     },
     {
       "id": "US-022",
@@ -367,7 +421,9 @@
       "priority": 10,
       "passes": false,
       "notes": "Phase 4: 교차 검증 — 한계 문서화",
-      "dependsOn": ["US-020"]
+      "dependsOn": [
+        "US-020"
+      ]
     },
     {
       "id": "US-023",
@@ -383,7 +439,13 @@
       "priority": 10,
       "passes": false,
       "notes": "Phase 4: 교차 검증 — 레이어 자유도 분석",
-      "dependsOn": ["US-011", "US-012"]
+      "dependsOn": [
+        "US-011",
+        "US-012"
+      ]
     }
-  ]
+  ],
+  "metadata": {
+    "updatedAt": "2026-02-20T18:35:36.904Z"
+  }
 }

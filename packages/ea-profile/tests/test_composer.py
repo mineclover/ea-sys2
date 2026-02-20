@@ -12,6 +12,7 @@ from ea_profile.types import (
     ProfileMetadata,
     ProfileRelation,
     ProfileRule,
+    ProfileStateTransition,
 )
 
 
@@ -88,6 +89,22 @@ class TestExtend:
         assert len(extended.validity_rules) == base_rule_count + 1
         rule_ids = {r.id for r in extended.validity_rules}
         assert "r-03" in rule_ids
+
+    def test_extend_adds_state_transitions(self):
+        base = _make_profile()
+        transition = ProfileStateTransition(
+            from_state="draft",
+            to_state="approved",
+            guard_condition="has_review",
+        )
+        extended = extend(
+            base,
+            name="Extended",
+            version="2.0",
+            add_state_transitions=(transition,),
+        )
+        assert len(extended.state_transitions) == 1
+        assert extended.state_transitions[0] == transition
 
     def test_extend_overrides_existing_rules_by_id(self):
         base = _make_profile()
@@ -197,6 +214,21 @@ class TestSubset:
         assert len(sub.elements) == len(base.elements)
         assert len(sub.relations) == len(base.relations)
         assert len(sub.validity_rules) == len(base.validity_rules)
+
+    def test_subset_preserves_state_transitions(self):
+        base = (
+            ProfileBuilder("Base", version="1.0", kernel_version="1.0")
+            .element("ElemA", kernel_type="structure", layer="Business", category="Structure")
+            .relation("Rel1", kernel_relation="association")
+            .add_state_transition("draft", "approved", guard_condition="has_review")
+            .build()
+        )
+        sub = subset(
+            base,
+            name="Subset",
+            version="1.0-subset",
+        )
+        assert sub.state_transitions == base.state_transitions
 
     def test_subset_preserves_metadata_and_kernel_version(self):
         base = _make_profile()

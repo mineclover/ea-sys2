@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
+  "status": "running",
+  "startedAt": "2026-02-20T18:29:03.096Z",
+  "updatedAt": "2026-02-20T18:35:36.906Z",
+  "currentIteration": 0,
+  "maxIterations": 0,
+  "tasksCompleted": 0,
+  "isPaused": false,
+  "agentPlugin": "codex",
+  "trackerState": {
+    "plugin": "json",
+    "totalTasks": 0,
+    "tasks": []
+  },
+  "iterations": [],
+  "skippedTaskIds": [],
+  "cwd": "/Users/junwoobang/workflow/ea-sys2",
+  "activeTaskIds": [],
+  "subagentPanelVisible": false
+}

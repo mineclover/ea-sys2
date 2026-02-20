@@ -63,6 +63,37 @@ class TestLoadFromContent:
         assert len(explicit) == 1
         assert explicit[0].source_pattern == "@Behavior"
 
+    def test_state_transitions_loaded(self):
+        toml = """\
+[profile]
+name = "StateProfile"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "Core"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[state_transitions]]
+from_state = "draft"
+to_state = "approved"
+guard_condition = "has_review"
+description = "Review complete"
+"""
+        p = load_profile_from_content(toml)
+        assert len(p.state_transitions) == 1
+        transition = p.state_transitions[0]
+        assert transition.from_state == "draft"
+        assert transition.to_state == "approved"
+        assert transition.guard_condition == "has_review"
+        assert transition.description == "Review complete"
+
 
 class TestLoadFromFile:
     def test_valid_file(self, tmp_path):
@@ -150,6 +181,52 @@ kernel_version = "2.0"
 name = "r"
 """
         with pytest.raises(ProfileLoadError, match="kernel_relation"):
+            load_profile_from_content(toml)
+
+    def test_missing_state_transition_from_state(self):
+        toml = """\
+[profile]
+name = "X"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[state_transitions]]
+to_state = "approved"
+"""
+        with pytest.raises(ProfileLoadError, match="from_state"):
+            load_profile_from_content(toml)
+
+    def test_missing_state_transition_to_state(self):
+        toml = """\
+[profile]
+name = "X"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[state_transitions]]
+from_state = "draft"
+"""
+        with pytest.raises(ProfileLoadError, match="to_state"):
             load_profile_from_content(toml)
 
 

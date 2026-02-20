@@ -22,17 +22,14 @@ from ea_profile.types import (
     ProfileMetadata,
     ProfileRelation,
     ProfileRule,
+    ProfileStateTransition,
     RuleCondition,
     SchemaPort,
     classify_pattern,
 )
 
 if TYPE_CHECKING:
-    from ea_kernel.types import (
-        KernelSchema,
-        RuleCorpusEntry,
-        RuleMetadata,
-    )
+    from ea_kernel.types import RuleMetadata
 
 
 class ProfileBuilder:
@@ -68,6 +65,7 @@ class ProfileBuilder:
         self._cat_map: dict[str, str] = {}
         self._elements: list[ProfileElement] = []
         self._relations: list[ProfileRelation] = []
+        self._state_transitions: list[ProfileStateTransition] = []
         self._rules: list[ProfileRule] = []
         self._rule_metadata: dict[str, RuleMetadata] = {}
         self._rule_counter = 0
@@ -222,6 +220,25 @@ class ProfileBuilder:
                 description=desc,
                 direction=direction,
             ))
+        return self
+
+    # ── State transitions ────────────────────────────────────────
+
+    def add_state_transition(
+        self,
+        from_state: str,
+        to_state: str,
+        *,
+        guard_condition: str = "",
+        description: I18nString = "",
+    ) -> ProfileBuilder:
+        """Add a declarative state transition to the profile."""
+        self._state_transitions.append(ProfileStateTransition(
+            from_state=from_state,
+            to_state=to_state,
+            guard_condition=guard_condition,
+            description=description,
+        ))
         return self
 
     # ── Composite validation ─────────────────────────────────────
@@ -477,6 +494,7 @@ class ProfileBuilder:
             relations=tuple(self._relations),
             validity_rules=tuple(rules),
             metadata=md,
+            state_transitions=tuple(self._state_transitions),
         )
 
     # ── Internal validation ───────────────────────────────────────

@@ -175,12 +175,13 @@
         "uv run pytest packages/ -x -q passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 2: 기존 M1 승격 — Layer Structure",
       "dependsOn": [
         "US-003",
         "US-005"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-010",
@@ -453,6 +454,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-20T19:17:06.006Z"
+    "updatedAt": "2026-02-20T19:22:55.196Z"
   }
 }

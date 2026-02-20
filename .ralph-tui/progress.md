@@ -12,6 +12,7 @@ after each iteration and it's included in prompts for context.
 - 상태머신 M1 로직을 M2 프로파일로 승격할 때는 `lifecycle`에 프로파일 전이 검증 단일 진입점(`ensure_profile_transition`)을 두고 도메인 mutator(approve/finalize/revise)에서 공통 호출하면 하드코딩 제거와 에러 메시지 일관성을 동시에 확보할 수 있다.
 - 상태 Enum 값(`draft`)과 프로파일 전이 토큰(`DRAFT`) 표현이 다를 수 있으므로, lifecycle 검증 진입점에서 공통 canonicalization(upper-case 정규화)을 적용하면 레이어 간 전이 검증 로직을 재사용하기 쉽다.
 - 정적 Enum을 프로파일 기반 레지스트리로 치환할 때는 `profile load(lru_cache) -> normalize/duplicate guard -> ensure()` 경로를 단일화하고, `dataclass.__post_init__`에서 `ensure()`를 공통 호출하면 기본 규칙/커스텀 규칙 모두에서 미정의 타입을 일관되게 차단할 수 있다.
+- 독립 레이어 스택 선언은 `전용 TOML(00-layer-stack) -> cached loader -> validate_layer_stack(순환/참조) + order 방향 검증` 조합으로 분리하면 기존 대형 프로파일과 독립적으로 M1 구조 계약을 안정 검증할 수 있다.
 
 ---
 
@@ -198,4 +199,23 @@ after each iteration and it's included in prompts for context.
     - 프로파일 기반 레지스트리 치환 시 기존 enum 사용감(`ArtifactType.PAGE`, iteration)을 메타클래스 facade로 보존하면 호출부 수정을 최소화하면서 선언적 스키마 전환이 가능하다.
   - Gotchas encountered
     - 샌드박스에서 `uv run ruff/mypy`는 `~/.cache/uv` 접근 오류가 발생할 수 있어 `.venv/bin/ruff`, `.venv/bin/mypy`로 대체 실행이 필요했다.
+---
+
+## 2026-02-20 - US-009
+- What was implemented
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/00-layer-stack.toml`을 추가해 6개 레이어(`infra`, `decision`, `needs`, `kernel`, `flow`, `governance`)의 `name/order/depends_on/responsibility/model_perspective`를 선언했다.
+  - 같은 TOML에 `definition_flow`, `runtime_flow`, `feedback_flow`를 명시적으로 선언해 거버넌스 도메인 레이어 구조의 M1 설계 결정을 문서화했다.
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/layer_stack.py` 모듈을 추가해 layer stack TOML 로드(`lru_cache`), 메타데이터 접근, 의존 방향 검증, 순환 포함 정적 검증(`validate_layer_stack`)을 제공하도록 구현했다.
+  - 테스트를 추가해 레이어 정의 로드, 의존 방향 검증 통과, 순환 없음/validator 통과를 확인했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/ea-kernel/tests/test_ea_sys_layer_stack_profile.py -q`, `uv run pytest packages/ -x -q` (3109 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/00-layer-stack.toml`
+  - `packages/ea-kernel/src/ea_kernel/profiles/ea_sys/layer_stack.py`
+  - `packages/ea-kernel/tests/test_ea_sys_layer_stack_profile.py`
+- **Learnings:**
+  - Patterns discovered
+    - 레이어 스택은 커널 도메인 로직과 분리된 독립 프로파일로 두고 전용 로더 모듈에서 재사용하면, ProfileGraph/API가 필요할 때 동일 메타를 안정적으로 참조할 수 있다.
+  - Gotchas encountered
+    - `ea_kernel.profile_loader`는 `ea_profile.loader` 재-export라 mypy에서 속성 추론이 실패할 수 있어, 새 모듈에서는 정적 타입 안정성을 위해 `ea_profile.loader.load_profile`를 직접 import하는 편이 안전했다.
 ---

@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T19:17:06.007Z",
-  "currentIteration": 7,
+  "updatedAt": "2026-02-20T19:22:55.197Z",
+  "currentIteration": 8,
   "maxIterations": 0,
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -84,6 +84,16 @@
       "durationMs": 309739,
       "startedAt": "2026-02-20T19:04:56.324Z",
       "endedAt": "2026-02-20T19:10:06.063Z"
+    },
+    {
+      "iteration": 8,
+      "status": "completed",
+      "taskId": "US-008",
+      "taskTitle": "Projection ArtifactType 프로파일화",
+      "taskCompleted": true,
+      "durationMs": 418855,
+      "startedAt": "2026-02-20T19:10:07.151Z",
+      "endedAt": "2026-02-20T19:17:06.006Z"
     }
   ],
   "skippedTaskIds": [],

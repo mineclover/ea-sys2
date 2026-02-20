@@ -132,7 +132,7 @@ def _rule_to_dict(rule: ProfileRule) -> dict[str, Any]:
         }
         for c in rule.conditions
     ]
-    return {
+    d: dict[str, Any] = {
         "id": rule.id,
         "source_pattern": rule.source_pattern,
         "target_pattern": rule.target_pattern,
@@ -142,6 +142,9 @@ def _rule_to_dict(rule: ProfileRule) -> dict[str, Any]:
         "conditions": conditions,
         "notes": rule.notes,
     }
+    if rule.scope:
+        d["scope"] = rule.scope
+    return d
 
 
 def _dict_to_rule(d: dict[str, Any]) -> ProfileRule:
@@ -161,4 +164,5 @@ def _dict_to_rule(d: dict[str, Any]) -> ProfileRule:
         priority=d.get("priority", 0),
         conditions=conditions,
         notes=d.get("notes", ""),
+        scope=d.get("scope", ""),
     )

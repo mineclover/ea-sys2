@@ -8,15 +8,17 @@ from ea_needs.catalog import NeedCatalog
 
 
 class NeedsOps:
-    """Needs catalog CRUD through governance transaction control."""
+    """Needs catalog CRUD + analysis feedback through governance transaction control."""
 
     def __init__(
         self,
         needs_store: Any,
         execution_service: Any,
+        layer_store: Any = None,
     ) -> None:
         self._needs_store = needs_store
         self._execution_service = execution_service
+        self._layer_store = layer_store
 
     # -- Internal helpers ------------------------------------------------------
 
@@ -350,3 +352,192 @@ class NeedsOps:
                     }
                 )
         return sorted(matches, key=lambda item: (item["created_at"], item["event_id"]))
+
+    # -- Needs→Governance Feedback (S4 Analysis → Governance Audit) --------
+
+    def publish_analysis_report(
+        self,
+        catalog_id: str,
+        report: Any,
+        *,
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        """Record a NeedsAnalysisReport to the governance audit trail.
+
+        Maps to NeedsAuditPort element in 30-needs.toml.
+        Creates a transaction of type ``needs_analysis_report`` with the
+        report summary persisted as a layer snapshot.
+        """
+        report_payload = {
+            "report_id": report.report_id,
+            "created_at": report.created_at,
+            "total_needs_analyzed": report.total_needs_analyzed,
+            "health_score": report.health_score,
+            "unserved_count": len(report.unserved_stakeholders),
+            "underserved_count": len(report.underserved_stakeholders),
+            "stale_needs_count": report.stale_needs_count,
+        }
+
+        tx = self._execution_service.tx_manager.begin_transaction(
+            f"needs_analysis_{catalog_id}",
+            tx_type="needs_analysis_report",
+            payload={
+                "catalog_id": catalog_id,
+                "actor": actor,
+                "report_id": report.report_id,
+            },
+        )
+        try:
+            if self._layer_store is not None:
+                model_id = f"needs_report_{catalog_id}_{report.report_id}"
+                self._layer_store.save_payload(model_id, report_payload)
+
+            self._execution_service.tx_manager.add_event(
+                tx.id,
+                "needs_analysis_published",
+                f"Needs analysis report {report.report_id} published.",
+                payload=report_payload,
+            )
+            self._execution_service.tx_manager.commit(tx.id)
+        except Exception as exc:
+            self._execution_service.tx_manager.fail(tx.id, str(exc))
+            raise
+
+        return {
+            "catalog_id": catalog_id,
+            "report_id": report.report_id,
+            "transaction_id": tx.id,
+        }
+
+    def record_needs_version(
+        self,
+        catalog_id: str,
+        *,
+        version_label: str,
+        summary: str = "",
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        """Record a needs catalog version snapshot to governance.
+
+        Maps to NeedsVersionRecord element in 30-needs.toml.
+        Captures the current state of a catalog as a named version.
+        """
+        catalog = self._require_needs_catalog(catalog_id)
+
+        version_payload = {
+            "catalog_id": catalog.id,
+            "catalog_name": catalog.name,
+            "version_label": version_label,
+            "needs_count": len(catalog.needs),
+            "stakeholder_count": len(catalog.stakeholders),
+            "use_case_count": len(catalog.use_cases),
+            "summary": summary,
+        }
+
+        tx = self._execution_service.tx_manager.begin_transaction(
+            f"needs_version_{catalog_id}",
+            tx_type="needs_version_record",
+            payload={
+                "catalog_id": catalog_id,
+                "actor": actor,
+                "version_label": version_label,
+            },
+        )
+        try:
+            if self._layer_store is not None:
+                model_id = f"needs_version_{catalog_id}_{version_label}"
+                self._layer_store.save_payload(model_id, version_payload)
+
+            self._execution_service.tx_manager.add_event(
+                tx.id,
+                "needs_version_recorded",
+                f"Needs catalog version '{version_label}' recorded.",
+                payload=version_payload,
+            )
+            self._execution_service.tx_manager.commit(tx.id)
+        except Exception as exc:
+            self._execution_service.tx_manager.fail(tx.id, str(exc))
+            raise
+
+        return {
+            "catalog_id": catalog_id,
+            "version_label": version_label,
+            "transaction_id": tx.id,
+        }
+
+    def evaluate_change_policy(
+        self,
+        catalog_id: str,
+        *,
+        proposed_change: str,
+        change_scope: str = "catalog",
+        actor: str = "governance",
+    ) -> dict[str, Any]:
+        """Evaluate whether a proposed change passes governance policy.
+
+        Maps to NeedsChangePolicy element in 30-needs.toml.
+        Returns a policy check result with pass/fail and reasons.
+        """
+        catalog = self._require_needs_catalog(catalog_id)
+
+        violations: list[str] = []
+        warnings: list[str] = []
+
+        # Policy checks derived from governance constraints
+        if len(catalog.needs) == 0 and proposed_change in ("publish", "promote"):
+            violations.append("Cannot publish/promote a catalog with no needs.")
+
+        if change_scope == "catalog":
+            # Check for unresolved needs
+            unresolved = [
+                n for n in catalog.needs
+                if str(n.status) in ("draft", "expressed")
+            ]
+            if len(unresolved) > len(catalog.needs) * 0.5 and proposed_change == "publish":
+                warnings.append(
+                    f"Over 50% of needs are unresolved ({len(unresolved)}/{len(catalog.needs)})."
+                )
+
+            # Check stakeholder coverage
+            if not catalog.stakeholders and proposed_change != "delete":
+                violations.append("Catalog has no stakeholders defined.")
+
+        passed = len(violations) == 0
+
+        # Record the policy evaluation
+        tx = self._execution_service.tx_manager.begin_transaction(
+            f"needs_policy_{catalog_id}",
+            tx_type="needs_change_policy",
+            payload={
+                "catalog_id": catalog_id,
+                "actor": actor,
+                "proposed_change": proposed_change,
+            },
+        )
+        try:
+            self._execution_service.tx_manager.add_event(
+                tx.id,
+                "needs_policy_evaluated",
+                f"Change policy evaluated: {'PASS' if passed else 'FAIL'}",
+                payload={
+                    "catalog_id": catalog_id,
+                    "proposed_change": proposed_change,
+                    "change_scope": change_scope,
+                    "passed": passed,
+                    "violations": violations,
+                    "warnings": warnings,
+                },
+            )
+            self._execution_service.tx_manager.commit(tx.id)
+        except Exception as exc:
+            self._execution_service.tx_manager.fail(tx.id, str(exc))
+            raise
+
+        return {
+            "catalog_id": catalog_id,
+            "proposed_change": proposed_change,
+            "passed": passed,
+            "violations": violations,
+            "warnings": warnings,
+            "transaction_id": tx.id,
+        }

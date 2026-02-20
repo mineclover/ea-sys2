@@ -16,6 +16,10 @@ LAYER_FILE_MAP: dict[str, str] = {
     "development": "80-development.toml",
 }
 
+EXPERIMENTAL_FILE_MAP: dict[str, str] = {
+    "recursive-node": "85-recursive-node.toml",
+}
+
 LAYER_ORDER: tuple[str, ...] = (
     "infra",
     "governance",
@@ -28,17 +32,23 @@ LAYER_ORDER: tuple[str, ...] = (
     "development",
 )
 
+# Experimental profiles (not part of LAYER_ORDER / validation pipeline)
+EXPERIMENTAL_PROFILES: tuple[str, ...] = (
+    "recursive-node",
+)
+
 PROFILE_DIR = Path(__file__).resolve().parent
 
 
 def layer_path(layer: str) -> Path:
     """Return the filesystem path for an EA System layer profile file."""
+    all_maps = {**LAYER_FILE_MAP, **EXPERIMENTAL_FILE_MAP}
     try:
-        filename = LAYER_FILE_MAP[layer]
+        filename = all_maps[layer]
     except KeyError as exc:
-        allowed = ", ".join(sorted(LAYER_FILE_MAP))
+        allowed = ", ".join(sorted(all_maps))
         raise KeyError(f"Unknown EA System layer '{layer}'. Allowed: {allowed}") from exc
     return PROFILE_DIR / filename
 
 
-__all__ = ["LAYER_FILE_MAP", "LAYER_ORDER", "PROFILE_DIR", "layer_path"]
+__all__ = ["LAYER_FILE_MAP", "LAYER_ORDER", "EXPERIMENTAL_PROFILES", "EXPERIMENTAL_FILE_MAP", "PROFILE_DIR", "layer_path"]

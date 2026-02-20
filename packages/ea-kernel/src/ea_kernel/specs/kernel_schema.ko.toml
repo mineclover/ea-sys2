@@ -5,7 +5,7 @@
 # _en_*: 번역 시점 영문 원본 (stale 감지용)
 
 # ═══════════════════════════════════════════════════════════════════
-# L1 Structure — entities (10)
+# L1 Structure — entities (12)
 # ═══════════════════════════════════════════════════════════════════
 
 [entities.element]
@@ -37,6 +37,18 @@ _en_display_name = "Port"
 _en_description = "Access or interaction point exposed by a structure"
 display_name = "포트"
 description = "구조체가 노출하는 접근/상호작용 지점"
+
+[entities.input_port]
+_en_display_name = "Input Port"
+_en_description = "Receiving access point — data flows into this port"
+display_name = "입력 포트"
+description = "수신 접근 지점 — 데이터가 이 포트로 유입됨"
+
+[entities.output_port]
+_en_display_name = "Output Port"
+_en_description = "Emitting access point — data flows out of this port"
+display_name = "출력 포트"
+description = "송신 접근 지점 — 데이터가 이 포트에서 유출됨"
 
 [entities.classifier]
 _en_display_name = "Classifier"

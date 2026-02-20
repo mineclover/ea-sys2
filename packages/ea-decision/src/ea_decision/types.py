@@ -28,6 +28,11 @@ def _now() -> str:
     return datetime.now(UTC).isoformat() + "Z"
 
 
+def generate_trace_id() -> str:
+    """Generate a cross-layer trace ID for end-to-end correlation."""
+    return f"trace-{uuid.uuid4().hex[:12]}"
+
+
 # ---------------------------------------------------------------------------
 # From design_thinking.py
 # ---------------------------------------------------------------------------
@@ -201,6 +206,9 @@ class DecisionTopic:
 
     # L1 Grounding
     supporting_evidence: list[EvidenceReference] = field(default_factory=list)
+
+    # Forward causal reference to Needs layer
+    need_refs: list[str] = field(default_factory=list)  # Need IDs this decision addresses
 
 
 class DecisionOntology:

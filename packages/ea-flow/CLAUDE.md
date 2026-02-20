@@ -67,7 +67,10 @@ src/ea_flow/
 ├── execution_store.py      # S3: ExecutionStore (ABC → InMemory → SQLite) — 워크플로 실행 기록 영속화
 ├── flow_analyzer.py        # S4: FlowAnalyzer — 스텝 효과성·병목 감지·처리량 분석
 ├── flow_simulator.py       # S5: FlowSimulator — 토폴로지 변경 What-If 시뮬레이션
-└── workflow_promotion.py   # S5: WorkflowPromotionEngine — 워크플로 승격/폐기 워크플로
+├── workflow_promotion.py   # S5: WorkflowPromotionEngine — 워크플로 승격/폐기 워크플로
+├── flow_propagation.py     # S6: FlowPropagationEngine — 워크플로 변경의 기존 실행 기록 영향 전파 평가
+├── anchor_validation.py    # Kernel↔Flow 양방향 인식 — kernel_anchor 검증 + 역방향 조회
+└── workflow_version_store.py # S3: WorkflowVersionStore — 워크플로 스펙 버전 관리 (ABC → InMemory → SQLite)
 ```
 
 ### 잔여 한계
@@ -114,6 +117,9 @@ execution_store.py: 독립 (자체 도메인 타입 정의)
   ← flow_analyzer.py (ExecutionStore — TYPE_CHECKING import)
   ← flow_simulator.py (ExecutionStore — TYPE_CHECKING import)
 flow_analyzer.py ← workflow_promotion.py (FlowAnalysisReport, StepEffectiveness — TYPE_CHECKING import)
+flow_propagation.py: execution_store (ExecutionStore — TYPE_CHECKING import)
+anchor_validation.py: ea_kernel.definition lazy import (kernel_anchor 검증 + 역방향 조회)
+workflow_version_store.py: 독립 (자체 도메인 타입 정의)
 ```
 
 선언(P1/P2)이 실행(P3)을 모르는 것이 최우선 규칙이다. spec.py/types.py → runtime.py/kernel_implementers.py import 금지. 이는 Kernel의 types.py가 kernel_service.py를 모르는 것과 동일한 원칙이다.
@@ -125,6 +131,7 @@ Kernel의 6-phase governance lifecycle 패턴을 Flow 도메인 어휘로 번역
 - **S3 Recording** (execution_store.py) — 워크플로 실행 기록 영속화 (ABC → InMemory → SQLite 3-tier)
 - **S4 Analysis** (flow_analyzer.py) — 스텝 효과성, 병목 감지, 처리량 분석
 - **S5 Evolution** (flow_simulator.py, workflow_promotion.py) — What-If 시뮬레이션 + 워크플로 승격/폐기 워크플로
+- **S6 Propagation** (flow_propagation.py) — 워크플로/스텝 변경의 기존 실행 기록 영향 전파 평가
 
 Store 패턴은 ea-kernel/decision_store.py와 동일: `__slots__`, `@contextmanager _connection()`, `_init_schema()`.
 Promotion 패턴은 ea-kernel/promotion_engine.py와 동일: in-memory proposal store, vote/approve/reject/apply 워크플로.

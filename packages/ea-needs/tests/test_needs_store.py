@@ -230,6 +230,49 @@ class _NeedStoreTests(ABC):
         assert cto.addressed_rate == pytest.approx(2 / 3)
         assert cto.avg_justification_count == pytest.approx(2.0)
 
+    def test_query_by_decision_ref(self):
+        store = self.create_store()
+        store.store(_make_snapshot(
+            need_id="n1", decision_ref="decision-aaa",
+        ))
+        store.store(_make_snapshot(
+            need_id="n2", decision_ref="decision-bbb",
+        ))
+        store.store(_make_snapshot(
+            need_id="n3", decision_ref="decision-aaa",
+        ))
+
+        options = NeedQueryOptions(decision_ref="decision-aaa")
+        results = store.query(options)
+        assert len(results) == 2
+        assert all(r.decision_ref == "decision-aaa" for r in results)
+
+    def test_count_by_decision_ref(self):
+        store = self.create_store()
+        store.store(_make_snapshot(
+            need_id="n1", decision_ref="decision-aaa",
+        ))
+        store.store(_make_snapshot(
+            need_id="n2", decision_ref="decision-bbb",
+        ))
+
+        options = NeedQueryOptions(decision_ref="decision-aaa")
+        assert store.count(options) == 1
+
+    def test_decision_ref_empty_matches_none(self):
+        store = self.create_store()
+        store.store(_make_snapshot(
+            need_id="n1", decision_ref="decision-aaa",
+        ))
+        store.store(_make_snapshot(
+            need_id="n2", decision_ref="",
+        ))
+
+        # Empty string filter should be ignored (returns all)
+        options = NeedQueryOptions(decision_ref="")
+        results = store.query(options)
+        assert len(results) == 2
+
     def test_metadata_preserved(self):
         store = self.create_store()
         snap = _make_snapshot(

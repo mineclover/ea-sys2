@@ -63,8 +63,11 @@ class ProfileRegistry(_ProfileRegistry):
             "projection": "EASystem-Projection",
             "web-kernel-viz": "EASystem-WebKernelViz",
             "development": "EASystem-Development",
+            "recursive-node": "EASystem-RecursiveNode",
         }
-        for layer_key in LAYER_ORDER:
+        from ea_kernel.profiles.ea_sys import EXPERIMENTAL_PROFILES
+        all_keys = list(LAYER_ORDER) + list(EXPERIMENTAL_PROFILES)
+        for layer_key in all_keys:
             reg_name = layer_name_map[layer_key]
             if reg_name in self._profiles:
                 continue

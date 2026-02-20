@@ -465,8 +465,8 @@ class TestTopologyAssertions:
         assert len(out) == 0
 
     def test_concrete_entity_count(self, graph):
-        # 11 concrete entities
-        assert len(graph.entities) == 11
+        # 13 concrete entities (11 original + input_port + output_port)
+        assert len(graph.entities) == 13
 
 
 # ═════════════════════════════════════════════════════════════════════════════

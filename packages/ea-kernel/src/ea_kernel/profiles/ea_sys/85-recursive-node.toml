@@ -1,0 +1,1407 @@
+# EA System: Recursive Node (Input/Output/Logic) Self-Description
+# Goal: Node = { Input, Output, Logic }, Logic contains Nodes (recursive)
+# 기존 80-development.toml 과 동일 프로젝트를 재귀 노드 패턴으로 재모델링
+#
+# 검증 대상:
+#   1. 주소 체계 — 중첩 노드를 고유하게 참조할 수 있는가?
+#   2. 상호작용 정의 — 경계를 넘는 데이터 흐름을 표현할 수 있는가?
+#   3. 적정 추상화 — 프로젝션 레벨별로 재귀 깊이가 제어되는가?
+
+[profile]
+name = "EASystem-RecursiveNode"
+version = "0.1.0"
+kernel_version = "2.5.0"
+id_prefix = "rn"
+standard = "Recursive Node Pattern v0.1"
+organization = "ea-system"
+
+# ── Projection Overrides ──────────────────────────────────────
+# max_containment_depth per level: 재귀 구조의 점진적 노출
+#   L0: 최상위 노드만 (depth 0)
+#   L1: 1단계 중첩까지 (패키지 노드)
+#   L2+: 제한 없음 (모듈 레벨 이하 전부)
+[projection]
+max_containment_depth_l0 = 0
+max_containment_depth_l1 = 1
+
+# ── Category → Kernel Entity 매핑 ────────────────────────────
+# 주의: 프로젝션 필터가 표준 카테고리 이름으로 동작하므로
+#       커스텀 이름 대신 표준 EA 카테고리 사용 필수.
+#
+# 프로젝션 레벨별 가시성:
+#   L0: Composite, InputInterface, OutputInterface, Context, Goal, Governance
+#   L1: + Assessment, Behavior, Executable
+#   L3: + PassiveStructure, Event
+#   L4: 전부
+#
+# 재귀 노드 패턴의 점진적 노출 전략:
+#   Node     → Composite        (L0부터 — 경계 보임)
+#   In Port  → InputInterface   (L0부터 — 수신 접점)
+#   Out Port → OutputInterface  (L0부터 — 송신 접점)
+#   Logic    → Behavior         (L1부터 — 내부 로직은 한 단계 아래서)
+#   Data     → PassiveStructure (L3부터 — 데이터 흐름은 실행 레벨에서)
+#   Gate     → Assessment       (L1부터 — 품질 게이트)
+[categories]
+Composite = "structure"           # Node: 계산 노드 (경계 컨테이너)
+InputInterface = "input_port"     # In: 수신 포트
+OutputInterface = "output_port"   # Out: 송신 포트
+Behavior = "package"              # Logic: 내부 로직 컨테이너 (재귀 핵심)
+PassiveStructure = "item"         # Data: 노드 간 데이터 채널
+Assessment = "expression"         # Gate: 품질 검증 게이트
+
+# ── Relations (10 standard) ──────────────────────────────────
+[[relations]]
+name = "contains"
+kernel_relation = "ownership"
+description = "Node contains I/O ports and Logic; Logic contains sub-Nodes."
+
+[[relations]]
+name = "depends_on"
+kernel_relation = "association"
+description = "Structural dependency between Nodes."
+
+[[relations]]
+name = "next"
+kernel_relation = "succession"
+description = "Data flow: OutputPort → InputPort (cross-boundary wiring)."
+
+[[relations]]
+name = "produces"
+kernel_relation = "flow"
+direction = "out"
+description = "Node produces DataChannel."
+
+[[relations]]
+name = "consumes"
+kernel_relation = "flow"
+direction = "in"
+description = "Node consumes DataChannel."
+
+[[relations]]
+name = "triggers"
+kernel_relation = "triggering"
+description = "Event-driven execution trigger."
+
+[[relations]]
+name = "constrains"
+kernel_relation = "association"
+description = "QualityGate constrains execution."
+
+[[relations]]
+name = "coordinates"
+kernel_relation = "association"
+description = "Runtime orchestration between nodes."
+
+[[relations]]
+name = "registers"
+kernel_relation = "membership"
+description = "Registry membership."
+
+[[relations]]
+name = "available_in"
+kernel_relation = "association"
+description = "Port exposed at parent boundary."
+
+# ══════════════════════════════════════════════════════════════
+# LEVEL 0: Top-Level System Node
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "EASys2"
+layer = "System"
+category = "Composite"
+description = "Top-level system node: ea-sys2 monorepo."
+
+[[elements]]
+name = "EASys2.in"
+layer = "System"
+category = "InputInterface"
+description = "System input: user requests, profile TOMLs, CLI commands."
+
+[[elements]]
+name = "EASys2.out"
+layer = "System"
+category = "OutputInterface"
+description = "System output: projections, validations, MCP tools, API responses."
+
+[[elements]]
+name = "EASys2.logic"
+layer = "System"
+category = "Behavior"
+description = "System logic container: 7 sub-nodes."
+
+# ══════════════════════════════════════════════════════════════
+# LEVEL 1: Package-Level Nodes (inside EASys2.logic)
+# ══════════════════════════════════════════════════════════════
+
+# ── Profile Node ─────────────────────────────────────────────
+
+[[elements]]
+name = "Profile"
+layer = "Foundation"
+category = "Composite"
+description = "ea-profile: kernel-agnostic profile framework (zero dep)."
+
+[[elements]]
+name = "Profile.in"
+layer = "Foundation"
+category = "InputInterface"
+description = "Input: TOML content string, validation flag."
+
+[[elements]]
+name = "Profile.out"
+layer = "Foundation"
+category = "OutputInterface"
+description = "Output: KernelProfile frozen dataclass."
+
+[[elements]]
+name = "Profile.logic"
+layer = "Foundation"
+category = "Behavior"
+description = "Profile internals: types, builder, loader, store."
+
+# ── Kernel Node ──────────────────────────────────────────────
+
+[[elements]]
+name = "Kernel"
+layer = "Kernel"
+category = "Composite"
+description = "ea-kernel: lightweight kernel metamodel (L1-L4 ontology)."
+
+[[elements]]
+name = "Kernel.in"
+layer = "Kernel"
+category = "InputInterface"
+description = "Input: profile name/content, judgment queries, projection params."
+
+[[elements]]
+name = "Kernel.out"
+layer = "Kernel"
+category = "OutputInterface"
+description = "Output: topology, judgment reports, projections, rule exploration."
+
+[[elements]]
+name = "Kernel.logic"
+layer = "Kernel"
+category = "Behavior"
+description = "Kernel internals: schema, corpus, service, governance."
+
+# ── Projection Node ──────────────────────────────────────────
+
+[[elements]]
+name = "Projection"
+layer = "Projection"
+category = "Composite"
+description = "ea-projection: abstraction and indexing layer."
+
+[[elements]]
+name = "Projection.in"
+layer = "Projection"
+category = "InputInterface"
+description = "Input: topology dict, level, tier, max_edges, preserve set."
+
+[[elements]]
+name = "Projection.out"
+layer = "Projection"
+category = "OutputInterface"
+description = "Output: projected view (nodes, edges, reduction metadata)."
+
+[[elements]]
+name = "Projection.logic"
+layer = "Projection"
+category = "Behavior"
+description = "Projection internals: depth, surface, filter, policy, tier, ext."
+
+# ── Decision Node ────────────────────────────────────────────
+
+[[elements]]
+name = "Decision"
+layer = "Decision"
+category = "Composite"
+description = "ea-decision: decision meta-meta model, Design Thinking process."
+
+[[elements]]
+name = "Decision.in"
+layer = "Decision"
+category = "InputInterface"
+description = "Input: intent, evidence, options."
+
+[[elements]]
+name = "Decision.out"
+layer = "Decision"
+category = "OutputInterface"
+description = "Output: decision result, modeling actions, patterns."
+
+[[elements]]
+name = "Decision.logic"
+layer = "Decision"
+category = "Behavior"
+description = "Decision internals: topic, lifecycle, evaluation, pattern."
+
+# ── Needs Node ───────────────────────────────────────────────
+
+[[elements]]
+name = "Needs"
+layer = "Needs"
+category = "Composite"
+description = "ea-needs: stakeholder needs formalization."
+
+[[elements]]
+name = "Needs.in"
+layer = "Needs"
+category = "InputInterface"
+description = "Input: stakeholder context, goal definitions."
+
+[[elements]]
+name = "Needs.out"
+layer = "Needs"
+category = "OutputInterface"
+description = "Output: formalized needs, coverage analysis."
+
+[[elements]]
+name = "Needs.logic"
+layer = "Needs"
+category = "Behavior"
+description = "Needs internals: catalog, service, coverage."
+
+# ── Flow Node ────────────────────────────────────────────────
+
+[[elements]]
+name = "Flow"
+layer = "Flow"
+category = "Composite"
+description = "ea-flow: execution flow + data schema spec ownership."
+
+[[elements]]
+name = "Flow.in"
+layer = "Flow"
+category = "InputInterface"
+description = "Input: workflow spec, step bindings, context."
+
+[[elements]]
+name = "Flow.out"
+layer = "Flow"
+category = "OutputInterface"
+description = "Output: execution result, data schemas, flow state."
+
+[[elements]]
+name = "Flow.logic"
+layer = "Flow"
+category = "Behavior"
+description = "Flow internals: spec, runtime, topology, schema."
+
+# ── Governance Node ──────────────────────────────────────────
+
+[[elements]]
+name = "Governance"
+layer = "Management"
+category = "Composite"
+description = "ea-governance: 5-layer management system."
+
+[[elements]]
+name = "Governance.in"
+layer = "Management"
+category = "InputInterface"
+description = "Input: layer snapshots, validation requests, entry commands."
+
+[[elements]]
+name = "Governance.out"
+layer = "Management"
+category = "OutputInterface"
+description = "Output: dashboard, cross-layer summary, version history."
+
+[[elements]]
+name = "Governance.logic"
+layer = "Management"
+category = "Behavior"
+description = "Governance internals: facade, service, layer store."
+
+# ══════════════════════════════════════════════════════════════
+# LEVEL 2: Module-Level Nodes (inside package Logic containers)
+# ══════════════════════════════════════════════════════════════
+
+# ── Profile.logic 내부 ───────────────────────────────────────
+
+[[elements]]
+name = "ProfileTypes"
+layer = "Foundation"
+category = "Composite"
+description = "Frozen vocabulary: ProfileElement, ProfileRule, KernelProfile."
+
+[[elements]]
+name = "ProfileBuilder"
+layer = "Foundation"
+category = "Composite"
+description = "Fluent builder API: profile creation and composition."
+
+[[elements]]
+name = "ProfileLoader"
+layer = "Foundation"
+category = "Composite"
+description = "TOML parser + schema validation."
+
+# ── Kernel.logic 내부 ────────────────────────────────────────
+
+[[elements]]
+name = "SchemaLoader"
+layer = "Kernel"
+category = "Composite"
+description = "TOML→KernelSchema parser."
+
+[[elements]]
+name = "RuleCorpus"
+layer = "Kernel"
+category = "Composite"
+description = "Rule corpus: metadata, query, evidence-based judgment."
+
+[[elements]]
+name = "KernelService"
+layer = "Kernel"
+category = "Composite"
+description = "Service layer: UC1-UC6 pure functions, dict return."
+
+[[elements]]
+name = "JudgmentService"
+layer = "Kernel"
+category = "Composite"
+description = "Governance-aware judgment (S2)."
+
+# ── Projection.logic 내부 ────────────────────────────────────
+
+[[elements]]
+name = "DepthRegistry"
+layer = "Projection"
+category = "Composite"
+description = "L0-L4 depth level specifications + DEDS semantics."
+
+[[elements]]
+name = "SurfaceClassifier"
+layer = "Projection"
+category = "Composite"
+description = "5-axis relation classification + depth_semantic linking."
+
+[[elements]]
+name = "PolicyResolver"
+layer = "Projection"
+category = "Composite"
+description = "M2/M1 policy loading, validation, merging."
+
+[[elements]]
+name = "FilterEngine"
+layer = "Projection"
+category = "Composite"
+description = "4-stage topology reduction + relation-balanced edge capping."
+
+[[elements]]
+name = "TierClassifier"
+layer = "Projection"
+category = "Composite"
+description = "5-tier element classification (ui/function/data/decision/evidence)."
+
+[[elements]]
+name = "ExtensionRunner"
+layer = "Projection"
+category = "Composite"
+description = "ProjectionExtension protocol execution (enrich + supplementary)."
+
+# ── Decision.logic 내부 ──────────────────────────────────────
+
+[[elements]]
+name = "TopicModel"
+layer = "Decision"
+category = "Composite"
+description = "Topic aggregate root: Diverge→Converge→Plan→Action."
+
+[[elements]]
+name = "DecisionProjectionExt"
+layer = "Decision"
+category = "Composite"
+description = "ProjectionExtension: decision_phase, gate_type enrichment."
+
+# ── Flow.logic 내부 ──────────────────────────────────────────
+
+[[elements]]
+name = "FlowRuntime"
+layer = "Flow"
+category = "Composite"
+description = "Execution engine: StepImplementer binding + sequential execution."
+
+[[elements]]
+name = "FlowProjectionExt"
+layer = "Flow"
+category = "Composite"
+description = "ProjectionExtension: pipeline_order, plane enrichment."
+
+# ── Governance.logic 내부 ────────────────────────────────────
+
+[[elements]]
+name = "GovernanceFacade"
+layer = "Management"
+category = "Composite"
+description = "GovernanceContainer: single public entry point."
+
+[[elements]]
+name = "GovernanceService"
+layer = "Management"
+category = "Composite"
+description = "Pure function queries: dashboard, cross_layer_summary."
+
+# ══════════════════════════════════════════════════════════════
+# DATA CHANNELS: 노드 간 흐르는 데이터 객체
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProfileData"
+layer = "Foundation"
+category = "PassiveStructure"
+description = "KernelProfile frozen dataclass — Profile→Kernel 경계 데이터."
+
+[[elements]]
+name = "TopologyData"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "Topology dict (nodes, edges, metadata) — Kernel→Projection 경계 데이터."
+
+[[elements]]
+name = "ProjectedViewData"
+layer = "Projection"
+category = "PassiveStructure"
+description = "Projected view (filtered nodes/edges + reduction report)."
+
+[[elements]]
+name = "JudgmentData"
+layer = "Kernel"
+category = "PassiveStructure"
+description = "JudgmentReport (evidence, winner rule, confidence)."
+
+[[elements]]
+name = "DecisionResultData"
+layer = "Decision"
+category = "PassiveStructure"
+description = "DecisionResult (selected option, rationale, pattern)."
+
+[[elements]]
+name = "NeedsCoverageData"
+layer = "Needs"
+category = "PassiveStructure"
+description = "Needs coverage analysis result."
+
+[[elements]]
+name = "ExecutionResultData"
+layer = "Flow"
+category = "PassiveStructure"
+description = "Step execution result + data schema artifacts."
+
+[[elements]]
+name = "DashboardData"
+layer = "Management"
+category = "PassiveStructure"
+description = "Governance dashboard snapshot."
+
+# ══════════════════════════════════════════════════════════════
+# QUALITY GATES
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "ProfileValidationGate"
+layer = "Foundation"
+category = "Assessment"
+description = "Schema validation + quality gate on profile loading."
+
+[[elements]]
+name = "ProjectionBudgetGate"
+layer = "Projection"
+category = "Assessment"
+description = "Edge budget cap enforcement."
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Category-Level Structure (재귀 패턴 핵심)
+# ══════════════════════════════════════════════════════════════
+
+# ── Node 구성: Node contains I/O + Logic ─────────────────────
+
+[[rules]]
+id = "rn-struct-01"
+source = "@Composite"
+target = "@InputInterface"
+relation = "contains"
+priority = 50
+notes = "Every Node contains its InputPorts."
+
+[[rules]]
+id = "rn-struct-02"
+source = "@Composite"
+target = "@OutputInterface"
+relation = "contains"
+priority = 50
+notes = "Every Node contains its OutputPorts."
+
+[[rules]]
+id = "rn-struct-03"
+source = "@Composite"
+target = "@Behavior"
+relation = "contains"
+priority = 50
+notes = "Every Node contains its Logic container."
+
+# ── 재귀: Logic contains Nodes ───────────────────────────────
+
+[[rules]]
+id = "rn-recurse-01"
+source = "@Behavior"
+target = "@Composite"
+relation = "contains"
+priority = 50
+notes = "Logic contains sub-Nodes (recursion)."
+
+# ── 재귀: Logic contains QualityGates ────────────────────────
+
+[[rules]]
+id = "rn-recurse-02"
+source = "@Behavior"
+target = "@Assessment"
+relation = "contains"
+priority = 50
+notes = "Logic can contain quality gates."
+
+# ── 데이터 흐름: Output → Input (cross-boundary wiring) ──────
+
+[[rules]]
+id = "rn-wire-01"
+source = "@OutputInterface"
+target = "@InputInterface"
+relation = "next"
+priority = 50
+scope = "sibling"
+notes = "Cross-boundary data wiring: OutputPort → InputPort (same container only)."
+
+# ── 데이터 생산/소비 ─────────────────────────────────────────
+
+[[rules]]
+id = "rn-data-01"
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "Node produces DataChannel."
+
+[[rules]]
+id = "rn-data-02"
+source = "@Composite"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 50
+notes = "Node consumes DataChannel."
+
+[[rules]]
+id = "rn-data-03"
+source = "@OutputInterface"
+target = "@PassiveStructure"
+relation = "produces"
+priority = 50
+notes = "OutputPort produces DataChannel."
+
+[[rules]]
+id = "rn-data-04"
+source = "@InputInterface"
+target = "@PassiveStructure"
+relation = "consumes"
+priority = 50
+notes = "InputPort consumes DataChannel."
+
+# ── 제약/조율 ────────────────────────────────────────────────
+
+[[rules]]
+id = "rn-gate-01"
+source = "@Assessment"
+target = "@Composite"
+relation = "constrains"
+priority = 50
+notes = "QualityGate constrains Node execution."
+
+[[rules]]
+id = "rn-coord-01"
+source = "@Composite"
+target = "@Composite"
+relation = "coordinates"
+priority = 50
+notes = "Nodes coordinate with each other."
+
+[[rules]]
+id = "rn-dep-01"
+source = "@Composite"
+target = "@Composite"
+relation = "depends_on"
+priority = 50
+notes = "Structural dependency between Nodes."
+
+[[rules]]
+id = "rn-avail-01"
+source = "@InputInterface"
+target = "@Composite"
+relation = "available_in"
+priority = 50
+notes = "InputPort exposed at parent Node boundary."
+
+[[rules]]
+id = "rn-avail-02"
+source = "@OutputInterface"
+target = "@Composite"
+relation = "available_in"
+priority = 50
+notes = "OutputPort exposed at parent Node boundary."
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Level 0 Containment (System → Logic)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-l0-01"
+source = "EASys2"
+target = "EASys2.in"
+relation = "contains"
+priority = 60
+notes = "System node contains system input."
+
+[[rules]]
+id = "rn-l0-02"
+source = "EASys2"
+target = "EASys2.out"
+relation = "contains"
+priority = 60
+notes = "System node contains system output."
+
+[[rules]]
+id = "rn-l0-03"
+source = "EASys2"
+target = "EASys2.logic"
+relation = "contains"
+priority = 60
+notes = "System node contains system logic."
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Level 1 Containment (Logic → Package Nodes)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-l1-01"
+source = "EASys2.logic"
+target = "Profile"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-02"
+source = "EASys2.logic"
+target = "Kernel"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-03"
+source = "EASys2.logic"
+target = "Projection"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-04"
+source = "EASys2.logic"
+target = "Decision"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-05"
+source = "EASys2.logic"
+target = "Needs"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-06"
+source = "EASys2.logic"
+target = "Flow"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-07"
+source = "EASys2.logic"
+target = "Governance"
+relation = "contains"
+priority = 65
+
+# ── Package Node 내부 구조: I/O + Logic ──────────────────────
+
+[[rules]]
+id = "rn-l1-p-01"
+source = "Profile"
+target = "Profile.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-p-02"
+source = "Profile"
+target = "Profile.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-p-03"
+source = "Profile"
+target = "Profile.logic"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-k-01"
+source = "Kernel"
+target = "Kernel.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-k-02"
+source = "Kernel"
+target = "Kernel.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-k-03"
+source = "Kernel"
+target = "Kernel.logic"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-pj-01"
+source = "Projection"
+target = "Projection.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-pj-02"
+source = "Projection"
+target = "Projection.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-pj-03"
+source = "Projection"
+target = "Projection.logic"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-d-01"
+source = "Decision"
+target = "Decision.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-d-02"
+source = "Decision"
+target = "Decision.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-d-03"
+source = "Decision"
+target = "Decision.logic"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-n-01"
+source = "Needs"
+target = "Needs.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-n-02"
+source = "Needs"
+target = "Needs.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-n-03"
+source = "Needs"
+target = "Needs.logic"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-f-01"
+source = "Flow"
+target = "Flow.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-f-02"
+source = "Flow"
+target = "Flow.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-f-03"
+source = "Flow"
+target = "Flow.logic"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-g-01"
+source = "Governance"
+target = "Governance.in"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-g-02"
+source = "Governance"
+target = "Governance.out"
+relation = "contains"
+priority = 65
+
+[[rules]]
+id = "rn-l1-g-03"
+source = "Governance"
+target = "Governance.logic"
+relation = "contains"
+priority = 65
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Level 2 Containment (Package Logic → Module Nodes)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-l2-p-01"
+source = "Profile.logic"
+target = "ProfileTypes"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-p-02"
+source = "Profile.logic"
+target = "ProfileBuilder"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-p-03"
+source = "Profile.logic"
+target = "ProfileLoader"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-k-01"
+source = "Kernel.logic"
+target = "SchemaLoader"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-k-02"
+source = "Kernel.logic"
+target = "RuleCorpus"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-k-03"
+source = "Kernel.logic"
+target = "KernelService"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-k-04"
+source = "Kernel.logic"
+target = "JudgmentService"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-pj-01"
+source = "Projection.logic"
+target = "DepthRegistry"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-pj-02"
+source = "Projection.logic"
+target = "SurfaceClassifier"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-pj-03"
+source = "Projection.logic"
+target = "PolicyResolver"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-pj-04"
+source = "Projection.logic"
+target = "FilterEngine"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-pj-05"
+source = "Projection.logic"
+target = "TierClassifier"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-pj-06"
+source = "Projection.logic"
+target = "ExtensionRunner"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-d-01"
+source = "Decision.logic"
+target = "TopicModel"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-d-02"
+source = "Decision.logic"
+target = "DecisionProjectionExt"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-f-01"
+source = "Flow.logic"
+target = "FlowRuntime"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-f-02"
+source = "Flow.logic"
+target = "FlowProjectionExt"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-g-01"
+source = "Governance.logic"
+target = "GovernanceFacade"
+relation = "contains"
+priority = 70
+
+[[rules]]
+id = "rn-l2-g-02"
+source = "Governance.logic"
+target = "GovernanceService"
+relation = "contains"
+priority = 70
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Cross-Boundary Wiring (OutputPort → InputPort)
+# 주소 체계 검증: 점 표기법으로 경계를 명시적으로 참조
+# ══════════════════════════════════════════════════════════════
+
+# Profile.out → Kernel.in  (ProfileData flows)
+[[rules]]
+id = "rn-wire-pk"
+source = "Profile.out"
+target = "Kernel.in"
+relation = "next"
+priority = 72
+notes = "Profile output wired to Kernel input (KernelProfile data)."
+
+# Kernel.out → Projection.in  (TopologyData flows)
+[[rules]]
+id = "rn-wire-kp"
+source = "Kernel.out"
+target = "Projection.in"
+relation = "next"
+priority = 72
+notes = "Kernel output wired to Projection input (topology data)."
+
+# Decision.out → Kernel.in  (decision feedback)
+[[rules]]
+id = "rn-wire-dk"
+source = "Decision.out"
+target = "Kernel.in"
+relation = "next"
+priority = 72
+notes = "Decision output wired to Kernel input (modeling actions)."
+
+# Needs.out → Decision.in  (needs→decision trigger)
+[[rules]]
+id = "rn-wire-nd"
+source = "Needs.out"
+target = "Decision.in"
+relation = "next"
+priority = 72
+notes = "Needs output wired to Decision input (goals, context)."
+
+# Flow.out → Kernel.in  (flow feedback)
+[[rules]]
+id = "rn-wire-fk"
+source = "Flow.out"
+target = "Kernel.in"
+relation = "next"
+priority = 72
+notes = "Flow execution result fed back to Kernel."
+
+# Governance.out → EASys2.out  (dashboard surfaces to system output)
+[[rules]]
+id = "rn-wire-go"
+source = "Governance.out"
+target = "EASys2.out"
+relation = "next"
+priority = 72
+notes = "Governance dashboard surfaces to system output."
+
+# Projection.out → EASys2.out  (projections surface to system output)
+[[rules]]
+id = "rn-wire-po"
+source = "Projection.out"
+target = "EASys2.out"
+relation = "next"
+priority = 72
+notes = "Projected views surface to system output."
+
+# EASys2.in → Kernel.in  (user requests routed to kernel)
+[[rules]]
+id = "rn-wire-sk"
+source = "EASys2.in"
+target = "Kernel.in"
+relation = "next"
+priority = 72
+notes = "System input routed to Kernel."
+
+# EASys2.in → Governance.in  (admin requests routed to governance)
+[[rules]]
+id = "rn-wire-sg"
+source = "EASys2.in"
+target = "Governance.in"
+relation = "next"
+priority = 72
+notes = "System input routed to Governance."
+
+# ══════════════════════════════════════════════════════════════
+# RULES: DataChannel Production/Consumption
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-dc-01"
+source = "Profile"
+target = "ProfileData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-02"
+source = "Kernel"
+target = "ProfileData"
+relation = "consumes"
+priority = 72
+
+[[rules]]
+id = "rn-dc-03"
+source = "Kernel"
+target = "TopologyData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-04"
+source = "Projection"
+target = "TopologyData"
+relation = "consumes"
+priority = 72
+
+[[rules]]
+id = "rn-dc-05"
+source = "Projection"
+target = "ProjectedViewData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-06"
+source = "Kernel"
+target = "JudgmentData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-07"
+source = "Decision"
+target = "DecisionResultData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-08"
+source = "Governance"
+target = "DashboardData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-09"
+source = "Needs"
+target = "NeedsCoverageData"
+relation = "produces"
+priority = 72
+
+[[rules]]
+id = "rn-dc-10"
+source = "Flow"
+target = "ExecutionResultData"
+relation = "produces"
+priority = 72
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Dependency Direction (Node→Node)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-dep-pk"
+source = "Kernel"
+target = "Profile"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-pj"
+source = "Projection"
+target = "Profile"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-nk"
+source = "Needs"
+target = "Kernel"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-dk"
+source = "Decision"
+target = "Kernel"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-dn"
+source = "Decision"
+target = "Needs"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-fk"
+source = "Flow"
+target = "Kernel"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-fd"
+source = "Flow"
+target = "Decision"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-gk"
+source = "Governance"
+target = "Kernel"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-gd"
+source = "Governance"
+target = "Decision"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-gf"
+source = "Governance"
+target = "Flow"
+relation = "depends_on"
+priority = 70
+
+[[rules]]
+id = "rn-dep-gn"
+source = "Governance"
+target = "Needs"
+relation = "depends_on"
+priority = 70
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Internal Coordination (Module-Level)
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-int-01"
+source = "KernelService"
+target = "RuleCorpus"
+relation = "coordinates"
+priority = 72
+notes = "Kernel service coordinates rule corpus."
+
+[[rules]]
+id = "rn-int-02"
+source = "KernelService"
+target = "JudgmentService"
+relation = "coordinates"
+priority = 72
+notes = "Kernel service coordinates judgment."
+
+[[rules]]
+id = "rn-int-03"
+source = "FilterEngine"
+target = "TierClassifier"
+relation = "coordinates"
+priority = 72
+notes = "Filter engine uses tier classifier."
+
+[[rules]]
+id = "rn-int-04"
+source = "PolicyResolver"
+target = "DepthRegistry"
+relation = "coordinates"
+priority = 72
+notes = "Policy resolver uses depth registry."
+
+[[rules]]
+id = "rn-int-05"
+source = "ExtensionRunner"
+target = "DecisionProjectionExt"
+relation = "coordinates"
+priority = 72
+notes = "Extension runner invokes decision extension."
+
+[[rules]]
+id = "rn-int-06"
+source = "ExtensionRunner"
+target = "FlowProjectionExt"
+relation = "coordinates"
+priority = 72
+notes = "Extension runner invokes flow extension."
+
+[[rules]]
+id = "rn-int-07"
+source = "GovernanceFacade"
+target = "GovernanceService"
+relation = "coordinates"
+priority = 72
+notes = "Facade coordinates service layer."
+
+# ══════════════════════════════════════════════════════════════
+# RULES: QualityGate Constraints
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-qg-01"
+source = "ProfileValidationGate"
+target = "ProfileLoader"
+relation = "constrains"
+priority = 72
+notes = "Validation gate constrains profile loading."
+
+[[rules]]
+id = "rn-qg-02"
+source = "ProjectionBudgetGate"
+target = "FilterEngine"
+relation = "constrains"
+priority = 72
+notes = "Budget gate constrains edge capping."
+
+# ══════════════════════════════════════════════════════════════
+# RULES: Reverse Dependency Deny
+# ══════════════════════════════════════════════════════════════
+
+[[rules]]
+id = "rn-deny-01"
+source = "Profile"
+target = "Kernel"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Foundation must not depend on kernel."
+
+[[rules]]
+id = "rn-deny-02"
+source = "Kernel"
+target = "Decision"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Kernel must not depend on decision."
+
+[[rules]]
+id = "rn-deny-03"
+source = "Kernel"
+target = "Flow"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Kernel must not depend on flow."
+
+[[rules]]
+id = "rn-deny-04"
+source = "Kernel"
+target = "Governance"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Kernel must not depend on governance."
+
+[[rules]]
+id = "rn-deny-05"
+source = "Needs"
+target = "Decision"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Needs must not depend on decision."
+
+[[rules]]
+id = "rn-deny-06"
+source = "Decision"
+target = "Flow"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Decision must not depend on flow."
+
+[[rules]]
+id = "rn-deny-07"
+source = "Flow"
+target = "Governance"
+relation = "depends_on"
+valid = false
+priority = 80
+notes = "Flow must not depend on governance."

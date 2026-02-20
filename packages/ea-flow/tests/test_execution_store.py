@@ -204,6 +204,173 @@ class _ExecutionStoreTests:
         assert got is not None
         assert dict(got.metadata) == {"env": "test", "version": "1.0"}
 
+    # ── GAP-1: Decision back-reference fields ──────────────────────────
+
+    def test_report_id_and_topic_id_preserved(self):
+        store = self._create_store()
+        rec = StoredExecutionRecord(
+            storage_id="",
+            workflow_name="wf",
+            success=True,
+            total_steps=1,
+            completed_steps=1,
+            failed_step="",
+            rollback_occurred=False,
+            duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            report_id="report-abc",
+            topic_id="topic-xyz",
+        )
+        stored = store.store(rec)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.report_id == "report-abc"
+        assert got.topic_id == "topic-xyz"
+
+    def test_report_id_defaults_to_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_record())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.report_id == ""
+        assert got.topic_id == ""
+
+    def test_query_by_report_id(self):
+        store = self._create_store()
+        r1 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            report_id="report-A", topic_id="topic-1",
+        )
+        r2 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T11:00:00Z",
+            report_id="report-B", topic_id="topic-2",
+        )
+        store.store(r1)
+        store.store(r2)
+
+        results = store.query(ExecutionQueryOptions(report_id="report-A"))
+        assert len(results) == 1
+        assert results[0].report_id == "report-A"
+
+    def test_trace_id_preserved(self):
+        store = self._create_store()
+        rec = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            trace_id="trace-abc123def456",
+        )
+        stored = store.store(rec)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.trace_id == "trace-abc123def456"
+
+    def test_trace_id_defaults_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_record())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.trace_id == ""
+
+    def test_query_by_trace_id(self):
+        store = self._create_store()
+        r1 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            trace_id="trace-aaa",
+        )
+        r2 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T11:00:00Z",
+            trace_id="trace-bbb",
+        )
+        store.store(r1)
+        store.store(r2)
+
+        results = store.query(ExecutionQueryOptions(trace_id="trace-aaa"))
+        assert len(results) == 1
+        assert results[0].trace_id == "trace-aaa"
+
+    def test_query_by_topic_id(self):
+        store = self._create_store()
+        r1 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            report_id="r1", topic_id="topic-A",
+        )
+        r2 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=False,
+            total_steps=1, completed_steps=0, failed_step="s1",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T11:00:00Z",
+            report_id="r2", topic_id="topic-B",
+        )
+        store.store(r1)
+        store.store(r2)
+
+        results = store.query(ExecutionQueryOptions(topic_id="topic-A"))
+        assert len(results) == 1
+        assert results[0].topic_id == "topic-A"
+
+    # ── GAP-3: Workflow version linkage ──────────────────────────────
+
+    def test_workflow_version_id_preserved(self):
+        store = self._create_store()
+        rec = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            workflow_version_id="wfv-abc123",
+        )
+        stored = store.store(rec)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.workflow_version_id == "wfv-abc123"
+
+    def test_workflow_version_id_defaults_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_record())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.workflow_version_id == ""
+
+    def test_query_by_workflow_version_id(self):
+        store = self._create_store()
+        r1 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T10:00:00Z",
+            workflow_version_id="wfv-aaa",
+        )
+        r2 = StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-15T11:00:00Z",
+            workflow_version_id="wfv-bbb",
+        )
+        store.store(r1)
+        store.store(r2)
+
+        results = store.query(ExecutionQueryOptions(workflow_version_id="wfv-aaa"))
+        assert len(results) == 1
+        assert results[0].workflow_version_id == "wfv-aaa"
+
 
 # ── InMemory Tests ──────────────────────────────────────────────────────
 

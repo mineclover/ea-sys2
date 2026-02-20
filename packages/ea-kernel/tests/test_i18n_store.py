@@ -114,8 +114,8 @@ class TestInMemoryI18nStore:
         store = InMemoryI18nStore()
         ko_path = SPECS_DIR / "kernel_schema.ko.toml"
         count = store.import_from_toml(ko_path, "ko")
-        # 15 entities + 14 relations, each with display_name + description = 58
-        assert count == 58
+        # 17 entities + 14 relations, each with display_name + description = 62
+        assert count == 62
 
     def test_audit_clean(self):
         """Complete translation → is_clean."""
@@ -126,7 +126,7 @@ class TestInMemoryI18nStore:
 
         report = store.audit(schema, "ko")
         assert isinstance(report, I18nAuditReport)
-        assert report.total_schema_items == 58
+        assert report.total_schema_items == 62
         assert len(report.missing) == 0
         assert len(report.orphan) == 0
         # coverage should be 1.0
@@ -137,7 +137,7 @@ class TestInMemoryI18nStore:
         store = InMemoryI18nStore()
         _, schema, *_ = load_kernel_schema()
         report = store.audit(schema, "ko")
-        assert len(report.missing) == 58
+        assert len(report.missing) == 62
         assert report.total_translated == 0
 
     def test_audit_orphan(self):
@@ -219,7 +219,7 @@ class TestSQLiteI18nStore:
             store = SQLiteI18nStore(db_path)
             ko_path = SPECS_DIR / "kernel_schema.ko.toml"
             count = store.import_from_toml(ko_path, "ko")
-            assert count == 58
+            assert count == 62
 
             all_ko = store.list_translations("ko")
-            assert len(all_ko) == 58
+            assert len(all_ko) == 62

@@ -48,6 +48,8 @@ attribute join_mode, value string;                  ## all | any | first
 #       └── metatype (KerML: Type — classifies instances)
 #           ├── feature (KerML insight: Feature IS a Type)
 #           │   ├── port          [L1] — access/interaction point
+#           │   │   ├── input_port  [L1] — receiving access point
+#           │   │   └── output_port [L1] — emitting access point
 #           │   ├── step          [L4]
 #           │   │   └── action    [L4]
 #           │   ├── event         [L4] — state change trigger
@@ -98,6 +100,14 @@ entity feature, sub metatype,
 
 entity port, sub feature;
 ## port inherits connector:source, connector:target from feature
+
+entity input_port, sub port;
+## Receiving access point — data flows into this port
+## Direction constraint (input only) enforced at rule level, not schema level
+
+entity output_port, sub port;
+## Emitting access point — data flows out of this port
+## Direction constraint (output only) enforced at rule level, not schema level
 
 entity classifier @abstract, sub metatype;
 

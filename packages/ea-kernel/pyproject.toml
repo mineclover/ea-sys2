@@ -29,6 +29,7 @@ classifiers = [
 # TypeDB dependency only for runtime schema loading
 dependencies = [
     "ea-profile>=0.1.0",
+    "ea-projection>=0.1.0",
 ]
 
 [project.optional-dependencies]

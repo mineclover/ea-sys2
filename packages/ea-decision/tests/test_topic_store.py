@@ -182,6 +182,192 @@ class _TopicStoreTests:
         assert got is not None
         assert dict(got.metadata) == {"key1": "val1", "key2": "val2"}
 
+    # ── GAP-1: Execution back-reference fields ─────────────────────────
+
+    def test_execution_fields_preserved(self):
+        store = self._create_store()
+        snap = StoredDecisionSnapshot(
+            storage_id="",
+            topic_id="t-exec",
+            pattern_name="Test",
+            complexity="trivial",
+            option_count=2,
+            evaluation_score=0.8,
+            decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            execution_id="exec-123",
+            execution_success=True,
+            transaction_id="tx-456",
+        )
+        stored = store.store(snap)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.execution_id == "exec-123"
+        assert got.execution_success is True
+        assert got.transaction_id == "tx-456"
+
+    def test_execution_fields_default_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_snapshot())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.execution_id == ""
+        assert got.execution_success is None
+        assert got.transaction_id == ""
+
+    def test_trace_id_preserved(self):
+        store = self._create_store()
+        snap = StoredDecisionSnapshot(
+            storage_id="",
+            topic_id="t-trace",
+            pattern_name="Trace",
+            complexity="trivial",
+            option_count=1,
+            evaluation_score=0.5,
+            decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            trace_id="trace-abc123def456",
+        )
+        stored = store.store(snap)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.trace_id == "trace-abc123def456"
+
+    def test_trace_id_defaults_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_snapshot())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.trace_id == ""
+
+    def test_query_by_trace_id(self):
+        store = self._create_store()
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="t1", pattern_name="A", complexity="trivial",
+            option_count=1, evaluation_score=0.5, decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED, trace_id="trace-aaa",
+        ))
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="t2", pattern_name="B", complexity="trivial",
+            option_count=1, evaluation_score=0.5, decided_at="2025-01-15T11:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED, trace_id="trace-bbb",
+        ))
+
+        results = store.query(DecisionQueryOptions(trace_id="trace-aaa"))
+        assert len(results) == 1
+        assert results[0].trace_id == "trace-aaa"
+
+    # ── Need refs (forward causal reference) ────────────────────────────
+
+    def test_need_refs_preserved(self):
+        store = self._create_store()
+        snap = StoredDecisionSnapshot(
+            storage_id="",
+            topic_id="t-needs",
+            pattern_name="NeedLinked",
+            complexity="trivial",
+            option_count=2,
+            evaluation_score=0.7,
+            decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            need_refs=("need-001", "need-002"),
+        )
+        stored = store.store(snap)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.need_refs == ("need-001", "need-002")
+
+    def test_need_refs_defaults_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_snapshot())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.need_refs == ()
+
+    def test_query_by_need_ref(self):
+        store = self._create_store()
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="t1", pattern_name="A", complexity="trivial",
+            option_count=1, evaluation_score=0.5, decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            need_refs=("need-001", "need-002"),
+        ))
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="t2", pattern_name="B", complexity="trivial",
+            option_count=1, evaluation_score=0.5, decided_at="2025-01-15T11:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            need_refs=("need-003",),
+        ))
+
+        results = store.query(DecisionQueryOptions(need_ref="need-001"))
+        assert len(results) == 1
+        assert results[0].topic_id == "t1"
+
+    def test_count_by_need_ref(self):
+        store = self._create_store()
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="t1", pattern_name="A", complexity="trivial",
+            option_count=1, evaluation_score=0.5, decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            need_refs=("need-001",),
+        ))
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="t2", pattern_name="B", complexity="trivial",
+            option_count=1, evaluation_score=0.5, decided_at="2025-01-16T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            need_refs=("need-002",),
+        ))
+
+        assert store.count(DecisionQueryOptions(need_ref="need-001")) == 1
+        assert store.count(DecisionQueryOptions(need_ref="need-999")) == 0
+
+    # ── Projection refs (feedback loop) ─────────────────────────────
+
+    def test_projection_refs_preserved(self):
+        store = self._create_store()
+        snap = StoredDecisionSnapshot(
+            storage_id="",
+            topic_id="t-proj",
+            pattern_name="ProjLinked",
+            complexity="trivial",
+            option_count=2,
+            evaluation_score=0.7,
+            decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            projection_refs=("proj-001", "proj-002"),
+        )
+        stored = store.store(snap)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.projection_refs == ("proj-001", "proj-002")
+
+    def test_projection_refs_defaults_empty(self):
+        store = self._create_store()
+        stored = store.store(_make_snapshot())
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.projection_refs == ()
+
+    def test_execution_success_false_preserved(self):
+        store = self._create_store()
+        snap = StoredDecisionSnapshot(
+            storage_id="",
+            topic_id="t-fail",
+            pattern_name="FailTest",
+            complexity="trivial",
+            option_count=1,
+            evaluation_score=0.3,
+            decided_at="2025-01-15T10:00:00Z",
+            status=DecisionSnapshotStatus.REJECTED,
+            execution_id="exec-fail",
+            execution_success=False,
+            transaction_id="tx-fail",
+        )
+        stored = store.store(snap)
+        got = store.get(stored.storage_id)
+        assert got is not None
+        assert got.execution_success is False
+
 
 # ── InMemory Tests ──────────────────────────────────────────────────────
 

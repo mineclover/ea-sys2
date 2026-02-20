@@ -71,6 +71,7 @@ class NeedQueryOptions:
     priority: str = ""
     complexity: str = ""
     use_case_id: str = ""
+    decision_ref: str = ""
     start_time: str = ""
     end_time: str = ""
     limit: int = 100
@@ -267,6 +268,8 @@ class InMemoryNeedStore(NeedStore):
                 continue
             if options.use_case_id and snap.use_case_id != options.use_case_id:
                 continue
+            if options.decision_ref and snap.decision_ref != options.decision_ref:
+                continue
             if options.start_time and snap.expressed_at < options.start_time:
                 continue
             if options.end_time and snap.expressed_at > options.end_time:
@@ -287,7 +290,7 @@ class SQLiteNeedStore(NeedStore):
 
     __slots__ = ("_db_path",)
 
-    _SCHEMA_VERSION = 1
+    _SCHEMA_VERSION = 2
 
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = Path(db_path)
@@ -341,12 +344,20 @@ class SQLiteNeedStore(NeedStore):
                     ON need_snapshots(use_case_id);
                 CREATE INDEX IF NOT EXISTS idx_expressed_at
                     ON need_snapshots(expressed_at);
+                CREATE INDEX IF NOT EXISTS idx_decision_ref
+                    ON need_snapshots(decision_ref);
             """)
 
             cursor = conn.execute("SELECT version FROM schema_version")
-            if cursor.fetchone() is None:
+            row = cursor.fetchone()
+            if row is None:
                 conn.execute(
                     "INSERT INTO schema_version (version) VALUES (?)",
+                    (self._SCHEMA_VERSION,),
+                )
+            elif row[0] < self._SCHEMA_VERSION:
+                conn.execute(
+                    "UPDATE schema_version SET version = ?",
                     (self._SCHEMA_VERSION,),
                 )
 
@@ -411,38 +422,50 @@ class SQLiteNeedStore(NeedStore):
                 return None
             return self._row_to_snapshot(row)
 
+    @staticmethod
+    def _build_where_conditions(
+        options: NeedQueryOptions,
+    ) -> tuple[list[str], list[str | int]]:
+        conditions: list[str] = []
+        params: list[str | int] = []
+
+        if options.stakeholder_id:
+            conditions.append("stakeholder_id = ?")
+            params.append(options.stakeholder_id)
+        if options.status is not None:
+            conditions.append("status = ?")
+            params.append(options.status.value)
+        if options.priority:
+            conditions.append("priority = ?")
+            params.append(options.priority)
+        if options.complexity:
+            conditions.append("complexity = ?")
+            params.append(options.complexity)
+        if options.use_case_id:
+            conditions.append("use_case_id = ?")
+            params.append(options.use_case_id)
+        if options.decision_ref:
+            conditions.append("decision_ref = ?")
+            params.append(options.decision_ref)
+        if options.start_time:
+            conditions.append("expressed_at >= ?")
+            params.append(options.start_time)
+        if options.end_time:
+            conditions.append("expressed_at <= ?")
+            params.append(options.end_time)
+
+        return conditions, params
+
     def query(
         self, options: NeedQueryOptions | None = None,
     ) -> tuple[StoredNeedSnapshot, ...]:
         query = "SELECT * FROM need_snapshots"
         params: list[str | int] = []
-        conditions: list[str] = []
 
         if options:
-            if options.stakeholder_id:
-                conditions.append("stakeholder_id = ?")
-                params.append(options.stakeholder_id)
-            if options.status is not None:
-                conditions.append("status = ?")
-                params.append(options.status.value)
-            if options.priority:
-                conditions.append("priority = ?")
-                params.append(options.priority)
-            if options.complexity:
-                conditions.append("complexity = ?")
-                params.append(options.complexity)
-            if options.use_case_id:
-                conditions.append("use_case_id = ?")
-                params.append(options.use_case_id)
-            if options.start_time:
-                conditions.append("expressed_at >= ?")
-                params.append(options.start_time)
-            if options.end_time:
-                conditions.append("expressed_at <= ?")
-                params.append(options.end_time)
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+            conditions, params = self._build_where_conditions(options)
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
 
         query += " ORDER BY expressed_at DESC"
 
@@ -458,33 +481,11 @@ class SQLiteNeedStore(NeedStore):
     def count(self, options: NeedQueryOptions | None = None) -> int:
         query = "SELECT COUNT(*) FROM need_snapshots"
         params: list[str | int] = []
-        conditions: list[str] = []
 
         if options:
-            if options.stakeholder_id:
-                conditions.append("stakeholder_id = ?")
-                params.append(options.stakeholder_id)
-            if options.status is not None:
-                conditions.append("status = ?")
-                params.append(options.status.value)
-            if options.priority:
-                conditions.append("priority = ?")
-                params.append(options.priority)
-            if options.complexity:
-                conditions.append("complexity = ?")
-                params.append(options.complexity)
-            if options.use_case_id:
-                conditions.append("use_case_id = ?")
-                params.append(options.use_case_id)
-            if options.start_time:
-                conditions.append("expressed_at >= ?")
-                params.append(options.start_time)
-            if options.end_time:
-                conditions.append("expressed_at <= ?")
-                params.append(options.end_time)
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+            conditions, params = self._build_where_conditions(options)
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
 
         with self._connection() as conn:
             cursor = conn.execute(query, params)

@@ -73,6 +73,12 @@ GOVERNANCE_SCHEMA = GovernanceSchema(
         GovernanceEntity("transaction_unit", description="Transaction unit with status lifecycle (PENDING/IN_PROGRESS/COMMITTED/ROLLED_BACK/FAILED)"),
         GovernanceEntity("transaction_event", description="Frozen event sourcing record for transaction audit"),
         GovernanceEntity("execution_service", description="DesignReport/UseCaseSpec to flow runtime bridge with transaction control"),
+        # Projection depth reference
+        GovernanceEntity("exposure_depth_policy", description="Projection depth-referenced exposure policy"),
+        GovernanceEntity("surface_contract", description="Surface visibility contract referencing projection levels"),
+        # Projection execution recording
+        GovernanceEntity("projection_result", description="Recorded projection execution result with filter statistics"),
+        GovernanceEntity("projection_policy", description="Projection policy reference (level, lens, tier, seed)"),
     ),
     relations=(
         GovernanceRelation("contains", description="Containment relationship"),
@@ -84,6 +90,7 @@ GOVERNANCE_SCHEMA = GovernanceSchema(
         GovernanceRelation("next", description="Sequence relationship"),
         GovernanceRelation("triggers", description="Trigger relationship"),
         GovernanceRelation("constrains", description="Constraint relationship"),
-        GovernanceRelation("available_in", description="Availability relationship"),
+        GovernanceRelation("available_in", description="Availability relationship (projection surface scope)"),
+        GovernanceRelation("records", description="Recording relationship (governance records execution results)"),
     ),
 )

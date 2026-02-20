@@ -30,6 +30,7 @@ class TransactionUnit:
     updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     payload: dict[str, Any] = field(default_factory=dict)
     logs: list[str] = field(default_factory=list)
+    trace_id: str = ""
 
     def log(self, message: str) -> None:
         self.logs.append(f"[{datetime.now(UTC).isoformat()}] {message}")
@@ -46,7 +47,7 @@ class TransactionEvent:
 
 
 class TransactionManager:
-    _SCHEMA_VERSION = 1
+    _SCHEMA_VERSION = 2
 
     def __init__(self, db_path: str | Path) -> None:
         if db_path is None:
@@ -85,7 +86,8 @@ class TransactionManager:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     payload_json TEXT NOT NULL DEFAULT '{}',
-                    logs_json TEXT NOT NULL DEFAULT '[]'
+                    logs_json TEXT NOT NULL DEFAULT '[]',
+                    trace_id TEXT NOT NULL DEFAULT ''
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_tx_status
@@ -112,6 +114,18 @@ class TransactionManager:
                     "INSERT INTO schema_version(version) VALUES (?)",
                     (self._SCHEMA_VERSION,),
                 )
+
+            # Migration v1 → v2: add trace_id column
+            try:
+                conn.execute(
+                    "ALTER TABLE transactions ADD COLUMN trace_id TEXT NOT NULL DEFAULT ''"
+                )
+            except sqlite3.OperationalError:
+                pass  # column already exists
+
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_tx_trace_id ON transactions(trace_id)"
+            )
             conn.commit()
 
     def begin_transaction(
@@ -119,12 +133,14 @@ class TransactionManager:
         name: str,
         tx_type: str = "generic",
         payload: dict[str, Any] | None = None,
+        trace_id: str = "",
     ) -> TransactionUnit:
         tx = TransactionUnit(
             name=name,
             tx_type=tx_type,
             status=TransactionStatus.IN_PROGRESS,
             payload=payload or {},
+            trace_id=trace_id,
         )
         self._persist_upsert(tx)
         self._persist_event(tx.id, "begin", "Transaction started", tx.payload)
@@ -204,11 +220,12 @@ class TransactionManager:
         *,
         tx_type: str | None = None,
         status: TransactionStatus | None = None,
+        trace_id: str | None = None,
         limit: int | None = None,
     ) -> list[TransactionUnit]:
         """List transactions with optional filtering."""
         query = (
-            "SELECT id, name, tx_type, status, created_at, updated_at, payload_json, logs_json "
+            "SELECT id, name, tx_type, status, created_at, updated_at, payload_json, logs_json, trace_id "
             "FROM transactions"
         )
         clauses: list[str] = []
@@ -219,6 +236,9 @@ class TransactionManager:
         if status is not None:
             clauses.append("status = ?")
             params.append(status.value)
+        if trace_id is not None:
+            clauses.append("trace_id = ?")
+            params.append(trace_id)
 
         if clauses:
             query = f"{query} WHERE {' AND '.join(clauses)}"
@@ -237,8 +257,9 @@ class TransactionManager:
             conn.execute(
                 """
                 INSERT INTO transactions (
-                    id, name, tx_type, status, created_at, updated_at, payload_json, logs_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    id, name, tx_type, status, created_at, updated_at,
+                    payload_json, logs_json, trace_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
                     tx_type = excluded.tx_type,
@@ -246,7 +267,8 @@ class TransactionManager:
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at,
                     payload_json = excluded.payload_json,
-                    logs_json = excluded.logs_json
+                    logs_json = excluded.logs_json,
+                    trace_id = excluded.trace_id
                 """,
                 (
                     tx.id,
@@ -257,6 +279,7 @@ class TransactionManager:
                     tx.updated_at,
                     json.dumps(tx.payload, ensure_ascii=False, sort_keys=True),
                     json.dumps(tx.logs, ensure_ascii=False),
+                    tx.trace_id,
                 ),
             )
             conn.commit()
@@ -289,7 +312,8 @@ class TransactionManager:
         with self._connection() as conn:
             row = conn.execute(
                 """
-                SELECT id, name, tx_type, status, created_at, updated_at, payload_json, logs_json
+                SELECT id, name, tx_type, status, created_at, updated_at,
+                       payload_json, logs_json, trace_id
                 FROM transactions
                 WHERE id = ?
                 """,
@@ -304,6 +328,7 @@ class TransactionManager:
         status = TransactionStatus(str(row["status"]))
         payload = json.loads(str(row["payload_json"]))
         logs = json.loads(str(row["logs_json"]))
+        keys = row.keys()
         return TransactionUnit(
             id=str(row["id"]),
             name=str(row["name"]),
@@ -313,6 +338,7 @@ class TransactionManager:
             updated_at=str(row["updated_at"]),
             payload=payload,
             logs=list(logs),
+            trace_id=str(row["trace_id"]) if "trace_id" in keys else "",
         )
 
     @staticmethod

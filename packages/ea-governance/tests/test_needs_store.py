@@ -196,3 +196,164 @@ def test_governance_container_layer_scoped_store(tmp_path: Path):
     snapshots = container.list_layer_snapshots("decision")
     assert len(snapshots) == 1
     assert snapshots[0]["model_id"] == "decision-schema-v1"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Needs→Governance Feedback Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _container_with_catalog(tmp_path: Path) -> tuple:
+    """Create GovernanceContainer with a needs catalog + stakeholder + need."""
+    from ea_needs.types import NeedPriority
+
+    schema = KernelSchema(attributes=(), entities=(), relations=())
+    container = GovernanceContainer(tmp_path, schema)
+
+    created = container.create_needs_catalog("Test Catalog", actor="tester")
+    catalog_id = created["catalog_id"]
+
+    sh = container.add_needs_stakeholder(
+        catalog_id, name="Alice", role="operator", actor="tester",
+    )
+    stakeholder_id = sh["stakeholder_id"]
+
+    container.express_need_in_catalog(
+        catalog_id,
+        stakeholder_id=stakeholder_id,
+        action="stabilize",
+        subject="service recovery",
+        priority=NeedPriority.HIGH,
+        actor="tester",
+    )
+
+    return container, catalog_id
+
+
+def test_publish_analysis_report(tmp_path: Path):
+    """NeedsAnalysisReport is persisted to governance audit + layer store."""
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class FakeReport:
+        report_id: str = "rpt-001"
+        created_at: str = "2025-01-15T10:00:00Z"
+        total_needs_analyzed: int = 5
+        health_score: float = 72.0
+        unserved_stakeholders: tuple[str, ...] = ()
+        underserved_stakeholders: tuple[str, ...] = ("sh-2",)
+        stale_needs_count: int = 1
+
+    container, catalog_id = _container_with_catalog(tmp_path)
+    report = FakeReport()
+
+    result = container.publish_needs_analysis_report(
+        catalog_id, report, actor="analyzer",
+    )
+
+    assert result["report_id"] == "rpt-001"
+    assert "transaction_id" in result
+
+    # Verify the report was saved to the layer store
+    snapshot = container.get_layer_snapshot(
+        "needs", f"needs_report_{catalog_id}_rpt-001",
+    )
+    assert snapshot is not None
+    assert snapshot["health_score"] == 72.0
+    assert snapshot["unserved_count"] == 0
+    assert snapshot["underserved_count"] == 1
+
+    # Verify transaction events
+    tx_events = container.get_transaction_events(result["transaction_id"])
+    event_types = [e["event_type"] for e in tx_events]
+    assert "needs_analysis_published" in event_types
+
+
+def test_record_needs_version(tmp_path: Path):
+    """Catalog version metadata is recorded to governance."""
+    container, catalog_id = _container_with_catalog(tmp_path)
+
+    result = container.record_needs_version(
+        catalog_id,
+        version_label="v1.0",
+        summary="Initial needs baseline",
+        actor="architect",
+    )
+
+    assert result["version_label"] == "v1.0"
+    assert "transaction_id" in result
+
+    # Verify layer snapshot
+    snapshot = container.get_layer_snapshot(
+        "needs", f"needs_version_{catalog_id}_v1.0",
+    )
+    assert snapshot is not None
+    assert snapshot["version_label"] == "v1.0"
+    assert snapshot["needs_count"] >= 1
+    assert snapshot["summary"] == "Initial needs baseline"
+
+    # Verify transaction
+    tx_events = container.get_transaction_events(result["transaction_id"])
+    event_types = [e["event_type"] for e in tx_events]
+    assert "needs_version_recorded" in event_types
+
+
+def test_evaluate_change_policy_pass(tmp_path: Path):
+    """Change policy passes for valid catalog state."""
+    container, catalog_id = _container_with_catalog(tmp_path)
+
+    result = container.evaluate_needs_change_policy(
+        catalog_id,
+        proposed_change="publish",
+        actor="architect",
+    )
+
+    assert result["passed"] is True
+    assert result["violations"] == []
+    assert "transaction_id" in result
+
+    # Verify policy evaluation was recorded
+    tx_events = container.get_transaction_events(result["transaction_id"])
+    event_types = [e["event_type"] for e in tx_events]
+    assert "needs_policy_evaluated" in event_types
+
+
+def test_evaluate_change_policy_no_stakeholders(tmp_path: Path):
+    """Change policy fails when catalog has no stakeholders."""
+    schema = KernelSchema(attributes=(), entities=(), relations=())
+    container = GovernanceContainer(tmp_path, schema)
+
+    created = container.create_needs_catalog("Empty Catalog", actor="tester")
+    catalog_id = created["catalog_id"]
+
+    result = container.evaluate_needs_change_policy(
+        catalog_id,
+        proposed_change="publish",
+        actor="architect",
+    )
+
+    assert result["passed"] is False
+    assert any("no stakeholders" in v.lower() for v in result["violations"])
+
+
+def test_evaluate_change_policy_no_needs(tmp_path: Path):
+    """Change policy fails for publish when catalog has no needs."""
+    schema = KernelSchema(attributes=(), entities=(), relations=())
+    container = GovernanceContainer(tmp_path, schema)
+
+    created = container.create_needs_catalog("No Needs", actor="tester")
+    catalog_id = created["catalog_id"]
+
+    # Add stakeholder but no needs
+    container.add_needs_stakeholder(
+        catalog_id, name="Bob", role="dev", actor="tester",
+    )
+
+    result = container.evaluate_needs_change_policy(
+        catalog_id,
+        proposed_change="promote",
+        actor="architect",
+    )
+
+    assert result["passed"] is False
+    assert any("no needs" in v.lower() for v in result["violations"])

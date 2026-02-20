@@ -16,7 +16,19 @@ from ea_decision.types import (
     Reference,
     _generate_id,
     _now,
+    generate_trace_id,
 )
+
+
+@dataclass(frozen=True)
+class ProjectionCoverageAssessment:
+    """프로젝션 표층 커버리지 평가 결과."""
+    total_artifacts: int
+    by_tier: dict[str, int]
+    by_type: dict[str, int]
+    missing_tiers: tuple[str, ...]
+    coverage_score: float
+    sufficient: bool
 
 
 def _as_text(value: I18nString) -> str:
@@ -119,6 +131,15 @@ class DesignReport:
     # References to grounded evidence (IDs)
     key_evidence_refs: list[str] = field(default_factory=list)
 
+    # Forward causal reference to Needs layer
+    need_refs: list[str] = field(default_factory=list)  # Need IDs addressed by this report
+
+    # Projection feedback — observed surface state
+    projection_refs: list[str] = field(default_factory=list)  # Projection snapshot IDs
+
+    # Projection coverage assessment (populated by Topic.finalize_plan)
+    projection_coverage: ProjectionCoverageAssessment | None = None
+
     # Execution Status
     executed_at: str | None = None
     execution_log: list[str] = field(default_factory=list)
@@ -136,6 +157,22 @@ class DesignReport:
     ) -> None:
         self.modeling_actions.append(ModelingAction(action_type, target, description, payload=(payload or {})))
 
+    def finalize_execution(
+        self,
+        success: bool,
+        execution_log: list[str],
+        transaction_id: str,
+    ) -> None:
+        """Update report state after flow execution completes."""
+        self.executed_at = _now()
+        self.execution_log.extend(execution_log)
+        self.transaction_id = transaction_id
+
+        if success:
+            self.decision.status = DecisionStatus.ACCEPTED
+        else:
+            self.decision.status = DecisionStatus.REJECTED
+
 @dataclass
 class Topic:
     """Grouping container for a specific design problem."""
@@ -151,12 +188,47 @@ class Topic:
     report: DesignReport | None = None
     report_history: list[DesignReport] = field(default_factory=list)
 
+    # Forward causal reference to Needs layer
+    need_refs: list[str] = field(default_factory=list)  # Need IDs triggering this decision
+
+    # Projection feedback — observed surface state at decision time
+    projection_refs: list[str] = field(default_factory=list)  # Projection snapshot IDs
+    surface_summary: dict[str, Any] = field(default_factory=dict)  # Artifact counts by tier/type
+
     # Metadata
     pattern_name: str | None = None
     status: str = "active"  # active, completed, archived
     created_at: str = field(default_factory=_now)
     updated_at: str = field(default_factory=_now)
     id: str = field(default_factory=lambda: _generate_id("topic"))
+    trace_id: str = field(default_factory=generate_trace_id)
+
+    def set_projection_context(
+        self,
+        projection_refs: list[str],
+        surface_summary: dict[str, Any] | None = None,
+    ) -> None:
+        """Capture the projection state this decision is based on.
+
+        Records which projection snapshots were observed and a summary
+        of the surface artifacts at decision time.
+        """
+        for ref in projection_refs:
+            if ref not in self.projection_refs:
+                self.projection_refs.append(ref)
+        if surface_summary is not None:
+            self.surface_summary = dict(surface_summary)
+        self.updated_at = _now()
+
+    def link_needs(self, need_ids: list[str]) -> None:
+        """Link Need IDs that triggered or are addressed by this decision.
+
+        Deduplicates: existing refs are preserved, new ones appended.
+        """
+        for nid in need_ids:
+            if nid not in self.need_refs:
+                self.need_refs.append(nid)
+        self.updated_at = _now()
 
     def apply_pattern(self, pattern: DecisionPattern) -> None:
         """Apply a cognitive reasoning pattern to this topic."""
@@ -217,6 +289,31 @@ class Topic:
         self.options.append(Option(title, description))
         self.updated_at = _now()
 
+    def assess_projection_coverage(
+        self,
+        required_tiers: tuple[str, ...] = ("ui", "function", "data"),
+    ) -> ProjectionCoverageAssessment:
+        """프로젝션 표층 상태를 평가하여 커버리지 판정."""
+        by_tier: dict[str, int] = dict(self.surface_summary.get("by_tier", {}))
+        by_type: dict[str, int] = dict(self.surface_summary.get("by_type", {}))
+        total_artifacts = sum(by_tier.values())
+
+        missing_tiers = tuple(
+            t for t in required_tiers if by_tier.get(t, 0) == 0
+        )
+        covered = len(required_tiers) - len(missing_tiers)
+        coverage_score = covered / len(required_tiers) if required_tiers else 1.0
+        sufficient = coverage_score >= 0.5
+
+        return ProjectionCoverageAssessment(
+            total_artifacts=total_artifacts,
+            by_tier=by_tier,
+            by_type=by_type,
+            missing_tiers=missing_tiers,
+            coverage_score=coverage_score,
+            sufficient=sufficient,
+        )
+
     def finalize_plan(self, title: str, summary: str, selected_option_id: str, rationale: str) -> DesignReport:
         """Creates the formal Design Report (Plan) based on the process."""
         # Archive existing report if any
@@ -229,10 +326,37 @@ class Topic:
             raise ValueError(f"Option {selected_option_id} not found in topic {self.id}")
 
         decision = DesignDecision(selected_option_id=selected_option_id, rationale=rationale)
-        self.report = DesignReport(title=title, summary=summary, decision=decision)
+
+        coverage = None
+        if self.projection_refs:
+            coverage = self.assess_projection_coverage()
+
+        self.report = DesignReport(
+            title=title, summary=summary, decision=decision,
+            need_refs=list(self.need_refs),
+            projection_refs=list(self.projection_refs),
+            projection_coverage=coverage,
+        )
         self.status = "completed"
         self.updated_at = _now()
         return self.report
+
+    def execution_completed(
+        self,
+        success: bool,
+        execution_log: list[str],
+        transaction_id: str,
+    ) -> None:
+        """Called after flow execution to update decision and topic state."""
+        if not self.report:
+            return
+
+        self.report.finalize_execution(success, execution_log, transaction_id)
+
+        if not success:
+            self.status = "active"  # re-open for revision on failure
+
+        self.updated_at = _now()
 
     def revise_report(self) -> None:
         """Re-opens the topic for further discussion, archiving the current report."""
@@ -247,6 +371,32 @@ class Topic:
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, ensure_ascii=False)
 
+    @staticmethod
+    def _hydrate_report(rep_data: dict[str, Any]) -> DesignReport:
+        dec_data = rep_data.pop('decision')
+        actions_data = rep_data.pop('modeling_actions', [])
+        cov_data = rep_data.pop('projection_coverage', None)
+
+        coverage = None
+        if cov_data is not None:
+            coverage = ProjectionCoverageAssessment(
+                total_artifacts=cov_data['total_artifacts'],
+                by_tier=dict(cov_data['by_tier']),
+                by_type=dict(cov_data['by_type']),
+                missing_tiers=tuple(cov_data['missing_tiers']),
+                coverage_score=cov_data['coverage_score'],
+                sufficient=cov_data['sufficient'],
+            )
+
+        report = DesignReport(
+            decision=DesignDecision(**dec_data),
+            projection_coverage=coverage,
+            **rep_data,
+        )
+        for act in actions_data:
+            report.modeling_actions.append(ModelingAction(**act))
+        return report
+
     @classmethod
     def from_json(cls, json_str: str) -> Topic:
         data = json.loads(json_str)
@@ -254,6 +404,9 @@ class Topic:
         topic = cls(
             title=data['title'],
             description=data['description'],
+            need_refs=list(data.get('need_refs', [])),
+            projection_refs=list(data.get('projection_refs', [])),
+            surface_summary=dict(data.get('surface_summary', {})),
             status=data.get('status', 'active'),
             created_at=data.get('created_at', ""),
             updated_at=data.get('updated_at', ""),
@@ -281,23 +434,10 @@ class Topic:
 
         if data.get('report'):
             rep_data = data['report']
-            dec_data = rep_data.pop('decision')
-            actions_data = rep_data.pop('modeling_actions', [])
-
-            report = DesignReport(decision=DesignDecision(**dec_data), **rep_data)
-            for act in actions_data:
-                report.modeling_actions.append(ModelingAction(**act))
-
-            topic.report = report
+            topic.report = cls._hydrate_report(rep_data)
 
         # Hydrate history
         for h_data in data.get('report_history', []):
-             dec_data = h_data.pop('decision')
-             actions_data = h_data.pop('modeling_actions', [])
-             report = DesignReport(decision=DesignDecision(**dec_data), **h_data)
-
-             for act in actions_data:
-                report.modeling_actions.append(ModelingAction(**act))
-             topic.report_history.append(report)
+            topic.report_history.append(cls._hydrate_report(h_data))
 
         return topic

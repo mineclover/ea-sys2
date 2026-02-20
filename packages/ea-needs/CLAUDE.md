@@ -40,7 +40,8 @@ src/ea_needs/
 ├── needs_store.py       # S3: NeedStore (ABC → InMemory → SQLite) — 니즈 스냅샷 영속화
 ├── needs_analyzer.py    # S4: NeedsAnalyzer — 이해관계자 커버리지·우선순위 분포 분석
 ├── needs_simulator.py   # S5: NeedsSimulator — 이해관계자/니즈 변경 What-If 시뮬레이션
-└── needs_promotion.py   # S5: NeedPromotionEngine — 니즈 승격/폐기 워크플로
+├── needs_promotion.py   # S5: NeedPromotionEngine — 니즈 승격/폐기 워크플로
+└── needs_propagation.py # S6: NeedsPropagationEngine — 니즈 변경의 기존 스냅샷 영향 전파 평가
 ```
 
 N1 타입 전부 `frozen=True`. N2 Need만 mutable (status/priority 상태 전이). NeedStatement은 frozen.
@@ -98,6 +99,7 @@ needs_store.py: 독립 (자체 도메인 타입 정의)
   ← needs_analyzer.py (NeedStore — TYPE_CHECKING import)
   ← needs_simulator.py (NeedStore — TYPE_CHECKING import)
 needs_analyzer.py ← needs_promotion.py (NeedsAnalysisReport, StakeholderCoverage — TYPE_CHECKING import)
+needs_propagation.py: needs_store (NeedStore — TYPE_CHECKING import)
 ```
 
 ### Test Convention
@@ -154,6 +156,7 @@ Kernel의 6-phase governance lifecycle 패턴을 Needs 도메인 어휘로 번�
 - **S3 Recording** (needs_store.py) — 니즈 스냅샷 영속화 (ABC → InMemory → SQLite 3-tier)
 - **S4 Analysis** (needs_analyzer.py) — 이해관계자 커버리지, 우선순위 분포, 해결 처리량 분석
 - **S5 Evolution** (needs_simulator.py, needs_promotion.py) — What-If 시뮬레이션 + 니즈 승격/폐기 워크플로
+- **S6 Propagation** (needs_propagation.py) — 이해관계자/우선순위 변경의 기존 니즈 스냅샷 영향 전파 평가
 
 Store 패턴은 ea-kernel/decision_store.py와 동일: `__slots__`, `@contextmanager _connection()`, `_init_schema()`.
 Promotion 패턴은 ea-kernel/promotion_engine.py와 동일: in-memory proposal store, vote/approve/reject/apply 워크플로.

@@ -11,10 +11,10 @@ class TestGovernanceSchemaPort:
         assert isinstance(GOVERNANCE_SCHEMA, SchemaPort)
 
     def test_entity_count(self):
-        assert len(GOVERNANCE_SCHEMA.entities) == 18
+        assert len(GOVERNANCE_SCHEMA.entities) == 22
 
     def test_relation_count(self):
-        assert len(GOVERNANCE_SCHEMA.relations) == 10
+        assert len(GOVERNANCE_SCHEMA.relations) == 11
 
     def test_entities_are_governance_entity(self):
         for e in GOVERNANCE_SCHEMA.entities:
@@ -60,6 +60,10 @@ class TestGovernanceSchemaPort:
             # Transaction / Event Sourcing
             "transaction_manager", "transaction_unit", "transaction_event",
             "execution_service",
+            # Projection depth reference
+            "exposure_depth_policy", "surface_contract",
+            # Projection execution recording
+            "projection_result", "projection_policy",
         }
         assert names == expected
 
@@ -68,7 +72,7 @@ class TestGovernanceSchemaPort:
         expected = {
             "contains", "registers", "coordinates", "depends_on",
             "produces", "consumes", "next", "triggers",
-            "constrains", "available_in",
+            "constrains", "available_in", "records",
         }
         assert names == expected
 

@@ -10,7 +10,6 @@ from functools import lru_cache
 from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Any
-import tomllib
 
 from ea_kernel.types import (
     KernelSchema,
@@ -18,6 +17,33 @@ from ea_kernel.types import (
     RuleGroup,
     RuleMetadata,
 )
+from ea_projection.surface import DEFAULT_SURFACE_PROFILE
+from ea_projection.depth import (
+    DepthLevelRegistry,
+    PROJECTION_DEFAULT_ACTOR_DEPTH,
+    PROJECTION_DEFAULT_SEED_DEPTH,
+    PROJECTION_LENS_TO_LEVEL,
+)
+from ea_projection.policy.constants import (
+    PROJECTION_POLICY_FILE_NAME,
+    TOPIC_QUERY_POLICY_DEFAULT,
+)
+from ea_projection.policy.normalizer import (
+    normalize_topic_query_policy as _normalize_topic_query_policy,
+)
+from ea_projection.policy.resolver import (
+    resolve_projection_policy as _resolve_projection_policy_core,
+    projection_policy_snapshot as _projection_policy_snapshot_core,
+)
+from ea_projection.tier import (
+    resolve_tier_definitions as _resolve_tier_definitions_from_loader,
+)
+from ea_projection.filter import (
+    apply_projection_filters as _apply_projection_filters,
+    edge_surface_exposed as _edge_surface_exposed,
+)
+from ea_projection.filter.engine import _cap_edges_relation_balanced
+from ea_projection.ext import ProjectionExtension
 
 if TYPE_CHECKING:
     from ea_kernel.rule_corpus import RuleCorpus
@@ -30,19 +56,6 @@ _LAYER_LABELS: dict[Layer, str] = {
     Layer.L4: "L4 Concrete",
 }
 
-# Surface visibility policy (M1): expose structural/causal edges by default,
-# hide inheritance/meta/self-description relations from the primary lens.
-_SURFACE_RELATION_PROFILE: dict[str, tuple[str, ...]] = {
-    "structural": ("contains", "depends_on", "next"),
-    "causal": ("triggers", "constrains"),
-    "operational": ("produces", "consumes", "coordinates"),
-    "self_description": ("registers", "available_in"),
-    "inheritance_meta": ("specialization", "redefinition", "subsetting", "feature_typing"),
-}
-_SURFACE_VISIBLE_RELATIONS: tuple[str, ...] = (
-    *_SURFACE_RELATION_PROFILE["structural"],
-    *_SURFACE_RELATION_PROFILE["causal"],
-)
 _RELATION_SEMANTIC_AXIS: dict[str, str] = {
     "contains": "structure",
     "depends_on": "structure",
@@ -161,254 +174,7 @@ _ACTOR_INTERACTION_NODE_CATEGORIES: frozenset[str] = frozenset({
     "Assessment",
 })
 
-_PROJECTION_LEVEL_SPECS: dict[str, dict[str, Any]] = {
-    "l0": {
-        "level": "L0",
-        "lens": "panorama",
-        "description": "Strategic panorama for cross-domain orientation.",
-        "base_view_mode": "focus",
-        "base_focus": "core",
-        "allowed_relations": ("contains", "depends_on", "next", "triggers", "constrains"),
-        "allowed_categories": ("Composite", "Page", "Interface", "Context", "Goal", "Governance"),
-        "default_max_edges": 180,
-        "next_levels": ("L1",),
-    },
-    "l1": {
-        "level": "L1",
-        "lens": "capability",
-        "description": "Capability and responsibility map around experiences and interfaces.",
-        "base_view_mode": "summary",
-        "allowed_relations": ("contains", "depends_on", "next", "triggers", "constrains"),
-        "allowed_categories": (
-            "Composite",
-            "Page",
-            "Interface",
-            "Context",
-            "Goal",
-            "Governance",
-            "Assessment",
-            "Behavior",
-            "Executable",
-        ),
-        "default_max_edges": 320,
-        "next_levels": ("L2",),
-    },
-    "l2": {
-        "level": "L2",
-        "lens": "interaction",
-        "description": "Actor-centric valid interaction routes.",
-        "base_view_mode": "focus",
-        "base_focus": "actor",
-        "allowed_relations": _ACTOR_INTERACTION_RELATIONS,
-        "allowed_categories": tuple(sorted(_ACTOR_INTERACTION_NODE_CATEGORIES)),
-        "default_max_edges": 520,
-        "next_levels": ("L3",),
-    },
-    "l3": {
-        "level": "L3",
-        "lens": "execution",
-        "description": "Execution chain over steps, actions, and triggering events.",
-        "base_view_mode": "summary",
-        "allowed_relations": (
-            "next",
-            "triggers",
-            "depends_on",
-            "coordinates",
-            "constrains",
-            "produces",
-            "consumes",
-        ),
-        "allowed_categories": (
-            "Behavior",
-            "Executable",
-            "Event",
-            "Interface",
-            "Goal",
-            "Governance",
-            "Assessment",
-            "PassiveStructure",
-        ),
-        "default_max_edges": 760,
-        "next_levels": ("L4",),
-    },
-    "l4": {
-        "level": "L4",
-        "lens": "trace",
-        "description": "Developer-grade decision/data trace view with detailed flow relations.",
-        "base_view_mode": "summary",
-        "allowed_relations": (
-            "produces",
-            "consumes",
-            "next",
-            "triggers",
-            "depends_on",
-            "coordinates",
-            "registers",
-            "available_in",
-            "constrains",
-        ),
-        "allowed_categories": (
-            "Behavior",
-            "Executable",
-            "Event",
-            "Interface",
-            "Goal",
-            "Governance",
-            "Assessment",
-            "PassiveStructure",
-            "Context",
-            "Page",
-            "Composite",
-        ),
-        "default_max_edges": 980,
-        "next_levels": (),
-    },
-}
-_PROJECTION_LENS_TO_LEVEL: dict[str, str] = {
-    "panorama": "l0",
-    "overview": "l0",
-    "capability": "l1",
-    "interaction": "l2",
-    "execution": "l3",
-    "trace": "l4",
-}
-_PROJECTION_BASE_VIEW_MODES: frozenset[str] = frozenset({"raw", "summary", "focus"})
-_PROJECTION_FOCUS_MODES: frozenset[str] = frozenset({"core", "relation", "layer", "actor", "topic", "seed"})
-_PROJECTION_DEFAULT_ACTOR_DEPTH = 4
-_PROJECTION_DEFAULT_SEED_DEPTH = 2
-_PROJECTION_TIER_DEFINITIONS: dict[str, dict[str, Any]] = {
-    "ui": {
-        "categories": ["Page", "Interface", "Context"],
-        "name_patterns": [],
-        "name_exclude_patterns": [],
-        "transitions": ["function"],
-    },
-    "function": {
-        "categories": ["ActiveStructure", "Behavior", "Executable", "Governance"],
-        "name_patterns": [],
-        "name_exclude_patterns": [],
-        "transitions": ["data", "decision"],
-    },
-    "data": {
-        "categories": ["PassiveStructure", "Composite"],
-        "name_patterns": [],
-        "name_exclude_patterns": ["Evidence", "Provenance", "Rationale", "Audit", "AnalysisReport", "Compliance"],
-        "transitions": ["evidence"],
-    },
-    "decision": {
-        "categories": ["Assessment", "Goal", "Event"],
-        "name_patterns": [],
-        "name_exclude_patterns": [],
-        "transitions": ["evidence"],
-    },
-    "evidence": {
-        "categories": ["PassiveStructure"],
-        "name_patterns": ["Evidence", "Provenance", "Rationale", "Audit", "AnalysisReport", "Compliance"],
-        "name_exclude_patterns": [],
-        "transitions": [],
-    },
-}
-_PROJECTION_TIER_NAMES: tuple[str, ...] = ("ui", "function", "data", "decision", "evidence")
-_PROJECTION_POLICY_FILE_NAME = "projection_policy.toml"
-_TOPIC_QUERY_POLICY_DEFAULT: dict[str, Any] = {
-    "default_depth": 2,
-    "max_scope_nodes_per_depth": 40,
-    "seed_score_ratio": 0.72,
-    "seed_score_floor": 60,
-    "min_token_coverage": 0.5,
-    "max_seed_count": 8,
-    "max_match_count": 16,
-    "max_available_topics": 60,
-    "scoring": {
-        "name_token": 34,
-        "display_token": 22,
-        "description_token": 10,
-        "name_exact": 220,
-        "name_contains": 120,
-        "display_exact": 180,
-        "display_contains": 90,
-        "description_contains": 40,
-    },
-}
-_PROJECTION_UI_PRESET_KEYS: tuple[str, ...] = ("overview", "actor-route", "trace")
-_PROJECTION_UI_DEFAULT: dict[str, Any] = {
-    "edge_budget_options": [220, 320, 420, 620, 900, 1200, 1600],
-    "preset_order": list(_PROJECTION_UI_PRESET_KEYS),
-    "defaults": {
-        "safety_mode": True,
-        "surface_only": True,
-        "domain_scope": "owned",
-    },
-    "safety_caps": {
-        "topology": {
-            "raw": 700,
-            "summary": 900,
-            "focus": 780,
-        },
-        "composed": {
-            "summary": 760,
-            "focus": 700,
-        },
-        "projection": {
-            "l0": 220,
-            "l1": 320,
-            "l2": 520,
-            "l3": 760,
-            "l4": 900,
-        },
-    },
-    "presets": {
-        "overview": {
-            "source_mode": "topology",
-            "view_mode": "summary",
-            "focus_mode": "core",
-            "domain_scope": "owned",
-            "surface_only": True,
-            "max_edges": 420,
-        },
-        "actor-route": {
-            "source_mode": "projection",
-            "projection_level": "l2",
-            "focus_depth": 3,
-            "domain_scope": "owned",
-            "surface_only": True,
-            "max_edges": 620,
-        },
-        "trace": {
-            "source_mode": "projection",
-            "projection_level": "l4",
-            "domain_scope": "all",
-            "surface_only": True,
-            "max_edges": 900,
-        },
-    },
-}
-_PROJECTION_UI_LAYER_TUNING: dict[str, dict[str, dict[str, Any]]] = {
-    "overview": {
-        "infra": {"max_edges": 320},
-        "needs": {"max_edges": 360},
-        "governance": {"max_edges": 420},
-        "decision": {"max_edges": 420},
-        "kernel": {"max_edges": 420},
-        "flow": {"max_edges": 480},
-    },
-    "actor-route": {
-        "infra": {"focus_depth": 2, "max_edges": 420},
-        "needs": {"focus_depth": 3, "max_edges": 480},
-        "governance": {"focus_depth": 3, "max_edges": 520},
-        "decision": {"focus_depth": 3, "max_edges": 520},
-        "kernel": {"focus_depth": 4, "max_edges": 620},
-        "flow": {"focus_depth": 4, "max_edges": 620},
-    },
-    "trace": {
-        "infra": {"max_edges": 620, "domain_scope": "all"},
-        "needs": {"max_edges": 700, "domain_scope": "all"},
-        "governance": {"max_edges": 760, "domain_scope": "all"},
-        "decision": {"max_edges": 760, "domain_scope": "all"},
-        "kernel": {"max_edges": 900, "domain_scope": "all"},
-        "flow": {"max_edges": 900, "domain_scope": "all"},
-    },
-}
+_PROJECTION_LEVEL_SPECS: dict[str, dict[str, Any]] = DepthLevelRegistry.from_hardcoded().to_level_specs()
 
 _EA_PROFILE_TO_LAYER_KEY: dict[str, str] = {
     "easystem-infra": "infra",
@@ -437,897 +203,21 @@ _MODEL_PORT_TO_LAYER: dict[str, str] = {
 
 
 def _projection_policy_path() -> Path:
-    return Path(__file__).parent / "profiles" / "ea_sys" / _PROJECTION_POLICY_FILE_NAME
-
-
-def _to_string_tuple(value: Any) -> tuple[str, ...]:
-    if isinstance(value, str):
-        normalized = value.strip()
-        return (normalized,) if normalized else ()
-    if not isinstance(value, (list, tuple)):
-        return ()
-    out: list[str] = []
-    for item in value:
-        text = str(item).strip()
-        if text:
-            out.append(text)
-    return tuple(out)
-
-
-def _safe_positive_int(value: Any, fallback: int) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return fallback
-    return parsed if parsed > 0 else fallback
-
-
-def _safe_probability(value: Any, fallback: float) -> float:
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return fallback
-    if parsed < 0.0:
-        return fallback
-    if parsed > 1.0:
-        return fallback
-    return parsed
-
-
-def _normalized_projection_preset_key(value: str) -> str:
-    return value.strip().lower().replace("_", "-")
-
-
-def _copy_projection_ui_defaults() -> dict[str, Any]:
-    return {
-        "edge_budget_options": list(_PROJECTION_UI_DEFAULT["edge_budget_options"]),
-        "preset_order": list(_PROJECTION_UI_DEFAULT["preset_order"]),
-        "defaults": dict(_PROJECTION_UI_DEFAULT["defaults"]),
-        "safety_caps": {
-            "topology": dict(_PROJECTION_UI_DEFAULT["safety_caps"]["topology"]),
-            "composed": dict(_PROJECTION_UI_DEFAULT["safety_caps"]["composed"]),
-            "projection": dict(_PROJECTION_UI_DEFAULT["safety_caps"]["projection"]),
-        },
-        "presets": {
-            key: dict(value)
-            for key, value in _PROJECTION_UI_DEFAULT["presets"].items()
-        },
-    }
-
-
-def _normalize_projection_ui_preset(
-    *,
-    spec: Any,
-    fallback: dict[str, Any],
-) -> dict[str, Any]:
-    normalized = dict(fallback)
-    if not isinstance(spec, dict):
-        return normalized
-
-    source_mode_raw = spec.get("source_mode")
-    if isinstance(source_mode_raw, str):
-        source_mode = source_mode_raw.strip().lower()
-        if source_mode in {"topology", "projection", "composed"}:
-            normalized["source_mode"] = source_mode
-
-    view_mode_raw = spec.get("view_mode")
-    if isinstance(view_mode_raw, str):
-        view_mode = view_mode_raw.strip().lower()
-        if view_mode in _PROJECTION_BASE_VIEW_MODES:
-            normalized["view_mode"] = view_mode
-
-    projection_level_raw = spec.get("projection_level")
-    if isinstance(projection_level_raw, str):
-        projection_level = projection_level_raw.strip().lower()
-        if projection_level in _PROJECTION_LEVEL_SPECS:
-            normalized["projection_level"] = projection_level
-
-    focus_mode_raw = spec.get("focus_mode")
-    if isinstance(focus_mode_raw, str):
-        focus_mode = focus_mode_raw.strip().lower()
-        if focus_mode in _PROJECTION_FOCUS_MODES:
-            normalized["focus_mode"] = focus_mode
-
-    if "focus_depth" in spec:
-        normalized["focus_depth"] = _safe_positive_int(
-            spec.get("focus_depth"),
-            int(normalized.get("focus_depth", _PROJECTION_DEFAULT_ACTOR_DEPTH)),
-        )
-    if "max_edges" in spec:
-        normalized["max_edges"] = _safe_positive_int(
-            spec.get("max_edges"),
-            int(normalized.get("max_edges", 420)),
-        )
-
-    if "surface_only" in spec and isinstance(spec.get("surface_only"), bool):
-        normalized["surface_only"] = bool(spec.get("surface_only"))
-
-    domain_scope_raw = spec.get("domain_scope")
-    if isinstance(domain_scope_raw, str):
-        domain_scope = domain_scope_raw.strip().lower()
-        if domain_scope in {"all", "owned", "bridge"}:
-            normalized["domain_scope"] = domain_scope
-
-    source_mode = str(normalized.get("source_mode", "topology"))
-    if source_mode == "projection":
-        projection_level = str(normalized.get("projection_level", "l1")).strip().lower()
-        if projection_level not in _PROJECTION_LEVEL_SPECS:
-            normalized["projection_level"] = "l1"
-        normalized.pop("view_mode", None)
-        normalized.pop("focus_mode", None)
-    else:
-        view_mode = str(normalized.get("view_mode", "summary")).strip().lower()
-        if view_mode not in _PROJECTION_BASE_VIEW_MODES:
-            normalized["view_mode"] = "summary"
-        normalized.pop("projection_level", None)
-        if view_mode != "focus":
-            normalized.pop("focus_mode", None)
-            normalized.pop("focus_depth", None)
-
-    return normalized
-
-
-def _normalize_projection_ui_policy(
-    *,
-    spec: Any,
-    layer_key: str | None,
-    fallback: dict[str, Any],
-) -> dict[str, Any]:
-    normalized = {
-        "edge_budget_options": list(fallback.get("edge_budget_options", [])),
-        "preset_order": list(fallback.get("preset_order", [])),
-        "defaults": dict(fallback.get("defaults", {})),
-        "safety_caps": {
-            "topology": dict(fallback.get("safety_caps", {}).get("topology", {})),
-            "composed": dict(fallback.get("safety_caps", {}).get("composed", {})),
-            "projection": dict(fallback.get("safety_caps", {}).get("projection", {})),
-        },
-        "presets": {
-            key: dict(value)
-            for key, value in dict(fallback.get("presets", {})).items()
-        },
-    }
-    if not isinstance(spec, dict):
-        return normalized
-
-    raw_options = spec.get("edge_budget_options")
-    if isinstance(raw_options, (list, tuple)):
-        parsed_options: list[int] = []
-        seen: set[int] = set()
-        for item in raw_options:
-            value = _safe_positive_int(item, -1)
-            if value <= 0 or value in seen:
-                continue
-            parsed_options.append(value)
-            seen.add(value)
-        if parsed_options:
-            normalized["edge_budget_options"] = sorted(parsed_options)
-
-    raw_order = _to_string_tuple(spec.get("preset_order"))
-    if raw_order:
-        seen_order: set[str] = set()
-        order: list[str] = []
-        for item in raw_order:
-            key = _normalized_projection_preset_key(item)
-            if key in normalized["presets"] and key not in seen_order:
-                order.append(key)
-                seen_order.add(key)
-        if order:
-            normalized["preset_order"] = order
-
-    defaults = normalized["defaults"]
-    if isinstance(spec.get("safety_mode_default"), bool):
-        defaults["safety_mode"] = bool(spec.get("safety_mode_default"))
-    if isinstance(spec.get("surface_only_default"), bool):
-        defaults["surface_only"] = bool(spec.get("surface_only_default"))
-    domain_scope_raw = spec.get("domain_scope_default")
-    if isinstance(domain_scope_raw, str):
-        domain_scope = domain_scope_raw.strip().lower()
-        if domain_scope in {"all", "owned", "bridge"}:
-            defaults["domain_scope"] = domain_scope
-
-    raw_caps = spec.get("safety_caps")
-    if isinstance(raw_caps, dict):
-        for mode, keys in (
-            ("topology", ("raw", "summary", "focus")),
-            ("composed", ("summary", "focus")),
-            ("projection", tuple(_PROJECTION_LEVEL_SPECS.keys())),
-        ):
-            raw_mode = raw_caps.get(mode)
-            if not isinstance(raw_mode, dict):
-                continue
-            target_mode = normalized["safety_caps"][mode]
-            for key in keys:
-                if key not in raw_mode:
-                    continue
-                target_mode[key] = _safe_positive_int(raw_mode.get(key), int(target_mode.get(key, 1)))
-
-    raw_presets = spec.get("presets")
-    if isinstance(raw_presets, dict):
-        for raw_key, raw_value in raw_presets.items():
-            key = _normalized_projection_preset_key(str(raw_key))
-            if key not in normalized["presets"]:
-                continue
-            normalized["presets"][key] = _normalize_projection_ui_preset(
-                spec=raw_value,
-                fallback=normalized["presets"][key],
-            )
-
-    raw_layers = spec.get("layers")
-    layer_spec: dict[str, Any] | None = None
-    if isinstance(raw_layers, dict) and layer_key:
-        candidate = raw_layers.get(layer_key)
-        if isinstance(candidate, dict):
-            layer_spec = candidate
-    if layer_spec is None:
-        return normalized
-
-    layer_options = layer_spec.get("edge_budget_options")
-    if isinstance(layer_options, (list, tuple)):
-        parsed_layer_options: list[int] = []
-        seen_layer_options: set[int] = set()
-        for item in layer_options:
-            value = _safe_positive_int(item, -1)
-            if value <= 0 or value in seen_layer_options:
-                continue
-            parsed_layer_options.append(value)
-            seen_layer_options.add(value)
-        if parsed_layer_options:
-            normalized["edge_budget_options"] = sorted(parsed_layer_options)
-
-    layer_order = _to_string_tuple(layer_spec.get("preset_order"))
-    if layer_order:
-        seen_order: set[str] = set()
-        order: list[str] = []
-        for item in layer_order:
-            key = _normalized_projection_preset_key(item)
-            if key in normalized["presets"] and key not in seen_order:
-                order.append(key)
-                seen_order.add(key)
-        if order:
-            normalized["preset_order"] = order
-
-    if isinstance(layer_spec.get("safety_mode_default"), bool):
-        defaults["safety_mode"] = bool(layer_spec.get("safety_mode_default"))
-    if isinstance(layer_spec.get("surface_only_default"), bool):
-        defaults["surface_only"] = bool(layer_spec.get("surface_only_default"))
-    layer_domain_scope_raw = layer_spec.get("domain_scope_default")
-    if isinstance(layer_domain_scope_raw, str):
-        layer_domain_scope = layer_domain_scope_raw.strip().lower()
-        if layer_domain_scope in {"all", "owned", "bridge"}:
-            defaults["domain_scope"] = layer_domain_scope
-
-    layer_caps = layer_spec.get("safety_caps")
-    if isinstance(layer_caps, dict):
-        for mode, keys in (
-            ("topology", ("raw", "summary", "focus")),
-            ("composed", ("summary", "focus")),
-            ("projection", tuple(_PROJECTION_LEVEL_SPECS.keys())),
-        ):
-            raw_mode = layer_caps.get(mode)
-            if not isinstance(raw_mode, dict):
-                continue
-            target_mode = normalized["safety_caps"][mode]
-            for key in keys:
-                if key not in raw_mode:
-                    continue
-                target_mode[key] = _safe_positive_int(raw_mode.get(key), int(target_mode.get(key, 1)))
-
-    layer_presets = layer_spec.get("presets")
-    if isinstance(layer_presets, dict):
-        for raw_key, raw_value in layer_presets.items():
-            key = _normalized_projection_preset_key(str(raw_key))
-            if key not in normalized["presets"]:
-                continue
-            normalized["presets"][key] = _normalize_projection_ui_preset(
-                spec=raw_value,
-                fallback=normalized["presets"][key],
-            )
-
-    return normalized
-
-
-def _fallback_projection_ui_policy(layer_key: str | None) -> dict[str, Any]:
-    fallback = _copy_projection_ui_defaults()
-    if not layer_key:
-        return fallback
-    for preset_key, per_layer in _PROJECTION_UI_LAYER_TUNING.items():
-        override = per_layer.get(layer_key)
-        if not isinstance(override, dict):
-            continue
-        preset_fallback = fallback["presets"].get(preset_key)
-        if not isinstance(preset_fallback, dict):
-            continue
-        fallback["presets"][preset_key] = _normalize_projection_ui_preset(
-            spec=override,
-            fallback=preset_fallback,
-        )
-    return fallback
-
-
-def _normalize_topic_query_policy(
-    *,
-    spec: Any,
-    fallback: dict[str, Any],
-) -> dict[str, Any]:
-    normalized: dict[str, Any] = {
-        "default_depth": int(fallback.get("default_depth", 2)),
-        "max_scope_nodes_per_depth": int(fallback.get("max_scope_nodes_per_depth", 40)),
-        "seed_score_ratio": float(fallback.get("seed_score_ratio", 0.72)),
-        "seed_score_floor": int(fallback.get("seed_score_floor", 60)),
-        "min_token_coverage": float(fallback.get("min_token_coverage", 0.5)),
-        "max_seed_count": int(fallback.get("max_seed_count", 8)),
-        "max_match_count": int(fallback.get("max_match_count", 16)),
-        "max_available_topics": int(fallback.get("max_available_topics", 60)),
-        "scoring": dict(fallback.get("scoring", {})),
-    }
-    if not isinstance(spec, dict):
-        return normalized
-
-    positive_int_fields = (
-        "default_depth",
-        "max_scope_nodes_per_depth",
-        "seed_score_floor",
-        "max_seed_count",
-        "max_match_count",
-        "max_available_topics",
-    )
-    for field in positive_int_fields:
-        if field not in spec:
-            continue
-        normalized[field] = _safe_positive_int(spec.get(field), int(normalized[field]))
-
-    if "seed_score_ratio" in spec:
-        normalized["seed_score_ratio"] = _safe_probability(
-            spec.get("seed_score_ratio"),
-            float(normalized["seed_score_ratio"]),
-        )
-    if "min_token_coverage" in spec:
-        normalized["min_token_coverage"] = _safe_probability(
-            spec.get("min_token_coverage"),
-            float(normalized["min_token_coverage"]),
-        )
-
-    scoring = normalized["scoring"]
-    if not isinstance(scoring, dict):
-        scoring = {}
-        normalized["scoring"] = scoring
-    raw_scoring = spec.get("scoring")
-    if isinstance(raw_scoring, dict):
-        for key, fallback_value in list(scoring.items()):
-            if key not in raw_scoring:
-                continue
-            scoring[key] = _safe_positive_int(raw_scoring.get(key), int(fallback_value))
-
-    return normalized
-
-
-def _validate_topic_query_policy(
-    *,
-    label: str,
-    spec: Any,
-    issues: list[str],
-) -> None:
-    if spec is None:
-        return
-    if not isinstance(spec, dict):
-        issues.append(f"{label} must be a table")
-        return
-
-    positive_int_fields = (
-        "default_depth",
-        "max_scope_nodes_per_depth",
-        "seed_score_floor",
-        "max_seed_count",
-        "max_match_count",
-        "max_available_topics",
-    )
-    for field in positive_int_fields:
-        if field not in spec:
-            continue
-        value = _safe_positive_int(spec.get(field), -1)
-        if value <= 0:
-            issues.append(f"{label}.{field} must be greater than zero")
-
-    probability_fields = ("seed_score_ratio", "min_token_coverage")
-    for field in probability_fields:
-        if field not in spec:
-            continue
-        try:
-            value = float(spec.get(field))
-        except (TypeError, ValueError):
-            issues.append(f"{label}.{field} must be a number between 0.0 and 1.0")
-            continue
-        if value < 0.0 or value > 1.0:
-            issues.append(f"{label}.{field} must be between 0.0 and 1.0")
-
-    scoring = spec.get("scoring")
-    if scoring is not None:
-        if not isinstance(scoring, dict):
-            issues.append(f"{label}.scoring must be a table")
-        else:
-            for key, raw in scoring.items():
-                value = _safe_positive_int(raw, -1)
-                if value <= 0:
-                    issues.append(f"{label}.scoring.{key} must be greater than zero")
-
-
-def _normalize_projection_level_spec(
-    *,
-    level_key: str,
-    spec: Any,
-    fallback: dict[str, Any],
-) -> dict[str, Any]:
-    normalized = dict(fallback)
-    if not isinstance(spec, dict):
-        return normalized
-
-    text_fields = ("level", "lens", "description")
-    for field in text_fields:
-        raw = spec.get(field)
-        if isinstance(raw, str) and raw.strip():
-            normalized[field] = raw.strip()
-
-    raw_base_view = spec.get("base_view_mode")
-    if isinstance(raw_base_view, str):
-        base_view = raw_base_view.strip().lower()
-        if base_view in _PROJECTION_BASE_VIEW_MODES:
-            normalized["base_view_mode"] = base_view
-
-    if "base_focus" in spec:
-        raw_focus = spec.get("base_focus")
-        if raw_focus is None:
-            normalized["base_focus"] = None
-        elif isinstance(raw_focus, str):
-            focus = raw_focus.strip().lower()
-            if focus in {"", "none", "null"}:
-                normalized["base_focus"] = None
-            elif focus in _PROJECTION_FOCUS_MODES:
-                normalized["base_focus"] = focus
-
-    if "allowed_relations" in spec:
-        normalized["allowed_relations"] = _to_string_tuple(spec.get("allowed_relations"))
-    if "allowed_categories" in spec:
-        normalized["allowed_categories"] = _to_string_tuple(spec.get("allowed_categories"))
-    if "next_levels" in spec:
-        normalized["next_levels"] = _to_string_tuple(spec.get("next_levels"))
-    if "default_max_edges" in spec:
-        normalized["default_max_edges"] = _safe_positive_int(
-            spec.get("default_max_edges"),
-            int(fallback.get("default_max_edges", 600)),
-        )
-
-    if not normalized.get("lens"):
-        normalized["lens"] = level_key
-    if not normalized.get("level"):
-        normalized["level"] = level_key.upper()
-
-    return normalized
-
-
-@lru_cache(maxsize=1)
-def _load_projection_policy_document() -> dict[str, Any]:
-    path = _projection_policy_path()
-    payload: dict[str, Any] = {
-        "status": "missing",
-        "path": str(path),
-        "document": {},
-    }
-    if not path.exists():
-        return payload
-    try:
-        with path.open("rb") as handle:
-            loaded = tomllib.load(handle)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
-        payload["status"] = "invalid_toml"
-        payload["error"] = str(exc)
-        return payload
-    if not isinstance(loaded, dict):
-        payload["status"] = "invalid_document"
-        payload["error"] = "Root TOML document must be a table/object."
-        return payload
-    payload["status"] = "ok"
-    payload["document"] = loaded
-    return payload
-
-
-def _validate_projection_policy_document(policy_doc: dict[str, Any]) -> list[str]:
-    issues: list[str] = []
-    m2 = policy_doc.get("m2")
-    if not isinstance(m2, dict):
-        return ["m2 section is required and must be a table"]
-    schema = m2.get("schema")
-    if not isinstance(schema, dict):
-        return ["m2.schema section is required and must be a table"]
-
-    levels = _to_string_tuple(schema.get("levels"))
-    lenses = _to_string_tuple(schema.get("lenses"))
-    base_view_modes = {value.lower() for value in _to_string_tuple(schema.get("base_view_modes"))}
-    focus_modes = {value.lower() for value in _to_string_tuple(schema.get("focus_modes"))}
-    required_level_fields = _to_string_tuple(schema.get("required_level_fields"))
-
-    if not levels:
-        issues.append("m2.schema.levels must define at least one level")
-    if not lenses:
-        issues.append("m2.schema.lenses must define at least one lens")
-    if not required_level_fields:
-        issues.append("m2.schema.required_level_fields must define required keys")
-    if not base_view_modes:
-        issues.append("m2.schema.base_view_modes must define allowed base_view_mode values")
-    if not focus_modes:
-        issues.append("m2.schema.focus_modes must define allowed focus values")
-
-    allowed_base_view_modes = {value.lower() for value in _PROJECTION_BASE_VIEW_MODES}
-    invalid_base_modes = sorted(base_view_modes - allowed_base_view_modes)
-    if invalid_base_modes:
-        issues.append(f"m2.schema.base_view_modes has invalid values: {', '.join(invalid_base_modes)}")
-
-    allowed_focus_modes = {value.lower() for value in _PROJECTION_FOCUS_MODES}
-    invalid_focus_modes = sorted(focus_modes - allowed_focus_modes)
-    if invalid_focus_modes:
-        issues.append(f"m2.schema.focus_modes has invalid values: {', '.join(invalid_focus_modes)}")
-
-    level_set = {level.lower() for level in levels}
-    lens_set = {lens.lower() for lens in lenses}
-
-    lens_to_level_raw = schema.get("lens_to_level")
-    if not isinstance(lens_to_level_raw, dict):
-        issues.append("m2.schema.lens_to_level must be a table")
-    else:
-        mapped_lenses: set[str] = set()
-        for lens_name, target_level in lens_to_level_raw.items():
-            lens_name_norm = str(lens_name).strip().lower()
-            target_level_norm = str(target_level).strip().lower()
-            if not lens_name_norm:
-                issues.append("m2.schema.lens_to_level contains an empty lens key")
-                continue
-            mapped_lenses.add(lens_name_norm)
-            if target_level_norm not in level_set:
-                issues.append(
-                    f"m2.schema.lens_to_level.{lens_name_norm} points to unknown level {target_level}",
-                )
-        missing_lenses = sorted(lens_set - mapped_lenses)
-        if missing_lenses:
-            issues.append(f"m2.schema.lens_to_level is missing mappings for: {', '.join(missing_lenses)}")
-
-    defaults = m2.get("defaults")
-    if defaults is not None:
-        if not isinstance(defaults, dict):
-            issues.append("m2.defaults must be a table when provided")
-        else:
-            if "actor_default_depth" in defaults:
-                actor_depth = _safe_positive_int(defaults.get("actor_default_depth"), -1)
-                if actor_depth <= 0:
-                    issues.append("m2.defaults.actor_default_depth must be greater than zero")
-    _validate_topic_query_policy(
-        label="m2.topic",
-        spec=m2.get("topic"),
-        issues=issues,
-    )
-
-    # Validate tier definitions (optional section)
-    tiers = m2.get("tiers")
-    if tiers is not None:
-        if not isinstance(tiers, dict):
-            issues.append("m2.tiers must be a table when provided")
-        else:
-            tier_names = tiers.get("names")
-            if tier_names is not None:
-                if not isinstance(tier_names, (list, tuple)) or not tier_names:
-                    issues.append("m2.tiers.names must be a non-empty list")
-            definitions = tiers.get("definitions")
-            if definitions is not None:
-                if not isinstance(definitions, dict):
-                    issues.append("m2.tiers.definitions must be a table when provided")
-                else:
-                    valid_tier_names = set(str(n) for n in (tier_names or []))
-                    for tier_key, tier_def in definitions.items():
-                        if not isinstance(tier_def, dict):
-                            issues.append(f"m2.tiers.definitions.{tier_key} must be a table")
-                            continue
-                        cats = tier_def.get("categories")
-                        if not isinstance(cats, (list, tuple)) or not cats:
-                            issues.append(
-                                f"m2.tiers.definitions.{tier_key}.categories must be a non-empty list"
-                            )
-                        transitions = tier_def.get("transitions")
-                        if isinstance(transitions, (list, tuple)):
-                            for t in transitions:
-                                t_str = str(t).strip()
-                                if valid_tier_names and t_str not in valid_tier_names:
-                                    issues.append(
-                                        f"m2.tiers.definitions.{tier_key}.transitions references unknown tier: {t_str}"
-                                    )
-
-    m1 = policy_doc.get("m1")
-    if not isinstance(m1, dict):
-        issues.append("m1 section is required and must be a table")
-        return issues
-
-    global_section = m1.get("global")
-    if not isinstance(global_section, dict):
-        issues.append("m1.global section is required and must be a table")
-        return issues
-    global_levels = global_section.get("levels")
-    if not isinstance(global_levels, dict):
-        issues.append("m1.global.levels section is required and must be a table")
-        return issues
-
-    required_fields_set = set(required_level_fields)
-    allowed_level_set = set(level_set)
-
-    for level in level_set:
-        level_spec = global_levels.get(level)
-        if not isinstance(level_spec, dict):
-            issues.append(f"m1.global.levels.{level} must exist and be a table")
-            continue
-
-        missing_fields = sorted(field for field in required_fields_set if field not in level_spec)
-        if missing_fields:
-            issues.append(
-                f"m1.global.levels.{level} is missing required fields: {', '.join(missing_fields)}",
-            )
-
-        if "base_view_mode" in level_spec:
-            mode = str(level_spec.get("base_view_mode", "")).strip().lower()
-            if mode not in base_view_modes:
-                issues.append(
-                    f"m1.global.levels.{level}.base_view_mode={mode or '<empty>'} is not declared in m2.schema.base_view_modes",
-                )
-
-        if "base_focus" in level_spec:
-            base_focus = level_spec.get("base_focus")
-            if base_focus is not None:
-                focus = str(base_focus).strip().lower()
-                if focus and focus not in {"none", "null"} and focus not in focus_modes:
-                    issues.append(
-                        f"m1.global.levels.{level}.base_focus={focus} is not declared in m2.schema.focus_modes",
-                    )
-
-        if "default_max_edges" in level_spec:
-            edge_cap = _safe_positive_int(level_spec.get("default_max_edges"), -1)
-            if edge_cap <= 0:
-                issues.append(f"m1.global.levels.{level}.default_max_edges must be greater than zero")
-
-        next_levels = _to_string_tuple(level_spec.get("next_levels"))
-        for next_level in next_levels:
-            if next_level.strip().lower() not in allowed_level_set:
-                issues.append(
-                    f"m1.global.levels.{level}.next_levels contains unknown level {next_level}",
-                )
-
-    layer_overrides = m1.get("layers")
-    if layer_overrides is not None:
-        if not isinstance(layer_overrides, dict):
-            issues.append("m1.layers must be a table when provided")
-        else:
-            for layer_key, layer_config in layer_overrides.items():
-                if not isinstance(layer_config, dict):
-                    issues.append(f"m1.layers.{layer_key} must be a table")
-                    continue
-                _validate_topic_query_policy(
-                    label=f"m1.layers.{layer_key}.topic",
-                    spec=layer_config.get("topic"),
-                    issues=issues,
-                )
-                levels_table = layer_config.get("levels")
-                if levels_table is None:
-                    levels_table = {}
-                if not isinstance(levels_table, dict):
-                    issues.append(f"m1.layers.{layer_key}.levels must be a table when provided")
-                    continue
-                for level_name, override in levels_table.items():
-                    level_norm = str(level_name).strip().lower()
-                    if level_norm not in allowed_level_set:
-                        issues.append(f"m1.layers.{layer_key}.levels.{level_name} is not a declared level")
-                        continue
-                    if not isinstance(override, dict):
-                        issues.append(f"m1.layers.{layer_key}.levels.{level_name} must be a table")
-                        continue
-
-                    if "base_view_mode" in override:
-                        mode = str(override.get("base_view_mode", "")).strip().lower()
-                        if mode not in base_view_modes:
-                            issues.append(
-                                f"m1.layers.{layer_key}.levels.{level_name}.base_view_mode={mode or '<empty>'} is not declared in m2.schema.base_view_modes",
-                            )
-                    if "base_focus" in override:
-                        base_focus = override.get("base_focus")
-                        if base_focus is not None:
-                            focus = str(base_focus).strip().lower()
-                            if focus and focus not in {"none", "null"} and focus not in focus_modes:
-                                issues.append(
-                                    f"m1.layers.{layer_key}.levels.{level_name}.base_focus={focus} is not declared in m2.schema.focus_modes",
-                                )
-                    if "default_max_edges" in override:
-                        edge_cap = _safe_positive_int(override.get("default_max_edges"), -1)
-                        if edge_cap <= 0:
-                            issues.append(
-                                f"m1.layers.{layer_key}.levels.{level_name}.default_max_edges must be greater than zero",
-                            )
-                    if "next_levels" in override:
-                        for next_level in _to_string_tuple(override.get("next_levels")):
-                            if next_level.strip().lower() not in allowed_level_set:
-                                issues.append(
-                                    f"m1.layers.{layer_key}.levels.{level_name}.next_levels contains unknown level {next_level}",
-                                )
-
-    return issues
+    return Path(__file__).parent / "profiles" / "ea_sys" / PROJECTION_POLICY_FILE_NAME
 
 
 @lru_cache(maxsize=64)
 def _resolve_projection_policy(profile_name: str) -> dict[str, Any]:
-    layer_key = _profile_layer_key(profile_name)
-    level_specs: dict[str, dict[str, Any]] = {
-        key: dict(value)
-        for key, value in _PROJECTION_LEVEL_SPECS.items()
-    }
-    lens_to_level = dict(_PROJECTION_LENS_TO_LEVEL)
-    actor_default_depth = _PROJECTION_DEFAULT_ACTOR_DEPTH
-    topic_policy = _normalize_topic_query_policy(
-        spec=None,
-        fallback=_TOPIC_QUERY_POLICY_DEFAULT,
+    """Delegate to ea-projection resolver with kernel's policy path."""
+    return _resolve_projection_policy_core(
+        profile_name,
+        policy_path=_projection_policy_path(),
+        layer_key=_profile_layer_key(profile_name),
     )
-    ui_policy = _fallback_projection_ui_policy(layer_key)
-    policy_source = "fallback"
-    policy_scope = "global"
-    schema_contract: dict[str, Any] = {}
-
-    policy_loaded = _load_projection_policy_document()
-    policy_status = str(policy_loaded.get("status", "missing"))
-    policy_path = str(policy_loaded.get("path", _projection_policy_path()))
-
-    if policy_status == "missing":
-        return {
-            "level_specs": level_specs,
-            "lens_to_level": lens_to_level,
-            "actor_default_depth": actor_default_depth,
-            "topic_policy": topic_policy,
-            "ui_policy": ui_policy,
-            "source": policy_source,
-            "scope": policy_scope,
-            "layer_key": layer_key,
-            "schema_contract": schema_contract,
-        }
-    if policy_status != "ok":
-        return {
-            "error": "Projection policy parsing failed",
-            "policy_error": {
-                "status": policy_status,
-                "path": policy_path,
-                "detail": str(policy_loaded.get("error", "invalid projection policy document")),
-            },
-        }
-
-    policy_doc = policy_loaded.get("document")
-    if not isinstance(policy_doc, dict):
-        return {
-            "error": "Projection policy parsing failed",
-            "policy_error": {
-                "status": "invalid_document",
-                "path": policy_path,
-                "detail": "Projection policy document must be a table/object.",
-            },
-        }
-
-    issues = _validate_projection_policy_document(policy_doc)
-    if issues:
-        return {
-            "error": "Projection policy contract validation failed",
-            "policy_error": {
-                "status": "invalid_contract",
-                "path": policy_path,
-                "issues": issues,
-            },
-        }
-
-    policy_source = "toml"
-    m2 = policy_doc.get("m2")
-    if isinstance(m2, dict):
-        schema = m2.get("schema")
-        if isinstance(schema, dict):
-            for field in (
-                "levels",
-                "lenses",
-                "base_view_modes",
-                "focus_modes",
-                "required_level_fields",
-            ):
-                values = _to_string_tuple(schema.get(field))
-                if values:
-                    schema_contract[field] = list(values)
-
-            lens_to_level_doc = schema.get("lens_to_level")
-            if isinstance(lens_to_level_doc, dict):
-                for lens_name, target_level in lens_to_level_doc.items():
-                    lens = str(lens_name).strip().lower()
-                    level = str(target_level).strip().lower()
-                    if not lens or level not in level_specs:
-                        continue
-                    lens_to_level[lens] = level
-
-        defaults = m2.get("defaults")
-        if isinstance(defaults, dict):
-            actor_default_depth = _safe_positive_int(
-                defaults.get("actor_default_depth"),
-                actor_default_depth,
-            )
-        topic_policy = _normalize_topic_query_policy(
-            spec=m2.get("topic"),
-            fallback=topic_policy,
-        )
-
-    m1 = policy_doc.get("m1")
-    global_levels: dict[str, Any] = {}
-    layer_levels: dict[str, Any] = {}
-    layer_topic_policy: dict[str, Any] = {}
-    if isinstance(m1, dict):
-        global_config = m1.get("global")
-        if isinstance(global_config, dict):
-            levels = global_config.get("levels")
-            if isinstance(levels, dict):
-                global_levels = levels
-
-        if layer_key:
-            layers = m1.get("layers")
-            if isinstance(layers, dict):
-                layer_config = layers.get(layer_key)
-                if isinstance(layer_config, dict):
-                    levels = layer_config.get("levels")
-                    if isinstance(levels, dict):
-                        layer_levels = levels
-                    topic = layer_config.get("topic")
-                    if isinstance(topic, dict):
-                        layer_topic_policy = topic
-                    if levels or layer_topic_policy:
-                        policy_scope = f"layer:{layer_key}"
-        ui_policy = _normalize_projection_ui_policy(
-            spec=m1.get("ui"),
-            layer_key=layer_key,
-            fallback=ui_policy,
-        )
-
-    for level_key, fallback in _PROJECTION_LEVEL_SPECS.items():
-        merged = _normalize_projection_level_spec(
-            level_key=level_key,
-            spec=global_levels.get(level_key),
-            fallback=fallback,
-        )
-        merged = _normalize_projection_level_spec(
-            level_key=level_key,
-            spec=layer_levels.get(level_key),
-            fallback=merged,
-        )
-        level_specs[level_key] = merged
-
-    for level_key, spec in level_specs.items():
-        lens = str(spec.get("lens", "")).strip().lower()
-        if lens:
-            lens_to_level[lens] = level_key
-
-    topic_policy = _normalize_topic_query_policy(
-        spec=layer_topic_policy,
-        fallback=topic_policy,
-    )
-
-    return {
-        "level_specs": level_specs,
-        "lens_to_level": lens_to_level,
-        "actor_default_depth": actor_default_depth,
-        "topic_policy": topic_policy,
-        "ui_policy": ui_policy,
-        "source": policy_source,
-        "scope": policy_scope,
-        "layer_key": layer_key,
-        "schema_contract": schema_contract,
-    }
 
 
 def _resolve_topic_query_policy(profile_name: str) -> dict[str, Any]:
-    fallback = _normalize_topic_query_policy(
-        spec=None,
-        fallback=_TOPIC_QUERY_POLICY_DEFAULT,
-    )
+    fallback = _normalize_topic_query_policy(spec=None, fallback=TOPIC_QUERY_POLICY_DEFAULT)
     policy = _resolve_projection_policy(profile_name)
     if "error" in policy:
         return fallback
@@ -1339,60 +229,11 @@ def _resolve_topic_query_policy(profile_name: str) -> dict[str, Any]:
 
 def projection_policy_snapshot(*, profile_name: str) -> dict[str, Any]:
     """Expose resolved projection policy (M2 contract + M1 layer policy + UI policy)."""
-    policy = _resolve_projection_policy(profile_name)
-    if "error" in policy:
-        return {
-            "error": str(policy.get("error", "Projection policy resolution failed")),
-            "policy_error": policy.get("policy_error"),
-            "profile_name": profile_name,
-        }
-
-    level_specs_raw = policy.get("level_specs")
-    level_specs: dict[str, dict[str, Any]] = {}
-    if isinstance(level_specs_raw, dict):
-        for key, raw in level_specs_raw.items():
-            if not isinstance(raw, dict):
-                continue
-            level_specs[str(key)] = {
-                "level": str(raw.get("level", str(key).upper())),
-                "lens": str(raw.get("lens", str(key))),
-                "description": str(raw.get("description", "")),
-                "base_view_mode": str(raw.get("base_view_mode", "summary")),
-                "base_focus": raw.get("base_focus"),
-                "allowed_relations": list(_to_string_tuple(raw.get("allowed_relations"))),
-                "allowed_categories": list(_to_string_tuple(raw.get("allowed_categories"))),
-                "default_max_edges": int(raw.get("default_max_edges", 600)),
-                "next_levels": list(_to_string_tuple(raw.get("next_levels"))),
-            }
-
-    lens_to_level_raw = policy.get("lens_to_level")
-    lens_to_level: dict[str, str] = {}
-    if isinstance(lens_to_level_raw, dict):
-        for lens_name, level_name in lens_to_level_raw.items():
-            lens = str(lens_name).strip().lower()
-            level = str(level_name).strip().lower()
-            if not lens or not level:
-                continue
-            lens_to_level[lens] = level
-
-    topic_policy = policy.get("topic_policy")
-    ui_policy = policy.get("ui_policy")
-
-    return {
-        "profile_name": profile_name,
-        "source": str(policy.get("source", "fallback")),
-        "scope": str(policy.get("scope", "global")),
-        "layer_key": policy.get("layer_key"),
-        "schema_contract": dict(policy.get("schema_contract", {})),
-        "actor_default_depth": int(policy.get("actor_default_depth", _PROJECTION_DEFAULT_ACTOR_DEPTH)),
-        "lens_to_level": lens_to_level,
-        "levels": level_specs,
-        "topic": dict(topic_policy) if isinstance(topic_policy, dict) else _normalize_topic_query_policy(
-            spec=None,
-            fallback=_TOPIC_QUERY_POLICY_DEFAULT,
-        ),
-        "ui": dict(ui_policy) if isinstance(ui_policy, dict) else _fallback_projection_ui_policy(_profile_layer_key(profile_name)),
-    }
+    return _projection_policy_snapshot_core(
+        profile_name=profile_name,
+        policy_path=_projection_policy_path(),
+        layer_key=_profile_layer_key(profile_name),
+    )
 
 
 def _get_spec() -> KernelSchema:
@@ -1877,10 +718,6 @@ def _edge_semantic_intent(
     return _RELATION_SEMANTIC_INTENT.get(str(relation).strip().lower(), "other")
 
 
-def _edge_surface_exposed(relation: str) -> bool:
-    normalized = str(relation).strip().lower()
-    return normalized in _SURFACE_VISIBLE_RELATIONS
-
 
 def _edge_origin_counts(edge: dict[str, Any]) -> tuple[int, int]:
     rule_count = max(1, _to_non_negative_int(edge.get("rule_count", 1), 1))
@@ -1986,102 +823,6 @@ def _edge_priority_sort_key(edge: dict[str, Any]) -> tuple[int, str, str, str]:
         str(edge.get("source", "")),
         str(edge.get("target", "")),
     )
-
-
-def _cap_edges_relation_balanced(
-    edges: list[dict[str, Any]],
-    max_edges: int,
-) -> list[dict[str, Any]]:
-    """Cap edges while preserving relation mix as much as possible."""
-    if len(edges) <= max_edges:
-        return edges
-    if max_edges <= 0:
-        return []
-
-    by_relation: dict[str, list[dict[str, Any]]] = {}
-    for edge in edges:
-        relation = str(edge.get("relation", ""))
-        bucket = by_relation.get(relation)
-        if bucket is None:
-            by_relation[relation] = [edge]
-        else:
-            bucket.append(edge)
-    for relation in by_relation:
-        by_relation[relation] = sorted(by_relation[relation], key=_edge_priority_sort_key)
-
-    total_edges = len(edges)
-    relations = sorted(by_relation.keys())
-    quotas: dict[str, int] = {}
-    fractions: list[tuple[float, int, str]] = []
-    allocated = 0
-
-    for relation in relations:
-        size = len(by_relation[relation])
-        exact = (size * max_edges) / total_edges
-        base = min(size, int(exact))
-        quotas[relation] = base
-        allocated += base
-        fractions.append((exact - base, size, relation))
-
-    if len(relations) <= max_edges:
-        for relation in relations:
-            if quotas[relation] == 0:
-                quotas[relation] = 1
-                allocated += 1
-
-    if allocated > max_edges:
-        over = allocated - max_edges
-        reducible = sorted(
-            (
-                (quotas[relation], relation)
-                for relation in relations
-                if quotas[relation] > 0
-            ),
-            key=lambda item: (-item[0], item[1]),
-        )
-        idx = 0
-        while over > 0 and reducible:
-            relation = reducible[idx % len(reducible)][1]
-            if quotas[relation] > 0:
-                quotas[relation] -= 1
-                over -= 1
-            idx += 1
-
-    elif allocated < max_edges:
-        remaining = max_edges - allocated
-        expandable = sorted(
-            fractions,
-            key=lambda item: (-item[0], -item[1], item[2]),
-        )
-        while remaining > 0:
-            progressed = False
-            for _fraction, _size, relation in expandable:
-                if quotas[relation] >= len(by_relation[relation]):
-                    continue
-                quotas[relation] += 1
-                remaining -= 1
-                progressed = True
-                if remaining == 0:
-                    break
-            if not progressed:
-                break
-
-    selected: list[dict[str, Any]] = []
-    selected_ids: set[int] = set()
-    for relation in relations:
-        for edge in by_relation[relation][:quotas.get(relation, 0)]:
-            selected.append(edge)
-            selected_ids.add(id(edge))
-
-    if len(selected) < max_edges:
-        remainder_pool = sorted(
-            [edge for edge in edges if id(edge) not in selected_ids],
-            key=_edge_priority_sort_key,
-        )
-        need = max_edges - len(selected)
-        selected.extend(remainder_pool[:need])
-
-    return sorted(selected[:max_edges], key=_edge_priority_sort_key)
 
 
 def _is_actor_element(element: Any) -> bool:
@@ -2283,91 +1024,11 @@ def _expand_actor_scope(
     return scope
 
 
-def _classify_element_tier(
-    name: str,
-    category: str,
-    tier_definitions: dict[str, dict[str, Any]],
-) -> str | None:
-    """Classify an element into a tier based on its category and name patterns.
-
-    Evidence tier is checked first because it shares PassiveStructure with data.
-    """
-    name_lower = name.lower()
-    # Evidence-first: check if PassiveStructure + name pattern match
-    evidence_def = tier_definitions.get("evidence")
-    if evidence_def and category in evidence_def.get("categories", []):
-        patterns = evidence_def.get("name_patterns", [])
-        if patterns and any(pat.lower() in name_lower for pat in patterns):
-            return "evidence"
-
-    for tier_name, tier_def in tier_definitions.items():
-        if tier_name == "evidence":
-            continue
-        categories = tier_def.get("categories", [])
-        if category not in categories:
-            continue
-        exclude_patterns = tier_def.get("name_exclude_patterns", [])
-        if exclude_patterns and any(pat.lower() in name_lower for pat in exclude_patterns):
-            continue
-        include_patterns = tier_def.get("name_patterns", [])
-        if include_patterns and not any(pat.lower() in name_lower for pat in include_patterns):
-            continue
-        return tier_name
-    return None
-
-
-def _resolve_tier_node_set(
-    nodes: list[dict[str, Any]],
-    tier: str,
-    tier_definitions: dict[str, dict[str, Any]],
-) -> tuple[set[str], dict[str, str]]:
-    """Return (node names matching tier, {name: tier} for all classified nodes)."""
-    matched: set[str] = set()
-    classification: dict[str, str] = {}
-    for node in nodes:
-        name = str(node.get("name", ""))
-        category = str(node.get("category", ""))
-        if not name:
-            continue
-        classified = _classify_element_tier(name, category, tier_definitions)
-        if classified:
-            classification[name] = classified
-        if classified == tier:
-            matched.add(name)
-    return matched, classification
-
-
 def _resolve_tier_definitions(policy: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Load tier definitions from resolved policy or fall back to hardcoded defaults."""
-    policy_doc_loaded = _load_projection_policy_document()
-    if str(policy_doc_loaded.get("status", "")) != "ok":
-        return dict(_PROJECTION_TIER_DEFINITIONS)
-    doc = policy_doc_loaded.get("document")
-    if not isinstance(doc, dict):
-        return dict(_PROJECTION_TIER_DEFINITIONS)
-    m2 = doc.get("m2")
-    if not isinstance(m2, dict):
-        return dict(_PROJECTION_TIER_DEFINITIONS)
-    tiers = m2.get("tiers")
-    if not isinstance(tiers, dict):
-        return dict(_PROJECTION_TIER_DEFINITIONS)
-    definitions = tiers.get("definitions")
-    if not isinstance(definitions, dict) or not definitions:
-        return dict(_PROJECTION_TIER_DEFINITIONS)
-    result: dict[str, dict[str, Any]] = {}
-    for tier_name, tier_def in definitions.items():
-        if not isinstance(tier_def, dict):
-            continue
-        cats = tier_def.get("categories")
-        if not isinstance(cats, (list, tuple)) or not cats:
-            continue
-        result[str(tier_name)] = {
-            "categories": [str(c) for c in cats],
-            "name_patterns": [str(p) for p in (tier_def.get("name_patterns") or [])],
-            "name_exclude_patterns": [str(p) for p in (tier_def.get("name_exclude_patterns") or [])],
-            "transitions": [str(t) for t in (tier_def.get("transitions") or [])],
-        }
-    return result if result else dict(_PROJECTION_TIER_DEFINITIONS)
+    from ea_projection.policy.resolver import load_projection_policy_document
+    policy_doc_loaded = load_projection_policy_document(_projection_policy_path())
+    return _resolve_tier_definitions_from_loader(policy_doc_loaded)
 
 
 def _i18n_search_text(value: Any, *, lang: str | None = None) -> str:
@@ -2428,17 +1089,17 @@ def _topic_match_candidates(
 
     effective_policy = _normalize_topic_query_policy(
         spec=policy,
-        fallback=_TOPIC_QUERY_POLICY_DEFAULT,
+        fallback=TOPIC_QUERY_POLICY_DEFAULT,
     )
     scoring = effective_policy.get("scoring", {})
-    name_token_score = int(scoring.get("name_token", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["name_token"]))
-    display_token_score = int(scoring.get("display_token", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["display_token"]))
-    description_token_score = int(scoring.get("description_token", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["description_token"]))
-    name_exact_score = int(scoring.get("name_exact", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["name_exact"]))
-    name_contains_score = int(scoring.get("name_contains", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["name_contains"]))
-    display_exact_score = int(scoring.get("display_exact", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["display_exact"]))
-    display_contains_score = int(scoring.get("display_contains", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["display_contains"]))
-    description_contains_score = int(scoring.get("description_contains", _TOPIC_QUERY_POLICY_DEFAULT["scoring"]["description_contains"]))
+    name_token_score = int(scoring.get("name_token", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["name_token"]))
+    display_token_score = int(scoring.get("display_token", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["display_token"]))
+    description_token_score = int(scoring.get("description_token", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["description_token"]))
+    name_exact_score = int(scoring.get("name_exact", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["name_exact"]))
+    name_contains_score = int(scoring.get("name_contains", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["name_contains"]))
+    display_exact_score = int(scoring.get("display_exact", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["display_exact"]))
+    display_contains_score = int(scoring.get("display_contains", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["display_contains"]))
+    description_contains_score = int(scoring.get("description_contains", TOPIC_QUERY_POLICY_DEFAULT["scoring"]["description_contains"]))
 
     candidates: list[dict[str, Any]] = []
     for node in nodes:
@@ -2554,7 +1215,7 @@ def _resolve_topic_relations(
     if not selected:
         selected = [
             relation
-            for relation in _SURFACE_VISIBLE_RELATIONS
+            for relation in DEFAULT_SURFACE_PROFILE.surface_relations
             if relation in relation_candidates
         ]
     return structural, intent, selected
@@ -2734,6 +1395,7 @@ def profile_topology(
         }
 
     graph = ProfileTopologyGraph(profile)
+    containment_depth_of = graph.containment_depths()
 
     # Build layer lookup: element name → domain layer
     layer_of: dict[str, str] = {elem.name: elem.layer for elem in profile.elements}
@@ -2778,6 +1440,7 @@ def profile_topology(
             "category": elem.category,
             "kernel_type": elem.kernel_type,
             "description": _serialize_i18n(elem.description),
+            "containment_depth": containment_depth_of.get(elem.name, 0),
         }
         if elem.display_name:
             d["display_name"] = _serialize_i18n(elem.display_name)
@@ -2831,7 +1494,7 @@ def profile_topology(
             for name in relations
             if name in relation_candidates
         ]
-        for group, relations in _SURFACE_RELATION_PROFILE.items()
+        for group, relations in DEFAULT_SURFACE_PROFILE.groups.items()
     }
     relation_profile["interaction"] = [
         name
@@ -2840,7 +1503,7 @@ def profile_topology(
     ]
     visible_relations = [
         name
-        for name in _SURFACE_VISIBLE_RELATIONS
+        for name in DEFAULT_SURFACE_PROFILE.surface_relations
         if name in relation_candidates
     ]
     hidden_relations = sorted(
@@ -3181,7 +1844,7 @@ def profile_topology(
                 if src and tgt:
                     seed_adjacency.setdefault(src, set()).add(tgt)
                     seed_adjacency.setdefault(tgt, set()).add(src)
-            resolved_depth = focus_depth if focus_depth is not None else _PROJECTION_DEFAULT_SEED_DEPTH
+            resolved_depth = focus_depth if focus_depth is not None else PROJECTION_DEFAULT_SEED_DEPTH
             if resolved_depth <= 0:
                 return {"error": "focus_depth must be greater than zero"}
             scope = _expand_actor_scope(
@@ -3202,7 +1865,7 @@ def profile_topology(
         else:
             selected_relations = [
                 relation
-                for relation in _SURFACE_VISIBLE_RELATIONS
+                for relation in DEFAULT_SURFACE_PROFILE.surface_relations
                 if relation in relation_candidates
             ]
             selected_set = set(selected_relations)
@@ -3579,7 +2242,7 @@ def profile_composed_topology(
             for name in relations
             if name in relation_candidates
         ]
-        for group, relations in _SURFACE_RELATION_PROFILE.items()
+        for group, relations in DEFAULT_SURFACE_PROFILE.groups.items()
     }
     relation_profile["interaction"] = [
         name
@@ -3588,7 +2251,7 @@ def profile_composed_topology(
     ]
     visible_relations = [
         name
-        for name in _SURFACE_VISIBLE_RELATIONS
+        for name in DEFAULT_SURFACE_PROFILE.surface_relations
         if name in relation_candidates
     ]
     hidden_relations = sorted(set(relation_candidates) - set(visible_relations))
@@ -3832,7 +2495,7 @@ def profile_composed_topology(
                 if src and tgt:
                     seed_adjacency_c.setdefault(src, set()).add(tgt)
                     seed_adjacency_c.setdefault(tgt, set()).add(src)
-            resolved_depth = focus_depth if focus_depth is not None else _PROJECTION_DEFAULT_SEED_DEPTH
+            resolved_depth = focus_depth if focus_depth is not None else PROJECTION_DEFAULT_SEED_DEPTH
             if resolved_depth <= 0:
                 return {"error": "focus_depth must be greater than zero"}
             scope = _expand_actor_scope(
@@ -3853,7 +2516,7 @@ def profile_composed_topology(
         else:
             selected_relations = [
                 relation
-                for relation in _SURFACE_VISIBLE_RELATIONS
+                for relation in DEFAULT_SURFACE_PROFILE.surface_relations
                 if relation in relation_candidates
             ]
             selected_set = set(selected_relations)
@@ -4009,187 +2672,29 @@ def _profile_topology_summary_for_composed(
         include_rule_provenance=True,
     )
 
+# ── Projection Extension Registry ────────────────────────────────
+_projection_extensions: dict[str, ProjectionExtension] = {}
 
-def _apply_projection_filters(
-    *,
-    topology: dict[str, Any],
-    allowed_relations: tuple[str, ...] | None,
-    allowed_categories: tuple[str, ...] | None,
-    max_edges: int | None,
-    preserve_nodes: set[str] | None = None,
-    tier: str | None = None,
-    tier_definitions: dict[str, dict[str, Any]] | None = None,
-) -> dict[str, Any]:
-    nodes_in = list(topology.get("nodes", []))
-    edges_in = list(topology.get("edges", []))
-    preserve = set(preserve_nodes or set())
 
-    relation_allow_set = set(allowed_relations or ())
-    category_allow_set = set(allowed_categories or ())
-    relation_filter_enabled = len(relation_allow_set) > 0
+def register_projection_extension(ext: ProjectionExtension) -> None:
+    """Register a domain projection extension (e.g. FlowProjectionExtension)."""
+    _projection_extensions[ext.layer_key] = ext
 
-    # Tier filtering: compute tier node set if tier is specified
-    tier_node_set: set[str] | None = None
-    node_tier_filtered = 0
-    if tier and tier_definitions:
-        tier_node_set, _ = _resolve_tier_node_set(nodes_in, tier, tier_definitions)
-    tier_filter_enabled = tier_node_set is not None
-    category_filter_enabled = len(category_allow_set) > 0 and not tier_filter_enabled
 
-    category_of: dict[str, str] = {}
-    candidate_node_names: set[str] = set()
-    all_named_nodes: set[str] = set()
-    node_without_name = 0
-    node_category_filtered = 0
-    for node in nodes_in:
-        name = str(node.get("name", ""))
-        category = str(node.get("category", ""))
-        if not name:
-            node_without_name += 1
-            continue
-        all_named_nodes.add(name)
-        category_of[name] = category
-        if tier_filter_enabled:
-            if name in tier_node_set:  # type: ignore[operator]
-                candidate_node_names.add(name)
-            else:
-                node_tier_filtered += 1
-        elif not category_filter_enabled or category in category_allow_set:
-            candidate_node_names.add(name)
-        else:
-            node_category_filtered += 1
-    candidate_node_names.update(preserve)
-    preserve_matched = len(preserve & all_named_nodes)
-    preserve_unmatched = sorted(preserve - all_named_nodes)
-
-    filtered_edges: list[dict[str, Any]] = []
-    edge_invalid_endpoint = 0
-    edge_node_scope_filtered = 0
-    edge_relation_filtered = 0
-    edge_after_node_scope = 0
-    for edge in edges_in:
-        source = str(edge.get("source", ""))
-        target = str(edge.get("target", ""))
-        relation = str(edge.get("relation", ""))
-        if not source or not target:
-            edge_invalid_endpoint += 1
-            continue
-        if source not in candidate_node_names or target not in candidate_node_names:
-            edge_node_scope_filtered += 1
-            continue
-        edge_after_node_scope += 1
-        if relation_filter_enabled and relation not in relation_allow_set:
-            edge_relation_filtered += 1
-            continue
-        filtered_edges.append(edge)
-
-    connected = {str(edge.get("source", "")) for edge in filtered_edges}
-    connected.update({str(edge.get("target", "")) for edge in filtered_edges})
-    connected.update(preserve)
-
-    nodes_out = [
-        node
-        for node in nodes_in
-        if str(node.get("name", "")) in connected
-    ]
-    node_disconnected = 0
-    node_candidates = 0
-    for node in nodes_in:
-        name = str(node.get("name", ""))
-        if not name:
-            continue
-        if name in candidate_node_names:
-            node_candidates += 1
-            if name not in connected:
-                node_disconnected += 1
-
-    edge_total_before_cap = len(filtered_edges)
-    projection_capped = False
-    if max_edges is not None and max_edges > 0 and edge_total_before_cap > max_edges:
-        filtered_edges = _cap_edges_relation_balanced(filtered_edges, max_edges=max_edges)
-        projection_capped = True
-    edge_capped = max(0, edge_total_before_cap - len(filtered_edges))
-
-    relation_distribution: dict[str, int] = {}
-    for edge in filtered_edges:
-        relation_name = str(edge.get("relation", ""))
-        if not relation_name:
-            continue
-        relation_distribution[relation_name] = relation_distribution.get(relation_name, 0) + 1
-
-    payload = dict(topology)
-    payload["nodes"] = nodes_out
-    payload["edges"] = filtered_edges
-    payload["node_count"] = len(nodes_out)
-    payload["edge_count"] = len(filtered_edges)
-    payload["edge_total_before_cap"] = edge_total_before_cap
-    payload["edge_truncated"] = bool(topology.get("edge_truncated", False)) or projection_capped
-    payload["relation_distribution"] = relation_distribution
-    domain_view_payload = payload.get("domain_view")
-    semantic_layer_key = None
-    if isinstance(domain_view_payload, dict):
-        profile_layer_key = domain_view_payload.get("profile_layer_key")
-        if isinstance(profile_layer_key, str) and profile_layer_key:
-            semantic_layer_key = profile_layer_key
-    payload["semantic_view"] = _build_semantic_view(
-        filtered_edges,
-        semantic_layer_key=semantic_layer_key,
-    )
-    payload["projection_filter"] = {
-        "stages": {
-            "node_input": len(nodes_in),
-            "node_candidates": node_candidates,
-            "node_connected_or_preserved": len(nodes_out),
-            "edge_input": len(edges_in),
-            "edge_after_node_scope": edge_after_node_scope,
-            "edge_after_relation": edge_total_before_cap,
-            "edge_before_cap": edge_total_before_cap,
-            "edge_after_cap": len(filtered_edges),
-        },
-        "drop_reasons": {
-            "node_without_name": node_without_name,
-            "node_category_filtered": node_category_filtered,
-            "node_tier_filtered": node_tier_filtered,
-            "node_disconnected": node_disconnected,
-            "edge_invalid_endpoint": edge_invalid_endpoint,
-            "edge_node_scope_filtered": edge_node_scope_filtered,
-            "edge_relation_filtered": edge_relation_filtered,
-            "edge_capped": edge_capped,
-        },
-        "preserve": {
-            "requested": len(preserve),
-            "matched": preserve_matched,
-            "retained": sum(1 for node in nodes_out if str(node.get("name", "")) in preserve),
-            "unmatched": preserve_unmatched[:16],
-        },
-    }
-    domain_view = payload.get("domain_view")
-    if isinstance(domain_view, dict):
-        stats = domain_view.get("stats")
-        if isinstance(stats, dict):
-            stats["edges_after_scope"] = len(filtered_edges)
-            profile_layer_key = domain_view.get("profile_layer_key")
-            if isinstance(profile_layer_key, str) and profile_layer_key:
-                owned_edges = 0
-                bridge_edges = 0
-                for edge in filtered_edges:
-                    if _edge_domain_scope(edge, profile_layer_key=profile_layer_key) == "bridge":
-                        bridge_edges += 1
-                    else:
-                        owned_edges += 1
-                stats["owned_edges"] = owned_edges
-                stats["bridge_edges"] = bridge_edges
-            stats["owned_nodes"] = sum(
-                1
-                for node in nodes_out
-                if str(node.get("ownership", "")) in {"owned", "home_port"}
-            )
-            stats["foreign_nodes"] = sum(
-                1
-                for node in nodes_out
-                if str(node.get("ownership", "")) == "foreign_port"
-            )
-    return payload
+def _bootstrap_projection_extensions() -> None:
+    """Auto-register available projection extensions."""
+    if _projection_extensions:
+        return
+    try:
+        from ea_flow.projection_ext import FlowProjectionExtension
+        register_projection_extension(FlowProjectionExtension())
+    except ImportError:
+        pass
+    try:
+        from ea_decision.projection_ext import DecisionProjectionExtension
+        register_projection_extension(DecisionProjectionExtension())
+    except ImportError:
+        pass
 
 
 def profile_projection(
@@ -4216,7 +2721,7 @@ def profile_projection(
             "policy_error": policy.get("policy_error"),
         }
     level_specs = policy.get("level_specs", _PROJECTION_LEVEL_SPECS)
-    lens_to_level = policy.get("lens_to_level", _PROJECTION_LENS_TO_LEVEL)
+    lens_to_level = policy.get("lens_to_level", PROJECTION_LENS_TO_LEVEL)
 
     if not normalized_level:
         normalized_level = str(lens_to_level.get(normalized_lens, "l0"))
@@ -4274,9 +2779,9 @@ def profile_projection(
         effective_focus = "seed"
         effective_view_mode = "focus"
         if effective_depth is None:
-            effective_depth = _PROJECTION_DEFAULT_SEED_DEPTH
+            effective_depth = PROJECTION_DEFAULT_SEED_DEPTH
     elif base_focus == "actor" and effective_depth is None:
-        effective_depth = int(policy.get("actor_default_depth", _PROJECTION_DEFAULT_ACTOR_DEPTH))
+        effective_depth = int(policy.get("actor_default_depth", PROJECTION_DEFAULT_ACTOR_DEPTH))
 
     topology = profile_topology(
         profile_name=profile_name,
@@ -4329,6 +2834,14 @@ def profile_projection(
     if resolved_tier is None:
         filter_categories = tuple(spec.get("allowed_categories", ()))
 
+    max_cd = spec.get("max_containment_depth")
+    # Profile-level override: [projection] max_containment_depth_l0 = 0
+    _proj_profile = _load_profile(profile_name)
+    if _proj_profile and _proj_profile.metadata and _proj_profile.metadata.extra:
+        _cd_key = f"projection.max_containment_depth_{normalized_level}"
+        _cd_val = _proj_profile.metadata.extra.get(_cd_key)
+        if _cd_val is not None:
+            max_cd = int(_cd_val)
     projected = _apply_projection_filters(
         topology=topology,
         allowed_relations=tuple(spec.get("allowed_relations", ())),
@@ -4337,8 +2850,23 @@ def profile_projection(
         preserve_nodes=preserve_nodes,
         tier=resolved_tier,
         tier_definitions=resolved_tier_definitions,
+        max_containment_depth=max_cd,
     )
     projection_filter_meta = projected.pop("projection_filter", {})
+
+    # Apply registered projection extensions (enrich nodes/edges, add supplementary edges)
+    _bootstrap_projection_extensions()
+    extension_meta: dict[str, Any] = {}
+    for ext_key, ext in _projection_extensions.items():
+        enriched_nodes = ext.enrich_nodes(projected["nodes"], normalized_level, resolved_tier)
+        enriched_edges = ext.enrich_edges(projected["edges"], enriched_nodes, normalized_level)
+        supplementary = ext.supplementary_edges(enriched_nodes, normalized_level, resolved_tier)
+        projected["nodes"] = enriched_nodes
+        projected["edges"] = enriched_edges + supplementary
+        if supplementary:
+            extension_meta[ext_key] = {"supplementary_edges": len(supplementary)}
+    projected["node_count"] = len(projected["nodes"])
+    projected["edge_count"] = len(projected["edges"])
 
     source_node_count = int(topology.get("node_count", 0) or 0)
     source_edge_count = int(topology.get("edge_count", 0) or 0)
@@ -4426,6 +2954,10 @@ def profile_projection(
     # Seed metadata
     if seed_meta_payload is not None:
         projection_meta["seed"] = seed_meta_payload
+
+    # Extension metadata
+    if extension_meta:
+        projection_meta["extensions"] = extension_meta
 
     projected["projection"] = projection_meta
     return projected

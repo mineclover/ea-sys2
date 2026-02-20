@@ -135,6 +135,20 @@ class TestPatternEffectiveness:
         )
         assert eff.revision_rate == 0.3
 
+    def test_execution_success_rate(self):
+        eff = PatternEffectiveness(
+            pattern_name="Cross",
+            total_decisions=10,
+            accepted_count=8,
+            execution_linked_count=6,
+            execution_success_count=5,
+        )
+        assert eff.execution_success_rate == 5 / 6
+
+    def test_execution_success_rate_no_links(self):
+        eff = PatternEffectiveness(pattern_name="NoLink")
+        assert eff.execution_success_rate == 0.0
+
 
 # ── EvaluationConsistency Tests ─────────────────────────────────────────
 
@@ -225,6 +239,38 @@ class TestDecisionAnalyzer:
         report = analyzer.generate_report()
         # Legacy pattern should be flagged for deprecation
         assert "Legacy" in report.patterns_for_deprecation
+
+    def test_cross_layer_execution_feedback(self):
+        """S5/S6: Analyzer populates execution metrics from snapshot execution_success."""
+        store = InMemoryTopicStore()
+        # 3 snapshots with execution feedback
+        store.store(_make_snapshot(
+            topic_id="exec-1", pattern_name="TradeOff",
+            status=DecisionSnapshotStatus.ACCEPTED,
+        ))
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="exec-2", pattern_name="TradeOff",
+            complexity="structural", option_count=3, evaluation_score=0.8,
+            decided_at="2025-01-16T10:00:00Z",
+            status=DecisionSnapshotStatus.ACCEPTED,
+            execution_success=True,
+        ))
+        store.store(StoredDecisionSnapshot(
+            storage_id="", topic_id="exec-3", pattern_name="TradeOff",
+            complexity="structural", option_count=2, evaluation_score=0.6,
+            decided_at="2025-01-17T10:00:00Z",
+            status=DecisionSnapshotStatus.REJECTED,
+            execution_success=False,
+        ))
+
+        analyzer = DecisionAnalyzer(store)
+        results = analyzer.analyze_pattern_effectiveness()
+        assert len(results) == 1
+
+        trade_off = results[0]
+        assert trade_off.execution_linked_count == 2
+        assert trade_off.execution_success_count == 1
+        assert trade_off.execution_success_rate == 0.5
 
     def test_report_period_range(self):
         store = _populated_store()

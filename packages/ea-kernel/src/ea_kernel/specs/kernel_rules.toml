@@ -10,8 +10,8 @@
 
 [meta]
 kernel_version = "2.5.0"
-total_explicit_rules = 67
-total_explicit_metadata = 67
+total_explicit_rules = 69
+total_explicit_metadata = 69
 total_layer_constraints = 2
 
 fallback_relations = [
@@ -747,6 +747,37 @@ confidence = "common"
 source = "KerML §8.4 Transfers"
 established_version = "1.5.0"
 rationale = "Feature can flow data to item as output destination"
+
+[rules.flow-dir-01]
+source = "output_port"
+target = "input_port"
+relation = "flow"
+priority = 60
+notes = "Directed flow from output to input port"
+[rules.flow-dir-01.metadata]
+domain = "kernel"
+tags = ["dataflow", "directed", "port"]
+category = "behavioral"
+confidence = "common"
+source = "KerML §8.4 Transfers"
+established_version = "2.5.0"
+rationale = "Output port emits data to input port — enforces direction"
+
+[rules.flow-dir-02]
+source = "input_port"
+target = "output_port"
+relation = "flow"
+valid = false
+priority = 70
+notes = "Input port cannot emit data to output port"
+[rules.flow-dir-02.metadata]
+domain = "kernel"
+tags = ["prohibition", "directed", "port"]
+category = "behavioral"
+confidence = "universal"
+source = "KerML §8.4 Transfers"
+established_version = "2.5.0"
+rationale = "Input port is a receiver; it cannot emit data to output port"
 
 # ═══════════════════════════════════════════════════════════════════
 # Succession rules

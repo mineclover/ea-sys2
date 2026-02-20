@@ -81,4 +81,5 @@ def test_allowed_layers_contract():
         "needs",
         "kernel",
         "flow",
+        "projection",
     }

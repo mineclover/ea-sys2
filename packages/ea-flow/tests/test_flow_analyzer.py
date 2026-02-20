@@ -145,6 +145,20 @@ class TestStepEffectiveness:
         )
         assert eff.rollback_trigger_rate == 0.3
 
+    def test_decision_acceptance_rate(self):
+        eff = StepEffectiveness(
+            step_name="cross",
+            total_executions=10,
+            success_count=8,
+            decision_linked_count=6,
+            decision_accepted_count=5,
+        )
+        assert eff.decision_acceptance_rate == 5 / 6
+
+    def test_decision_acceptance_rate_no_links(self):
+        eff = StepEffectiveness(step_name="no-link")
+        assert eff.decision_acceptance_rate == 0.0
+
 
 # ── BottleneckHotspot Tests ─────────────────────────────────────────────
 
@@ -264,6 +278,44 @@ class TestFlowAnalyzer:
         analyzer = FlowAnalyzer(store)
         report = analyzer.generate_report()
         assert "step-x" in report.broken_steps
+
+    def test_cross_layer_decision_feedback(self):
+        """S5/S6: Analyzer populates decision metrics from report_id back-references."""
+        store = InMemoryExecutionStore()
+        # 2 records linked to a decision report, 1 unlinked
+        store.store(StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-10T00:00:00Z",
+            report_id="rpt-1",
+            step_results=(StepResultSummary("step-a", accepted=True),),
+        ))
+        store.store(StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=False,
+            total_steps=1, completed_steps=0, failed_step="step-a",
+            rollback_occurred=True, duration_ms=10,
+            executed_at="2025-01-11T00:00:00Z",
+            report_id="rpt-2",
+            step_results=(StepResultSummary("step-a", accepted=False),),
+        ))
+        store.store(StoredExecutionRecord(
+            storage_id="", workflow_name="wf", success=True,
+            total_steps=1, completed_steps=1, failed_step="",
+            rollback_occurred=False, duration_ms=10,
+            executed_at="2025-01-12T00:00:00Z",
+            step_results=(StepResultSummary("step-a", accepted=True),),
+        ))
+
+        analyzer = FlowAnalyzer(store)
+        results = analyzer.analyze_step_effectiveness()
+        step_a = next(s for s in results if s.step_name == "step-a")
+
+        # 2 records have report_id → linked to decisions
+        assert step_a.decision_linked_count == 2
+        # Only rpt-1 was successful
+        assert step_a.decision_accepted_count == 1
+        assert step_a.decision_acceptance_rate == 0.5
 
     def test_report_period_range(self):
         store = _populated_store()

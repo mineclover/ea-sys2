@@ -42,10 +42,10 @@ class TestVersionPin:
 
 
 class TestKernelCounts:
-    """Verify the 29-element kernel structure."""
+    """Verify the 31-element kernel structure."""
 
     def test_l1_entity_count(self):
-        assert len(L1_ENTITIES) == 10
+        assert len(L1_ENTITIES) == 12
 
     def test_l2_relation_count(self):
         assert len(L2_RELATIONS) == 8
@@ -58,7 +58,7 @@ class TestKernelCounts:
 
     def test_total_element_count(self):
         total = len(L1_ENTITIES) + len(L2_RELATIONS) + len(L3_RELATIONS) + len(L4_ENTITIES)
-        assert total == 29
+        assert total == 31
 
     def test_attribute_count(self):
         assert len(ATTRIBUTES) == 20
@@ -229,7 +229,7 @@ class TestLayerDistribution:
     def test_l1_entities(self):
         l1 = KERNEL_SCHEMA.entities_in_layer(Layer.L1)
         names = {e.name for e in l1}
-        expected = {"element", "namespace", "metatype", "feature", "port", "classifier", "structure", "item", "datatype", "package"}
+        expected = {"element", "namespace", "metatype", "feature", "port", "input_port", "output_port", "classifier", "structure", "item", "datatype", "package"}
         assert names == expected
 
     def test_l2_relations(self):

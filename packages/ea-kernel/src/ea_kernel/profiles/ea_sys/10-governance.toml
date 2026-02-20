@@ -2937,3 +2937,54 @@ target = "ProjectionChangeRecord"
 relation = "depends_on"
 priority = 72
 notes = "Gov-Projection: layer model registry depends on projection change history."
+
+# ══════════════════════════════════════════════════════════════
+# Projection Depth Reference: Governance ↔ Projection Depth
+# ══════════════════════════════════════════════════════════════
+
+[[elements]]
+name = "EndpointDepthCeiling"
+layer = "Governance"
+category = "Governance"
+description = "Endpoint별 최대 노출 깊이. Projection L0-L4 참조."
+
+[[elements]]
+name = "SurfaceVisibilityContract"
+layer = "Governance"
+category = "Governance"
+description = "표층 노출 계약. Projection SurfaceProfile 참조."
+
+[[rules]]
+source = "EndpointDepthCeiling"
+target = "KernelRuleEndpoint"
+relation = "constrains"
+priority = 72
+notes = "Rule endpoint exposes up to L2 depth."
+
+[[rules]]
+source = "EndpointDepthCeiling"
+target = "GovernanceDashboardEndpoint"
+relation = "constrains"
+priority = 72
+notes = "Dashboard exposes L0-L1 panorama."
+
+[[rules]]
+source = "EndpointDepthCeiling"
+target = "ModelDecisionTraceEndpoint"
+relation = "constrains"
+priority = 72
+notes = "Decision trace exposes full L4."
+
+[[rules]]
+source = "SurfaceVisibilityContract"
+target = "ProjectionModelPort"
+relation = "depends_on"
+priority = 72
+notes = "Surface contract references projection depth."
+
+[[rules]]
+source = "BoundaryPolicy"
+target = "EndpointDepthCeiling"
+relation = "constrains"
+priority = 72
+notes = "Boundary policy governs depth ceilings."

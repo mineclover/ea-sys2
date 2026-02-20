@@ -99,8 +99,16 @@ def load_profile_from_content(
     # Metadata
     standard = profile_section.get("standard", "")
     organization = profile_section.get("organization", "")
-    if standard or organization:
-        builder.metadata(standard=standard, organization=organization)
+    # Projection overrides (optional [projection] section)
+    projection = doc.get("projection", {})
+    extra: dict[str, str] = {}
+    for proj_key, proj_val in projection.items():
+        extra[f"projection.{proj_key}"] = str(proj_val)
+    if standard or organization or extra:
+        builder.metadata(
+            standard=standard, organization=organization,
+            extra=extra or None,
+        )
 
     # Category mapping
     categories = doc.get("categories", {})
@@ -163,16 +171,19 @@ def load_profile_from_content(
                 parsed.append(RuleCondition(ct))
             conditions = tuple(parsed)
 
+        scope = rule.get("scope", "")
+
         if valid:
             builder.allow(
                 source, target, relation,
                 priority=priority, notes=notes, rule_id=rule_id,
-                conditions=conditions,
+                conditions=conditions, scope=scope,
             )
         else:
             builder.deny(
                 source, target, relation,
                 priority=priority, notes=notes, rule_id=rule_id,
+                scope=scope,
             )
 
     return builder.build(kernel)

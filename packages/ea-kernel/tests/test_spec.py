@@ -928,8 +928,8 @@ class TestSelfDescription:
     """Verify completeness and consistency of the spec."""
 
     def test_rule_count(self):
-        """v2.0: 81 rules (67 explicit + 14 fallback)."""
-        assert len(KERNEL_VALIDITY_RULES) == 81
+        """v2.5: 83 rules (69 explicit + 14 fallback)."""
+        assert len(KERNEL_VALIDITY_RULES) == 83
 
     def test_relation_coverage_complete(self):
         """All 14 relations are covered by at least one non-fallback rule."""

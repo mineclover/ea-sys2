@@ -7,7 +7,7 @@
 [meta]
 kernel_version = "2.5.0"
 total_attributes = 20
-total_entities = 15
+total_entities = 17
 total_relations = 14
 
 # ═══════════════════════════════════════════════════════════════════
@@ -194,6 +194,20 @@ layer = "L1"
 parent = "feature"
 plays = ["connector:source", "connector:target"]
 description = "Access or interaction point exposed by a structure"
+
+[[entities]]
+name = "input_port"
+layer = "L1"
+parent = "port"
+plays = ["connector:target"]
+description = "Receiving access point — data flows into this port"
+
+[[entities]]
+name = "output_port"
+layer = "L1"
+parent = "port"
+plays = ["connector:source"]
+description = "Emitting access point — data flows out of this port"
 
 [[entities]]
 name = "classifier"

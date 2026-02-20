@@ -31,6 +31,7 @@ src/ea_governance/
 ├── kernel_rule_ops.py       # KernelRuleOps — 규칙 제출/승인/거부/폐기 + 평가 + 스냅샷
 ├── decision_trace_ops.py    # DecisionTraceOps — 의사결정 추적 읽기/쓰기
 ├── needs_ops.py             # NeedsOps — Needs 카탈로그 CRUD + 트랜잭션 제어
+├── lifecycle_ops.py         # LifecycleOps — S4/S5/S6 크로스 레이어 피드백 루프 (분석→제안→전파 환류)
 ├── layer_store.py           # GovernanceLayerStore ABC + InMemory + SQLite 3중 구현
 ├── kernel_store.py          # GovernanceKernelStore — 커널 규칙/코퍼스/판단 스냅샷 스토어
 ├── needs_store.py           # GovernanceNeedsStore — Needs 카탈로그 영속화 어댑터
@@ -82,6 +83,7 @@ decision_trace_ops.py: ea_kernel.governance + layer_store
 kernel_model_ops.py: ea_kernel.model_registration + decision_trace_ops
 kernel_rule_ops.py: ea_kernel.governance_types + kernel_store
 needs_ops.py: ea_needs.catalog + needs_store + execution_service
+lifecycle_ops.py: execution_service + layer_store (S4/S5/S6 lazy imports: ea_kernel.promotion_engine, ea_decision.pattern_promotion, ea_flow.workflow_promotion, ea_needs.needs_promotion)
 
 execution_service.py: ea_decision + ea_flow + transaction
 

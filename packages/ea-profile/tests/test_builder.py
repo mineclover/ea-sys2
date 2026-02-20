@@ -187,6 +187,24 @@ class TestRules:
         explicit = [r for r in p.validity_rules if r.valid and r.priority > 1]
         assert len(explicit) == 2
 
+    def test_allow_with_scope(self):
+        p = (
+            _minimal_builder()
+            .allow("A", "A", "rel", scope="sibling")
+            .build()
+        )
+        scoped = [r for r in p.validity_rules if r.scope == "sibling"]
+        assert len(scoped) == 1
+
+    def test_deny_with_scope(self):
+        p = (
+            _minimal_builder()
+            .deny("A", "A", "rel", scope="subtree")
+            .build()
+        )
+        scoped = [r for r in p.validity_rules if r.scope == "subtree"]
+        assert len(scoped) == 1
+
 
 # ---------------------------------------------------------------------------
 # Build options

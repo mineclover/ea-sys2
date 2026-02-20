@@ -271,3 +271,251 @@ class TestEmptyProfile:
         graph = ProfileTopologyGraph(profile)
         assert graph.nodes == ("Only",)
         assert graph.edge_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Scope-aware edge expansion
+# ---------------------------------------------------------------------------
+
+def _make_scoped_profile() -> KernelProfile:
+    """Profile with containment hierarchy for scope testing.
+
+    Hierarchy:
+      Container1 contains PortA, PortB
+      Container2 contains PortC, PortD
+    """
+    return KernelProfile(
+        name="ScopedTest",
+        version="1.0",
+        kernel_version="2.5.0",
+        elements=(
+            ProfileElement("Container1", "structure", "L", "Composite"),
+            ProfileElement("Container2", "structure", "L", "Composite"),
+            ProfileElement("PortA", "port", "L", "Interface"),
+            ProfileElement("PortB", "port", "L", "Interface"),
+            ProfileElement("PortC", "port", "L", "Interface"),
+            ProfileElement("PortD", "port", "L", "Interface"),
+        ),
+        relations=(
+            ProfileRelation("contains", "ownership"),
+            ProfileRelation("next", "succession"),
+        ),
+        validity_rules=(
+            # Containment rules
+            ProfileRule(
+                id="s-contain-1a", source_pattern="Container1",
+                target_pattern="PortA", relationship_name="contains",
+                valid=True, priority=60,
+            ),
+            ProfileRule(
+                id="s-contain-1b", source_pattern="Container1",
+                target_pattern="PortB", relationship_name="contains",
+                valid=True, priority=60,
+            ),
+            ProfileRule(
+                id="s-contain-2c", source_pattern="Container2",
+                target_pattern="PortC", relationship_name="contains",
+                valid=True, priority=60,
+            ),
+            ProfileRule(
+                id="s-contain-2d", source_pattern="Container2",
+                target_pattern="PortD", relationship_name="contains",
+                valid=True, priority=60,
+            ),
+            # Global scope: all Interface → Interface (Cartesian product)
+            ProfileRule(
+                id="s-wire-global", source_pattern="@Interface",
+                target_pattern="@Interface", relationship_name="next",
+                valid=True, priority=50, scope="",
+            ),
+        ),
+    )
+
+
+class TestScopeGlobal:
+    def test_global_scope_cartesian_product(self):
+        """scope="" creates all Interface×Interface edges (4×3=12)."""
+        profile = _make_scoped_profile()
+        graph = ProfileTopologyGraph(profile)
+        next_edges = [
+            e for src in graph.nodes
+            for e in graph.outgoing(src, "next")
+        ]
+        # 4 ports × 3 other ports = 12 edges
+        assert len(next_edges) == 12
+
+
+class TestScopeSibling:
+    def test_sibling_scope_limits_to_same_container(self):
+        """scope="sibling" only creates edges between ports in the same container."""
+        from dataclasses import replace
+        profile = _make_scoped_profile()
+        # Replace the global rule with a sibling-scoped one
+        new_rules = tuple(
+            r for r in profile.validity_rules if r.id != "s-wire-global"
+        ) + (
+            ProfileRule(
+                id="s-wire-sibling", source_pattern="@Interface",
+                target_pattern="@Interface", relationship_name="next",
+                valid=True, priority=50, scope="sibling",
+            ),
+        )
+        profile = replace(profile, validity_rules=new_rules)
+        graph = ProfileTopologyGraph(profile)
+        next_edges = [
+            e for src in graph.nodes
+            for e in graph.outgoing(src, "next")
+        ]
+        # Container1: PortA↔PortB = 2 edges
+        # Container2: PortC↔PortD = 2 edges
+        assert len(next_edges) == 4
+        # Verify no cross-container edges
+        for e in next_edges:
+            assert not (e.source.endswith("A") and e.target.endswith("C"))
+            assert not (e.source.endswith("C") and e.target.endswith("A"))
+
+
+class TestScopeSubtree:
+    def test_subtree_scope_limits_to_same_root(self):
+        """scope="subtree" only creates edges within the same root subtree."""
+        from dataclasses import replace
+        # Create a profile with two separate roots
+        profile = KernelProfile(
+            name="SubtreeTest",
+            version="1.0",
+            kernel_version="2.5.0",
+            elements=(
+                ProfileElement("Root1", "structure", "L", "Composite"),
+                ProfileElement("Root2", "structure", "L", "Composite"),
+                ProfileElement("Child1A", "port", "L", "Interface"),
+                ProfileElement("Child2A", "port", "L", "Interface"),
+            ),
+            relations=(
+                ProfileRelation("contains", "ownership"),
+                ProfileRelation("next", "succession"),
+            ),
+            validity_rules=(
+                ProfileRule(
+                    id="c-1a", source_pattern="Root1",
+                    target_pattern="Child1A", relationship_name="contains",
+                    valid=True, priority=60,
+                ),
+                ProfileRule(
+                    id="c-2a", source_pattern="Root2",
+                    target_pattern="Child2A", relationship_name="contains",
+                    valid=True, priority=60,
+                ),
+                ProfileRule(
+                    id="wire-subtree", source_pattern="@Interface",
+                    target_pattern="@Interface", relationship_name="next",
+                    valid=True, priority=50, scope="subtree",
+                ),
+            ),
+        )
+        graph = ProfileTopologyGraph(profile)
+        next_edges = [
+            e for src in graph.nodes
+            for e in graph.outgoing(src, "next")
+        ]
+        # Child1A and Child2A are in different subtrees → no edges
+        assert len(next_edges) == 0
+
+
+class TestContainmentDepths:
+    def test_depths_simple_hierarchy(self):
+        """Test containment depth calculation."""
+        profile = _make_scoped_profile()
+        graph = ProfileTopologyGraph(profile)
+        depths = graph.containment_depths()
+        # Containers are roots (depth 0)
+        assert depths["Container1"] == 0
+        assert depths["Container2"] == 0
+        # Ports are children (depth 1)
+        assert depths["PortA"] == 1
+        assert depths["PortB"] == 1
+        assert depths["PortC"] == 1
+        assert depths["PortD"] == 1
+
+    def test_priority_ordering_prevents_spurious_containment(self):
+        """Higher-priority instance rules should win over lower-priority category rules.
+
+        Without priority sorting, @Composite→@Behavior (priority 50) would set
+        Mid's container to the first Composite it finds. With priority sorting,
+        the explicit rule Root→Mid (priority 60) wins.
+        """
+        profile = KernelProfile(
+            name="PriorityTest",
+            version="1.0",
+            kernel_version="2.5.0",
+            elements=(
+                ProfileElement("NodeA", "structure", "L", "Composite"),
+                ProfileElement("NodeB", "structure", "L", "Composite"),
+                ProfileElement("NodeA.logic", "package", "L", "Behavior"),
+                ProfileElement("NodeB.logic", "package", "L", "Behavior"),
+            ),
+            relations=(
+                ProfileRelation("contains", "ownership"),
+            ),
+            validity_rules=(
+                # Category-level rule (lower priority) — Cartesian product
+                ProfileRule(
+                    id="cat-contain", source_pattern="@Composite",
+                    target_pattern="@Behavior", relationship_name="contains",
+                    valid=True, priority=50,
+                ),
+                # Instance-level rules (higher priority) — correct mappings
+                ProfileRule(
+                    id="inst-a-logic", source_pattern="NodeA",
+                    target_pattern="NodeA.logic", relationship_name="contains",
+                    valid=True, priority=65,
+                ),
+                ProfileRule(
+                    id="inst-b-logic", source_pattern="NodeB",
+                    target_pattern="NodeB.logic", relationship_name="contains",
+                    valid=True, priority=65,
+                ),
+            ),
+        )
+        graph = ProfileTopologyGraph(profile)
+        depths = graph.containment_depths()
+        # Instance rules should win: each .logic belongs to its own Node
+        assert depths["NodeA"] == 0
+        assert depths["NodeB"] == 0
+        assert depths["NodeA.logic"] == 1
+        assert depths["NodeB.logic"] == 1
+        # Verify correct parents
+        assert graph._container_of["NodeA.logic"] == "NodeA"
+        assert graph._container_of["NodeB.logic"] == "NodeB"
+
+    def test_depths_nested(self):
+        """3-level nesting: Root → Mid → Leaf."""
+        profile = KernelProfile(
+            name="Nested",
+            version="1.0",
+            kernel_version="2.5.0",
+            elements=(
+                ProfileElement("Root", "structure", "L", "Composite"),
+                ProfileElement("Mid", "package", "L", "Behavior"),
+                ProfileElement("Leaf", "port", "L", "Interface"),
+            ),
+            relations=(
+                ProfileRelation("contains", "ownership"),
+            ),
+            validity_rules=(
+                ProfileRule(
+                    id="c-rm", source_pattern="Root",
+                    target_pattern="Mid", relationship_name="contains",
+                    valid=True, priority=60,
+                ),
+                ProfileRule(
+                    id="c-ml", source_pattern="Mid",
+                    target_pattern="Leaf", relationship_name="contains",
+                    valid=True, priority=60,
+                ),
+            ),
+        )
+        graph = ProfileTopologyGraph(profile)
+        depths = graph.containment_depths()
+        assert depths["Root"] == 0
+        assert depths["Mid"] == 1
+        assert depths["Leaf"] == 2

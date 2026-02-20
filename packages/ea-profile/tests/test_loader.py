@@ -217,6 +217,61 @@ conditions = ["UNKNOWN_COND"]
 # Category mapping inference from TOML
 # ---------------------------------------------------------------------------
 
+class TestScopeLoading:
+    def test_scope_sibling_parsed(self):
+        toml = """\
+[profile]
+name = "S"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[rules]]
+source = "A"
+target = "A"
+relation = "r"
+scope = "sibling"
+"""
+        p = load_profile_from_content(toml)
+        scoped_rules = [r for r in p.validity_rules if r.scope == "sibling"]
+        assert len(scoped_rules) == 1
+
+    def test_scope_default_empty(self):
+        toml = """\
+[profile]
+name = "S"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "L"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[rules]]
+source = "A"
+target = "A"
+relation = "r"
+"""
+        p = load_profile_from_content(toml)
+        allow_rules = [r for r in p.validity_rules if r.valid and r.priority > 1]
+        assert all(r.scope == "" for r in allow_rules)
+
+
 class TestCategoryMapping:
     def test_category_mapping_infers_kernel_type(self):
         toml = """\

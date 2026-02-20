@@ -438,6 +438,7 @@ version = "2.5.0"
 source = { editable = "packages/ea-kernel" }
 dependencies = [
     { name = "ea-profile" },
+    { name = "ea-projection" },
 ]
 
 [package.optional-dependencies]
@@ -461,6 +462,7 @@ typedb = [
 [package.metadata]
 requires-dist = [
     { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "ea-projection", editable = "packages/ea-projection" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.12.0" },
     { name = "pydantic", marker = "extra == 'api'", specifier = ">=2.10.0" },

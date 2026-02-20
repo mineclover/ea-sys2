@@ -54,6 +54,12 @@ class StoredDecisionSnapshot:
     stored_at: str = ""
     rationale: str = ""
     selected_option_id: str = ""
+    execution_id: str = ""
+    execution_success: bool | None = None
+    transaction_id: str = ""
+    trace_id: str = ""
+    need_refs: tuple[str, ...] = ()  # Forward causal reference to Needs
+    projection_refs: tuple[str, ...] = ()  # Projection snapshot IDs observed
     metadata: tuple[tuple[str, str], ...] = ()
 
 
@@ -65,6 +71,8 @@ class DecisionQueryOptions:
     status: DecisionSnapshotStatus | None = None
     start_time: str = ""
     end_time: str = ""
+    trace_id: str = ""
+    need_ref: str = ""  # Filter by Need ID in need_refs
     limit: int = 100
     offset: int = 0
 
@@ -151,6 +159,12 @@ class InMemoryTopicStore(TopicStore):
             stored_at=now,
             rationale=snapshot.rationale,
             selected_option_id=snapshot.selected_option_id,
+            execution_id=snapshot.execution_id,
+            execution_success=snapshot.execution_success,
+            transaction_id=snapshot.transaction_id,
+            trace_id=snapshot.trace_id,
+            need_refs=snapshot.need_refs,
+            projection_refs=snapshot.projection_refs,
             metadata=snapshot.metadata,
         )
 
@@ -217,6 +231,10 @@ class InMemoryTopicStore(TopicStore):
                 continue
             if options.end_time and snap.decided_at > options.end_time:
                 continue
+            if options.trace_id and snap.trace_id != options.trace_id:
+                continue
+            if options.need_ref and options.need_ref not in snap.need_refs:
+                continue
             results.append(snap)
 
         start = options.offset
@@ -233,7 +251,7 @@ class SQLiteTopicStore(TopicStore):
 
     __slots__ = ("_db_path",)
 
-    _SCHEMA_VERSION = 1
+    _SCHEMA_VERSION = 5
 
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = Path(db_path)
@@ -267,6 +285,9 @@ class SQLiteTopicStore(TopicStore):
                     stored_at TEXT NOT NULL,
                     rationale TEXT DEFAULT '',
                     selected_option_id TEXT DEFAULT '',
+                    execution_id TEXT DEFAULT '',
+                    execution_success INTEGER DEFAULT NULL,
+                    transaction_id TEXT DEFAULT '',
                     metadata_json TEXT DEFAULT '{}'
                 );
 
@@ -280,10 +301,37 @@ class SQLiteTopicStore(TopicStore):
                     ON decision_snapshots(decided_at);
             """)
 
+            # Migration: add columns for existing databases
+            for col, default, col_type in (
+                ("execution_id", "''", "TEXT"),
+                ("execution_success", "NULL", "INTEGER"),
+                ("transaction_id", "''", "TEXT"),
+                ("trace_id", "''", "TEXT"),
+                ("need_refs_json", "'[]'", "TEXT"),
+                ("projection_refs_json", "'[]'", "TEXT"),
+            ):
+                try:
+                    conn.execute(
+                        f"ALTER TABLE decision_snapshots ADD COLUMN {col} "
+                        f"{col_type} DEFAULT {default}"
+                    )
+                except sqlite3.OperationalError:
+                    pass  # column already exists
+
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trace_id ON decision_snapshots(trace_id)"
+            )
+
             cursor = conn.execute("SELECT version FROM schema_version")
-            if cursor.fetchone() is None:
+            row = cursor.fetchone()
+            if row is None:
                 conn.execute(
                     "INSERT INTO schema_version (version) VALUES (?)",
+                    (self._SCHEMA_VERSION,),
+                )
+            elif row[0] < self._SCHEMA_VERSION:
+                conn.execute(
+                    "UPDATE schema_version SET version = ?",
                     (self._SCHEMA_VERSION,),
                 )
 
@@ -306,22 +354,40 @@ class SQLiteTopicStore(TopicStore):
             stored_at=now,
             rationale=snapshot.rationale,
             selected_option_id=snapshot.selected_option_id,
+            execution_id=snapshot.execution_id,
+            execution_success=snapshot.execution_success,
+            transaction_id=snapshot.transaction_id,
+            trace_id=snapshot.trace_id,
+            need_refs=snapshot.need_refs,
+            projection_refs=snapshot.projection_refs,
             metadata=snapshot.metadata,
         )
+
+        exec_success_val = None
+        if snapshot.execution_success is not None:
+            exec_success_val = 1 if snapshot.execution_success else 0
+        need_refs_json = json.dumps(list(snapshot.need_refs))
+        projection_refs_json = json.dumps(list(snapshot.projection_refs))
 
         with self._connection() as conn:
             conn.execute("""
                 INSERT INTO decision_snapshots (
                     storage_id, topic_id, pattern_name, complexity,
                     option_count, evaluation_score, decided_at, status,
-                    stored_at, rationale, selected_option_id, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    stored_at, rationale, selected_option_id,
+                    execution_id, execution_success, transaction_id,
+                    trace_id, need_refs_json, projection_refs_json,
+                    metadata_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 storage_id, snapshot.topic_id, snapshot.pattern_name,
                 snapshot.complexity, snapshot.option_count,
                 snapshot.evaluation_score, snapshot.decided_at,
                 snapshot.status.value, now, snapshot.rationale,
-                snapshot.selected_option_id, metadata_json,
+                snapshot.selected_option_id,
+                snapshot.execution_id, exec_success_val,
+                snapshot.transaction_id, snapshot.trace_id,
+                need_refs_json, projection_refs_json, metadata_json,
             ))
             conn.commit()
 
@@ -342,25 +408,7 @@ class SQLiteTopicStore(TopicStore):
         self, options: DecisionQueryOptions | None = None,
     ) -> tuple[StoredDecisionSnapshot, ...]:
         query = "SELECT * FROM decision_snapshots"
-        params: list[str | int] = []
-        conditions: list[str] = []
-
-        if options:
-            if options.pattern_name:
-                conditions.append("pattern_name = ?")
-                params.append(options.pattern_name)
-            if options.complexity:
-                conditions.append("complexity = ?")
-                params.append(options.complexity)
-            if options.status is not None:
-                conditions.append("status = ?")
-                params.append(options.status.value)
-            if options.start_time:
-                conditions.append("decided_at >= ?")
-                params.append(options.start_time)
-            if options.end_time:
-                conditions.append("decided_at <= ?")
-                params.append(options.end_time)
+        conditions, params = self._build_where_conditions(options)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -376,25 +424,7 @@ class SQLiteTopicStore(TopicStore):
 
     def count(self, options: DecisionQueryOptions | None = None) -> int:
         query = "SELECT COUNT(*) FROM decision_snapshots"
-        params: list[str | int] = []
-        conditions: list[str] = []
-
-        if options:
-            if options.pattern_name:
-                conditions.append("pattern_name = ?")
-                params.append(options.pattern_name)
-            if options.complexity:
-                conditions.append("complexity = ?")
-                params.append(options.complexity)
-            if options.status is not None:
-                conditions.append("status = ?")
-                params.append(options.status.value)
-            if options.start_time:
-                conditions.append("decided_at >= ?")
-                params.append(options.start_time)
-            if options.end_time:
-                conditions.append("decided_at <= ?")
-                params.append(options.end_time)
+        conditions, params = self._build_where_conditions(options)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -403,6 +433,38 @@ class SQLiteTopicStore(TopicStore):
             cursor = conn.execute(query, params)
             result = cursor.fetchone()
             return result[0] if result else 0
+
+    @staticmethod
+    def _build_where_conditions(
+        options: DecisionQueryOptions | None,
+    ) -> tuple[list[str], list[str | int]]:
+        """Build WHERE clause conditions and params from query options."""
+        conditions: list[str] = []
+        params: list[str | int] = []
+        if options is None:
+            return conditions, params
+        if options.pattern_name:
+            conditions.append("pattern_name = ?")
+            params.append(options.pattern_name)
+        if options.complexity:
+            conditions.append("complexity = ?")
+            params.append(options.complexity)
+        if options.status is not None:
+            conditions.append("status = ?")
+            params.append(options.status.value)
+        if options.start_time:
+            conditions.append("decided_at >= ?")
+            params.append(options.start_time)
+        if options.end_time:
+            conditions.append("decided_at <= ?")
+            params.append(options.end_time)
+        if options.trace_id:
+            conditions.append("trace_id = ?")
+            params.append(options.trace_id)
+        if options.need_ref:
+            conditions.append("need_refs_json LIKE ?")
+            params.append(f'%"{options.need_ref}"%')
+        return conditions, params
 
     def statistics_by_pattern(self) -> tuple[DecisionStatistics, ...]:
         with self._connection() as conn:
@@ -436,6 +498,18 @@ class SQLiteTopicStore(TopicStore):
         metadata_dict = json.loads(row["metadata_json"])
         metadata = tuple(metadata_dict.items())
 
+        keys = row.keys()
+        exec_success_raw = row["execution_success"] if "execution_success" in keys else None
+        exec_success: bool | None = None
+        if exec_success_raw is not None:
+            exec_success = bool(exec_success_raw)
+
+        need_refs_raw = row["need_refs_json"] if "need_refs_json" in keys else "[]"
+        need_refs = tuple(json.loads(need_refs_raw))
+
+        projection_refs_raw = row["projection_refs_json"] if "projection_refs_json" in keys else "[]"
+        projection_refs = tuple(json.loads(projection_refs_raw))
+
         return StoredDecisionSnapshot(
             storage_id=row["storage_id"],
             topic_id=row["topic_id"],
@@ -448,5 +522,11 @@ class SQLiteTopicStore(TopicStore):
             stored_at=row["stored_at"],
             rationale=row["rationale"],
             selected_option_id=row["selected_option_id"],
+            execution_id=row["execution_id"] if "execution_id" in keys else "",
+            execution_success=exec_success,
+            transaction_id=row["transaction_id"] if "transaction_id" in keys else "",
+            trace_id=row["trace_id"] if "trace_id" in keys else "",
+            need_refs=need_refs,
+            projection_refs=projection_refs,
             metadata=metadata,
         )

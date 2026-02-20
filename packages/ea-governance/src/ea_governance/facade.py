@@ -21,6 +21,7 @@ from ea_governance.kernel_model_ops import KernelModelOps
 from ea_governance.kernel_rule_ops import KernelRuleOps
 from ea_governance.kernel_store import GovernanceKernelStore
 from ea_governance.layer_store import ALLOWED_LAYERS, GovernanceLayerStore, SQLiteGovernanceLayerStore
+from ea_governance.lifecycle_ops import LifecycleOps
 from ea_governance.needs_ops import NeedsOps
 from ea_governance.needs_store import GovernanceNeedsStore
 
@@ -91,7 +92,15 @@ class GovernanceContainer:
             self.kernel_store,
             self.execution_service,
         )
-        self._needs_ops = NeedsOps(self.needs_store, self.execution_service)
+        self._needs_ops = NeedsOps(
+            self.needs_store,
+            self.execution_service,
+            layer_store=self.layer_stores["needs"],
+        )
+        self._lifecycle_ops = LifecycleOps(
+            self.execution_service,
+            self.layer_stores,
+        )
 
     # -- Topic / Initiative / Decision (remain in facade) ----------------------
 
@@ -119,14 +128,19 @@ class GovernanceContainer:
             raise e
 
     def interpret_decision(self, report_id: str, topic: Topic) -> dict[str, Any]:
-        """Interprets the modeling actions of a finalized report."""
+        """Interprets the modeling actions of a finalized report.
+
+        On success: decision status → ACCEPTED.
+        On failure: decision status → REJECTED, topic re-opened.
+        """
         if not topic.report or topic.report.id != report_id:
             return {"success": False, "error": "Invalid Report ID"}
 
-        success = self.execution_service.interpret_report(topic.report)
+        success = self.execution_service.interpret_report(topic.report, topic=topic)
         return {
             "success": success,
             "transaction_id": topic.report.transaction_id,
+            "decision_status": topic.report.decision.status.value if topic.report else None,
         }
 
     def execute_decision(self, report_id: str, topic: Topic) -> dict[str, Any]:
@@ -272,6 +286,185 @@ class GovernanceContainer:
             }
             for snapshot in store.list_snapshots()
         ]
+
+    # -- Projection recording --------------------------------------------------
+
+    def record_projection_result(
+        self,
+        *,
+        profile_name: str,
+        level: str,
+        node_count: int,
+        edge_count: int,
+        projection_filter: dict[str, Any] | None = None,
+        tier: str | None = None,
+        seed: str | None = None,
+        trace_id: str = "",
+        actor: str = "governance",
+        return_transaction: bool = False,
+    ) -> str | dict[str, str]:
+        """Record a projection execution result to the governance 'projection' layer store."""
+        from datetime import UTC, datetime
+
+        ts = datetime.now(UTC).isoformat() + "Z"
+        model_id = f"proj:{profile_name}:{level}:{ts}"
+        payload: dict[str, Any] = {
+            "profile_name": profile_name,
+            "level": level,
+            "node_count": node_count,
+            "edge_count": edge_count,
+            "recorded_at": ts,
+        }
+        if projection_filter is not None:
+            payload["projection_filter"] = projection_filter
+        if tier is not None:
+            payload["tier"] = tier
+        if seed is not None:
+            payload["seed"] = seed
+        if trace_id:
+            payload["trace_id"] = trace_id
+
+        return self.save_layer_snapshot(
+            "projection",
+            model_id,
+            payload,
+            actor=actor,
+            return_transaction=return_transaction,
+        )
+
+    def detect_projection_drift(
+        self,
+        profile_name: str,
+        level: str = "l0",
+        *,
+        node_threshold: float = 0.2,
+        edge_threshold: float = 0.3,
+    ) -> dict[str, Any] | None:
+        """Detect significant projection drift by comparing the latest two snapshots.
+
+        Returns a drift report if thresholds are exceeded, else None.
+        The report includes drift metrics and can be used to trigger decision revision.
+        """
+        snapshots = [
+            s for s in self.layer_stores["projection"].list_snapshots()
+            if s.payload.get("profile_name") == profile_name
+            and s.payload.get("level") == level
+        ]
+        if len(snapshots) < 2:
+            return None
+
+        # list_snapshots returns sorted by model_id ascending; last two are most recent
+        prev = snapshots[-2].payload
+        curr = snapshots[-1].payload
+        prev_nodes = int(prev.get("node_count", 0))
+        curr_nodes = int(curr.get("node_count", 0))
+        prev_edges = int(prev.get("edge_count", 0))
+        curr_edges = int(curr.get("edge_count", 0))
+
+        node_delta = abs(curr_nodes - prev_nodes)
+        edge_delta = abs(curr_edges - prev_edges)
+        node_drift = node_delta / max(prev_nodes, 1)
+        edge_drift = edge_delta / max(prev_edges, 1)
+
+        if node_drift < node_threshold and edge_drift < edge_threshold:
+            return None
+
+        return {
+            "profile_name": profile_name,
+            "level": level,
+            "prev_node_count": prev_nodes,
+            "curr_node_count": curr_nodes,
+            "prev_edge_count": prev_edges,
+            "curr_edge_count": curr_edges,
+            "node_drift": round(node_drift, 4),
+            "edge_drift": round(edge_drift, 4),
+            "thresholds": {"node": node_threshold, "edge": edge_threshold},
+            "recommendation": "revise_decision",
+        }
+
+    def apply_projection_feedback(
+        self,
+        topic: Topic,
+        drift_report: dict[str, Any],
+    ) -> bool:
+        """Apply projection drift feedback to a topic, triggering decision revision.
+
+        Returns True if the topic was revised, False if no revision was needed.
+        """
+        if topic.status != "completed" or topic.report is None:
+            return False
+
+        topic.revise_report()
+        return True
+
+    def query_by_trace_id(self, trace_id: str) -> dict[str, Any]:
+        """Query all cross-layer records associated with a trace ID.
+
+        Returns transactions and projection snapshots linked to the given trace_id.
+        """
+        transactions = self.execution_service.tx_manager.list_transactions(
+            trace_id=trace_id,
+        )
+        projection_snapshots = [
+            snap
+            for snap in self.layer_stores["projection"].list_snapshots()
+            if snap.payload.get("trace_id") == trace_id
+        ]
+        return {
+            "trace_id": trace_id,
+            "transactions": [
+                {"id": tx.id, "name": tx.name, "status": tx.status.value, "tx_type": tx.tx_type}
+                for tx in transactions
+            ],
+            "projection_snapshots": [
+                {"model_id": s.model_id, "payload": s.payload}
+                for s in projection_snapshots
+            ],
+        }
+
+    # -- S6 auto-invalidation ---------------------------------------------------
+
+    def apply_critical_impact(
+        self,
+        impact_report: dict[str, Any],
+        *,
+        actor: str = "governance",
+    ) -> dict[str, Any]:
+        """S6: Auto-deprecate affected kernel rules when impact severity is CRITICAL.
+
+        Takes an ImpactReport-like dict and deprecates all rules that caused
+        verdict changes.  Returns a summary of actions taken.
+        """
+        severity = impact_report.get("severity", "none")
+        if severity not in ("critical", "high"):
+            return {"action": "none", "reason": f"severity={severity}, below threshold"}
+
+        affected = impact_report.get("affected_decisions", ())
+        deprecated_rules: list[str] = []
+        seen: set[str] = set()
+        for ad in affected:
+            if not ad.get("potential_verdict_change", False):
+                continue
+            for rule_id in ad.get("affected_by_rules", ()):
+                if rule_id in seen:
+                    continue
+                seen.add(rule_id)
+                try:
+                    self.deprecate_kernel_rule(
+                        rule_id,
+                        actor=actor,
+                        reason=f"S6 auto-invalidation: impact severity={severity}",
+                    )
+                    deprecated_rules.append(rule_id)
+                except Exception:
+                    pass  # rule may not exist or already deprecated
+
+        return {
+            "action": "auto_deprecate",
+            "severity": severity,
+            "deprecated_rules": deprecated_rules,
+            "total_affected_decisions": len(affected),
+        }
 
     # -- Self-model diagram ----------------------------------------------------
 
@@ -670,3 +863,103 @@ class GovernanceContainer:
 
     def get_needs_catalog_history(self, catalog_id: str) -> list[dict[str, Any]]:
         return self._needs_ops.get_needs_catalog_history(catalog_id)
+
+    # -- Needs→Governance Feedback ------------------------------------------
+
+    def publish_needs_analysis_report(
+        self,
+        catalog_id: str,
+        report: Any,
+        *,
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._needs_ops.publish_analysis_report(
+            catalog_id, report, actor=actor,
+        )
+
+    def record_needs_version(
+        self,
+        catalog_id: str,
+        *,
+        version_label: str,
+        summary: str = "",
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._needs_ops.record_needs_version(
+            catalog_id, version_label=version_label, summary=summary, actor=actor,
+        )
+
+    def evaluate_needs_change_policy(
+        self,
+        catalog_id: str,
+        *,
+        proposed_change: str,
+        change_scope: str = "catalog",
+        actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._needs_ops.evaluate_change_policy(
+            catalog_id,
+            proposed_change=proposed_change,
+            change_scope=change_scope,
+            actor=actor,
+        )
+
+    # -- Lifecycle feedback delegates (S4/S5/S6) ------------------------------
+
+    def publish_kernel_analysis(
+        self, report: Any, *, actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._lifecycle_ops.publish_kernel_analysis(report, actor=actor)
+
+    def publish_decision_analysis(
+        self, report: Any, *, actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._lifecycle_ops.publish_decision_analysis(report, actor=actor)
+
+    def publish_flow_analysis(
+        self, report: Any, *, actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._lifecycle_ops.publish_flow_analysis(report, actor=actor)
+
+    def generate_kernel_proposals(
+        self, analysis_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.generate_kernel_proposals(analysis_report, actor=actor)
+
+    def generate_decision_proposals(
+        self, analysis_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.generate_decision_proposals(analysis_report, actor=actor)
+
+    def generate_flow_proposals(
+        self, analysis_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.generate_flow_proposals(analysis_report, actor=actor)
+
+    def generate_needs_proposals(
+        self, analysis_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.generate_needs_proposals(analysis_report, actor=actor)
+
+    def evaluate_kernel_impact(
+        self, impact_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.evaluate_kernel_impact(impact_report, actor=actor)
+
+    def evaluate_decision_impact(
+        self, propagation_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.evaluate_decision_impact(propagation_report, actor=actor)
+
+    def evaluate_needs_impact(
+        self, propagation_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.evaluate_needs_impact(propagation_report, actor=actor)
+
+    def evaluate_flow_impact(
+        self, propagation_report: Any, *, actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._lifecycle_ops.evaluate_flow_impact(propagation_report, actor=actor)
+
+    def lifecycle_summary(self) -> dict[str, Any]:
+        return self._lifecycle_ops.lifecycle_summary()

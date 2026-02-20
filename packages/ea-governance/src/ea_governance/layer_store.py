@@ -23,6 +23,7 @@ ALLOWED_LAYERS: tuple[str, ...] = (
     "needs",
     "kernel",
     "flow",
+    "projection",
 )
 
 

@@ -331,6 +331,7 @@ class ProfileBuilder:
         conditions: tuple[RuleCondition, ...] = (),
         rule_id: str | None = None,
         metadata: RuleMetadata | None = None,
+        scope: str = "",
     ) -> ProfileBuilder:
         """Add an allow rule."""
         rid = rule_id or self._next_rule_id("allow")
@@ -343,6 +344,7 @@ class ProfileBuilder:
             priority=priority,
             conditions=conditions,
             notes=notes,
+            scope=scope,
         ))
         if metadata is not None:
             self._rule_metadata[rid] = metadata
@@ -358,6 +360,7 @@ class ProfileBuilder:
         notes: str = "",
         rule_id: str | None = None,
         metadata: RuleMetadata | None = None,
+        scope: str = "",
     ) -> ProfileBuilder:
         """Add a deny rule."""
         rid = rule_id or self._next_rule_id("deny")
@@ -369,6 +372,7 @@ class ProfileBuilder:
             valid=False,
             priority=priority,
             notes=notes,
+            scope=scope,
         ))
         if metadata is not None:
             self._rule_metadata[rid] = metadata

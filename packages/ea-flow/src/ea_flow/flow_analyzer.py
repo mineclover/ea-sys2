@@ -51,6 +51,10 @@ class StepEffectiveness:
     # Impact metrics
     rollback_trigger_count: int = 0
 
+    # Cross-layer decision feedback
+    decision_linked_count: int = 0
+    decision_accepted_count: int = 0
+
     # Time-based
     first_seen_at: str = ""
     last_seen_at: str = ""
@@ -73,6 +77,13 @@ class StepEffectiveness:
         if self.total_executions == 0:
             return 0.0
         return self.rollback_trigger_count / self.total_executions
+
+    @property
+    def decision_acceptance_rate(self) -> float:
+        """Acceptance rate of linked decisions."""
+        if self.decision_linked_count == 0:
+            return 0.0
+        return self.decision_accepted_count / self.decision_linked_count
 
     @property
     def grade(self) -> StepEffectivenessGrade:
@@ -199,6 +210,15 @@ class FlowAnalyzer:
 
         step_data: dict[str, dict] = {}
 
+        # Track which report_ids are linked to accepted decisions
+        decision_accepted_reports: set[str] = set()
+        decision_linked_reports: set[str] = set()
+        for rec in records:
+            if rec.report_id:
+                decision_linked_reports.add(rec.report_id)
+                if rec.success:
+                    decision_accepted_reports.add(rec.report_id)
+
         for rec in records:
             for sr in rec.step_results:
                 name = sr.step_name
@@ -211,6 +231,8 @@ class FlowAnalyzer:
                         "rollback_trigger": 0,
                         "first_seen_at": rec.executed_at,
                         "last_seen_at": rec.executed_at,
+                        "decision_linked": 0,
+                        "decision_accepted": 0,
                     }
 
                 data = step_data[name]
@@ -226,6 +248,12 @@ class FlowAnalyzer:
                     if rec.failed_step == name and rec.rollback_occurred:
                         data["rollback_trigger"] += 1
 
+                # Cross-layer: decision back-reference
+                if rec.report_id and rec.report_id in decision_linked_reports:
+                    data["decision_linked"] += 1
+                    if rec.report_id in decision_accepted_reports:
+                        data["decision_accepted"] += 1
+
         results: list[StepEffectiveness] = []
         for name, data in step_data.items():
             results.append(StepEffectiveness(
@@ -235,6 +263,8 @@ class FlowAnalyzer:
                 success_count=data["success"],
                 failure_count=data["failure"],
                 rollback_trigger_count=data["rollback_trigger"],
+                decision_linked_count=data["decision_linked"],
+                decision_accepted_count=data["decision_accepted"],
                 first_seen_at=data["first_seen_at"],
                 last_seen_at=data["last_seen_at"],
             ))

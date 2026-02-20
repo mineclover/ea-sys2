@@ -54,6 +54,10 @@ class StoredExecutionRecord:
     stored_at: str = ""
     step_results: tuple[StepResultSummary, ...] = ()
     execution_id: str = ""
+    report_id: str = ""
+    topic_id: str = ""
+    trace_id: str = ""
+    workflow_version_id: str = ""
     metadata: tuple[tuple[str, str], ...] = ()
 
 
@@ -65,6 +69,10 @@ class ExecutionQueryOptions:
     rollback_occurred: bool | None = None
     start_time: str = ""
     end_time: str = ""
+    report_id: str = ""
+    topic_id: str = ""
+    trace_id: str = ""
+    workflow_version_id: str = ""
     limit: int = 100
     offset: int = 0
 
@@ -163,6 +171,10 @@ class InMemoryExecutionStore(ExecutionStore):
             stored_at=now,
             step_results=record.step_results,
             execution_id=record.execution_id,
+            report_id=record.report_id,
+            topic_id=record.topic_id,
+            trace_id=record.trace_id,
+            workflow_version_id=record.workflow_version_id,
             metadata=record.metadata,
         )
 
@@ -226,6 +238,14 @@ class InMemoryExecutionStore(ExecutionStore):
                 continue
             if options.end_time and rec.executed_at > options.end_time:
                 continue
+            if options.report_id and rec.report_id != options.report_id:
+                continue
+            if options.topic_id and rec.topic_id != options.topic_id:
+                continue
+            if options.trace_id and rec.trace_id != options.trace_id:
+                continue
+            if options.workflow_version_id and rec.workflow_version_id != options.workflow_version_id:
+                continue
             results.append(rec)
 
         start = options.offset
@@ -242,7 +262,7 @@ class SQLiteExecutionStore(ExecutionStore):
 
     __slots__ = ("_db_path",)
 
-    _SCHEMA_VERSION = 1
+    _SCHEMA_VERSION = 4
 
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = Path(db_path)
@@ -277,6 +297,8 @@ class SQLiteExecutionStore(ExecutionStore):
                     stored_at TEXT NOT NULL,
                     step_results_json TEXT DEFAULT '[]',
                     execution_id TEXT DEFAULT '',
+                    report_id TEXT DEFAULT '',
+                    topic_id TEXT DEFAULT '',
                     metadata_json TEXT DEFAULT '{}'
                 );
 
@@ -286,12 +308,41 @@ class SQLiteExecutionStore(ExecutionStore):
                     ON execution_records(success);
                 CREATE INDEX IF NOT EXISTS idx_executed_at
                     ON execution_records(executed_at);
+                CREATE INDEX IF NOT EXISTS idx_report_id
+                    ON execution_records(report_id);
+                CREATE INDEX IF NOT EXISTS idx_topic_id
+                    ON execution_records(topic_id);
             """)
 
+            # Migration: add columns for existing databases
+            for col, default in (
+                ("report_id", "''"), ("topic_id", "''"),
+                ("trace_id", "''"), ("workflow_version_id", "''"),
+            ):
+                try:
+                    conn.execute(
+                        f"ALTER TABLE execution_records ADD COLUMN {col} TEXT DEFAULT {default}"
+                    )
+                except sqlite3.OperationalError:
+                    pass  # column already exists
+
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_trace_id ON execution_records(trace_id)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_workflow_version_id ON execution_records(workflow_version_id)"
+            )
+
             cursor = conn.execute("SELECT version FROM schema_version")
-            if cursor.fetchone() is None:
+            row = cursor.fetchone()
+            if row is None:
                 conn.execute(
                     "INSERT INTO schema_version (version) VALUES (?)",
+                    (self._SCHEMA_VERSION,),
+                )
+            elif row[0] < self._SCHEMA_VERSION:
+                conn.execute(
+                    "UPDATE schema_version SET version = ?",
                     (self._SCHEMA_VERSION,),
                 )
 
@@ -324,6 +375,10 @@ class SQLiteExecutionStore(ExecutionStore):
             stored_at=now,
             step_results=record.step_results,
             execution_id=record.execution_id,
+            report_id=record.report_id,
+            topic_id=record.topic_id,
+            trace_id=record.trace_id,
+            workflow_version_id=record.workflow_version_id,
             metadata=record.metadata,
         )
 
@@ -333,8 +388,10 @@ class SQLiteExecutionStore(ExecutionStore):
                     storage_id, workflow_name, success, total_steps,
                     completed_steps, failed_step, rollback_occurred,
                     duration_ms, executed_at, stored_at,
-                    step_results_json, execution_id, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    step_results_json, execution_id,
+                    report_id, topic_id, trace_id,
+                    workflow_version_id, metadata_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 storage_id, record.workflow_name,
                 1 if record.success else 0,
@@ -342,7 +399,9 @@ class SQLiteExecutionStore(ExecutionStore):
                 record.failed_step,
                 1 if record.rollback_occurred else 0,
                 record.duration_ms, record.executed_at, now,
-                step_results_json, record.execution_id, metadata_json,
+                step_results_json, record.execution_id,
+                record.report_id, record.topic_id, record.trace_id,
+                record.workflow_version_id, metadata_json,
             ))
             conn.commit()
 
@@ -382,6 +441,18 @@ class SQLiteExecutionStore(ExecutionStore):
             if options.end_time:
                 conditions.append("executed_at <= ?")
                 params.append(options.end_time)
+            if options.report_id:
+                conditions.append("report_id = ?")
+                params.append(options.report_id)
+            if options.topic_id:
+                conditions.append("topic_id = ?")
+                params.append(options.topic_id)
+            if options.trace_id:
+                conditions.append("trace_id = ?")
+                params.append(options.trace_id)
+            if options.workflow_version_id:
+                conditions.append("workflow_version_id = ?")
+                params.append(options.workflow_version_id)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -416,6 +487,18 @@ class SQLiteExecutionStore(ExecutionStore):
             if options.end_time:
                 conditions.append("executed_at <= ?")
                 params.append(options.end_time)
+            if options.report_id:
+                conditions.append("report_id = ?")
+                params.append(options.report_id)
+            if options.topic_id:
+                conditions.append("topic_id = ?")
+                params.append(options.topic_id)
+            if options.trace_id:
+                conditions.append("trace_id = ?")
+                params.append(options.trace_id)
+            if options.workflow_version_id:
+                conditions.append("workflow_version_id = ?")
+                params.append(options.workflow_version_id)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -477,5 +560,9 @@ class SQLiteExecutionStore(ExecutionStore):
             stored_at=row["stored_at"],
             step_results=step_results,
             execution_id=row["execution_id"],
+            report_id=row["report_id"] if "report_id" in row.keys() else "",
+            topic_id=row["topic_id"] if "topic_id" in row.keys() else "",
+            trace_id=row["trace_id"] if "trace_id" in row.keys() else "",
+            workflow_version_id=row["workflow_version_id"] if "workflow_version_id" in row.keys() else "",
             metadata=metadata,
         )

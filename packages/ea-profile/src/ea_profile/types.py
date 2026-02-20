@@ -118,6 +118,7 @@ class ProfileRule:
     conditions: tuple[RuleCondition, ...] = ()
     description: I18nString = ""
     notes: str = ""
+    scope: str = ""  # "" (global) | "sibling" | "subtree"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ProfileRule):
@@ -126,10 +127,12 @@ class ProfileRule:
             self.id, self.source_pattern, self.target_pattern,
             self.relationship_name, self.valid, self.priority,
             self.conditions, self.description, self.notes,
+            self.scope,
         ) == (
             other.id, other.source_pattern, other.target_pattern,
             other.relationship_name, other.valid, other.priority,
             other.conditions, other.description, other.notes,
+            other.scope,
         )
 
     def __hash__(self) -> int:
@@ -137,6 +140,7 @@ class ProfileRule:
             self.id, self.source_pattern, self.target_pattern,
             self.relationship_name, self.valid, self.priority,
             self.conditions, self.description, self.notes,
+            self.scope,
         ))
 
 # ── Core Profile Types ──────────────────────────────────────────

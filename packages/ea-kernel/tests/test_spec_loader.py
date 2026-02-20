@@ -46,14 +46,14 @@ class TestLoaderBasic:
         assert isinstance(constraints, tuple)
 
     def test_total_rule_count(self):
-        """67 explicit + 14 fallback = 81 total."""
+        """69 explicit + 14 fallback = 83 total."""
         rules, _ = load_kernel_rules()
-        assert len(rules) == 81
+        assert len(rules) == 83
 
     def test_explicit_rule_count(self):
         rules, _ = load_kernel_rules()
         explicit = [r for r in rules if not r.id.startswith("fallback-")]
-        assert len(explicit) == 67
+        assert len(explicit) == 69
 
     def test_fallback_count(self):
         rules, _ = load_kernel_rules()

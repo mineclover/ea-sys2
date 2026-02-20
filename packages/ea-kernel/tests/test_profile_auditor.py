@@ -19,12 +19,12 @@ from ea_kernel.profile_types import (
     ProfileStoreError,
     RegistryAuditReport,
 )
-from ea_kernel.profiles.ea_sys import LAYER_ORDER
+from ea_kernel.profiles.ea_sys import LAYER_ORDER, EXPERIMENTAL_PROFILES
 from ea_kernel.profiles.governance_profile_stack import PROFILE_FILE_MAP as GOV_STACK_MAP
 from ea_kernel.types import KernelSchema, KernelValidityRule
 
 _BUILTIN_NAMES = {"ArchiMate", "BPMN", "SysML", "TOGAF", "Zachman"}
-_EXPECTED_BOOTSTRAP_COUNT = len(_BUILTIN_NAMES) + len(LAYER_ORDER) + len(GOV_STACK_MAP)
+_EXPECTED_BOOTSTRAP_COUNT = len(_BUILTIN_NAMES) + len(LAYER_ORDER) + len(EXPERIMENTAL_PROFILES) + len(GOV_STACK_MAP)
 
 # ── Fixtures ───────────────────────────────────────────────────
 

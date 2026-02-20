@@ -53,6 +53,10 @@ class PatternEffectiveness:
     avg_evaluation_score: float = 0.0
     avg_option_count: float = 0.0
 
+    # Cross-layer execution feedback
+    execution_linked_count: int = 0
+    execution_success_count: int = 0
+
     # Time-based
     first_used_at: str = ""
     last_used_at: str = ""
@@ -75,6 +79,13 @@ class PatternEffectiveness:
         if self.total_decisions == 0:
             return 0.0
         return self.deprecated_count / self.total_decisions
+
+    @property
+    def execution_success_rate(self) -> float:
+        """Success rate of linked executions."""
+        if self.execution_linked_count == 0:
+            return 0.0
+        return self.execution_success_count / self.execution_linked_count
 
     @property
     def grade(self) -> PatternEffectivenessGrade:
@@ -208,6 +219,8 @@ class DecisionAnalyzer:
                     "option_counts": [],
                     "first_used_at": snap.decided_at,
                     "last_used_at": snap.decided_at,
+                    "execution_linked": 0,
+                    "execution_success": 0,
                 }
 
             data = pattern_data[name]
@@ -227,6 +240,12 @@ class DecisionAnalyzer:
             ):
                 data["deprecated"] += 1
 
+            # Cross-layer execution feedback
+            if snap.execution_success is not None:
+                data["execution_linked"] += 1
+                if snap.execution_success:
+                    data["execution_success"] += 1
+
         results: list[PatternEffectiveness] = []
         for name, data in pattern_data.items():
             scores = data["scores"]
@@ -243,6 +262,8 @@ class DecisionAnalyzer:
                 deprecated_count=data["deprecated"],
                 avg_evaluation_score=avg_score,
                 avg_option_count=avg_options,
+                execution_linked_count=data["execution_linked"],
+                execution_success_count=data["execution_success"],
                 first_used_at=data["first_used_at"],
                 last_used_at=data["last_used_at"],
             ))

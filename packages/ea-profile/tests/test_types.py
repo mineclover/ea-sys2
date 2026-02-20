@@ -47,6 +47,30 @@ class TestFrozenTypes:
         assert rule.id == "r-01"
         assert rule.valid is True
         assert rule.conditions == ()
+        assert rule.scope == ""
+
+    def test_profile_rule_scope_default(self):
+        rule = ProfileRule(id="r-s", source_pattern="A", target_pattern="B", relationship_name="rel")
+        assert rule.scope == ""
+
+    def test_profile_rule_scope_sibling(self):
+        rule = ProfileRule(
+            id="r-s", source_pattern="A", target_pattern="B",
+            relationship_name="rel", scope="sibling",
+        )
+        assert rule.scope == "sibling"
+
+    def test_profile_rule_scope_in_equality(self):
+        r1 = ProfileRule(id="r", source_pattern="A", target_pattern="B", relationship_name="rel", scope="sibling")
+        r2 = ProfileRule(id="r", source_pattern="A", target_pattern="B", relationship_name="rel", scope="sibling")
+        r3 = ProfileRule(id="r", source_pattern="A", target_pattern="B", relationship_name="rel", scope="")
+        assert r1 == r2
+        assert r1 != r3
+
+    def test_profile_rule_scope_in_hash(self):
+        r1 = ProfileRule(id="r", source_pattern="A", target_pattern="B", relationship_name="rel", scope="sibling")
+        r2 = ProfileRule(id="r", source_pattern="A", target_pattern="B", relationship_name="rel", scope="")
+        assert hash(r1) != hash(r2)
 
     def test_rule_condition_creation(self):
         c = RuleCondition(condition_type="same_layer")

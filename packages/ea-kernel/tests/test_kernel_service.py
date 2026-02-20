@@ -592,10 +592,18 @@ class TestProfileProjection:
         assert isinstance(reduction, dict)
         drop_reasons = reduction.get("drop_reasons")
         assert isinstance(drop_reasons, dict)
-        assert drop_reasons["edge_capped"] == result["edge_total_before_cap"] - result["edge_count"]
+        # Supplementary edges from extensions are added after the cap stage,
+        # so subtract them to get the true capped count.
+        extensions = result["projection"].get("extensions", {})
+        supplementary_total = sum(
+            ext.get("supplementary_edges", 0) for ext in extensions.values()
+        )
+        assert drop_reasons["edge_capped"] == result["edge_total_before_cap"] - (result["edge_count"] - supplementary_total)
 
     def test_projection_policy_fail_fast_on_invalid_contract(self, monkeypatch):
-        def fake_policy_loader() -> dict[str, object]:
+        import ea_projection.policy.resolver as resolver_module
+
+        def fake_policy_loader(policy_path):
             return {
                 "status": "ok",
                 "path": "/tmp/projection_policy.toml",
@@ -628,7 +636,8 @@ class TestProfileProjection:
             }
 
         kernel_service_module._resolve_projection_policy.cache_clear()
-        monkeypatch.setattr(kernel_service_module, "_load_projection_policy_document", fake_policy_loader)
+        resolver_module.resolve_projection_policy.cache_clear()
+        monkeypatch.setattr(resolver_module, "load_projection_policy_document", fake_policy_loader)
 
         result = kernel_service_module.profile_projection(profile_name="EASystem-Kernel", level="l0")
 
@@ -642,6 +651,7 @@ class TestProfileProjection:
         assert len(issues) > 0
 
         kernel_service_module._resolve_projection_policy.cache_clear()
+        resolver_module.resolve_projection_policy.cache_clear()
 
     def test_projection_rejects_invalid_level(self):
         result = profile_projection(profile_name="EASystem-Kernel", level="l9")

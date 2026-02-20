@@ -17,6 +17,7 @@ from ea_decision.topic import (
     Evaluation,
     ModelingAction,
     Option,
+    ProjectionCoverageAssessment,
     Question,
     ResearchNote,
     Topic,
@@ -417,6 +418,99 @@ class TestTopic:
         assert topic.status == "active"
         assert len(topic.report_history) == 0
 
+    def test_link_needs(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.link_needs(["need-001", "need-002"])
+
+        assert topic.need_refs == ["need-001", "need-002"]
+
+    def test_link_needs_deduplicates(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.link_needs(["need-001", "need-002"])
+        topic.link_needs(["need-002", "need-003"])
+
+        assert topic.need_refs == ["need-001", "need-002", "need-003"]
+
+    def test_need_refs_default_empty(self):
+        topic = Topic(title="Test", description="Test topic")
+        assert topic.need_refs == []
+
+    def test_finalize_plan_carries_need_refs(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.link_needs(["need-001", "need-002"])
+        topic.add_option("Option A", "Description A")
+        option_id = topic.options[0].id
+
+        report = topic.finalize_plan(
+            title="Plan",
+            summary="Summary",
+            selected_option_id=option_id,
+            rationale="Reason",
+        )
+
+        assert report.need_refs == ["need-001", "need-002"]
+
+    def test_need_refs_json_round_trip(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.link_needs(["need-001", "need-002"])
+
+        json_str = topic.to_json()
+        topic2 = Topic.from_json(json_str)
+
+        assert topic2.need_refs == ["need-001", "need-002"]
+
+    # ── Projection feedback ──────────────────────────────────────────
+
+    def test_set_projection_context(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(
+            projection_refs=["proj-001", "proj-002"],
+            surface_summary={"ui": 3, "function": 5},
+        )
+
+        assert topic.projection_refs == ["proj-001", "proj-002"]
+        assert topic.surface_summary == {"ui": 3, "function": 5}
+
+    def test_set_projection_context_deduplicates(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(["proj-001", "proj-002"])
+        topic.set_projection_context(["proj-002", "proj-003"])
+
+        assert topic.projection_refs == ["proj-001", "proj-002", "proj-003"]
+
+    def test_projection_refs_default_empty(self):
+        topic = Topic(title="Test", description="Test topic")
+        assert topic.projection_refs == []
+        assert topic.surface_summary == {}
+
+    def test_finalize_plan_carries_projection_refs(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(["proj-001"])
+        topic.add_option("Option A", "Description A")
+        option_id = topic.options[0].id
+
+        report = topic.finalize_plan(
+            title="Plan",
+            summary="Summary",
+            selected_option_id=option_id,
+            rationale="Reason",
+        )
+
+        assert report.projection_refs == ["proj-001"]
+
+    def test_projection_refs_json_round_trip(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(
+            ["proj-001", "proj-002"],
+            surface_summary={"ui": 3, "data": 2},
+        )
+
+        json_str = topic.to_json()
+        topic2 = Topic.from_json(json_str)
+
+        assert topic2.projection_refs == ["proj-001", "proj-002"]
+        assert topic2.surface_summary == {"ui": 3, "data": 2}
+
     def test_apply_pattern(self):
         pattern = DecisionPattern(
             name="TradeOffResolution",
@@ -707,3 +801,189 @@ class TestTopic:
         assert topic2.options == []
         assert topic2.report is None
         assert topic2.report_history == []
+
+
+class TestDesignReportFinalizeExecution:
+    """Tests for DesignReport.finalize_execution()."""
+
+    def _make_report(self) -> DesignReport:
+        decision = DesignDecision(selected_option_id="opt-1", rationale="test")
+        return DesignReport(title="Plan", summary="S", decision=decision)
+
+    def test_finalize_execution_success(self):
+        report = self._make_report()
+        report.finalize_execution(
+            success=True,
+            execution_log=["step1 ok", "step2 ok"],
+            transaction_id="tx-123",
+        )
+        assert report.decision.status == DecisionStatus.ACCEPTED
+        assert report.executed_at is not None
+        assert report.transaction_id == "tx-123"
+        assert "step1 ok" in report.execution_log
+        assert "step2 ok" in report.execution_log
+
+    def test_finalize_execution_failure(self):
+        report = self._make_report()
+        report.finalize_execution(
+            success=False,
+            execution_log=["step1 failed"],
+            transaction_id="tx-456",
+        )
+        assert report.decision.status == DecisionStatus.REJECTED
+        assert report.executed_at is not None
+        assert report.transaction_id == "tx-456"
+
+
+class TestTopicExecutionCompleted:
+    """Tests for Topic.execution_completed()."""
+
+    def _make_topic_with_report(self) -> Topic:
+        topic = Topic(title="Test", description="Test topic")
+        topic.add_option("A", "Desc A")
+        topic.finalize_plan("Plan", "Summary", topic.options[0].id, "Reason")
+        return topic
+
+    def test_execution_completed_success(self):
+        topic = self._make_topic_with_report()
+        assert topic.status == "completed"
+
+        topic.execution_completed(
+            success=True,
+            execution_log=["ok"],
+            transaction_id="tx-1",
+        )
+
+        assert topic.report.decision.status == DecisionStatus.ACCEPTED
+        assert topic.status == "completed"  # stays completed on success
+        assert topic.report.transaction_id == "tx-1"
+
+    def test_execution_completed_failure_reopens_topic(self):
+        topic = self._make_topic_with_report()
+        assert topic.status == "completed"
+
+        topic.execution_completed(
+            success=False,
+            execution_log=["failed"],
+            transaction_id="tx-2",
+        )
+
+        assert topic.report.decision.status == DecisionStatus.REJECTED
+        assert topic.status == "active"  # re-opened for revision
+
+    def test_execution_completed_without_report(self):
+        topic = Topic(title="Test", description="No report")
+        # Should not raise
+        topic.execution_completed(success=True, execution_log=[], transaction_id="tx-x")
+
+
+class TestProjectionCoverageAssessment:
+    """Tests for ProjectionCoverageAssessment and Topic.assess_projection_coverage()."""
+
+    def test_assess_projection_coverage_full(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(
+            ["proj-001"],
+            surface_summary={
+                "by_tier": {"ui": 3, "function": 5, "data": 2},
+                "by_type": {"api_endpoint": 2, "page": 1, "table": 2},
+            },
+        )
+
+        result = topic.assess_projection_coverage()
+
+        assert result.total_artifacts == 10
+        assert result.by_tier == {"ui": 3, "function": 5, "data": 2}
+        assert result.by_type == {"api_endpoint": 2, "page": 1, "table": 2}
+        assert result.missing_tiers == ()
+        assert result.coverage_score == 1.0
+        assert result.sufficient is True
+
+    def test_assess_projection_coverage_missing_tier(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(
+            ["proj-001"],
+            surface_summary={
+                "by_tier": {"ui": 3, "function": 0, "data": 2},
+                "by_type": {"page": 3},
+            },
+        )
+
+        result = topic.assess_projection_coverage()
+
+        assert result.missing_tiers == ("function",)
+        assert result.coverage_score == pytest.approx(2.0 / 3.0)
+        assert result.sufficient is True  # 2/3 >= 0.5
+
+    def test_assess_projection_coverage_empty(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(["proj-001"], surface_summary={})
+
+        result = topic.assess_projection_coverage()
+
+        assert result.total_artifacts == 0
+        assert result.by_tier == {}
+        assert result.by_type == {}
+        assert result.missing_tiers == ("ui", "function", "data")
+        assert result.coverage_score == 0.0
+        assert result.sufficient is False
+
+    def test_finalize_plan_with_projection_coverage(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(
+            ["proj-001"],
+            surface_summary={
+                "by_tier": {"ui": 3, "function": 5, "data": 2},
+                "by_type": {"api_endpoint": 2},
+            },
+        )
+        topic.add_option("Option A", "Desc A")
+        option_id = topic.options[0].id
+
+        report = topic.finalize_plan(
+            title="Plan",
+            summary="Summary",
+            selected_option_id=option_id,
+            rationale="Reason",
+        )
+
+        assert report.projection_coverage is not None
+        assert report.projection_coverage.total_artifacts == 10
+        assert report.projection_coverage.sufficient is True
+
+    def test_finalize_plan_without_projection(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.add_option("Option A", "Desc A")
+        option_id = topic.options[0].id
+
+        report = topic.finalize_plan(
+            title="Plan",
+            summary="Summary",
+            selected_option_id=option_id,
+            rationale="Reason",
+        )
+
+        assert report.projection_coverage is None
+
+    def test_projection_coverage_json_round_trip(self):
+        topic = Topic(title="Test", description="Test topic")
+        topic.set_projection_context(
+            ["proj-001"],
+            surface_summary={
+                "by_tier": {"ui": 3, "function": 5, "data": 2},
+                "by_type": {"api_endpoint": 2},
+            },
+        )
+        topic.add_option("Option A", "Desc A")
+        option_id = topic.options[0].id
+        topic.finalize_plan("Plan", "Summary", option_id, "Reason")
+
+        json_str = topic.to_json()
+        topic2 = Topic.from_json(json_str)
+
+        assert topic2.report is not None
+        cov = topic2.report.projection_coverage
+        assert cov is not None
+        assert cov.total_artifacts == 10
+        assert cov.missing_tiers == ()
+        assert cov.sufficient is True

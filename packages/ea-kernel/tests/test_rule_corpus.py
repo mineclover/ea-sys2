@@ -398,7 +398,7 @@ class TestTomlMetadata:
 
     def test_all_explicit_metadata_entries(self):
         _rules, _constraints, metadata_map = load_kernel_rules_with_metadata()
-        assert len(metadata_map) == 67
+        assert len(metadata_map) == 69
 
     def test_mem01_metadata(self):
         _rules, _constraints, metadata_map = load_kernel_rules_with_metadata()

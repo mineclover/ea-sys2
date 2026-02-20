@@ -41,13 +41,14 @@ class ProfileTopologyGraph:
     then provides reachability, path-finding, and impact analysis.
     """
 
-    __slots__ = ("_profile", "_outgoing", "_incoming", "_nodes")
+    __slots__ = ("_profile", "_outgoing", "_incoming", "_nodes", "_container_of")
 
     def __init__(self, profile: KernelProfile) -> None:
         self._profile = profile
         self._outgoing: dict[str, list[ProfileEdge]] = {}
         self._incoming: dict[str, list[ProfileEdge]] = {}
         self._nodes: set[str] = set()
+        self._container_of: dict[str, str] = {}  # child → parent
         self._build()
 
     # ── Edge queries ───────────────────────────────────────────────
@@ -191,15 +192,73 @@ class ProfileTopologyGraph:
     def edge_count(self) -> int:
         return sum(len(edges) for edges in self._outgoing.values())
 
+    # ── Containment depth ────────────────────────────────────────────
+
+    def containment_depths(self) -> dict[str, int]:
+        """Return containment depth for all elements (0=root)."""
+        depths: dict[str, int] = {}
+        for name in self._nodes:
+            d = 0
+            current = name
+            visited: set[str] = set()
+            while current in self._container_of:
+                if current in visited:
+                    break  # guard against cycles
+                visited.add(current)
+                current = self._container_of[current]
+                d += 1
+            depths[name] = d
+        return depths
+
     # ── Graph construction ─────────────────────────────────────────
 
     def _build(self) -> None:
-        """Expand validity rules into concrete edges."""
+        """Expand validity rules into concrete edges (scope-aware).
+
+        Pass 1: Identify containment relationships → build container_of map.
+        Pass 2: Expand all rules with scope checks.
+        """
         profile = self._profile
 
         for elem in profile.elements:
             self._nodes.add(elem.name)
 
+        # Pass 1: Build containment map from containment relations
+        containment_rels: set[str] = set()
+        for rel in profile.relations:
+            if rel.kernel_relation in ("membership", "ownership"):
+                containment_rels.add(rel.name)
+
+        # Collect containment edges — process higher-priority rules first
+        # so instance-level rules (priority 60+) set containment before
+        # category-level rules (priority 50) which would create spurious mappings.
+        containment_rules = sorted(
+            (r for r in profile.validity_rules
+             if r.valid and r.relationship_name in containment_rels),
+            key=lambda r: -r.priority,
+        )
+        for rule in containment_rules:
+
+            containers = [
+                e.name for e in profile.elements
+                if match_pattern(e, rule.source_pattern)
+            ]
+            children = [
+                e.name for e in profile.elements
+                if match_pattern(e, rule.target_pattern)
+            ]
+
+            for container in containers:
+                for child in children:
+                    if container == child:
+                        continue
+                    # Only set if not already assigned (first match wins)
+                    if child not in self._container_of:
+                        # Guard: reject if this would create a cycle
+                        if not self._would_create_cycle(child, container):
+                            self._container_of[child] = container
+
+        # Pass 2: Expand all valid rules with scope checks
         for rule in profile.validity_rules:
             if not rule.valid:
                 continue
@@ -213,9 +272,15 @@ class ProfileTopologyGraph:
                 if match_pattern(e, rule.target_pattern)
             ]
 
+            scope = getattr(rule, "scope", "")
+
             for src in sources:
                 for tgt in targets:
                     if src == tgt:
+                        continue
+                    if scope == "sibling" and not self._are_siblings(src, tgt):
+                        continue
+                    if scope == "subtree" and not self._in_same_subtree(src, tgt):
                         continue
                     edge = ProfileEdge(
                         source=src,
@@ -226,3 +291,37 @@ class ProfileTopologyGraph:
                     )
                     self._outgoing.setdefault(src, []).append(edge)
                     self._incoming.setdefault(tgt, []).append(edge)
+
+    def _would_create_cycle(self, child: str, parent: str) -> bool:
+        """Check if setting container_of[child]=parent would create a cycle."""
+        current = parent
+        visited: set[str] = set()
+        while current in self._container_of:
+            if current == child:
+                return True
+            if current in visited:
+                break
+            visited.add(current)
+            current = self._container_of[current]
+        return current == child
+
+    def _are_siblings(self, a: str, b: str) -> bool:
+        """True if a and b share the same immediate container."""
+        pa = self._container_of.get(a)
+        pb = self._container_of.get(b)
+        return pa is not None and pa == pb
+
+    def _in_same_subtree(self, a: str, b: str) -> bool:
+        """True if a and b share the same root in the containment tree."""
+        return self._root_of(a) == self._root_of(b)
+
+    def _root_of(self, name: str) -> str:
+        """Walk up the containment chain to find the root."""
+        current = name
+        visited: set[str] = set()
+        while current in self._container_of:
+            if current in visited:
+                break  # guard against cycles
+            visited.add(current)
+            current = self._container_of[current]
+        return current

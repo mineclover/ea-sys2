@@ -43,7 +43,8 @@ src/ea_decision/
 ├── topic_store.py       # S3: TopicStore (ABC → InMemory → SQLite) — 의사결정 스냅샷 영속화
 ├── decision_analyzer.py # S4: DecisionAnalyzer — 패턴 효과성·평가 일관성 분석
 ├── decision_simulator.py # S5: DecisionSimulator — 패턴 변경 What-If 시뮬레이션
-└── pattern_promotion.py # S5: PatternPromotionEngine — 패턴 승격/폐기 워크플로
+├── pattern_promotion.py # S5: PatternPromotionEngine — 패턴 승격/폐기 워크플로
+└── decision_propagation.py # S6: DecisionPropagationEngine — 패턴 변경의 기존 의사결정 영향 전파 평가
 ```
 
 N1 타입 전부 `frozen=True`. N2 Aggregate(Topic)만 mutable 허용. DecisionLifecycle: frozen, 전이마다 새 인스턴스 반환(Kernel RuleLifecycle 패턴).
@@ -93,6 +94,7 @@ topic_store.py: 독립 (자체 도메인 타입 정의)
   ← decision_analyzer.py (TopicStore — TYPE_CHECKING import)
   ← decision_simulator.py (TopicStore — TYPE_CHECKING import)
 decision_analyzer.py ← pattern_promotion.py (DecisionAnalysisReport, PatternEffectiveness — TYPE_CHECKING import)
+decision_propagation.py: topic_store (TopicStore — TYPE_CHECKING import)
 ```
 
 types.py는 순수 어휘(N1)이므로 프로세스(N2)나 통합(N3) 모듈을 절대 import하지 않는다. 이는 Kernel의 types.py가 service/mcp 모듈을 모르는 것과 동일한 원칙이다.
@@ -104,6 +106,7 @@ Kernel의 6-phase governance lifecycle 패턴을 Decision 도메인 어휘로 �
 - **S3 Recording** (topic_store.py) — 완료된 의사결정 스냅샷 영속화 (ABC → InMemory → SQLite 3-tier)
 - **S4 Analysis** (decision_analyzer.py) — 패턴 효과성, 평가 일관성, 처리량 분석
 - **S5 Evolution** (decision_simulator.py, pattern_promotion.py) — What-If 시뮬레이션 + 패턴 승격/폐기 워크플로
+- **S6 Propagation** (decision_propagation.py) — 패턴 변경의 기존 의사결정 스냅샷 영향 전파 평가
 
 Store 패턴은 ea-kernel/decision_store.py와 동일: `__slots__`, `@contextmanager _connection()`, `_init_schema()`.
 Promotion 패턴은 ea-kernel/promotion_engine.py와 동일: in-memory proposal store, vote/approve/reject/apply 워크플로.

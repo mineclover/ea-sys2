@@ -21,6 +21,7 @@ src/ea_infra/
 ├── __init__.py             # 패키지 docstring + __version__
 ├── indexer.py              # 리소스 인덱서 (디렉토리 스캔, 파일 메타데이터 수집)
 ├── infra_schema.py         # I2.5: InfraSchema (SchemaPort 호환) + INFRA_SCHEMA 싱글턴
+├── storage_ports.py        # 저장소 포트 계약: StoragePort, EventStoragePort, ProfileStoragePort, StorageLifecyclePort (Protocol 기반)
 ├── condition_registry.py   # I2.5: infra_condition_registry() — kernel defaults + 3개 조건
 └── profile_bridge.py       # I3: load_infra_profile() / load_infra_profile_from_content()
 ```
@@ -44,12 +45,13 @@ from ea_infra.indexer import ResourceIndexer, Resource
 
 ```
 infra_schema.py: 독립 (InfraSchema, InfraEntity, InfraRelation, INFRA_SCHEMA)
+storage_ports.py: 독립 (StoragePort, EventStoragePort, ProfileStoragePort, StorageLifecyclePort, RetentionPolicy 등 — stdlib only, Protocol 기반)
 condition_registry.py: ea_profile.types lazy import (ConditionRegistry)
 profile_bridge.py: infra_schema + condition_registry ← ea_profile.loader lazy import
 indexer.py: 독립 (stdlib only)
 ```
 
-infra_schema.py와 indexer.py는 외부 패키지 의존 없는 독립 모듈.
+infra_schema.py, storage_ports.py, indexer.py는 외부 패키지 의존 없는 독립 모듈.
 profile_bridge.py만 ea_profile을 사용한다.
 
 ### Test Convention

@@ -409,3 +409,36 @@ class TestSchemaProfileAlignment:
             f"{layer_key}: rule density {density:.2f} "
             f"({num_rules}/{num_elements}) below 0.9"
         )
+
+
+class TestGovernanceProjectionDepthReference:
+    """Governance profile elements reference projection depth vocabulary."""
+
+    @pytest.fixture()
+    def gov_profile(self, loaded_profiles):
+        return loaded_profiles["governance"]
+
+    def test_governance_projection_depth_reference(self, gov_profile):
+        """EndpointDepthCeiling and SurfaceVisibilityContract exist and connect to projection."""
+        element_names = {e.name for e in gov_profile.elements}
+        assert "EndpointDepthCeiling" in element_names
+        assert "SurfaceVisibilityContract" in element_names
+
+        # SurfaceVisibilityContract depends_on ProjectionModelPort
+        depends_rules = [
+            r for r in gov_profile.validity_rules
+            if r.source_pattern == "SurfaceVisibilityContract"
+            and r.target_pattern == "ProjectionModelPort"
+            and r.relationship_name == "depends_on"
+        ]
+        assert len(depends_rules) >= 1
+
+    def test_boundary_policy_constrains_depth_ceiling(self, gov_profile):
+        """BoundaryPolicy constrains EndpointDepthCeiling."""
+        constrains_rules = [
+            r for r in gov_profile.validity_rules
+            if r.source_pattern == "BoundaryPolicy"
+            and r.target_pattern == "EndpointDepthCeiling"
+            and r.relationship_name == "constrains"
+        ]
+        assert len(constrains_rules) >= 1

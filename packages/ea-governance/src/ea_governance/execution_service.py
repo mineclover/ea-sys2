@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ea_decision.topic import DesignReport, ModelingAction
+from ea_decision.topic import DesignReport, ModelingAction, Topic
 from ea_flow.kernel_actions import AddRuleStepSpec, DeprecateRuleStepSpec
 from ea_flow.kernel_implementers import AddRuleImplementer, DeprecateRuleImplementer
 from ea_flow.runtime import FlowRuntime
@@ -67,8 +67,16 @@ class ExecutionService:
             return kernel_data_dir.parent / "transactions.db"
         return Path("transactions.db")
 
-    def interpret_report(self, report: DesignReport) -> bool:
-        """Translates report actions into a workflow and interprets intent outputs."""
+    def interpret_report(
+        self,
+        report: DesignReport,
+        topic: Topic | None = None,
+    ) -> bool:
+        """Translates report actions into a workflow and interprets intent outputs.
+
+        When *topic* is provided, the decision status is updated on completion:
+        success → ACCEPTED, failure → REJECTED (topic re-opened for revision).
+        """
         steps = []
         for i, action in enumerate(report.modeling_actions):
             step = self._map_action_to_step(action, f"idx_{i}")
@@ -82,8 +90,11 @@ class ExecutionService:
         workflow = DesignWorkflowSpec(f"report_{report.id}", steps, anchor=f"ea:governance:report:{report.id}")
         variables = {"governance_system": self.kernel}
 
-        # Begin Transaction
-        tx = self.tx_manager.begin_transaction(f"exec_{report.id}", tx_type="design_realization")
+        # Begin Transaction (propagate trace_id from topic if available)
+        trace_id = getattr(topic, "trace_id", "") if topic is not None else ""
+        tx = self.tx_manager.begin_transaction(
+            f"exec_{report.id}", tx_type="design_realization", trace_id=trace_id,
+        )
         report.transaction_id = tx.id
 
         # Interpret using runtime (side-effect free)
@@ -100,6 +111,15 @@ class ExecutionService:
             self.tx_manager.commit(tx.id)
             for action in report.modeling_actions:
                 action.status = "interpreted"
+
+            # Back-reference: update decision status via Topic
+            if topic is not None:
+                topic.execution_completed(
+                    success=True,
+                    execution_log=result.logs,
+                    transaction_id=tx.id,
+                )
+
             return True
         else:
             report.execution_log.append("Interpretation failed.")
@@ -110,11 +130,20 @@ class ExecutionService:
                     action.status = "rolled_back"
             else:
                 self.tx_manager.fail(tx.id, error_msg="Unknown Failure")
+
+            # Back-reference: mark decision as rejected, re-open topic
+            if topic is not None:
+                topic.execution_completed(
+                    success=False,
+                    execution_log=result.logs,
+                    transaction_id=tx.id,
+                )
+
             return False
 
-    def execute_report(self, report: DesignReport) -> bool:
+    def execute_report(self, report: DesignReport, topic: Topic | None = None) -> bool:
         """Backward-compatible alias for `interpret_report`."""
-        return self.interpret_report(report)
+        return self.interpret_report(report, topic=topic)
 
     def _map_action_to_step(self, action: ModelingAction, index_key: str) -> StepSpec | None:
         """Mapping logic between business actions and declarative specs."""

@@ -34,9 +34,9 @@ class TestLoadKernelSchema:
         version, schema, attributes, l1_entities, l2_relations, l3_relations, l4_entities = (
             load_kernel_schema()
         )
-        # Schema TOML declares meta counts: 20 attrs, 15 entities, 14 relations
+        # Schema TOML declares meta counts: 20 attrs, 17 entities, 14 relations
         assert len(attributes) == 20
-        assert len(schema.entities) == 15
+        assert len(schema.entities) == 17
         assert len(schema.relations) == 14
 
     def test_entity_layer_split(self):
@@ -147,10 +147,10 @@ class TestAuditI18nPatch:
 
     def test_ko_clean_report(self, base_schema: KernelSchema):
         report = audit_i18n_patch(base_schema, "ko")
-        # ko patch has all 29 items × 2 fields translated
+        # ko patch has all 31 items × 2 fields translated
         assert len(report.missing) == 0
         assert len(report.orphan) == 0
-        assert report.total_translated == 58
+        assert report.total_translated == 62
 
     def test_stale_detected(self, base_schema: KernelSchema, tmp_path: Path):
         """_en_description 불일치 → stale 감지."""
@@ -170,7 +170,7 @@ class TestAuditI18nPatch:
 
     def test_nonexistent_lang_all_missing(self, base_schema: KernelSchema):
         report = audit_i18n_patch(base_schema, "xx-none")
-        assert len(report.missing) == 58
+        assert len(report.missing) == 62
         assert report.total_translated == 0
         assert report.coverage == 0.0
 

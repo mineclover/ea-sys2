@@ -7,6 +7,7 @@ after each iteration and it's included in prompts for context.
 
 - KernelProfile에 새 tuple 필드를 추가할 때는 `types -> builder -> loader(TOML) -> serializer(dict/json) -> composer` 경로를 함께 갱신해야 값 손실 없이 round-trip/compose가 유지된다.
 - 중첩 TOML 배열 테이블(`[[layer_stack.layers]]`)은 loader에서 `doc["layer_stack"]["layers"]`로 파싱되므로, builder에서 stack 메타(`set_*`)와 항목 누적(`add_*`)을 분리하면 확장 스키마를 안정적으로 수용할 수 있다.
+- TOML의 문자열 목록 필드(`input_artifacts`, `output_artifacts`)는 loader에서 `str | list[str]`를 모두 허용해 tuple로 정규화하면 축약 표기와 배열 표기를 동시에 지원하면서 builder/serializer 타입 일관성을 유지할 수 있다.
 
 ---
 
@@ -86,4 +87,30 @@ after each iteration and it's included in prompts for context.
     - 계층 구조 같은 중첩 선언형 메타데이터는 단일 tuple 필드보다 `set(stack-level) + add(entry-level)` builder API로 분리하면 loader 파싱/검증 로직이 단순해지고 재사용성이 높다.
   - Gotchas encountered
     - `uv run ruff/mypy`는 샌드박스에서 `~/.cache/uv` 권한 오류가 발생할 수 있어 `.venv/bin/ruff`, `.venv/bin/mypy`로 대체 검증이 필요했다.
+---
+
+## 2026-02-20 - US-004
+- What was implemented
+  - `ProfileProcessUnit` frozen dataclass를 추가하고, `KernelProfile`에 `process_units` 필드를 기본값 `()`로 확장했다.
+  - `ProfileBuilder`에 `add_process_unit(name, phase, description, input_artifacts, output_artifacts)` 메서드와 내부 누적 저장소를 추가했다.
+  - TOML loader를 확장해 `[[process_units]]` 섹션을 파싱하고 builder로 전달하도록 구현했다(필수 필드 `name`, `phase` 검증 포함).
+  - serializer/composer 경로를 갱신해 dict/json round-trip 및 extend/subset compose에서도 `process_units` 데이터 유실이 없도록 반영했다.
+  - 테스트 추가/확장: loader TOML process_units 로드 검증, builder/types/serializer/composer 경로의 process_units 보존 검증.
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/ea-profile/src/ea_profile/types.py`
+  - `packages/ea-profile/src/ea_profile/builder.py`
+  - `packages/ea-profile/src/ea_profile/loader.py`
+  - `packages/ea-profile/src/ea_profile/serializer.py`
+  - `packages/ea-profile/src/ea_profile/composer.py`
+  - `packages/ea-profile/tests/test_types.py`
+  - `packages/ea-profile/tests/test_builder.py`
+  - `packages/ea-profile/tests/test_loader.py`
+  - `packages/ea-profile/tests/test_serializer.py`
+  - `packages/ea-profile/tests/test_composer.py`
+- **Learnings:**
+  - Patterns discovered
+    - 프로세스 유닛처럼 입력/출력 아티팩트 배열을 갖는 선언형 스키마는 loader에서 `str/list` 정규화를 먼저 수행하면 builder/dataclass 타입을 단순 tuple로 유지할 수 있다.
+  - Gotchas encountered
+    - 패키지 전체 `ruff`는 기존 테스트 코드의 선행 lint 이슈로 실패할 수 있어, 스토리 변경 파일 단위 검증과 전체 `pytest` 통과를 분리해 확인하는 것이 안정적이었다.
 ---

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from ea_profile.builder import ProfileBuilder
 from ea_profile.composer import extend, subset
 from ea_profile.types import (
@@ -13,6 +11,7 @@ from ea_profile.types import (
     ProfileArtifactType,
     ProfileElement,
     ProfileMetadata,
+    ProfileProcessUnit,
     ProfileRelation,
     ProfileRule,
     ProfileStateTransition,
@@ -125,6 +124,23 @@ class TestExtend:
         )
         assert len(extended.artifact_types) == 1
         assert extended.artifact_types[0] == artifact_type
+
+    def test_extend_adds_process_units(self):
+        base = _make_profile()
+        process_unit = ProfileProcessUnit(
+            name="NeedDiscovery",
+            phase="IDENTIFY",
+            input_artifacts=("market_signal",),
+            output_artifacts=("need_statement",),
+        )
+        extended = extend(
+            base,
+            name="Extended",
+            version="2.0",
+            add_process_units=(process_unit,),
+        )
+        assert len(extended.process_units) == 1
+        assert extended.process_units[0] == process_unit
 
     def test_extend_preserves_layer_stack(self):
         base = (
@@ -304,6 +320,26 @@ class TestSubset:
             version="1.0-subset",
         )
         assert sub.artifact_types == base.artifact_types
+
+    def test_subset_preserves_process_units(self):
+        base = (
+            ProfileBuilder("Base", version="1.0", kernel_version="1.0")
+            .element("ElemA", kernel_type="structure", layer="Business", category="Structure")
+            .relation("Rel1", kernel_relation="association")
+            .add_process_unit(
+                "NeedDiscovery",
+                "IDENTIFY",
+                input_artifacts=("market_signal",),
+                output_artifacts=("need_statement",),
+            )
+            .build()
+        )
+        sub = subset(
+            base,
+            name="Subset",
+            version="1.0-subset",
+        )
+        assert sub.process_units == base.process_units
 
     def test_subset_preserves_layer_stack(self):
         base = (

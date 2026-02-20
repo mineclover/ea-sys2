@@ -1,15 +1,12 @@
 """Tests for ea_profile.builder — ProfileBuilder fluent API."""
 
 import pytest
-
 from ea_profile.builder import ProfileBuilder
 from ea_profile.types import (
     KernelProfile,
     ProfileBuildError,
     ProfileMetadata,
-    RuleCondition,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -162,6 +159,26 @@ class TestFluentAPI:
         assert p.layer_stack.feedback_flow == "closed_loop"
         assert len(p.layer_stack.layers) == 2
         assert p.layer_stack.layers[1].depends_on == ("M2",)
+
+    def test_add_process_unit(self):
+        p = (
+            _minimal_builder()
+            .add_process_unit(
+                "NeedDiscovery",
+                "IDENTIFY",
+                description="Capture candidate needs",
+                input_artifacts=("market_signal",),
+                output_artifacts=("need_statement",),
+            )
+            .build()
+        )
+        assert len(p.process_units) == 1
+        unit = p.process_units[0]
+        assert unit.name == "NeedDiscovery"
+        assert unit.phase == "IDENTIFY"
+        assert unit.description == "Capture candidate needs"
+        assert unit.input_artifacts == ("market_signal",)
+        assert unit.output_artifacts == ("need_statement",)
 
 
 # ---------------------------------------------------------------------------

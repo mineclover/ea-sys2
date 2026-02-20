@@ -16,6 +16,7 @@ from ea_profile.types import (
     ProfileArtifactType,
     ProfileElement,
     ProfileMetadata,
+    ProfileProcessUnit,
     ProfileRelation,
     ProfileRule,
     ProfileStateTransition,
@@ -64,6 +65,16 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
         }
         for a in profile.artifact_types
     ]
+    process_units = [
+        {
+            "name": pu.name,
+            "phase": pu.phase,
+            "description": pu.description,
+            "input_artifacts": list(pu.input_artifacts),
+            "output_artifacts": list(pu.output_artifacts),
+        }
+        for pu in profile.process_units
+    ]
 
     metadata = None
     if profile.metadata is not None:
@@ -100,6 +111,7 @@ def profile_to_dict(profile: KernelProfile) -> dict[str, Any]:
         "validity_rules": rules,
         "state_transitions": state_transitions,
         "artifact_types": artifact_types,
+        "process_units": process_units,
         "metadata": metadata,
         "layer_stack": layer_stack,
     }
@@ -146,6 +158,16 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
         )
         for a in data.get("artifact_types", [])
     )
+    process_units = tuple(
+        ProfileProcessUnit(
+            name=pu["name"],
+            phase=pu["phase"],
+            description=pu.get("description", ""),
+            input_artifacts=tuple(pu.get("input_artifacts", [])),
+            output_artifacts=tuple(pu.get("output_artifacts", [])),
+        )
+        for pu in data.get("process_units", [])
+    )
 
     metadata = None
     md = data.get("metadata")
@@ -185,6 +207,7 @@ def dict_to_profile(data: dict[str, Any]) -> KernelProfile:
         metadata=metadata,
         state_transitions=state_transitions,
         artifact_types=artifact_types,
+        process_units=process_units,
         layer_stack=layer_stack,
     )
 

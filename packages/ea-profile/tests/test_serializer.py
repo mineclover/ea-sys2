@@ -10,7 +10,6 @@ from ea_profile.serializer import (
 )
 from ea_profile.types import RuleCondition
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -19,6 +18,7 @@ def _sample_profile(
     with_metadata: bool = True,
     with_state_transitions: bool = False,
     with_artifact_types: bool = False,
+    with_process_units: bool = False,
     with_layer_stack: bool = False,
 ):
     b = (
@@ -41,6 +41,14 @@ def _sample_profile(
             "function",
             description="HTTP endpoint artifact",
             kernel_element_pattern="*Endpoint*",
+        )
+    if with_process_units:
+        b.add_process_unit(
+            "NeedDiscovery",
+            "IDENTIFY",
+            description="Capture candidate needs",
+            input_artifacts=("market_signal",),
+            output_artifacts=("need_statement",),
         )
     if with_layer_stack:
         b.set_layer_stack(
@@ -116,6 +124,18 @@ class TestDictRoundTrip:
         assert artifact_type.tier == "function"
         assert artifact_type.description == "HTTP endpoint artifact"
         assert artifact_type.kernel_element_pattern == "*Endpoint*"
+
+    def test_process_units_round_trip(self):
+        original = _sample_profile(with_process_units=True)
+        d = profile_to_dict(original)
+        restored = dict_to_profile(d)
+        assert len(restored.process_units) == 1
+        unit = restored.process_units[0]
+        assert unit.name == "NeedDiscovery"
+        assert unit.phase == "IDENTIFY"
+        assert unit.description == "Capture candidate needs"
+        assert unit.input_artifacts == ("market_signal",)
+        assert unit.output_artifacts == ("need_statement",)
 
     def test_layer_stack_round_trip(self):
         original = _sample_profile(with_layer_stack=True)

@@ -1,7 +1,6 @@
 """Tests for ea_profile.types — core types, patterns, and condition registry."""
 
 import pytest
-
 from ea_profile.types import (
     ConditionRegistry,
     KernelProfile,
@@ -11,6 +10,7 @@ from ea_profile.types import (
     ProfileArtifactType,
     ProfileBuildError,
     ProfileElement,
+    ProfileProcessUnit,
     ProfileRelation,
     ProfileRule,
     ProfileStateTransition,
@@ -19,7 +19,6 @@ from ea_profile.types import (
     classify_pattern,
     match_pattern,
 )
-
 
 # ---------------------------------------------------------------------------
 # Frozen dataclass creation
@@ -62,6 +61,20 @@ class TestFrozenTypes:
         assert a.tier == "function"
         assert a.description == "HTTP endpoint artifact"
         assert a.kernel_element_pattern == "*Endpoint*"
+
+    def test_profile_process_unit_creation(self):
+        unit = ProfileProcessUnit(
+            name="NeedDiscovery",
+            phase="IDENTIFY",
+            description="Capture candidate needs",
+            input_artifacts=("market_signal",),
+            output_artifacts=("need_statement",),
+        )
+        assert unit.name == "NeedDiscovery"
+        assert unit.phase == "IDENTIFY"
+        assert unit.description == "Capture candidate needs"
+        assert unit.input_artifacts == ("market_signal",)
+        assert unit.output_artifacts == ("need_statement",)
 
     def test_layer_definition_creation(self):
         layer = LayerDefinition(
@@ -193,6 +206,9 @@ class TestKernelProfile:
 
     def test_artifact_types_default_empty(self, profile):
         assert profile.artifact_types == ()
+
+    def test_process_units_default_empty(self, profile):
+        assert profile.process_units == ()
 
     def test_layer_stack_default_none(self, profile):
         assert profile.layer_stack is None

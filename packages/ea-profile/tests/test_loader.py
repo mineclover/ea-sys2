@@ -1,10 +1,8 @@
 """Tests for ea_profile.loader — TOML → KernelProfile loading."""
 
 import pytest
-
 from ea_profile.loader import ProfileLoadError, load_profile, load_profile_from_content
-from ea_profile.types import ConditionRegistry, KernelProfile
-
+from ea_profile.types import KernelProfile
 
 # ---------------------------------------------------------------------------
 # Valid TOML loading
@@ -124,6 +122,53 @@ kernel_element_pattern = "*Endpoint*"
         assert artifact_type.tier == "function"
         assert artifact_type.description == "HTTP endpoint artifact"
         assert artifact_type.kernel_element_pattern == "*Endpoint*"
+
+    def test_process_units_loaded(self):
+        toml = """\
+[profile]
+name = "ProcessProfile"
+version = "1.0"
+kernel_version = "2.0"
+
+[[elements]]
+name = "A"
+layer = "Core"
+category = "C"
+kernel_type = "structure"
+
+[[relations]]
+name = "r"
+kernel_relation = "association"
+
+[[process_units]]
+name = "NeedDiscovery"
+phase = "IDENTIFY"
+description = "Capture candidate needs"
+input_artifacts = ["market_signal"]
+output_artifacts = ["need_statement"]
+
+[[process_units]]
+name = "QuestionFraming"
+phase = "QUERY"
+description = "Frame query model inputs"
+input_artifacts = ["need_statement"]
+output_artifacts = ["query_spec", "model_hypothesis"]
+"""
+        p = load_profile_from_content(toml)
+        assert len(p.process_units) == 2
+
+        first = p.process_units[0]
+        assert first.name == "NeedDiscovery"
+        assert first.phase == "IDENTIFY"
+        assert first.description == "Capture candidate needs"
+        assert first.input_artifacts == ("market_signal",)
+        assert first.output_artifacts == ("need_statement",)
+
+        second = p.process_units[1]
+        assert second.name == "QuestionFraming"
+        assert second.phase == "QUERY"
+        assert second.input_artifacts == ("need_statement",)
+        assert second.output_artifacts == ("query_spec", "model_hypothesis")
 
     def test_layer_stack_5_layer_loaded(self):
         toml = """\

@@ -180,6 +180,47 @@ def load_profile_from_content(
             kernel_element_pattern=artifact_type.get("kernel_element_pattern", ""),
         )
 
+    # Process units
+    for process_unit in doc.get("process_units", []):
+        if "name" not in process_unit:
+            raise ProfileLoadError(
+                "Process unit missing required field: name"
+            )
+        if "phase" not in process_unit:
+            raise ProfileLoadError(
+                f"Process unit '{process_unit['name']}' missing required field: phase"
+            )
+
+        input_artifacts_raw = process_unit.get("input_artifacts", [])
+        input_artifacts: tuple[str, ...]
+        if isinstance(input_artifacts_raw, str):
+            input_artifacts = (input_artifacts_raw,)
+        elif isinstance(input_artifacts_raw, list):
+            input_artifacts = tuple(str(a) for a in input_artifacts_raw)
+        else:
+            raise ProfileLoadError(
+                f"Process unit '{process_unit['name']}' has invalid input_artifacts type"
+            )
+
+        output_artifacts_raw = process_unit.get("output_artifacts", [])
+        output_artifacts: tuple[str, ...]
+        if isinstance(output_artifacts_raw, str):
+            output_artifacts = (output_artifacts_raw,)
+        elif isinstance(output_artifacts_raw, list):
+            output_artifacts = tuple(str(a) for a in output_artifacts_raw)
+        else:
+            raise ProfileLoadError(
+                f"Process unit '{process_unit['name']}' has invalid output_artifacts type"
+            )
+
+        builder.add_process_unit(
+            process_unit["name"],
+            process_unit["phase"],
+            description=process_unit.get("description", ""),
+            input_artifacts=input_artifacts,
+            output_artifacts=output_artifacts,
+        )
+
     # Layer stack
     layer_stack = doc.get("layer_stack")
     if layer_stack:

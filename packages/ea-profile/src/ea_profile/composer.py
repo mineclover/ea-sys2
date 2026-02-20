@@ -7,6 +7,7 @@ from ea_profile.types import (
     LayerStack,
     ProfileArtifactType,
     ProfileElement,
+    ProfileProcessUnit,
     ProfileRelation,
     ProfileRule,
     ProfileStateTransition,
@@ -22,6 +23,7 @@ def extend(
     add_relations: tuple[ProfileRelation, ...] = (),
     add_state_transitions: tuple[ProfileStateTransition, ...] = (),
     add_artifact_types: tuple[ProfileArtifactType, ...] = (),
+    add_process_units: tuple[ProfileProcessUnit, ...] = (),
     layer_stack: LayerStack | None = None,
     add_rules: tuple[ProfileRule, ...] = (),
     override_rules: tuple[ProfileRule, ...] = (),
@@ -42,6 +44,9 @@ def extend(
 
     # Merge artifact types (base + added)
     artifact_types = base.artifact_types + add_artifact_types
+
+    # Merge process units (base + added)
+    process_units = base.process_units + add_process_units
 
     merged_layer_stack = layer_stack if layer_stack is not None else base.layer_stack
 
@@ -66,6 +71,7 @@ def extend(
         metadata=base.metadata,
         state_transitions=state_transitions,
         artifact_types=artifact_types,
+        process_units=process_units,
         layer_stack=merged_layer_stack,
     )
 
@@ -116,5 +122,6 @@ def subset(
         metadata=profile.metadata,
         state_transitions=profile.state_transitions,
         artifact_types=profile.artifact_types,
+        process_units=profile.process_units,
         layer_stack=profile.layer_stack,
     )

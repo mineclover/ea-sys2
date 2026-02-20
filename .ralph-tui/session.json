@@ -3,10 +3,10 @@
   "sessionId": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
   "status": "running",
   "startedAt": "2026-02-20T18:29:03.096Z",
-  "updatedAt": "2026-02-20T18:46:10.574Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-02-20T18:50:50.053Z",
+  "currentIteration": 3,
   "maxIterations": 0,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -34,6 +34,16 @@
       "durationMs": 273464,
       "startedAt": "2026-02-20T18:35:38.025Z",
       "endedAt": "2026-02-20T18:40:11.489Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-003",
+      "taskTitle": "레이어 정의 메타데이터 TOML 스키마",
+      "taskCompleted": true,
+      "durationMs": 357983,
+      "startedAt": "2026-02-20T18:40:12.590Z",
+      "endedAt": "2026-02-20T18:46:10.573Z"
     }
   ],
   "skippedTaskIds": [],

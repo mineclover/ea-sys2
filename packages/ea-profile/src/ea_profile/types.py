@@ -204,6 +204,16 @@ class ProfileArtifactType:
 
 
 @dataclass(frozen=True)
+class ProfileProcessUnit:
+    """A declarative process unit definition for profile workflows."""
+    name: str
+    phase: str
+    description: I18nString = ""
+    input_artifacts: tuple[str, ...] = ()
+    output_artifacts: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class LayerDefinition:
     """A declarative layer definition inside a layer stack."""
     name: str
@@ -242,6 +252,7 @@ class KernelProfile:
     metadata: ProfileMetadata | None = None
     state_transitions: tuple[ProfileStateTransition, ...] = ()
     artifact_types: tuple[ProfileArtifactType, ...] = ()
+    process_units: tuple[ProfileProcessUnit, ...] = ()
     layer_stack: LayerStack | None = None
 
     def get_element(self, name: str) -> ProfileElement | None:

@@ -23,6 +23,7 @@ from ea_profile.types import (
     ProfileBuildError,
     ProfileElement,
     ProfileMetadata,
+    ProfileProcessUnit,
     ProfileRelation,
     ProfileRule,
     ProfileStateTransition,
@@ -70,6 +71,7 @@ class ProfileBuilder:
         self._relations: list[ProfileRelation] = []
         self._state_transitions: list[ProfileStateTransition] = []
         self._artifact_types: list[ProfileArtifactType] = []
+        self._process_units: list[ProfileProcessUnit] = []
         self._layer_stack: LayerStack | None = None
         self._rules: list[ProfileRule] = []
         self._rule_metadata: dict[str, RuleMetadata] = {}
@@ -260,6 +262,25 @@ class ProfileBuilder:
             tier=tier,
             description=description,
             kernel_element_pattern=kernel_element_pattern,
+        ))
+        return self
+
+    def add_process_unit(
+        self,
+        name: str,
+        phase: str,
+        *,
+        description: I18nString = "",
+        input_artifacts: tuple[str, ...] = (),
+        output_artifacts: tuple[str, ...] = (),
+    ) -> ProfileBuilder:
+        """Add a declarative process unit definition to the profile."""
+        self._process_units.append(ProfileProcessUnit(
+            name=name,
+            phase=phase,
+            description=description,
+            input_artifacts=input_artifacts,
+            output_artifacts=output_artifacts,
         ))
         return self
 
@@ -562,6 +583,7 @@ class ProfileBuilder:
             metadata=md,
             state_transitions=tuple(self._state_transitions),
             artifact_types=tuple(self._artifact_types),
+            process_units=tuple(self._process_units),
             layer_stack=self._layer_stack,
         )
 

@@ -24,6 +24,7 @@ after each iteration and it's included in prompts for context.
 - Projection 표층 생성 공통화는 `artifact_types -> extraction_rules_from_profile(kernel_element_pattern) -> extract_artifacts -> summarize_artifacts(by_tier/by_type)` 파이프라인으로 구성하면, 엔진 코드는 고정하고 도메인별 출력 아티팩트만 프로파일 선언으로 바꿀 수 있다.
 - 프로파일 기반 상태 검증이 필요한 Store는 `profile_id + lineage_id`를 전이 검증 키로 고정하고 `store()` 직전에 `latest(lineage) -> ensure_profile_transition`를 호출하면, InMemory/SQLite 양쪽 구현에서 동일 전이 규칙을 일관되게 강제할 수 있다.
 - S4 Analyzer를 도메인 확장할 때는 `profile elements(카테고리/alias) + state_transitions(depth/terminal/success)`를 먼저 컴파일해 차원을 만들고, Store snapshot 집계를 그 차원에 투영하면 지표(throughput/success/effectiveness) 하드코딩을 제거하면서도 리포트 포맷을 유지할 수 있다.
+- 동일 커널에서 복수 도메인 프로파일 공존을 검증할 때는 `raw profile_id overlap 확인 -> domain namespace 키(governance:/sdlc:)로 동시 로드 -> domain별 compose(validate_profile)` 순서를 쓰면 `projection` 같은 동명 프로파일이 있어도 검증 간섭 없이 격리를 안정적으로 증명할 수 있다.
 
 ---
 
@@ -480,4 +481,24 @@ after each iteration and it's included in prompts for context.
     - 도메인별 projection 확장은 공통 필터/티어 엔진은 유지하고 artifact rule만 profile metadata(`artifact_types`, `kernel_element_pattern`)에서 컴파일하면, 도메인 추가 시 런타임 로직 변경 없이 표층 타입만 교체할 수 있다.
   - Gotchas encountered
     - 기존 거버넌스 게이트 테스트가 runtime artifact set `==` 비교를 사용하면 다중 도메인 registry 확장 시 false negative가 발생하므로, 도메인 확장 이후에는 `declared <= runtime` 형태의 포함 관계 검증이 안전했다.
+---
+
+## 2026-02-20 - US-021
+- What was implemented
+  - `packages/sdlc-domain/tests/test_multi_domain_coexistence.py`를 추가해 US-021 교차 검증 게이트를 구현했다.
+  - 동일 `KERNEL_SPEC` 기준으로 거버넌스(ea_sys) + SDLC 프로파일을 동시 로드하고, `projection` 같은 raw profile id 중복을 `governance:*` / `sdlc:*` 네임스페이스로 분리해 공존 가능성을 검증했다.
+  - 거버넌스/SDLC 도메인 각각에 대해 `compose -> validate_profile` 결과를 `단독 로드` vs `동시 로드`로 비교해 rule 검증 비간섭을 확인했다.
+  - 통합 테스트에서 양 도메인의 전체 라이프사이클을 동시 실행했다:
+    - Governance: `InMemoryDecisionStore -> EvidenceAnalyzer -> project_governance_surface`
+    - SDLC: `InMemorySDLCStore -> SDLCAnalyzer -> project_sdlc_surface`
+    - 양 도메인 표층 아티팩트가 동시에 생성되고 타입 집합이 분리됨을 검증했다.
+  - 품질 검증: `.venv/bin/ruff check`, `.venv/bin/mypy`, `uv run pytest packages/sdlc-domain/tests/test_multi_domain_coexistence.py -q`, `uv run pytest packages/ -x -q` (3163 passed).
+- Files changed
+  - `.ralph-tui/progress.md`
+  - `packages/sdlc-domain/tests/test_multi_domain_coexistence.py`
+- **Learnings:**
+  - Patterns discovered
+    - 다중 도메인 공존 검증은 도메인별 네임스페이스 키로 로드한 뒤, domain compose 결과를 독립 validator에 각각 넣어 `same-result under coexistence`를 비교하면 비간섭성을 명시적으로 증명할 수 있다.
+  - Gotchas encountered
+    - 거버넌스 `projection` 단일 프로파일은 validator에서 실패할 수 있어, 비간섭 검증은 단일 프로파일이 아닌 도메인 합성 프로파일 단위로 수행해야 false negative를 피할 수 있었다.
 ---

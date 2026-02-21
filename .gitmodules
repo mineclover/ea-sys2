@@ -1,3 +1,6 @@
 [submodule "reference"]
 	path = reference
 	url = https://github.com/subsy/ralph-tui.git
+[submodule "ea-sys-ts"]
+	path = ea-sys-ts
+	url = https://github.com/mineclover/ea-sys-ts.git

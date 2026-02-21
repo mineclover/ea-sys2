@@ -314,6 +314,109 @@ def test_v2_types_enforce_required_fields_and_enums():
         )
 
 
+def test_v2_transition_state_validation_accepts_alias_references() -> None:
+    spec = TypeSystemSpec(
+        profile=ProfileSpec(
+            id="ea-m2-v2",
+            version="2.0.0",
+            kernel_version="2.5.0",
+            namespace="ea_sys",
+            domain="governance_core",
+        ),
+        layers=(
+            LayerSpec(
+                id="decision",
+                order=10,
+                role=LayerRole.CAUSAL_MEMORY,
+                responsibility="Decision state transitions",
+            ),
+        ),
+        state_tokens=(
+            StateTokenSpec(
+                id="decision.proposed",
+                layer="decision",
+                canonical="PROPOSED",
+                aliases=("DecisionStatusProposed",),
+            ),
+            StateTokenSpec(
+                id="decision.accepted",
+                layer="decision",
+                canonical="ACCEPTED",
+                aliases=("DecisionStatusAccepted",),
+            ),
+        ),
+        transitions=(
+            TransitionSpec(
+                id="decision.transition_alias",
+                layer="decision",
+                from_state="DecisionStatusProposed",
+                to_state="decision.ACCEPTED",
+                requires_trace=True,
+                requires_governance_event="decision.transitioned",
+            ),
+        ),
+    )
+
+    assert len(spec.transitions) == 1
+
+
+def test_v2_transition_state_validation_rejects_cross_layer_reference() -> None:
+    with pytest.raises(ValueError, match="must reference layer 'decision'"):
+        TypeSystemSpec(
+            profile=ProfileSpec(
+                id="ea-m2-v2",
+                version="2.0.0",
+                kernel_version="2.5.0",
+                namespace="ea_sys",
+                domain="governance_core",
+            ),
+            layers=(
+                LayerSpec(
+                    id="decision",
+                    order=10,
+                    role=LayerRole.CAUSAL_MEMORY,
+                    responsibility="Decision state transitions",
+                ),
+                LayerSpec(
+                    id="needs",
+                    order=20,
+                    role=LayerRole.CAUSAL_MEMORY,
+                    responsibility="Needs state transitions",
+                ),
+            ),
+            state_tokens=(
+                StateTokenSpec(
+                    id="decision.proposed",
+                    layer="decision",
+                    canonical="PROPOSED",
+                    aliases=(),
+                ),
+                StateTokenSpec(
+                    id="decision.accepted",
+                    layer="decision",
+                    canonical="ACCEPTED",
+                    aliases=(),
+                ),
+                StateTokenSpec(
+                    id="needs.expressed",
+                    layer="needs",
+                    canonical="EXPRESSED",
+                    aliases=(),
+                ),
+            ),
+            transitions=(
+                TransitionSpec(
+                    id="decision.invalid_transition",
+                    layer="decision",
+                    from_state="needs.EXPRESSED",
+                    to_state="decision.accepted",
+                    requires_trace=True,
+                    requires_governance_event="decision.transitioned",
+                ),
+            ),
+        )
+
+
 def test_v2_serialization_round_trip_dict_json():
     original = _sample_type_system()
 

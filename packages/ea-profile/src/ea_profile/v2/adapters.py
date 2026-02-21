@@ -14,6 +14,7 @@ from ea_profile.types import (
     ProfileMetadata,
     ProfileStateTransition,
 )
+from ea_profile.v2.state_tokens import canonicalize_state_token, layered_state_reference
 from ea_profile.v2.types import (
     ArtifactTier,
     ArtifactTypeSpec,
@@ -218,7 +219,7 @@ def state_token_specs_from_legacy(
         for state in (transition.from_state, transition.to_state):
             if state == "*":
                 continue
-            canonical = _canonical_state(state)
+            canonical = canonicalize_state_token(state)
             aliases_by_canonical.setdefault(canonical, set())
             original = state.strip()
             if original and original != canonical:
@@ -248,8 +249,8 @@ def transition_specs_from_legacy(
     layer_id = _normalize_identifier(layer, prefix="layer")
     result: list[TransitionSpec] = []
     for transition in transitions:
-        from_state = _state_ref(layer_id, transition.from_state)
-        to_state = _state_ref(layer_id, transition.to_state)
+        from_state = layered_state_reference(layer_id, transition.from_state)
+        to_state = layered_state_reference(layer_id, transition.to_state)
         from_slug = "any" if from_state == "*" else from_state.rsplit(".", 1)[-1]
         to_slug = "any" if to_state == "*" else to_state.rsplit(".", 1)[-1]
         result.append(
@@ -396,24 +397,10 @@ def _parse_flow_path(raw: str) -> tuple[str, ...]:
     return tuple(_normalize_identifier(part, prefix="layer") for part in parts)
 
 
-def _state_ref(layer: str, value: str) -> str:
-    if value == "*":
-        return "*"
-    return f"{layer}.{_canonical_state(value).lower()}"
-
-
-def _canonical_state(value: str) -> str:
-    token = value.strip()
-    if "." in token:
-        token = token.rsplit(".", 1)[-1]
-    return token.upper()
-
-
 def _legacy_state_token(value: str) -> str:
     if value == "*":
         return value
-    token = value.rsplit(".", 1)[-1]
-    return token.upper()
+    return canonicalize_state_token(value)
 
 
 def _as_text(value: Any) -> str:

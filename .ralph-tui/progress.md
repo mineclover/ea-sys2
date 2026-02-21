@@ -1,5 +1,6 @@
 ## Codebase Patterns (Study These First)
 - For typed catalog repositories, persist primitive values but always hydrate rows back into the canonical validated spec model so in-memory and SQLite enforce identical constraints.
+- For transition/state-token integrity, build a per-layer normalized reference index from `StateTokenSpec` (`id`, `canonical`, `aliases`) and validate `TransitionSpec.from/to` against that shared alias map so adapters and aggregate validators apply identical canonicalization rules.
 
 {"type":"thread.started","thread_id":"019c7e2a-e53c-77d3-970f-c57133b1785c"}
 {"type":"turn.started"}
@@ -23,4 +24,23 @@
     - Treating `InfraAssetSpec` as the single validated domain object and hydrating SQLite rows back into that type keeps in-memory/SQLite validation semantics identical.
   - Gotchas encountered
     - `uv run` panicked in this sandbox (`system-configuration` NULL object), so lint/test verification used direct `ruff`/`pytest` commands with explicit `PYTHONPATH`.
+---
+## 2026-02-21 - US-004
+- What was implemented
+  - Added shared state-token normalization utility module `ea_profile.v2.state_tokens` for alias/canonical parsing and layered state reference generation.
+  - Updated legacy adapters to reuse the shared utility when deriving `StateTokenSpec` and `TransitionSpec`, removing duplicated canonicalization logic.
+  - Strengthened `TypeSystemSpec` aggregate validation so each transition `from_state`/`to_state` must resolve to a `StateTokenSpec` in the same transition layer.
+  - Added alias-aware transition validation by indexing per-layer token references from `state_token.id`, `canonical`, and `aliases`.
+  - Added tests covering alias reference success (`DecisionStatusProposed`/`decision.ACCEPTED`) and cross-layer reference rejection (`needs.*` inside `decision` transition).
+- Files changed
+  - `packages/ea-profile/src/ea_profile/v2/state_tokens.py`
+  - `packages/ea-profile/src/ea_profile/v2/types.py`
+  - `packages/ea-profile/src/ea_profile/v2/adapters.py`
+  - `packages/ea-profile/tests/test_v2_types.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Transition validation is most stable when alias/canonical matching is centralized in one utility and reused by both adapter conversion and aggregate runtime validation.
+  - Gotchas encountered
+    - `uv run` currently panics in this sandbox (`system-configuration` NULL object), so verification required direct `ruff`/`pytest` invocation.
 ---

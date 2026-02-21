@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from ea_profile.v2.state_tokens import parse_state_reference, state_reference_aliases
+
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{2,63}$")
 TEAM_SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 EVENT_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{2,63}$")
@@ -441,6 +443,69 @@ class TypeSystemSpec:
         _ensure_unique(
             "evidence_bindings.id",
             (item.id for item in self.evidence_bindings),
+        )
+        _validate_transition_state_tokens(self.state_tokens, self.transitions)
+
+
+def _validate_transition_state_tokens(
+    state_tokens: tuple[StateTokenSpec, ...],
+    transitions: tuple[TransitionSpec, ...],
+) -> None:
+    references_by_layer: dict[str, dict[str, str]] = {}
+    for token in state_tokens:
+        references = references_by_layer.setdefault(token.layer, {})
+        for alias in state_reference_aliases(
+            token_id=token.id,
+            canonical=token.canonical,
+            aliases=token.aliases,
+        ):
+            existing = references.get(alias)
+            if existing is not None and existing != token.id:
+                raise ValueError(
+                    f"state_tokens alias '{alias}' is ambiguous in layer '{token.layer}'"
+                )
+            references[alias] = token.id
+
+    for transition in transitions:
+        layer_refs = references_by_layer.get(transition.layer)
+        if layer_refs is None:
+            raise ValueError(
+                f"transitions[{transition.id}] references unknown layer '{transition.layer}'"
+            )
+        _validate_transition_state_reference(
+            transition=transition,
+            field="from_state",
+            reference=transition.from_state,
+            layer_references=layer_refs,
+        )
+        _validate_transition_state_reference(
+            transition=transition,
+            field="to_state",
+            reference=transition.to_state,
+            layer_references=layer_refs,
+        )
+
+
+def _validate_transition_state_reference(
+    *,
+    transition: TransitionSpec,
+    field: str,
+    reference: str,
+    layer_references: dict[str, str],
+) -> None:
+    if reference == "*":
+        return
+
+    referenced_layer, alias = parse_state_reference(reference)
+    if referenced_layer and referenced_layer != transition.layer:
+        raise ValueError(
+            f"transitions[{transition.id}].{field} must reference layer "
+            f"'{transition.layer}', got '{referenced_layer}'"
+        )
+    if alias not in layer_references:
+        raise ValueError(
+            f"transitions[{transition.id}].{field} references unknown state '{reference}' "
+            f"for layer '{transition.layer}'"
         )
 
 

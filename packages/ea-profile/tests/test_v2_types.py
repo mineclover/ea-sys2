@@ -1,5 +1,9 @@
 """Tests for ea_profile.v2 canonical type system."""
 
+import json
+import logging
+from pathlib import Path
+
 import pytest
 from ea_profile.types import (
     KernelProfile,
@@ -9,7 +13,11 @@ from ea_profile.types import (
     ProfileMetadata,
     ProfileStateTransition,
 )
-from ea_profile.v2.adapters import legacy_profile_to_type_system, type_system_to_legacy_profile
+from ea_profile.v2.adapters import (
+    flow_edges_from_legacy_flows,
+    legacy_profile_to_type_system,
+    type_system_to_legacy_profile,
+)
 from ea_profile.v2.serializer import (
     dict_to_type_system,
     json_to_type_system,
@@ -41,6 +49,10 @@ from ea_profile.v2.types import (
     TraceRelation,
     TransitionSpec,
     TypeSystemSpec,
+)
+
+_GOLDEN_FLOW_EDGES = (
+    Path(__file__).parent / "golden" / "legacy_layer_stack_flow_edges.json"
 )
 
 
@@ -432,7 +444,7 @@ def test_v2_serialization_round_trip_dict_json():
 def test_v2_legacy_adapter_round_trip():
     legacy = _sample_legacy_profile()
 
-    as_v2 = legacy_profile_to_type_system(legacy)
+    as_v2 = legacy_profile_to_type_system(legacy, warn_on_deprecated=False)
     assert as_v2.profile.namespace == "ea_sys"
     assert len(as_v2.layers) == 2
     assert len(as_v2.transitions) == 1
@@ -445,3 +457,38 @@ def test_v2_legacy_adapter_round_trip():
     assert restored.state_transitions[0].from_state == "DRAFT"
     assert restored.state_transitions[0].to_state == "APPROVED"
     assert restored.artifact_types[0].name == "api_endpoint"
+
+
+def test_v2_legacy_adapter_emits_deprecation_warning(caplog: pytest.LogCaptureFixture):
+    legacy = _sample_legacy_profile()
+
+    with (
+        caplog.at_level(logging.WARNING, logger="ea_profile.v2.adapters"),
+        pytest.warns(DeprecationWarning, match="Loading legacy KernelProfile"),
+    ):
+        legacy_profile_to_type_system(legacy)
+
+    assert any(
+        "Loading legacy KernelProfile into ea_profile.v2 is deprecated" in record.message
+        for record in caplog.records
+    )
+
+
+def test_v2_legacy_flow_migration_matches_golden():
+    actual = [
+        {
+            "id": edge.id,
+            "from": edge.from_layer,
+            "to": edge.to_layer,
+            "kind": edge.kind.value,
+            "required": edge.required,
+        }
+        for edge in flow_edges_from_legacy_flows(
+            definition_flow="Infra -> Governance -> Decision -> Needs -> Flow -> Projection",
+            runtime_flow="Infra > Kernel > Flow > Projection",
+            feedback_flow="Projection, Decision, Needs",
+        )
+    ]
+
+    expected = json.loads(_GOLDEN_FLOW_EDGES.read_text(encoding="utf-8"))
+    assert actual == expected

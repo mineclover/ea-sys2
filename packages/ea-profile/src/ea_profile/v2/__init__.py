@@ -3,12 +3,15 @@
 from ea_profile.v2.adapters import (
     artifact_type_spec_to_legacy,
     artifact_type_specs_from_legacy,
+    flow_edges_from_legacy,
+    flow_edges_from_legacy_flows,
     legacy_profile_to_type_system,
     profile_spec_from_legacy,
     state_token_specs_from_legacy,
     transition_spec_to_legacy,
     transition_specs_from_legacy,
     type_system_to_legacy_profile,
+    warn_legacy_profile_deprecated,
 )
 from ea_profile.v2.serializer import (
     dict_to_type_system,
@@ -71,6 +74,8 @@ __all__ = [
     "artifact_type_spec_to_legacy",
     "artifact_type_specs_from_legacy",
     "dict_to_type_system",
+    "flow_edges_from_legacy",
+    "flow_edges_from_legacy_flows",
     "json_to_type_system",
     "legacy_profile_to_type_system",
     "profile_spec_from_legacy",
@@ -80,4 +85,5 @@ __all__ = [
     "type_system_to_dict",
     "type_system_to_json",
     "type_system_to_legacy_profile",
+    "warn_legacy_profile_deprecated",
 ]

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
+import warnings
 from typing import Any
 
 from ea_profile.types import (
@@ -29,6 +31,12 @@ from ea_profile.v2.types import (
 )
 
 _FLOW_SPLIT_RE = re.compile(r"\s*(?:->|>|,)\s*")
+_LOGGER = logging.getLogger(__name__)
+_LEGACY_PROFILE_DEPRECATION = (
+    "Loading legacy KernelProfile into ea_profile.v2 is deprecated and will be removed "
+    "in a future release. Migrate to TypeSystemSpec (see packages/ea-profile/docs/"
+    "v2-cutover-guide.md)."
+)
 
 _LAYER_ROLE_BY_NAME: dict[str, LayerRole] = {
     "infra": LayerRole.RUNTIME_SUBSTRATE,
@@ -49,12 +57,16 @@ def legacy_profile_to_type_system(
     role_by_layer: dict[str, LayerRole] | None = None,
     transition_layer: str | None = None,
     artifact_source_layers: tuple[str, ...] = ("projection",),
+    warn_on_deprecated: bool = True,
 ) -> TypeSystemSpec:
     """Convert a legacy KernelProfile to a v2 TypeSystemSpec.
 
     The adapter preserves what exists in legacy metadata and maps unsupported
     areas to empty collections.
     """
+
+    if warn_on_deprecated:
+        warn_legacy_profile_deprecated(source="legacy_profile_to_type_system")
 
     profile_spec = profile_spec_from_legacy(
         profile,
@@ -184,11 +196,25 @@ def flow_edges_from_legacy(stack: LayerStack | None) -> tuple[FlowEdgeSpec, ...]
 
     if stack is None:
         return ()
+    return flow_edges_from_legacy_flows(
+        definition_flow=stack.definition_flow,
+        runtime_flow=stack.runtime_flow,
+        feedback_flow=stack.feedback_flow,
+    )
+
+
+def flow_edges_from_legacy_flows(
+    *,
+    definition_flow: str = "",
+    runtime_flow: str = "",
+    feedback_flow: str = "",
+) -> tuple[FlowEdgeSpec, ...]:
+    """Convert legacy LayerStack flow strings into canonical v2 flow edges."""
 
     channels = (
-        ("definition", stack.definition_flow, FlowEdgeKind.STRUCTURE_REQUEST),
-        ("runtime", stack.runtime_flow, FlowEdgeKind.EXECUTION_SPEC),
-        ("feedback", stack.feedback_flow, FlowEdgeKind.FEEDBACK_OBSERVATION),
+        ("definition", definition_flow, FlowEdgeKind.STRUCTURE_REQUEST),
+        ("runtime", runtime_flow, FlowEdgeKind.EXECUTION_SPEC),
+        ("feedback", feedback_flow, FlowEdgeKind.FEEDBACK_OBSERVATION),
     )
     edges: list[FlowEdgeSpec] = []
     for channel, flow, kind in channels:
@@ -204,6 +230,14 @@ def flow_edges_from_legacy(stack: LayerStack | None) -> tuple[FlowEdgeSpec, ...]
                 )
             )
     return tuple(edges)
+
+
+def warn_legacy_profile_deprecated(*, source: str) -> None:
+    """Emit compatibility deprecation diagnostics for legacy profile loading."""
+
+    message = f"{_LEGACY_PROFILE_DEPRECATION} source={source}"
+    _LOGGER.warning(message)
+    warnings.warn(message, category=DeprecationWarning, stacklevel=3)
 
 
 def state_token_specs_from_legacy(

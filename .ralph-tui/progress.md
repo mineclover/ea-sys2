@@ -1,6 +1,7 @@
 ## Codebase Patterns (Study These First)
 - For typed catalog repositories, persist primitive values but always hydrate rows back into the canonical validated spec model so in-memory and SQLite enforce identical constraints.
 - For transition/state-token integrity, build a per-layer normalized reference index from `StateTokenSpec` (`id`, `canonical`, `aliases`) and validate `TransitionSpec.from/to` against that shared alias map so adapters and aggregate validators apply identical canonicalization rules.
+- For legacy→v2 migration shims, expose primitive-string conversion utilities (e.g., `LayerStack` flow strings → `FlowEdgeSpec`) and route higher-level adapters through the same helper to keep compatibility deterministic.
 
 {"type":"thread.started","thread_id":"019c7e2a-e53c-77d3-970f-c57133b1785c"}
 {"type":"turn.started"}
@@ -43,4 +44,26 @@
     - Transition validation is most stable when alias/canonical matching is centralized in one utility and reused by both adapter conversion and aggregate runtime validation.
   - Gotchas encountered
     - `uv run` currently panics in this sandbox (`system-configuration` NULL object), so verification required direct `ruff`/`pytest` invocation.
+---
+## 2026-02-21 - US-011
+- What was implemented
+  - Added legacy migration utility `flow_edges_from_legacy_flows(...)` to convert string-based `LayerStack` flow fields (`definition_flow`, `runtime_flow`, `feedback_flow`) into canonical `FlowEdgeSpec` tuples.
+  - Routed existing `flow_edges_from_legacy(...)` through the new primitive flow-string migration utility to keep adapter behavior deterministic.
+  - Added legacy compatibility deprecation diagnostics on legacy→v2 load path: `legacy_profile_to_type_system(...)` now emits both a `DeprecationWarning` and module warning log via a shared helper.
+  - Exposed migration/deprecation helpers from `ea_profile.v2` public exports.
+  - Added golden fixture test to lock migrated flow-edge output and prevent contract drift.
+  - Added cutover guide documentation for phased legacy-to-v2 migration and verification steps.
+- Files changed
+  - `packages/ea-profile/src/ea_profile/v2/adapters.py`
+  - `packages/ea-profile/src/ea_profile/v2/__init__.py`
+  - `packages/ea-profile/tests/test_v2_types.py`
+  - `packages/ea-profile/tests/golden/legacy_layer_stack_flow_edges.json`
+  - `packages/ea-profile/docs/v2-cutover-guide.md`
+  - `packages/ea-profile/README.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Compatibility migrations are easier to stabilize when low-level string normalization/conversion is separated into a pure helper and reused by aggregate adapters.
+  - Gotchas encountered
+    - `uv run` currently panics in this sandbox (`system-configuration` NULL object), so lint/test verification required direct `ruff`/`pytest` commands.
 ---

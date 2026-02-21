@@ -3,10 +3,10 @@
   "sessionId": "20ea4c68-14d0-48fe-b3fc-5edf7df4782d",
   "status": "running",
   "startedAt": "2026-02-21T02:03:04.364Z",
-  "updatedAt": "2026-02-21T02:28:08.494Z",
-  "currentIteration": 5,
+  "updatedAt": "2026-02-21T02:35:15.087Z",
+  "currentIteration": 6,
   "maxIterations": 0,
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -64,6 +64,16 @@
       "durationMs": 261302,
       "startedAt": "2026-02-21T02:19:56.313Z",
       "endedAt": "2026-02-21T02:24:17.615Z"
+    },
+    {
+      "iteration": 6,
+      "status": "completed",
+      "taskId": "US-006",
+      "taskTitle": "Lineage Replay API 제공",
+      "taskCompleted": true,
+      "durationMs": 229771,
+      "startedAt": "2026-02-21T02:24:18.721Z",
+      "endedAt": "2026-02-21T02:28:08.492Z"
     }
   ],
   "skippedTaskIds": [],

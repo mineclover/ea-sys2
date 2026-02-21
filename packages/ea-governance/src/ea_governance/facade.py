@@ -16,6 +16,10 @@ from ea_kernel.types import KernelSchema
 from ea_needs.catalog import NeedCatalog
 from ea_ops.events import ServiceOpsEventSpec
 
+from ea_governance.catalog_policy_store import (
+    CatalogAutoExpressPolicy,
+    SQLiteCatalogAutoExpressPolicyStore,
+)
 from ea_governance.decision_trace_ops import DecisionTraceOps
 from ea_governance.execution_service import ExecutionService
 from ea_governance.kernel_model_ops import KernelModelOps
@@ -78,6 +82,9 @@ class GovernanceContainer:
         # 3. Governance-owned DB adapters
         self.kernel_store = GovernanceKernelStore(self.layer_stores["kernel"])
         self.needs_store = GovernanceNeedsStore(self.layer_stores["needs"])
+        self.catalog_policy_store = SQLiteCatalogAutoExpressPolicyStore(
+            data_dir / "catalog_policies.db"
+        )
 
         # 4. Reference for direct access if needed
         self.runtime = self.execution_service.runtime
@@ -102,6 +109,7 @@ class GovernanceContainer:
             self.execution_service,
             layer_store=self.layer_stores["needs"],
             infra_layer_store=self.layer_stores["infra"],
+            policy_store=self.catalog_policy_store,
         )
         self._lifecycle_ops = LifecycleOps(
             self.execution_service,
@@ -866,6 +874,25 @@ class GovernanceContainer:
 
     def list_needs_catalogs(self) -> list[NeedCatalog]:
         return self._needs_ops.list_needs_catalogs()
+
+    def save_catalog_auto_express_policy(
+        self,
+        policy: CatalogAutoExpressPolicy,
+        *,
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._needs_ops.save_catalog_auto_express_policy(policy, actor=actor)
+
+    def get_catalog_auto_express_policy(
+        self,
+        catalog_id: str,
+    ) -> CatalogAutoExpressPolicy | None:
+        return self._needs_ops.get_catalog_auto_express_policy(catalog_id)
+
+    def list_catalog_auto_express_policies(
+        self,
+    ) -> list[CatalogAutoExpressPolicy]:
+        return self._needs_ops.list_catalog_auto_express_policies()
 
     def get_needs_catalog_history(self, catalog_id: str) -> list[dict[str, Any]]:
         return self._needs_ops.get_needs_catalog_history(catalog_id)

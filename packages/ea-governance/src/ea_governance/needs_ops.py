@@ -10,6 +10,12 @@ from ea_needs.catalog import NeedCatalog
 from ea_needs.ops_feedback import build_needs_feedback_draft
 from ea_ops.events import FeedbackLayer, ServiceOpsEventSpec, build_service_ops_event
 
+from ea_governance.catalog_policy_store import (
+    AutoExpressPolicyDecision,
+    CatalogAutoExpressPolicy,
+    evaluate_catalog_auto_express_policy,
+)
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat() + "Z"
@@ -24,11 +30,13 @@ class NeedsOps:
         execution_service: Any,
         layer_store: Any = None,
         infra_layer_store: Any = None,
+        policy_store: Any = None,
     ) -> None:
         self._needs_store = needs_store
         self._execution_service = execution_service
         self._layer_store = layer_store
         self._infra_layer_store = infra_layer_store
+        self._policy_store = policy_store
 
     # -- Internal helpers ------------------------------------------------------
 
@@ -87,6 +95,11 @@ class NeedsOps:
             raise
 
         return {"catalog_id": catalog_id, "transaction_id": tx.id}
+
+    def _require_catalog_policy_store(self) -> Any:
+        if self._policy_store is None:
+            raise RuntimeError("catalog policy store is not configured")
+        return self._policy_store
 
     # -- Public API ------------------------------------------------------------
 
@@ -341,6 +354,60 @@ class NeedsOps:
     def list_needs_catalogs(self) -> list[NeedCatalog]:
         return self._needs_store.list_catalogs()
 
+    def save_catalog_auto_express_policy(
+        self,
+        policy: CatalogAutoExpressPolicy,
+        *,
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        self._require_needs_catalog(policy.catalog_id)
+        policy_store = self._require_catalog_policy_store()
+        tx = self._execution_service.tx_manager.begin_transaction(
+            f"needs_auto_express_policy_{policy.catalog_id}",
+            tx_type="needs_auto_express_policy",
+            payload={
+                "catalog_id": policy.catalog_id,
+                "actor": actor,
+            },
+        )
+        try:
+            catalog_id = policy_store.save_policy(policy)
+            self._execution_service.tx_manager.add_event(
+                tx.id,
+                "needs_auto_express_policy_saved",
+                "Needs catalog auto-express policy persisted.",
+                payload={
+                    "catalog_id": catalog_id,
+                    "enabled": policy.enabled,
+                    "allowed_severities": [
+                        item.value for item in policy.allowed_severities
+                    ],
+                    "allowed_event_names": list(policy.allowed_event_names),
+                    "allowed_feeds_back_to": [
+                        item.value for item in policy.allowed_feeds_back_to
+                    ],
+                    "stakeholder_mapping_size": len(policy.stakeholder_event_map),
+                },
+            )
+            self._execution_service.tx_manager.commit(tx.id)
+        except Exception as exc:
+            self._execution_service.tx_manager.fail(tx.id, str(exc))
+            raise
+        return {"catalog_id": catalog_id, "transaction_id": tx.id}
+
+    def get_catalog_auto_express_policy(
+        self,
+        catalog_id: str,
+    ) -> CatalogAutoExpressPolicy | None:
+        if self._policy_store is None:
+            return None
+        return self._policy_store.get_policy(catalog_id)
+
+    def list_catalog_auto_express_policies(self) -> list[CatalogAutoExpressPolicy]:
+        if self._policy_store is None:
+            return []
+        return self._policy_store.list_policies()
+
     def get_needs_catalog_history(self, catalog_id: str) -> list[dict[str, Any]]:
         matches: list[dict[str, Any]] = []
         transactions = self._execution_service.tx_manager.list_transactions(
@@ -363,6 +430,28 @@ class NeedsOps:
                 )
         return sorted(matches, key=lambda item: (item["created_at"], item["event_id"]))
 
+    def _evaluate_auto_express_policy(
+        self,
+        *,
+        requested: bool,
+        spec: ServiceOpsEventSpec,
+        catalog_id: str | None,
+        stakeholder_id: str | None,
+    ) -> AutoExpressPolicyDecision:
+        policy = (
+            self.get_catalog_auto_express_policy(catalog_id)
+            if catalog_id is not None
+            else None
+        )
+        return evaluate_catalog_auto_express_policy(
+            policy,
+            requested=requested,
+            event_name=spec.name,
+            severity=spec.severity,
+            feeds_back_to=spec.feeds_back_to,
+            stakeholder_id=stakeholder_id,
+        )
+
     def ingest_service_ops_event(
         self,
         *,
@@ -382,6 +471,20 @@ class NeedsOps:
         - optional auto-expressed need (for feeds_back_to=needs)
         """
         event = build_service_ops_event(spec, payload)
+        normalized_catalog_id = (
+            str(catalog_id).strip()
+            if catalog_id is not None
+            else None
+        )
+        if normalized_catalog_id == "":
+            normalized_catalog_id = None
+        normalized_stakeholder_id = (
+            str(stakeholder_id).strip()
+            if stakeholder_id is not None
+            else None
+        )
+        if normalized_stakeholder_id == "":
+            normalized_stakeholder_id = None
         trace_id = str(event.payload.get("trace_id", "")).strip()
         lineage_id = str(event.payload.get("lineage_id", "")).strip()
         timestamp = _now_iso()
@@ -396,7 +499,7 @@ class NeedsOps:
                 "feeds_back_to": event.feeds_back_to.value,
                 "trace_id": trace_id,
                 "lineage_id": lineage_id,
-                "catalog_id": catalog_id,
+                "catalog_id": normalized_catalog_id,
                 "actor": actor,
             },
             trace_id=trace_id,
@@ -408,8 +511,28 @@ class NeedsOps:
         draft = build_needs_feedback_draft(event)
         draft_tags = [tag for tag in draft.tags if tag and tag != "service"]
         merged_tags = list(dict.fromkeys([*draft_tags, *(tags or [])]))
+        auto_express_decision = AutoExpressPolicyDecision(
+            requested=auto_express,
+            allowed=False,
+            reason_codes=(),
+            policy_found=False,
+            catalog_id=normalized_catalog_id,
+        )
 
         try:
+            if auto_express and event.feeds_back_to == FeedbackLayer.NEEDS:
+                if normalized_catalog_id is None:
+                    raise ValueError("catalog_id is required when auto_express=True")
+                if normalized_stakeholder_id is None:
+                    raise ValueError("stakeholder_id is required when auto_express=True")
+
+            auto_express_decision = self._evaluate_auto_express_policy(
+                requested=auto_express,
+                spec=spec,
+                catalog_id=normalized_catalog_id,
+                stakeholder_id=normalized_stakeholder_id,
+            )
+
             if self._infra_layer_store is not None:
                 infra_snapshot_id = f"service_ops_event:{event_key}"
                 self._infra_layer_store.save_payload(
@@ -434,8 +557,9 @@ class NeedsOps:
                 "feeds_back_to": event.feeds_back_to.value,
                 "trace_id": trace_id,
                 "lineage_id": lineage_id,
-                "catalog_id": catalog_id,
-                "stakeholder_id": stakeholder_id,
+                "catalog_id": normalized_catalog_id,
+                "stakeholder_id": normalized_stakeholder_id,
+                "auto_express": auto_express_decision.to_payload(),
                 "draft": {
                     "action": draft.action,
                     "subject": draft.subject,
@@ -449,15 +573,15 @@ class NeedsOps:
             if self._layer_store is not None:
                 self._layer_store.save_payload(feedback_snapshot_id, feedback_payload)
 
-            if auto_express and event.feeds_back_to == FeedbackLayer.NEEDS:
-                if catalog_id is None:
+            if auto_express_decision.allowed:
+                if normalized_catalog_id is None:
                     raise ValueError("catalog_id is required when auto_express=True")
-                if stakeholder_id is None:
+                if normalized_stakeholder_id is None:
                     raise ValueError("stakeholder_id is required when auto_express=True")
-                catalog = self._require_needs_catalog(catalog_id)
+                catalog = self._require_needs_catalog(normalized_catalog_id)
                 service_id = str(event.payload.get("service_id", "")).strip() or None
                 need = catalog.express_need(
-                    stakeholder_id=stakeholder_id,
+                    stakeholder_id=normalized_stakeholder_id,
                     action=draft.action,
                     subject=draft.subject,
                     target=service_id,
@@ -469,7 +593,7 @@ class NeedsOps:
                 )
                 self._needs_store.save_catalog(catalog)
                 expressed_need = {
-                    "catalog_id": catalog_id,
+                    "catalog_id": normalized_catalog_id,
                     "need_id": need.id,
                     "lineage_id": need.lineage_id,
                     "version": need.version,
@@ -479,8 +603,8 @@ class NeedsOps:
                     "needs_expressed_from_service_ops",
                     "Need auto-expressed from service operations event.",
                     payload={
-                        "catalog_id": catalog_id,
-                        "stakeholder_id": stakeholder_id,
+                        "catalog_id": normalized_catalog_id,
+                        "stakeholder_id": normalized_stakeholder_id,
                         **expressed_need,
                     },
                 )
@@ -498,6 +622,7 @@ class NeedsOps:
                     "infra_snapshot_id": infra_snapshot_id,
                     "feedback_snapshot_id": feedback_snapshot_id,
                     "auto_express": auto_express,
+                    "auto_express_decision": auto_express_decision.to_payload(),
                     "expressed_need": expressed_need,
                 },
             )
@@ -523,6 +648,7 @@ class NeedsOps:
                 "tags": merged_tags,
                 "rationale": draft.rationale,
             },
+            "auto_express_decision": auto_express_decision.to_payload(),
             "expressed_need": expressed_need,
         }
 

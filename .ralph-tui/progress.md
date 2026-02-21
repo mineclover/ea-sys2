@@ -12,6 +12,7 @@ after each iteration and it's included in prompts for context.
 - For bulk write APIs using fixed partial-failure strategy, keep HTTP 200 with `strategy/success_count/failed_count/results[]` and reuse the same validation envelope per failed item with `items[{index}].`-prefixed fields.
 - For ops-event list APIs backed by generic layer snapshots, parse `ingested_at` to UTC and sort by that timestamp (not `model_id`) before applying `limit/offset`, so pagination stays chronological.
 - For lineage replay APIs, return partial lineage data with `status=warning` + structured `warnings[]` on path disconnection instead of failing the whole request, while keeping 422/404 envelopes for invalid/missing decisions.
+- For policy-gated optional actions (like auto-express), compute a single structured decision (`requested`, `allowed`, `reason_codes`) and persist the same structure to snapshot/event/response so diagnostics stay deterministic across layers.
 
 ---
 
@@ -130,4 +131,26 @@ after each iteration and it's included in prompts for context.
     - Path compose failure is better represented as a warning-state replay response (with partial chain payload) than a hard API failure, so clients can still render available lineage evidence.
   - Gotchas encountered
     - Replay output should sanitize lineage arrays defensively (`list[dict]`, `list[str]`) because exploration payloads are generic mappings and can include malformed rows.
+---
+
+## 2026-02-21 - US-007
+- What was implemented
+  - Added catalog-level auto-express policy domain model + evaluator with criteria checks for `severity`, `event_name`, `feeds_back_to`, and stakeholder mapping.
+  - Added SQLite-backed catalog policy table store with `schema_version` tracking and `save/get/list` support.
+  - Wired policy storage into `GovernanceContainer` and exposed policy CRUD delegates for catalog-level governance control.
+  - Updated `ingest_service_ops_event(...)` to evaluate policy before auto-express execution and gate need creation on the evaluation result.
+  - Added structured policy decision payload (`requested`, `allowed`, `reason_codes`, `policy_found`) to feedback snapshot, transaction event, and ingestion response.
+  - Added tests for policy persistence, criteria evaluation pass/fail paths, and policy-miss reason-code behavior.
+- Files changed
+  - `packages/ea-governance/src/ea_governance/catalog_policy_store.py`
+  - `packages/ea-governance/src/ea_governance/facade.py`
+  - `packages/ea-governance/src/ea_governance/needs_ops.py`
+  - `packages/ea-governance/tests/test_catalog_policy_store.py`
+  - `packages/ea-governance/tests/test_needs_store.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Evaluating policy once and reusing the exact serialized decision object across persistence/audit/API boundaries keeps failure reasoning stable for debugging and client parsing.
+  - Gotchas encountered
+    - `catalog_id`/`stakeholder_id` should be normalized (`strip`) before policy lookup; blank strings otherwise silently bypass keyed policy checks.
 ---

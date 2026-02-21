@@ -14,13 +14,22 @@ from ea_kernel.model_registration import (
 )
 from ea_kernel.types import KernelSchema
 from ea_needs.catalog import NeedCatalog
+from ea_ops.events import ServiceOpsEventSpec
 
+from ea_governance.catalog_policy_store import (
+    CatalogAutoExpressPolicy,
+    SQLiteCatalogAutoExpressPolicyStore,
+)
 from ea_governance.decision_trace_ops import DecisionTraceOps
 from ea_governance.execution_service import ExecutionService
 from ea_governance.kernel_model_ops import KernelModelOps
 from ea_governance.kernel_rule_ops import KernelRuleOps
 from ea_governance.kernel_store import GovernanceKernelStore
-from ea_governance.layer_store import ALLOWED_LAYERS, GovernanceLayerStore, SQLiteGovernanceLayerStore
+from ea_governance.layer_store import (
+    ALLOWED_LAYERS,
+    GovernanceLayerStore,
+    SQLiteGovernanceLayerStore,
+)
 from ea_governance.lifecycle_ops import LifecycleOps
 from ea_governance.needs_ops import NeedsOps
 from ea_governance.needs_store import GovernanceNeedsStore
@@ -73,6 +82,9 @@ class GovernanceContainer:
         # 3. Governance-owned DB adapters
         self.kernel_store = GovernanceKernelStore(self.layer_stores["kernel"])
         self.needs_store = GovernanceNeedsStore(self.layer_stores["needs"])
+        self.catalog_policy_store = SQLiteCatalogAutoExpressPolicyStore(
+            data_dir / "catalog_policies.db"
+        )
 
         # 4. Reference for direct access if needed
         self.runtime = self.execution_service.runtime
@@ -96,6 +108,8 @@ class GovernanceContainer:
             self.needs_store,
             self.execution_service,
             layer_store=self.layer_stores["needs"],
+            infra_layer_store=self.layer_stores["infra"],
+            policy_store=self.catalog_policy_store,
         )
         self._lifecycle_ops = LifecycleOps(
             self.execution_service,
@@ -861,6 +875,25 @@ class GovernanceContainer:
     def list_needs_catalogs(self) -> list[NeedCatalog]:
         return self._needs_ops.list_needs_catalogs()
 
+    def save_catalog_auto_express_policy(
+        self,
+        policy: CatalogAutoExpressPolicy,
+        *,
+        actor: str = "governance",
+    ) -> dict[str, str]:
+        return self._needs_ops.save_catalog_auto_express_policy(policy, actor=actor)
+
+    def get_catalog_auto_express_policy(
+        self,
+        catalog_id: str,
+    ) -> CatalogAutoExpressPolicy | None:
+        return self._needs_ops.get_catalog_auto_express_policy(catalog_id)
+
+    def list_catalog_auto_express_policies(
+        self,
+    ) -> list[CatalogAutoExpressPolicy]:
+        return self._needs_ops.list_catalog_auto_express_policies()
+
     def get_needs_catalog_history(self, catalog_id: str) -> list[dict[str, Any]]:
         return self._needs_ops.get_needs_catalog_history(catalog_id)
 
@@ -901,6 +934,27 @@ class GovernanceContainer:
             catalog_id,
             proposed_change=proposed_change,
             change_scope=change_scope,
+            actor=actor,
+        )
+
+    def ingest_service_ops_event(
+        self,
+        *,
+        spec: ServiceOpsEventSpec,
+        payload: dict[str, Any],
+        catalog_id: str | None = None,
+        stakeholder_id: str | None = None,
+        auto_express: bool = False,
+        tags: list[str] | None = None,
+        actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._needs_ops.ingest_service_ops_event(
+            spec=spec,
+            payload=payload,
+            catalog_id=catalog_id,
+            stakeholder_id=stakeholder_id,
+            auto_express=auto_express,
+            tags=tags,
             actor=actor,
         )
 

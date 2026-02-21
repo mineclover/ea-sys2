@@ -1,0 +1,72 @@
+[
+  {
+    "id": "definition_flow_1",
+    "from": "infra",
+    "to": "governance",
+    "kind": "structure_request",
+    "required": true
+  },
+  {
+    "id": "definition_flow_2",
+    "from": "governance",
+    "to": "decision",
+    "kind": "structure_request",
+    "required": true
+  },
+  {
+    "id": "definition_flow_3",
+    "from": "decision",
+    "to": "needs",
+    "kind": "structure_request",
+    "required": true
+  },
+  {
+    "id": "definition_flow_4",
+    "from": "needs",
+    "to": "flow",
+    "kind": "structure_request",
+    "required": true
+  },
+  {
+    "id": "definition_flow_5",
+    "from": "flow",
+    "to": "projection",
+    "kind": "structure_request",
+    "required": true
+  },
+  {
+    "id": "runtime_flow_1",
+    "from": "infra",
+    "to": "kernel",
+    "kind": "execution_spec",
+    "required": true
+  },
+  {
+    "id": "runtime_flow_2",
+    "from": "kernel",
+    "to": "flow",
+    "kind": "execution_spec",
+    "required": true
+  },
+  {
+    "id": "runtime_flow_3",
+    "from": "flow",
+    "to": "projection",
+    "kind": "execution_spec",
+    "required": true
+  },
+  {
+    "id": "feedback_flow_1",
+    "from": "projection",
+    "to": "decision",
+    "kind": "feedback_observation",
+    "required": true
+  },
+  {
+    "id": "feedback_flow_2",
+    "from": "decision",
+    "to": "needs",
+    "kind": "feedback_observation",
+    "required": true
+  }
+]

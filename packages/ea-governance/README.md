@@ -60,3 +60,9 @@ preserving independent layer responsibility.
 - `list_layer_snapshots`
 
 Each layer (`infra/governance/decision/needs/kernel/flow`) is backed by its own store instance and DB file under governance data.
+
+## Ops Event API Docs
+- Canonical spec + runbook:
+  - `packages/ea-governance/docs/ops-events-api-runbook.md`
+- Lineage replay focused reference:
+  - `packages/ea-governance/docs/ops-lineage-replay-api.md`

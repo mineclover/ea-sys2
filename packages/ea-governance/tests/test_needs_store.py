@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ea_governance.catalog_policy_store import CatalogAutoExpressPolicy
 from ea_governance.facade import GovernanceContainer, KernelSchema
 from ea_governance.layer_store import SQLiteGovernanceLayerStore
 from ea_governance.needs_store import GovernanceNeedsStore
 from ea_needs.catalog import NeedCatalog
 from ea_needs.types import NeedPriority, NeedPurpose
+from ea_ops.events import FeedbackLayer, ServiceOpsEventSpec, ServiceOpsSeverity
 
 
 def _build_catalog() -> NeedCatalog:
@@ -357,3 +359,318 @@ def test_evaluate_change_policy_no_needs(tmp_path: Path):
 
     assert result["passed"] is False
     assert any("no needs" in v.lower() for v in result["violations"])
+
+
+def test_ingest_service_ops_event_records_infra_and_needs_feedback(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+
+    spec = ServiceOpsEventSpec(
+        name="slo_breached",
+        severity=ServiceOpsSeverity.HIGH,
+        must_include=("trace_id", "lineage_id", "service_id", "slo_name"),
+        feeds_back_to=FeedbackLayer.NEEDS,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-1",
+            "lineage_id": "lineage-needs-1",
+            "service_id": "payments-api",
+            "slo_name": "latency_p95",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        actor="ops-bot",
+    )
+
+    assert result["event_name"] == "slo_breached"
+    assert result["infra_snapshot_id"] is not None
+    assert result["feedback_snapshot_id"] is not None
+    assert result["expressed_need"] is None
+    assert result["needs_feedback_draft"]["priority"] == "high"
+
+    infra_snapshot = container.get_layer_snapshot("infra", result["infra_snapshot_id"])
+    assert infra_snapshot is not None
+    assert infra_snapshot["kind"] == "service_ops_event"
+
+    needs_snapshot = container.get_layer_snapshot("needs", result["feedback_snapshot_id"])
+    assert needs_snapshot is not None
+    assert needs_snapshot["kind"] == "service_ops_feedback"
+
+
+def test_ingest_service_ops_event_auto_expresses_need(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+    before_count = len(catalog.needs)
+
+    policy = CatalogAutoExpressPolicy(
+        catalog_id=catalog_id,
+        allowed_severities=(ServiceOpsSeverity.CRITICAL,),
+        allowed_event_names=("incident_opened",),
+        allowed_feeds_back_to=(FeedbackLayer.NEEDS,),
+        stakeholder_event_map={stakeholder_id: ("incident_opened",)},
+    )
+    container.save_catalog_auto_express_policy(policy, actor="architect")
+
+    spec = ServiceOpsEventSpec(
+        name="incident_opened",
+        severity=ServiceOpsSeverity.CRITICAL,
+        must_include=(
+            "trace_id",
+            "lineage_id",
+            "service_id",
+            "incident_id",
+            "runbook_url",
+        ),
+        feeds_back_to=FeedbackLayer.NEEDS,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-2",
+            "lineage_id": "lineage-needs-2",
+            "service_id": "orders-api",
+            "incident_id": "inc-100",
+            "runbook_url": "https://runbooks/orders-api",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        auto_express=True,
+        actor="ops-bot",
+    )
+
+    assert result["expressed_need"] is not None
+    assert result["expressed_need"]["catalog_id"] == catalog_id
+    assert result["expressed_need"]["need_id"]
+    assert result["expressed_need"]["lineage_id"]
+    assert result["expressed_need"]["version"] >= 1
+    assert result["auto_express_decision"]["requested"] is True
+    assert result["auto_express_decision"]["allowed"] is True
+    assert result["auto_express_decision"]["reason_codes"] == []
+
+    tx_events = container.get_transaction_events(result["transaction_id"])
+    ingested_events = [
+        event
+        for event in tx_events
+        if event["event_type"] == "service_ops_event_ingested"
+    ]
+    assert len(ingested_events) == 1
+    assert ingested_events[0]["payload"]["expressed_need"] == result["expressed_need"]
+
+    expressed_events = [
+        event
+        for event in tx_events
+        if event["event_type"] == "needs_expressed_from_service_ops"
+    ]
+    assert len(expressed_events) == 1
+    expressed_payload = expressed_events[0]["payload"]
+    assert expressed_payload["need_id"] == result["expressed_need"]["need_id"]
+    assert expressed_payload["lineage_id"] == result["expressed_need"]["lineage_id"]
+    assert expressed_payload["version"] == result["expressed_need"]["version"]
+
+    updated = container.get_needs_catalog(catalog_id)
+    assert updated is not None
+    assert len(updated.needs) == before_count + 1
+
+
+def test_catalog_auto_express_policy_save_get_list(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+
+    policy = CatalogAutoExpressPolicy(
+        catalog_id=catalog_id,
+        enabled=True,
+        allowed_severities=(ServiceOpsSeverity.HIGH, ServiceOpsSeverity.CRITICAL),
+        allowed_event_names=("slo_breached", "incident_opened"),
+        allowed_feeds_back_to=(FeedbackLayer.NEEDS,),
+        stakeholder_event_map={
+            stakeholder_id: ("slo_breached", "incident_opened"),
+        },
+    )
+    saved = container.save_catalog_auto_express_policy(policy, actor="architect")
+
+    assert saved["catalog_id"] == catalog_id
+    assert "transaction_id" in saved
+
+    loaded = container.get_catalog_auto_express_policy(catalog_id)
+    assert loaded is not None
+    assert loaded.catalog_id == catalog_id
+    assert loaded.enabled is True
+    assert loaded.allowed_severities == (
+        ServiceOpsSeverity.HIGH,
+        ServiceOpsSeverity.CRITICAL,
+    )
+    assert loaded.allowed_event_names == ("slo_breached", "incident_opened")
+    assert loaded.allowed_feeds_back_to == (FeedbackLayer.NEEDS,)
+    assert loaded.stakeholder_event_map[stakeholder_id] == (
+        "slo_breached",
+        "incident_opened",
+    )
+
+    listed = container.list_catalog_auto_express_policies()
+    assert len(listed) == 1
+    assert listed[0].catalog_id == catalog_id
+
+
+def test_ingest_service_ops_event_policy_denial_records_reason_codes(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+    before_count = len(catalog.needs)
+
+    restrictive_policy = CatalogAutoExpressPolicy(
+        catalog_id=catalog_id,
+        allowed_severities=(ServiceOpsSeverity.LOW,),
+        allowed_event_names=("slo_recovered",),
+        allowed_feeds_back_to=(FeedbackLayer.NEEDS,),
+        stakeholder_event_map={stakeholder_id: ("slo_recovered",)},
+    )
+    container.save_catalog_auto_express_policy(restrictive_policy, actor="architect")
+
+    spec = ServiceOpsEventSpec(
+        name="incident_opened",
+        severity=ServiceOpsSeverity.CRITICAL,
+        must_include=(
+            "trace_id",
+            "lineage_id",
+            "service_id",
+            "incident_id",
+            "runbook_url",
+        ),
+        feeds_back_to=FeedbackLayer.NEEDS,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-3",
+            "lineage_id": "lineage-needs-3",
+            "service_id": "orders-api",
+            "incident_id": "inc-101",
+            "runbook_url": "https://runbooks/orders-api",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        auto_express=True,
+        actor="ops-bot",
+    )
+
+    assert result["expressed_need"] is None
+    decision = result["auto_express_decision"]
+    assert decision["requested"] is True
+    assert decision["allowed"] is False
+    assert "severity_not_allowed" in decision["reason_codes"]
+    assert "event_name_not_allowed" in decision["reason_codes"]
+    assert "stakeholder_event_not_allowed" in decision["reason_codes"]
+
+    updated = container.get_needs_catalog(catalog_id)
+    assert updated is not None
+    assert len(updated.needs) == before_count
+
+    events = container.get_transaction_events(result["transaction_id"])
+    ingested_events = [
+        event
+        for event in events
+        if event["event_type"] == "service_ops_event_ingested"
+    ]
+    assert len(ingested_events) == 1
+    payload = ingested_events[0]["payload"]["auto_express_decision"]
+    assert payload["allowed"] is False
+    assert "severity_not_allowed" in payload["reason_codes"]
+
+
+def test_ingest_service_ops_event_policy_checks_feedback_destination(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+    before_count = len(catalog.needs)
+
+    policy = CatalogAutoExpressPolicy(
+        catalog_id=catalog_id,
+        allowed_severities=(ServiceOpsSeverity.HIGH,),
+        allowed_event_names=("slo_breached",),
+        allowed_feeds_back_to=(FeedbackLayer.NEEDS,),
+        stakeholder_event_map={stakeholder_id: ("slo_breached",)},
+    )
+    container.save_catalog_auto_express_policy(policy, actor="architect")
+
+    spec = ServiceOpsEventSpec(
+        name="slo_breached",
+        severity=ServiceOpsSeverity.HIGH,
+        must_include=("trace_id", "lineage_id", "service_id", "slo_name"),
+        feeds_back_to=FeedbackLayer.DECISION,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-4",
+            "lineage_id": "lineage-needs-4",
+            "service_id": "payments-api",
+            "slo_name": "latency_p95",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        auto_express=True,
+        actor="ops-bot",
+    )
+
+    assert result["expressed_need"] is None
+    decision = result["auto_express_decision"]
+    assert decision["allowed"] is False
+    assert "feeds_back_to_not_needs" in decision["reason_codes"]
+    assert "feeds_back_to_not_allowed" in decision["reason_codes"]
+
+    updated = container.get_needs_catalog(catalog_id)
+    assert updated is not None
+    assert len(updated.needs) == before_count
+
+
+def test_ingest_service_ops_event_without_policy_records_reason_code(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+    before_count = len(catalog.needs)
+
+    spec = ServiceOpsEventSpec(
+        name="incident_opened",
+        severity=ServiceOpsSeverity.CRITICAL,
+        must_include=(
+            "trace_id",
+            "lineage_id",
+            "service_id",
+            "incident_id",
+            "runbook_url",
+        ),
+        feeds_back_to=FeedbackLayer.NEEDS,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-5",
+            "lineage_id": "lineage-needs-5",
+            "service_id": "orders-api",
+            "incident_id": "inc-200",
+            "runbook_url": "https://runbooks/orders-api",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        auto_express=True,
+        actor="ops-bot",
+    )
+
+    assert result["expressed_need"] is None
+    assert result["auto_express_decision"]["allowed"] is False
+    assert "policy_not_found" in result["auto_express_decision"]["reason_codes"]
+
+    updated = container.get_needs_catalog(catalog_id)
+    assert updated is not None
+    assert len(updated.needs) == before_count

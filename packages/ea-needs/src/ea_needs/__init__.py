@@ -14,4 +14,11 @@ Core sentence patterns:
 - "A wants to move B to C, in order to D" -> Stakeholder + Desire(action, subject, target) + Justification(IN_ORDER_TO)
 """
 
+from ea_needs.ops_feedback import NeedsFeedbackDraft, build_needs_feedback_draft
+
+__all__ = [
+    "NeedsFeedbackDraft",
+    "build_needs_feedback_draft",
+]
+
 __version__ = "0.1.0"

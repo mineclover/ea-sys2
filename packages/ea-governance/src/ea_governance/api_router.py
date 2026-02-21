@@ -7,13 +7,27 @@ Usage in ea-kernel server:
     from ea_governance.api_router import governance_router, layer_schema_router
     app.include_router(governance_router)
     app.include_router(layer_schema_router)
+
+Operational API spec/runbook:
+    packages/ea-governance/docs/ops-events-api-runbook.md
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from ea_ops.events import (
+    FeedbackLayer,
+    ServiceOpsEventSpec,
+    ServiceOpsSeverity,
+    validate_service_ops_event_spec,
+    validate_service_ops_payload,
+)
+from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 from ea_governance.governance_service import (
     business_flow_topology,
@@ -26,6 +40,249 @@ from ea_governance.governance_service import (
 
 governance_router = APIRouter(prefix="/governance", tags=["governance"])
 layer_schema_router = APIRouter(tags=["layers"])
+
+
+class ServiceOpsEventSpecRequest(BaseModel):
+    """ServiceOpsEventSpec request payload."""
+
+    name: str = Field(min_length=3, max_length=64)
+    severity: ServiceOpsSeverity
+    must_include: tuple[str, ...]
+    feeds_back_to: FeedbackLayer
+
+
+class ServiceOpsIngestionRequest(BaseModel):
+    """Single event ingestion API payload."""
+
+    spec: ServiceOpsEventSpecRequest
+    payload: dict[str, Any]
+    catalog_id: str | None = None
+    stakeholder_id: str | None = None
+    auto_express: bool = False
+    tags: list[str] | None = None
+    actor: str = "api-user"
+
+
+def _resolve_governance_container(request: Request) -> Any:
+    container = getattr(request.app.state, "governance_container", None)
+    if container is not None:
+        return container
+
+    system = getattr(request.app.state, "system", None)
+    schema = getattr(system, "_base_schema", None)
+    system_data_dir = getattr(system, "data_dir", None)
+    data_dir = system_data_dir.parent if isinstance(system_data_dir, Path) else None
+    if data_dir is None or schema is None:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "ops_ingestion_configuration_error",
+                "message": "governance container is not initialized",
+                "issues": [
+                    {
+                        "field": "app.state.governance_container",
+                        "message": (
+                            "set app.state.governance_container or provide app.state.system "
+                            "with data_dir/_base_schema"
+                        ),
+                    }
+                ],
+            },
+        )
+
+    from ea_governance.facade import GovernanceContainer
+
+    container = GovernanceContainer(data_dir, schema, kernel_system=system)
+    request.app.state.governance_container = container
+    registration = getattr(request.app.state, "registration", None)
+    if registration is None:
+        request.app.state.registration = getattr(container, "model_registration", None)
+    return container
+
+
+def _validation_issue(field: str, message: str) -> dict[str, str]:
+    return {"field": field, "message": message}
+
+
+def _validation_error_detail(issues: list[dict[str, str]]) -> dict[str, Any]:
+    return {
+        "error": "ops_event_validation_error",
+        "message": "Service ops ingestion request failed validation",
+        "issues": issues,
+    }
+
+
+def _validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(status_code=422, detail=_validation_error_detail(issues))
+
+
+def _query_validation_error_detail(issues: list[dict[str, str]]) -> dict[str, Any]:
+    return {
+        "error": "ops_event_query_validation_error",
+        "message": "Service ops query parameters failed validation",
+        "issues": issues,
+    }
+
+
+def _query_validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(status_code=422, detail=_query_validation_error_detail(issues))
+
+
+def _lineage_replay_validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail={
+            "error": "lineage_replay_validation_error",
+            "message": "Lineage replay request failed validation",
+            "issues": issues,
+        },
+    )
+
+
+def _v2_spec_validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail={
+            "error": "v2_spec_validation_error",
+            "message": "V2 spec status request failed validation",
+            "issues": issues,
+        },
+    )
+
+
+def _lineage_replay_warning(
+    code: str,
+    message: str,
+    *,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    warning: dict[str, Any] = {"code": code, "message": message}
+    if details:
+        warning["details"] = details
+    return warning
+
+
+def _lineage_replay_evidence_blocked(missing_operations: list[str]) -> HTTPException:
+    operation_list = ", ".join(missing_operations)
+    return HTTPException(
+        status_code=409,
+        detail={
+            "error": "lineage_replay_evidence_blocked",
+            "message": "Lineage replay blocked because required evidence is missing",
+            "issues": [
+                _validation_issue(
+                    "evidence.missing_evidence_operations",
+                    f"missing required evidence for operations: {operation_list}",
+                )
+            ],
+            "missing_evidence_operations": missing_operations,
+        },
+    )
+
+
+def _spec_validation_issues(errors: list[str]) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    for message in errors:
+        field = "spec"
+        if message.startswith("name "):
+            field = "spec.name"
+        elif message.startswith("must_include "):
+            field = "spec.must_include"
+        issues.append(_validation_issue(field, message))
+    return issues
+
+
+def _payload_validation_issues(errors: list[str]) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    marker = "missing required ops field:"
+    for message in errors:
+        field = "payload"
+        if message.startswith(marker):
+            required_field = message[len(marker):].strip()
+            if required_field:
+                field = f"payload.{required_field}"
+        issues.append(_validation_issue(field, message))
+    return issues
+
+
+def _prefixed_issues(prefix: str, issues: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        _validation_issue(f"{prefix}.{issue['field']}", issue["message"])
+        for issue in issues
+    ]
+
+
+def _payload_correlation(payload: Mapping[str, Any]) -> tuple[str, str]:
+    trace_id = str(payload.get("trace_id", "")).strip()
+    lineage_id = str(payload.get("lineage_id", "")).strip()
+    return trace_id, lineage_id
+
+
+def _ingestion_response(result: Mapping[str, Any]) -> dict[str, Any]:
+    infra_snapshot_id = result.get("infra_snapshot_id")
+    feedback_snapshot_id = result.get("feedback_snapshot_id")
+    snapshot_id = feedback_snapshot_id or infra_snapshot_id
+    return {
+        **dict(result),
+        "transaction_id": str(result.get("transaction_id", "")),
+        "trace_id": str(result.get("trace_id", "")),
+        "lineage_id": str(result.get("lineage_id", "")),
+        "snapshot_id": snapshot_id,
+    }
+
+
+def _parse_timestamp(
+    value: str,
+    *,
+    field: str,
+) -> datetime:
+    normalized = value[:-1] if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as err:
+        raise _query_validation_error(
+            [_validation_issue(field, f"invalid ISO-8601 timestamp: {value!r}")]
+        ) from err
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _ops_event_response(event_id: str, payload: Mapping[str, Any]) -> dict[str, Any] | None:
+    if str(payload.get("kind", "")).strip() != "service_ops_event":
+        return None
+
+    event_name = (
+        str(payload.get("event_name", "")).strip()
+        or str(payload.get("name", "")).strip()
+    )
+    return {
+        "id": event_id,
+        "event_name": event_name,
+        "severity": str(payload.get("severity", "")),
+        "feeds_back_to": str(payload.get("feeds_back_to", "")),
+        "trace_id": str(payload.get("trace_id", "")),
+        "lineage_id": str(payload.get("lineage_id", "")),
+        "payload": payload.get("payload", {}),
+        "ingested_at": str(payload.get("ingested_at", "")),
+    }
+
+
+_V2_SPEC_ENTITY_ORDER = (
+    "profile",
+    "layers",
+    "flow_edges",
+    "state_tokens",
+    "transitions",
+    "artifact_types",
+    "trace_links",
+    "governance_events",
+    "loop_contracts",
+    "infra_assets",
+    "service_ops_events",
+    "evidence_bindings",
+)
+_BULK_INGESTION_STRATEGY = "partial"
 
 
 @governance_router.get("/layers")
@@ -62,6 +319,626 @@ def governance_business_flow(lang: str | None = None) -> dict[str, Any]:
 def governance_dashboard_endpoint() -> dict[str, Any]:
     """Overall governance status: layers, schema, frameworks."""
     return governance_dashboard()
+
+
+def _normalize_v2_entity_name(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_")
+    return "_".join(part for part in normalized.split("_") if part)
+
+
+def _v2_spec_entity_statuses() -> list[dict[str, Any]]:
+    try:
+        from ea_profile.v2.types import (
+            ArtifactTier,
+            ArtifactTypeSpec,
+            EvidenceBindingSpec,
+            EvidenceBindingTarget,
+            FeedbackLayer,
+            FlowEdgeKind,
+            FlowEdgeSpec,
+            GovernanceEventSpec,
+            GovernanceRetentionPolicy,
+            InfraAssetSpec,
+            InfraAssetType,
+            InfraCriticality,
+            InfraEnvironment,
+            LayerRole,
+            LayerSpec,
+            LoopContractSpec,
+            ProfileSpec,
+            ServiceOpsEventSpec,
+            ServiceOpsSeverity,
+            StateTokenSpec,
+            TraceLinkSpec,
+            TraceRelation,
+            TransitionSpec,
+            TypeSystemSpec,
+        )
+    except Exception as err:
+        message = f"failed to import ea_profile.v2.types: {err}"
+        return [
+            {
+                "entity": entity,
+                "loaded": False,
+                "validated": False,
+                "errors": [message],
+            }
+            for entity in _V2_SPEC_ENTITY_ORDER
+        ]
+
+    profile = ProfileSpec(
+        id="sample.profile",
+        version="1.0.0",
+        kernel_version="2.5.0",
+        namespace="sample.ns",
+        domain="sample.domain",
+    )
+    proposed_state = StateTokenSpec(
+        id="decision.proposed",
+        layer="decision",
+        canonical="PROPOSED",
+        aliases=("DecisionStatusProposed",),
+    )
+    accepted_state = StateTokenSpec(
+        id="decision.accepted",
+        layer="decision",
+        canonical="ACCEPTED",
+        aliases=("DecisionStatusAccepted",),
+    )
+    transition = TransitionSpec(
+        id="decision.proposed_to_accepted",
+        layer="decision",
+        from_state="decision.proposed",
+        to_state="decision.accepted",
+        requires_trace=True,
+        requires_governance_event="state.transitioned",
+    )
+    trace_link = TraceLinkSpec(
+        id="trace.decision_to_op",
+        source_type="decision_record",
+        target_type="kernel_model_operation",
+        relation=TraceRelation.DERIVED_FROM,
+        required=True,
+    )
+    surface_trace_link = TraceLinkSpec(
+        id="trace.surface_to_decision",
+        source_type="surface_artifact",
+        target_type="decision_record",
+        relation=TraceRelation.INFORMED_BY,
+        required=True,
+    )
+    evidence_binding = EvidenceBindingSpec(
+        id="binding.surface",
+        source_type="surface_artifact",
+        binds_to=EvidenceBindingTarget.DASHBOARD_SNAPSHOT,
+        required_fields=("environment", "artifact_id", "captured_at"),
+    )
+
+    checks: dict[str, Callable[[], Any]] = {
+        "profile": lambda: profile,
+        "layers": lambda: LayerSpec(
+            id="decision",
+            order=1,
+            role=LayerRole.CAUSAL_MEMORY,
+            responsibility="decision lifecycle management",
+        ),
+        "flow_edges": lambda: FlowEdgeSpec(
+            id="edge.decision_to_needs",
+            from_layer="decision",
+            to_layer="needs",
+            kind=FlowEdgeKind.FEEDBACK_OBSERVATION,
+            required=True,
+        ),
+        "state_tokens": lambda: (proposed_state, accepted_state),
+        "transitions": lambda: TypeSystemSpec(
+            profile=profile,
+            state_tokens=(proposed_state, accepted_state),
+            transitions=(transition,),
+        ),
+        "artifact_types": lambda: ArtifactTypeSpec(
+            id="artifact.ui_bundle",
+            tier=ArtifactTier.UI,
+            source_layers=("projection",),
+            kernel_element_pattern="*",
+        ),
+        "trace_links": lambda: trace_link,
+        "governance_events": lambda: GovernanceEventSpec(
+            name="state.transitioned",
+            must_include=("trace_id", "lineage_id", "actor"),
+            retention_policy=GovernanceRetentionPolicy.IMMUTABLE,
+        ),
+        "loop_contracts": lambda: LoopContractSpec(
+            id="loop.closed_feedback",
+            path=("decision", "needs", "decision"),
+            enforce_trace=True,
+            enforce_event_chain=True,
+        ),
+        "infra_assets": lambda: InfraAssetSpec(
+            id="payments.api",
+            asset_type=InfraAssetType.API_GATEWAY,
+            owner="platform-data",
+            environment=InfraEnvironment.PROD,
+            criticality=InfraCriticality.TIER1,
+            exposure_refs=(
+                "url:https://api.example.com/payments",
+                "dashboard:https://grafana.example.com/d/payments",
+            ),
+        ),
+        "service_ops_events": lambda: ServiceOpsEventSpec(
+            name="slo_breached",
+            severity=ServiceOpsSeverity.HIGH,
+            must_include=("trace_id", "lineage_id", "service_id"),
+            feeds_back_to=FeedbackLayer.NEEDS,
+        ),
+        "evidence_bindings": lambda: TypeSystemSpec(
+            profile=profile,
+            trace_links=(trace_link, surface_trace_link),
+            evidence_bindings=(evidence_binding,),
+        ),
+    }
+
+    statuses: list[dict[str, Any]] = []
+    for entity in _V2_SPEC_ENTITY_ORDER:
+        check = checks.get(entity)
+        loaded = check is not None
+        errors: list[str] = []
+        validated = False
+        if check is not None:
+            try:
+                check()
+                validated = True
+            except Exception as err:
+                errors.append(str(err))
+        statuses.append(
+            {
+                "entity": entity,
+                "loaded": loaded,
+                "validated": validated,
+                "errors": errors,
+            }
+        )
+    return statuses
+
+
+@governance_router.get("/v2-spec/status")
+def get_v2_spec_status(
+    request: Request,
+) -> dict[str, Any]:
+    """Expose ea_profile.v2 spec and validator readiness by entity."""
+    entities = request.query_params.getlist("entities")
+    statuses = _v2_spec_entity_statuses()
+    by_entity = {item["entity"]: item for item in statuses}
+    selected_entities = list(_V2_SPEC_ENTITY_ORDER)
+
+    if entities:
+        issues: list[dict[str, str]] = []
+        selected_entities = []
+        seen: set[str] = set()
+        expected = ", ".join(_V2_SPEC_ENTITY_ORDER)
+        for index, raw in enumerate(entities):
+            normalized = _normalize_v2_entity_name(raw)
+            if not normalized:
+                issues.append(
+                    _validation_issue(
+                        f"entities[{index}]",
+                        "entity filter must be a non-empty string",
+                    )
+                )
+                continue
+            if normalized not in by_entity:
+                issues.append(
+                    _validation_issue(
+                        f"entities[{index}]",
+                        (
+                            f"unknown entity {raw!r}; "
+                            f"expected one of: {expected}"
+                        ),
+                    )
+                )
+                continue
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            selected_entities.append(normalized)
+
+        if issues:
+            raise _v2_spec_validation_error(issues)
+
+    selected = [by_entity[entity] for entity in selected_entities]
+    loaded_count = sum(1 for item in selected if item["loaded"])
+    validated_count = sum(1 for item in selected if item["validated"])
+    error_count = sum(len(item["errors"]) for item in selected)
+    overall_status = (
+        "ok"
+        if loaded_count == len(selected)
+        and validated_count == len(selected)
+        and error_count == 0
+        else "warning"
+    )
+
+    return {
+        "spec": "ea_profile.v2",
+        "status": overall_status,
+        "entities": selected,
+        "summary": {
+            "entity_count": len(selected),
+            "loaded_count": loaded_count,
+            "validated_count": validated_count,
+            "error_count": error_count,
+        },
+    }
+
+
+@governance_router.get("/ops-events")
+def list_ops_events(
+    request: Request,
+    trace_id: str | None = None,
+    lineage_id: str | None = None,
+    event_name: str | None = None,
+    ingested_from: str | None = None,
+    ingested_to: str | None = None,
+    limit: int = Query(default=100, ge=0),
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    """List persisted ops events with filter and limit/offset pagination."""
+    container = _resolve_governance_container(request)
+
+    from_ts = _parse_timestamp(ingested_from, field="ingested_from") if ingested_from else None
+    to_ts = _parse_timestamp(ingested_to, field="ingested_to") if ingested_to else None
+    if from_ts is not None and to_ts is not None and from_ts > to_ts:
+        raise _query_validation_error(
+            [
+                _validation_issue(
+                    "ingested_from",
+                    "ingested_from must be less than or equal to ingested_to",
+                )
+            ]
+        )
+
+    events: list[dict[str, Any]] = []
+    snapshots = container.list_layer_snapshots("infra")
+    for snapshot in snapshots:
+        payload = snapshot.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+        response = _ops_event_response(str(snapshot.get("model_id", "")), payload)
+        if response is None:
+            continue
+
+        if trace_id and response["trace_id"] != trace_id:
+            continue
+        if lineage_id and response["lineage_id"] != lineage_id:
+            continue
+        if event_name and response["event_name"] != event_name:
+            continue
+
+        ingested_at = str(response["ingested_at"])
+        ingested_ts = _parse_timestamp(ingested_at, field="ingested_at")
+        if from_ts is not None and ingested_ts < from_ts:
+            continue
+        if to_ts is not None and ingested_ts > to_ts:
+            continue
+        events.append(response)
+
+    events.sort(
+        key=lambda item: _parse_timestamp(str(item["ingested_at"]), field="ingested_at"),
+        reverse=True,
+    )
+    total = len(events)
+    items = events[offset : offset + limit]
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "items": items,
+    }
+
+
+@governance_router.get("/ops-events/{event_id}")
+def get_ops_event(
+    event_id: str,
+    request: Request,
+) -> dict[str, Any]:
+    """Get a single persisted ops event by its snapshot ID."""
+    container = _resolve_governance_container(request)
+    payload = container.get_layer_snapshot("infra", event_id)
+    if payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "ops_event_not_found",
+                "message": f"ops event {event_id!r} not found",
+            },
+        )
+    response = _ops_event_response(event_id, payload)
+    if response is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "ops_event_not_found",
+                "message": f"ops event {event_id!r} not found",
+            },
+        )
+    return response
+
+
+@governance_router.get("/lineage-replay/{decision_id}")
+def replay_lineage(
+    decision_id: str,
+    request: Request,
+    evidence_mode: str = Query(default="warn"),
+) -> dict[str, Any]:
+    """Replay decision trace lineage and expose path/warning diagnostics."""
+    normalized_evidence_mode = evidence_mode.strip().lower()
+    if normalized_evidence_mode not in {"warn", "block"}:
+        raise _lineage_replay_validation_error(
+            [
+                _validation_issue(
+                    "evidence_mode",
+                    "must be one of: warn, block",
+                )
+            ]
+        )
+
+    container = _resolve_governance_container(request)
+    try:
+        exploration = container.explore_model_decision_trace(decision_id)
+    except ValueError as err:
+        raise _lineage_replay_validation_error(
+            [_validation_issue("decision_id", str(err))]
+        ) from err
+
+    if exploration is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "lineage_replay_not_found",
+                "message": f"decision trace {decision_id!r} not found",
+            },
+        )
+
+    evidence_raw = exploration.get("evidence")
+    evidence = evidence_raw if isinstance(evidence_raw, Mapping) else {}
+    missing_evidence_raw = evidence.get("missing_evidence_operations", [])
+    missing_evidence_operations = sorted(
+        {
+            str(item).strip()
+            for item in missing_evidence_raw
+            if isinstance(item, str) and item.strip()
+        }
+    ) if isinstance(missing_evidence_raw, list) else []
+    if missing_evidence_operations and normalized_evidence_mode == "block":
+        raise _lineage_replay_evidence_blocked(missing_evidence_operations)
+
+    lineage_raw = exploration.get("lineage")
+    lineage = lineage_raw if isinstance(lineage_raw, Mapping) else {}
+
+    replayed_nodes_raw = lineage.get("replayed_nodes", [])
+    replayed_nodes = [
+        item
+        for item in replayed_nodes_raw
+        if isinstance(item, dict)
+    ] if isinstance(replayed_nodes_raw, list) else []
+
+    path_raw = lineage.get("path_to_latest_operation", [])
+    path_to_latest_operation = [
+        item
+        for item in path_raw
+        if isinstance(item, dict)
+    ] if isinstance(path_raw, list) else []
+
+    missing_raw = lineage.get("missing_required_relations", [])
+    missing_required_relations = sorted(
+        {
+            str(item).strip()
+            for item in missing_raw
+            if isinstance(item, str) and item.strip()
+        }
+    ) if isinstance(missing_raw, list) else []
+
+    path_error_raw = lineage.get("path_error")
+    path_error = (
+        str(path_error_raw).strip()
+        if isinstance(path_error_raw, str) and path_error_raw.strip()
+        else None
+    )
+
+    warnings: list[dict[str, Any]] = []
+    if path_error is not None:
+        warnings.append(
+            _lineage_replay_warning(
+                "lineage_path_disconnected",
+                "Unable to compose lineage path to latest operation",
+                details={"path_error": path_error},
+            )
+        )
+    if missing_required_relations:
+        warnings.append(
+            _lineage_replay_warning(
+                "lineage_missing_required_relations",
+                "Required lineage relations are missing",
+                details={"relations": missing_required_relations},
+            )
+        )
+    if missing_evidence_operations and normalized_evidence_mode == "warn":
+        warnings.append(
+            _lineage_replay_warning(
+                "lineage_missing_required_evidence",
+                "Required lineage evidence is missing",
+                details={"operations": missing_evidence_operations},
+            )
+        )
+
+    return {
+        "decision_id": str(exploration.get("decision_id", decision_id)),
+        "evidence_mode": normalized_evidence_mode,
+        "status": "warning" if warnings else "ok",
+        "replayed_nodes": replayed_nodes,
+        "path_to_latest_operation": path_to_latest_operation,
+        "missing_required_relations": missing_required_relations,
+        "missing_evidence_operations": missing_evidence_operations,
+        "path_error": path_error,
+        "warnings": warnings,
+    }
+
+
+@governance_router.post("/ops-events/ingest")
+def ingest_service_ops_event(
+    request: Request,
+    body: ServiceOpsIngestionRequest,
+) -> dict[str, Any]:
+    """Ingest a single service operations event through governance pipeline."""
+    spec = ServiceOpsEventSpec(
+        name=body.spec.name,
+        severity=body.spec.severity,
+        must_include=tuple(body.spec.must_include),
+        feeds_back_to=body.spec.feeds_back_to,
+    )
+    spec_errors = validate_service_ops_event_spec(spec)
+    payload_errors = validate_service_ops_payload(spec, body.payload)
+    issues = _spec_validation_issues(spec_errors) + _payload_validation_issues(payload_errors)
+    if issues:
+        raise _validation_error(issues)
+
+    container = _resolve_governance_container(request)
+    try:
+        result = container.ingest_service_ops_event(
+            spec=spec,
+            payload=body.payload,
+            catalog_id=body.catalog_id,
+            stakeholder_id=body.stakeholder_id,
+            auto_express=body.auto_express,
+            tags=body.tags,
+            actor=body.actor,
+        )
+    except ValueError as err:
+        raise _validation_error([_validation_issue("request", str(err))]) from err
+
+    return _ingestion_response(result)
+
+
+@governance_router.post("/ops-events/ingest/bulk")
+def ingest_service_ops_events_bulk(
+    request: Request,
+    body: list[ServiceOpsIngestionRequest],
+) -> dict[str, Any]:
+    """Ingest multiple service operations events with fixed partial-failure strategy."""
+    if not body:
+        raise _validation_error(
+            [_validation_issue("items", "at least one ingestion item is required")]
+        )
+
+    container = _resolve_governance_container(request)
+
+    correlated_trace_id = ""
+    correlated_lineage_id = ""
+    for item in body:
+        trace_id, lineage_id = _payload_correlation(item.payload)
+        if trace_id and lineage_id:
+            correlated_trace_id = trace_id
+            correlated_lineage_id = lineage_id
+            break
+
+    results: list[dict[str, Any]] = []
+    success_count = 0
+    failed_count = 0
+
+    for index, item in enumerate(body):
+        spec = ServiceOpsEventSpec(
+            name=item.spec.name,
+            severity=item.spec.severity,
+            must_include=tuple(item.spec.must_include),
+            feeds_back_to=item.spec.feeds_back_to,
+        )
+        spec_errors = validate_service_ops_event_spec(spec)
+        payload_errors = validate_service_ops_payload(spec, item.payload)
+        issues = _spec_validation_issues(spec_errors) + _payload_validation_issues(
+            payload_errors
+        )
+
+        trace_id, lineage_id = _payload_correlation(item.payload)
+        if (
+            correlated_trace_id
+            and trace_id
+            and trace_id != correlated_trace_id
+        ):
+            issues.append(
+                _validation_issue(
+                    "payload.trace_id",
+                    (
+                        "bulk correlation mismatch: expected trace_id "
+                        f"{correlated_trace_id!r}"
+                    ),
+                )
+            )
+        if (
+            correlated_lineage_id
+            and lineage_id
+            and lineage_id != correlated_lineage_id
+        ):
+            issues.append(
+                _validation_issue(
+                    "payload.lineage_id",
+                    (
+                        "bulk correlation mismatch: expected lineage_id "
+                        f"{correlated_lineage_id!r}"
+                    ),
+                )
+            )
+
+        prefixed = _prefixed_issues(f"items[{index}]", issues)
+        if prefixed:
+            failed_count += 1
+            results.append(
+                {
+                    "index": index,
+                    "status": "failed",
+                    "error": _validation_error_detail(prefixed),
+                }
+            )
+            continue
+
+        try:
+            result = container.ingest_service_ops_event(
+                spec=spec,
+                payload=item.payload,
+                catalog_id=item.catalog_id,
+                stakeholder_id=item.stakeholder_id,
+                auto_express=item.auto_express,
+                tags=item.tags,
+                actor=item.actor,
+            )
+        except ValueError as err:
+            failed_count += 1
+            results.append(
+                {
+                    "index": index,
+                    "status": "failed",
+                    "error": _validation_error_detail(
+                        _prefixed_issues(
+                            f"items[{index}]",
+                            [_validation_issue("request", str(err))],
+                        )
+                    ),
+                }
+            )
+            continue
+
+        success_count += 1
+        results.append(
+            {
+                "index": index,
+                "status": "success",
+                "result": _ingestion_response(result),
+            }
+        )
+
+    return {
+        "strategy": _BULK_INGESTION_STRATEGY,
+        "success_count": success_count,
+        "failed_count": failed_count,
+        "results": results,
+    }
 
 
 @layer_schema_router.get("/layers/{layer_key}/schema")

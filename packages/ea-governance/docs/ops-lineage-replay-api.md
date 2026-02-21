@@ -1,5 +1,7 @@
 # Lineage Replay API
 
+> Canonical combined API + operations runbook: `packages/ea-governance/docs/ops-events-api-runbook.md`
+
 ## Endpoint
 - `GET /governance/lineage-replay/{decision_id}`
 

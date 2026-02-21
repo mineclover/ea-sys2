@@ -14,6 +14,7 @@ after each iteration and it's included in prompts for context.
 - For lineage replay APIs, return partial lineage data with `status=warning` + structured `warnings[]` on path disconnection instead of failing the whole request, while keeping 422/404 envelopes for invalid/missing decisions.
 - For policy-gated optional actions (like auto-express), compute a single structured decision (`requested`, `allowed`, `reason_codes`) and persist the same structure to snapshot/event/response so diagnostics stay deterministic across layers.
 - For auto-expressed ops→needs flow, reuse one `expressed_need` object (`catalog_id`, `need_id`, `lineage_id`, `version`) across transaction events and ingestion responses to keep audit/API parity deterministic.
+- For operational APIs, keep one canonical docs/runbook file under the package `docs/` directory and reference it from both module-level entrypoints and package README to prevent contract drift.
 
 ---
 
@@ -169,4 +170,23 @@ after each iteration and it's included in prompts for context.
     - A single shared `expressed_need` payload reused across `service_ops_event_ingested` and `needs_expressed_from_service_ops` events plus API/container response prevents drift between audit and client-facing contracts.
   - Gotchas encountered
     - Existing ingest tests validated need-count increase but did not explicitly pin `need_id/lineage_id/version` parity across all emitted transaction events; adding these checks prevents silent contract regressions.
+---
+
+## 2026-02-21 - US-009
+- What was implemented
+  - Added a canonical governance ops API + operations runbook document covering single/bulk ingestion, list/get, and lineage replay contracts.
+  - Documented runbook procedures for validation failures (`422`), bulk partial failures (`200` with failed items), and retention cleanup (`cleanup_preview` + `cleanup`).
+  - Added reproducible manual smoke procedure with server startup, curl calls, and expected verification points.
+  - Linked the canonical docs from `ea_governance.api_router` module docstring and `ea-governance` package README.
+- Files changed
+  - `packages/ea-governance/docs/ops-events-api-runbook.md`
+  - `packages/ea-governance/docs/ops-lineage-replay-api.md`
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/README.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Keeping one canonical ops API/runbook document and linking it from both runtime entrypoints and README reduces drift between implementation and operations docs.
+  - Gotchas encountered
+    - Bulk ingestion partial failures return `HTTP 200`, so runbooks must explicitly instruct operators to treat `failed_count > 0` as failure.
 ---

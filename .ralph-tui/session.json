@@ -3,10 +3,10 @@
   "sessionId": "20ea4c68-14d0-48fe-b3fc-5edf7df4782d",
   "status": "running",
   "startedAt": "2026-02-21T02:03:04.364Z",
-  "updatedAt": "2026-02-21T02:37:03.862Z",
-  "currentIteration": 7,
+  "updatedAt": "2026-02-21T02:40:48.835Z",
+  "currentIteration": 8,
   "maxIterations": 0,
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -84,6 +84,16 @@
       "durationMs": 425489,
       "startedAt": "2026-02-21T02:28:09.596Z",
       "endedAt": "2026-02-21T02:35:15.085Z"
+    },
+    {
+      "iteration": 8,
+      "status": "completed",
+      "taskId": "US-008",
+      "taskTitle": "Needs 자동 반영 실행 경로 완성",
+      "taskCompleted": true,
+      "durationMs": 107674,
+      "startedAt": "2026-02-21T02:35:16.186Z",
+      "endedAt": "2026-02-21T02:37:03.860Z"
     }
   ],
   "skippedTaskIds": [],

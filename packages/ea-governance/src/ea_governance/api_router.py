@@ -7,6 +7,9 @@ Usage in ea-kernel server:
     from ea_governance.api_router import governance_router, layer_schema_router
     app.include_router(governance_router)
     app.include_router(layer_schema_router)
+
+Operational API spec/runbook:
+    packages/ea-governance/docs/ops-events-api-runbook.md
 """
 
 from __future__ import annotations

@@ -3,10 +3,10 @@
   "sessionId": "20ea4c68-14d0-48fe-b3fc-5edf7df4782d",
   "status": "running",
   "startedAt": "2026-02-21T02:03:04.364Z",
-  "updatedAt": "2026-02-21T02:16:39.323Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-02-21T02:19:55.205Z",
+  "currentIteration": 3,
   "maxIterations": 0,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -34,6 +34,16 @@
       "durationMs": 202971,
       "startedAt": "2026-02-21T02:08:32.375Z",
       "endedAt": "2026-02-21T02:11:55.346Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-003",
+      "taskTitle": "단건 Ops Ingestion API 제공",
+      "taskCompleted": true,
+      "durationMs": 282881,
+      "startedAt": "2026-02-21T02:11:56.440Z",
+      "endedAt": "2026-02-21T02:16:39.321Z"
     }
   ],
   "skippedTaskIds": [],

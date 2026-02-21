@@ -9,6 +9,7 @@ after each iteration and it's included in prompts for context.
 - For append-only `read(after=..., limit=...)`, preserve in-memory parity by using insertion order (`rowid ASC`) and treating unknown `after` IDs as "start from beginning".
 - For retention cleanup parity, compute deletion candidates from the same ordered `(id, ingested_at)` rows and expose a non-mutating `cleanup_preview(...)` alongside mutating `cleanup(...)`.
 - Router-level write APIs can keep validation deterministic by splitting errors into typed issue entries (`field`, `message`) and returning a stable 422 envelope from the endpoint layer.
+- For bulk write APIs using fixed partial-failure strategy, keep HTTP 200 with `strategy/success_count/failed_count/results[]` and reuse the same validation envelope per failed item with `items[{index}].`-prefixed fields.
 
 ---
 
@@ -68,4 +69,22 @@ after each iteration and it's included in prompts for context.
     - Endpoint-level validation can combine domain validators (`validate_service_ops_event_spec`, `validate_service_ops_payload`) with stable API error envelopes to keep contract failures machine-parseable.
   - Gotchas encountered
     - The shared governance router is included by `ea-kernel` and may execute before container initialization, so endpoint code must resolve `app.state.governance_container` defensively.
+---
+
+## 2026-02-21 - US-004
+- What was implemented
+  - Added bulk ingestion endpoint to governance API router: `POST /governance/ops-events/ingest/bulk` with array input (`list[ServiceOpsIngestionRequest]`).
+  - Fixed bulk API contract to a partial-failure strategy (`strategy = "partial"`): endpoint returns `success_count`, `failed_count`, and item-level `results[]` with `success`/`failed` status.
+  - Reused the existing structured validation envelope (`error`, `message`, `issues[]`) per failed bulk item, prefixing issue fields as `items[{index}].*` for deterministic client parsing.
+  - Added request-level trace/lineage correlation validation for bulk ingestion: all items must correlate to the same `trace_id` and `lineage_id`; mismatches fail only the offending item under partial strategy.
+  - Added API router tests covering full-success bulk ingest, partial-failure behavior contract, and trace/lineage correlation mismatch validation.
+- Files changed
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/tests/test_api_router.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Bulk ingestion can stay machine-friendly by embedding the exact single-item validation envelope into each failed result entry and making fields index-addressable (`items[{index}].field`).
+  - Gotchas encountered
+    - Correlation checks should run after per-item spec/payload validation and only compare non-empty IDs, to avoid noisy duplicate errors when required fields are already missing.
 ---

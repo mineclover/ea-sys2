@@ -27,6 +27,8 @@ class _FakeGovernanceContainer:
         tags: list[str] | None = None,
         actor: str = "api-user",
     ) -> dict[str, Any]:
+        tx_suffix = len(self.calls) + 1
+        tx_id = f"tx-api-{tx_suffix:03d}"
         self.calls.append(
             {
                 "spec": spec,
@@ -44,9 +46,9 @@ class _FakeGovernanceContainer:
             "feeds_back_to": spec.feeds_back_to.value,
             "trace_id": str(payload["trace_id"]),
             "lineage_id": str(payload["lineage_id"]),
-            "transaction_id": "tx-api-001",
-            "infra_snapshot_id": "service_ops_event:tx-api-001",
-            "feedback_snapshot_id": "service_ops_feedback:tx-api-001",
+            "transaction_id": tx_id,
+            "infra_snapshot_id": f"service_ops_event:{tx_id}",
+            "feedback_snapshot_id": f"service_ops_feedback:{tx_id}",
             "needs_feedback_draft": {
                 "action": "improve",
                 "subject": "slo:latency_p95",
@@ -177,3 +179,160 @@ def test_ops_event_ingestion_endpoint_returns_structured_payload_validation_erro
         for issue in detail["issues"]
     )
     assert container.calls == []
+
+
+def test_ops_event_bulk_ingestion_endpoint_success_with_partial_strategy_contract() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.post(
+        "/governance/ops-events/ingest/bulk",
+        json=[
+            {
+                "spec": {
+                    "name": "slo_breached",
+                    "severity": "high",
+                    "must_include": ["trace_id", "lineage_id", "service_id", "slo_name"],
+                    "feeds_back_to": "needs",
+                },
+                "payload": {
+                    "trace_id": "trace-bulk-001",
+                    "lineage_id": "lineage-bulk-001",
+                    "service_id": "payments-api",
+                    "slo_name": "latency_p95",
+                },
+                "actor": "ops-bot",
+            },
+            {
+                "spec": {
+                    "name": "slo_recovered",
+                    "severity": "medium",
+                    "must_include": ["trace_id", "lineage_id", "service_id", "slo_name"],
+                    "feeds_back_to": "needs",
+                },
+                "payload": {
+                    "trace_id": "trace-bulk-001",
+                    "lineage_id": "lineage-bulk-001",
+                    "service_id": "payments-api",
+                    "slo_name": "latency_p95",
+                },
+                "actor": "ops-bot",
+            },
+        ],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["strategy"] == "partial"
+    assert body["success_count"] == 2
+    assert body["failed_count"] == 0
+    assert len(body["results"]) == 2
+    assert body["results"][0]["status"] == "success"
+    assert body["results"][1]["status"] == "success"
+    assert body["results"][0]["result"]["transaction_id"] == "tx-api-001"
+    assert body["results"][1]["result"]["transaction_id"] == "tx-api-002"
+    assert len(container.calls) == 2
+
+
+def test_ops_event_bulk_ingestion_endpoint_partial_failure_does_not_abort() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.post(
+        "/governance/ops-events/ingest/bulk",
+        json=[
+            {
+                "spec": {
+                    "name": "slo_breached",
+                    "severity": "high",
+                    "must_include": ["trace_id", "lineage_id", "service_id", "slo_name"],
+                    "feeds_back_to": "needs",
+                },
+                "payload": {
+                    "trace_id": "trace-bulk-002",
+                    "lineage_id": "lineage-bulk-002",
+                    "service_id": "payments-api",
+                    "slo_name": "latency_p95",
+                },
+            },
+            {
+                "spec": {
+                    "name": "slo_breached",
+                    "severity": "high",
+                    "must_include": ["trace_id", "lineage_id", "service_id", "slo_name"],
+                    "feeds_back_to": "needs",
+                },
+                "payload": {
+                    "trace_id": "trace-bulk-002",
+                    "lineage_id": "lineage-bulk-002",
+                    "service_id": "payments-api",
+                },
+            },
+        ],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["strategy"] == "partial"
+    assert body["success_count"] == 1
+    assert body["failed_count"] == 1
+    assert body["results"][0]["status"] == "success"
+    assert body["results"][1]["status"] == "failed"
+    assert body["results"][1]["error"]["error"] == "ops_event_validation_error"
+    assert any(
+        issue["field"] == "items[1].payload.slo_name"
+        and "missing required ops field: slo_name" in issue["message"]
+        for issue in body["results"][1]["error"]["issues"]
+    )
+    assert len(container.calls) == 1
+
+
+def test_ops_event_bulk_ingestion_endpoint_validates_trace_lineage_correlation() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.post(
+        "/governance/ops-events/ingest/bulk",
+        json=[
+            {
+                "spec": {
+                    "name": "slo_breached",
+                    "severity": "high",
+                    "must_include": ["trace_id", "lineage_id", "service_id", "slo_name"],
+                    "feeds_back_to": "needs",
+                },
+                "payload": {
+                    "trace_id": "trace-bulk-003",
+                    "lineage_id": "lineage-bulk-003",
+                    "service_id": "payments-api",
+                    "slo_name": "latency_p95",
+                },
+            },
+            {
+                "spec": {
+                    "name": "slo_recovered",
+                    "severity": "medium",
+                    "must_include": ["trace_id", "lineage_id", "service_id", "slo_name"],
+                    "feeds_back_to": "needs",
+                },
+                "payload": {
+                    "trace_id": "trace-bulk-999",
+                    "lineage_id": "lineage-bulk-003",
+                    "service_id": "payments-api",
+                    "slo_name": "latency_p95",
+                },
+            },
+        ],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success_count"] == 1
+    assert body["failed_count"] == 1
+    assert body["results"][1]["status"] == "failed"
+    assert any(
+        issue["field"] == "items[1].payload.trace_id"
+        and "bulk correlation mismatch" in issue["message"]
+        for issue in body["results"][1]["error"]["issues"]
+    )
+    assert len(container.calls) == 1

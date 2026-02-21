@@ -100,15 +100,16 @@ def _validation_issue(field: str, message: str) -> dict[str, str]:
     return {"field": field, "message": message}
 
 
+def _validation_error_detail(issues: list[dict[str, str]]) -> dict[str, Any]:
+    return {
+        "error": "ops_event_validation_error",
+        "message": "Service ops ingestion request failed validation",
+        "issues": issues,
+    }
+
+
 def _validation_error(issues: list[dict[str, str]]) -> HTTPException:
-    return HTTPException(
-        status_code=422,
-        detail={
-            "error": "ops_event_validation_error",
-            "message": "Service ops ingestion request failed validation",
-            "issues": issues,
-        },
-    )
+    return HTTPException(status_code=422, detail=_validation_error_detail(issues))
 
 
 def _spec_validation_issues(errors: list[str]) -> list[dict[str, str]]:
@@ -136,6 +137,19 @@ def _payload_validation_issues(errors: list[str]) -> list[dict[str, str]]:
     return issues
 
 
+def _prefixed_issues(prefix: str, issues: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        _validation_issue(f"{prefix}.{issue['field']}", issue["message"])
+        for issue in issues
+    ]
+
+
+def _payload_correlation(payload: Mapping[str, Any]) -> tuple[str, str]:
+    trace_id = str(payload.get("trace_id", "")).strip()
+    lineage_id = str(payload.get("lineage_id", "")).strip()
+    return trace_id, lineage_id
+
+
 def _ingestion_response(result: Mapping[str, Any]) -> dict[str, Any]:
     infra_snapshot_id = result.get("infra_snapshot_id")
     feedback_snapshot_id = result.get("feedback_snapshot_id")
@@ -147,6 +161,9 @@ def _ingestion_response(result: Mapping[str, Any]) -> dict[str, Any]:
         "lineage_id": str(result.get("lineage_id", "")),
         "snapshot_id": snapshot_id,
     }
+
+
+_BULK_INGESTION_STRATEGY = "partial"
 
 
 @governance_router.get("/layers")
@@ -218,6 +235,130 @@ def ingest_service_ops_event(
         raise _validation_error([_validation_issue("request", str(err))]) from err
 
     return _ingestion_response(result)
+
+
+@governance_router.post("/ops-events/ingest/bulk")
+def ingest_service_ops_events_bulk(
+    request: Request,
+    body: list[ServiceOpsIngestionRequest],
+) -> dict[str, Any]:
+    """Ingest multiple service operations events with fixed partial-failure strategy."""
+    if not body:
+        raise _validation_error(
+            [_validation_issue("items", "at least one ingestion item is required")]
+        )
+
+    container = _resolve_governance_container(request)
+
+    correlated_trace_id = ""
+    correlated_lineage_id = ""
+    for item in body:
+        trace_id, lineage_id = _payload_correlation(item.payload)
+        if trace_id and lineage_id:
+            correlated_trace_id = trace_id
+            correlated_lineage_id = lineage_id
+            break
+
+    results: list[dict[str, Any]] = []
+    success_count = 0
+    failed_count = 0
+
+    for index, item in enumerate(body):
+        spec = ServiceOpsEventSpec(
+            name=item.spec.name,
+            severity=item.spec.severity,
+            must_include=tuple(item.spec.must_include),
+            feeds_back_to=item.spec.feeds_back_to,
+        )
+        spec_errors = validate_service_ops_event_spec(spec)
+        payload_errors = validate_service_ops_payload(spec, item.payload)
+        issues = _spec_validation_issues(spec_errors) + _payload_validation_issues(
+            payload_errors
+        )
+
+        trace_id, lineage_id = _payload_correlation(item.payload)
+        if (
+            correlated_trace_id
+            and trace_id
+            and trace_id != correlated_trace_id
+        ):
+            issues.append(
+                _validation_issue(
+                    "payload.trace_id",
+                    (
+                        "bulk correlation mismatch: expected trace_id "
+                        f"{correlated_trace_id!r}"
+                    ),
+                )
+            )
+        if (
+            correlated_lineage_id
+            and lineage_id
+            and lineage_id != correlated_lineage_id
+        ):
+            issues.append(
+                _validation_issue(
+                    "payload.lineage_id",
+                    (
+                        "bulk correlation mismatch: expected lineage_id "
+                        f"{correlated_lineage_id!r}"
+                    ),
+                )
+            )
+
+        prefixed = _prefixed_issues(f"items[{index}]", issues)
+        if prefixed:
+            failed_count += 1
+            results.append(
+                {
+                    "index": index,
+                    "status": "failed",
+                    "error": _validation_error_detail(prefixed),
+                }
+            )
+            continue
+
+        try:
+            result = container.ingest_service_ops_event(
+                spec=spec,
+                payload=item.payload,
+                catalog_id=item.catalog_id,
+                stakeholder_id=item.stakeholder_id,
+                auto_express=item.auto_express,
+                tags=item.tags,
+                actor=item.actor,
+            )
+        except ValueError as err:
+            failed_count += 1
+            results.append(
+                {
+                    "index": index,
+                    "status": "failed",
+                    "error": _validation_error_detail(
+                        _prefixed_issues(
+                            f"items[{index}]",
+                            [_validation_issue("request", str(err))],
+                        )
+                    ),
+                }
+            )
+            continue
+
+        success_count += 1
+        results.append(
+            {
+                "index": index,
+                "status": "success",
+                "result": _ingestion_response(result),
+            }
+        )
+
+    return {
+        "strategy": _BULK_INGESTION_STRATEGY,
+        "success_count": success_count,
+        "failed_count": failed_count,
+        "results": results,
+    }
 
 
 @layer_schema_router.get("/layers/{layer_key}/schema")

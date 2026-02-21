@@ -429,6 +429,98 @@ def test_v2_transition_state_validation_rejects_cross_layer_reference() -> None:
         )
 
 
+def test_v2_trace_evidence_validation_accepts_connected_source_type() -> None:
+    spec = TypeSystemSpec(
+        profile=ProfileSpec(
+            id="ea-m2-v2",
+            version="2.0.0",
+            kernel_version="2.5.0",
+            namespace="ea_sys",
+            domain="governance_core",
+        ),
+        trace_links=(
+            TraceLinkSpec(
+                id="decision_informed_by_surface",
+                source_type="decision_record",
+                target_type="surface_artifact",
+                relation=TraceRelation.INFORMED_BY,
+                required=True,
+            ),
+        ),
+        evidence_bindings=(
+            EvidenceBindingSpec(
+                id="surface_to_deployment",
+                source_type="surface_artifact",
+                binds_to=EvidenceBindingTarget.DEPLOYMENT_RECORD,
+                required_fields=("service_id", "deployment_id", "environment"),
+            ),
+        ),
+    )
+
+    assert spec.evidence_bindings[0].source_type == "surface_artifact"
+
+
+def test_v2_trace_evidence_validation_rejects_unlinked_evidence_source_type() -> None:
+    with pytest.raises(ValueError, match="source_type references unknown trace node type"):
+        TypeSystemSpec(
+            profile=ProfileSpec(
+                id="ea-m2-v2",
+                version="2.0.0",
+                kernel_version="2.5.0",
+                namespace="ea_sys",
+                domain="governance_core",
+            ),
+            trace_links=(
+                TraceLinkSpec(
+                    id="decision_informed_by_projection",
+                    source_type="decision_record",
+                    target_type="surface_artifact",
+                    relation=TraceRelation.INFORMED_BY,
+                    required=True,
+                ),
+            ),
+            evidence_bindings=(
+                EvidenceBindingSpec(
+                    id="kernel_change_to_commit",
+                    source_type="kernel_change",
+                    binds_to=EvidenceBindingTarget.CODE_COMMIT,
+                    required_fields=("repo", "commit_sha", "author"),
+                ),
+            ),
+        )
+
+
+def test_v2_trace_evidence_validation_enforces_surface_artifact_environment_rule() -> None:
+    binding = EvidenceBindingSpec(
+        id="surface_to_deployment",
+        source_type="surface_artifact",
+        binds_to=EvidenceBindingTarget.DEPLOYMENT_RECORD,
+        required_fields=("service_id", "deployment_id", "environment"),
+    )
+    object.__setattr__(binding, "required_fields", ("service_id", "deployment_id", "region"))
+
+    with pytest.raises(ValueError, match="required_fields must include environment"):
+        TypeSystemSpec(
+            profile=ProfileSpec(
+                id="ea-m2-v2",
+                version="2.0.0",
+                kernel_version="2.5.0",
+                namespace="ea_sys",
+                domain="governance_core",
+            ),
+            trace_links=(
+                TraceLinkSpec(
+                    id="decision_informed_by_projection",
+                    source_type="decision_record",
+                    target_type="surface_artifact",
+                    relation=TraceRelation.INFORMED_BY,
+                    required=True,
+                ),
+            ),
+            evidence_bindings=(binding,),
+        )
+
+
 def test_v2_serialization_round_trip_dict_json():
     original = _sample_type_system()
 

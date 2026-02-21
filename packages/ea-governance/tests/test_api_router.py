@@ -69,6 +69,7 @@ class _FakeGovernanceContainer:
         self._decision_explorations: dict[str, dict[str, Any]] = {
             "decision-ok-001": {
                 "decision_id": "decision-ok-001",
+                "evidence": {"missing_evidence_operations": []},
                 "lineage": {
                     "replayed_nodes": [
                         {"node_type": "decision_record", "node_id": "decision-ok-001"},
@@ -93,6 +94,7 @@ class _FakeGovernanceContainer:
             },
             "decision-broken-001": {
                 "decision_id": "decision-broken-001",
+                "evidence": {"missing_evidence_operations": []},
                 "lineage": {
                     "replayed_nodes": [
                         {
@@ -106,6 +108,35 @@ class _FakeGovernanceContainer:
                         "cannot compose lineage from decision_record:"
                         "decision-broken-001 to kernel_model_operation:activate:tx-api-999"
                     ),
+                },
+            },
+            "decision-missing-evidence-001": {
+                "decision_id": "decision-missing-evidence-001",
+                "evidence": {
+                    "missing_evidence_operations": ["activate", "register", "activate"],
+                },
+                "lineage": {
+                    "replayed_nodes": [
+                        {
+                            "node_type": "decision_record",
+                            "node_id": "decision-missing-evidence-001",
+                        },
+                        {
+                            "node_type": "kernel_model_operation",
+                            "node_id": "activate:tx-api-111",
+                        },
+                    ],
+                    "path_to_latest_operation": [
+                        {
+                            "source_type": "decision_record",
+                            "source_id": "decision-missing-evidence-001",
+                            "relation": "drives",
+                            "target_type": "kernel_model_operation",
+                            "target_id": "activate:tx-api-111",
+                        }
+                    ],
+                    "missing_required_relations": [],
+                    "path_error": None,
                 },
             },
         }
@@ -539,10 +570,12 @@ def test_lineage_replay_endpoint_exposes_replay_contract() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["decision_id"] == "decision-ok-001"
+    assert body["evidence_mode"] == "warn"
     assert body["status"] == "ok"
     assert len(body["replayed_nodes"]) == 3
     assert len(body["path_to_latest_operation"]) == 1
     assert body["missing_required_relations"] == []
+    assert body["missing_evidence_operations"] == []
     assert body["path_error"] is None
     assert body["warnings"] == []
 
@@ -556,9 +589,11 @@ def test_lineage_replay_endpoint_surfaces_disconnected_path_warning_contract() -
     assert response.status_code == 200
     body = response.json()
     assert body["decision_id"] == "decision-broken-001"
+    assert body["evidence_mode"] == "warn"
     assert body["status"] == "warning"
     assert body["path_to_latest_operation"] == []
     assert body["missing_required_relations"] == ["materializes"]
+    assert body["missing_evidence_operations"] == []
     assert "cannot compose lineage" in body["path_error"]
     assert any(
         warning["code"] == "lineage_path_disconnected"
@@ -567,6 +602,49 @@ def test_lineage_replay_endpoint_surfaces_disconnected_path_warning_contract() -
     assert any(
         warning["code"] == "lineage_missing_required_relations"
         for warning in body["warnings"]
+    )
+
+
+def test_lineage_replay_endpoint_warns_when_evidence_is_missing_in_warn_mode() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get(
+        "/governance/lineage-replay/decision-missing-evidence-001",
+        params={"evidence_mode": "warn"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision_id"] == "decision-missing-evidence-001"
+    assert body["evidence_mode"] == "warn"
+    assert body["status"] == "warning"
+    assert body["missing_required_relations"] == []
+    assert body["missing_evidence_operations"] == ["activate", "register"]
+    assert any(
+        warning["code"] == "lineage_missing_required_evidence"
+        and warning["details"]["operations"] == ["activate", "register"]
+        for warning in body["warnings"]
+    )
+
+
+def test_lineage_replay_endpoint_blocks_when_evidence_mode_is_block() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get(
+        "/governance/lineage-replay/decision-missing-evidence-001",
+        params={"evidence_mode": "block"},
+    )
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert detail["error"] == "lineage_replay_evidence_blocked"
+    assert detail["missing_evidence_operations"] == ["activate", "register"]
+    assert any(
+        issue["field"] == "evidence.missing_evidence_operations"
+        and "activate, register" in issue["message"]
+        for issue in detail["issues"]
     )
 
 
@@ -582,6 +660,25 @@ def test_lineage_replay_endpoint_validates_decision_id() -> None:
     assert any(
         issue["field"] == "decision_id"
         and "non-empty string" in issue["message"]
+        for issue in detail["issues"]
+    )
+
+
+def test_lineage_replay_endpoint_validates_evidence_mode() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get(
+        "/governance/lineage-replay/decision-ok-001",
+        params={"evidence_mode": "deny"},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["error"] == "lineage_replay_validation_error"
+    assert any(
+        issue["field"] == "evidence_mode"
+        and "warn, block" in issue["message"]
         for issue in detail["issues"]
     )
 

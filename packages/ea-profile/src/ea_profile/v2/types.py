@@ -445,6 +445,10 @@ class TypeSystemSpec:
             (item.id for item in self.evidence_bindings),
         )
         _validate_transition_state_tokens(self.state_tokens, self.transitions)
+        _validate_trace_link_evidence_bindings(
+            trace_links=self.trace_links,
+            evidence_bindings=self.evidence_bindings,
+        )
 
 
 def _validate_transition_state_tokens(
@@ -507,6 +511,31 @@ def _validate_transition_state_reference(
             f"transitions[{transition.id}].{field} references unknown state '{reference}' "
             f"for layer '{transition.layer}'"
         )
+
+
+def _validate_trace_link_evidence_bindings(
+    *,
+    trace_links: tuple[TraceLinkSpec, ...],
+    evidence_bindings: tuple[EvidenceBindingSpec, ...],
+) -> None:
+    trace_node_types = {
+        link_type
+        for link in trace_links
+        for link_type in (link.source_type, link.target_type)
+    }
+    for binding in evidence_bindings:
+        if binding.source_type == "surface_artifact" and "environment" not in binding.required_fields:
+            raise ValueError(
+                "evidence_bindings"
+                f"[{binding.id}].required_fields must include environment "
+                "when source_type is surface_artifact"
+            )
+        if binding.source_type not in trace_node_types:
+            raise ValueError(
+                "evidence_bindings"
+                f"[{binding.id}].source_type references unknown trace node type "
+                f"'{binding.source_type}'"
+            )
 
 
 def _require_non_empty(field: str, value: str) -> str:

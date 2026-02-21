@@ -2,6 +2,7 @@
 - For typed catalog repositories, persist primitive values but always hydrate rows back into the canonical validated spec model so in-memory and SQLite enforce identical constraints.
 - For transition/state-token integrity, build a per-layer normalized reference index from `StateTokenSpec` (`id`, `canonical`, `aliases`) and validate `TransitionSpec.from/to` against that shared alias map so adapters and aggregate validators apply identical canonicalization rules.
 - For legacy→v2 migration shims, expose primitive-string conversion utilities (e.g., `LayerStack` flow strings → `FlowEdgeSpec`) and route higher-level adapters through the same helper to keep compatibility deterministic.
+- For trace/evidence contract integrity, validate `EvidenceBindingSpec.source_type` against a normalized set of `TraceLinkSpec` endpoint types and apply `surface_artifact -> required_fields includes environment` in the aggregate validator so replay/audit checks stay deterministic.
 
 {"type":"thread.started","thread_id":"019c7e2a-e53c-77d3-970f-c57133b1785c"}
 {"type":"turn.started"}
@@ -66,4 +67,26 @@
     - Compatibility migrations are easier to stabilize when low-level string normalization/conversion is separated into a pure helper and reused by aggregate adapters.
   - Gotchas encountered
     - `uv run` currently panics in this sandbox (`system-configuration` NULL object), so lint/test verification required direct `ruff`/`pytest` commands.
+---
+## 2026-02-21 - US-008
+- What was implemented
+  - Added `TypeSystemSpec` aggregate validation to integrate `TraceLinkSpec` and `EvidenceBindingSpec` contracts:
+    - each `evidence_bindings[*].source_type` must match a trace endpoint type from `trace_links[*].source_type|target_type`
+    - integrated validator now also enforces `surface_artifact` evidence bindings to include `environment` in `required_fields`.
+  - Extended lineage replay API (`GET /governance/lineage-replay/{decision_id}`) with selectable `evidence_mode` (`warn|block`).
+  - Implemented evidence-missing replay behavior:
+    - `warn`: returns `200` with `lineage_missing_required_evidence` warning and `missing_evidence_operations`.
+    - `block`: returns `409 lineage_replay_evidence_blocked` with structured `issues[]` and `missing_evidence_operations`.
+  - Added trace/evidence integration tests across profile aggregate validation and governance API replay behavior.
+- Files changed
+  - `packages/ea-profile/src/ea_profile/v2/types.py`
+  - `packages/ea-profile/tests/test_v2_types.py`
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/tests/test_api_router.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Reusing one normalized trace node-type index (`TraceLinkSpec.source_type|target_type`) as the join key for evidence bindings makes trace/evidence validation deterministic at the aggregate boundary.
+  - Gotchas encountered
+    - `uv run` still panics in this sandbox (`system-configuration` NULL object), so lint/test verification used direct `ruff`/`pytest`/`mypy` commands with explicit `PYTHONPATH`.
 ---

@@ -151,6 +151,24 @@ def _lineage_replay_warning(
     return warning
 
 
+def _lineage_replay_evidence_blocked(missing_operations: list[str]) -> HTTPException:
+    operation_list = ", ".join(missing_operations)
+    return HTTPException(
+        status_code=409,
+        detail={
+            "error": "lineage_replay_evidence_blocked",
+            "message": "Lineage replay blocked because required evidence is missing",
+            "issues": [
+                _validation_issue(
+                    "evidence.missing_evidence_operations",
+                    f"missing required evidence for operations: {operation_list}",
+                )
+            ],
+            "missing_evidence_operations": missing_operations,
+        },
+    )
+
+
 def _spec_validation_issues(errors: list[str]) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
     for message in errors:
@@ -375,8 +393,20 @@ def get_ops_event(
 def replay_lineage(
     decision_id: str,
     request: Request,
+    evidence_mode: str = Query(default="warn"),
 ) -> dict[str, Any]:
     """Replay decision trace lineage and expose path/warning diagnostics."""
+    normalized_evidence_mode = evidence_mode.strip().lower()
+    if normalized_evidence_mode not in {"warn", "block"}:
+        raise _lineage_replay_validation_error(
+            [
+                _validation_issue(
+                    "evidence_mode",
+                    "must be one of: warn, block",
+                )
+            ]
+        )
+
     container = _resolve_governance_container(request)
     try:
         exploration = container.explore_model_decision_trace(decision_id)
@@ -393,6 +423,19 @@ def replay_lineage(
                 "message": f"decision trace {decision_id!r} not found",
             },
         )
+
+    evidence_raw = exploration.get("evidence")
+    evidence = evidence_raw if isinstance(evidence_raw, Mapping) else {}
+    missing_evidence_raw = evidence.get("missing_evidence_operations", [])
+    missing_evidence_operations = sorted(
+        {
+            str(item).strip()
+            for item in missing_evidence_raw
+            if isinstance(item, str) and item.strip()
+        }
+    ) if isinstance(missing_evidence_raw, list) else []
+    if missing_evidence_operations and normalized_evidence_mode == "block":
+        raise _lineage_replay_evidence_blocked(missing_evidence_operations)
 
     lineage_raw = exploration.get("lineage")
     lineage = lineage_raw if isinstance(lineage_raw, Mapping) else {}
@@ -444,13 +487,23 @@ def replay_lineage(
                 details={"relations": missing_required_relations},
             )
         )
+    if missing_evidence_operations and normalized_evidence_mode == "warn":
+        warnings.append(
+            _lineage_replay_warning(
+                "lineage_missing_required_evidence",
+                "Required lineage evidence is missing",
+                details={"operations": missing_evidence_operations},
+            )
+        )
 
     return {
         "decision_id": str(exploration.get("decision_id", decision_id)),
+        "evidence_mode": normalized_evidence_mode,
         "status": "warning" if warnings else "ok",
         "replayed_nodes": replayed_nodes,
         "path_to_latest_operation": path_to_latest_operation,
         "missing_required_relations": missing_required_relations,
+        "missing_evidence_operations": missing_evidence_operations,
         "path_error": path_error,
         "warnings": warnings,
     }

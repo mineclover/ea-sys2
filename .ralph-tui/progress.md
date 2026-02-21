@@ -4,6 +4,7 @@
 - For legacy→v2 migration shims, expose primitive-string conversion utilities (e.g., `LayerStack` flow strings → `FlowEdgeSpec`) and route higher-level adapters through the same helper to keep compatibility deterministic.
 - For trace/evidence contract integrity, validate `EvidenceBindingSpec.source_type` against a normalized set of `TraceLinkSpec` endpoint types and apply `surface_artifact -> required_fields includes environment` in the aggregate validator so replay/audit checks stay deterministic.
 - For read-only spec readiness APIs, use deterministic in-process sample specs per entity and return a stable `loaded/validated/errors` matrix so operators can inspect contract implementation health without mutating runtime state.
+- For full-loop mandatory flow validation, enforce required edges only when the canonical loop layer set is fully declared, so partial entity-focused specs keep deterministic local validation without false positives.
 
 {"type":"thread.started","thread_id":"019c7e2a-e53c-77d3-970f-c57133b1785c"}
 {"type":"turn.started"}
@@ -107,4 +108,24 @@
     - Readiness endpoints are deterministic when they validate canonical sample instances per entity (including aggregate cross-constraints) rather than depending on external runtime data.
   - Gotchas encountered
     - `uv run` continues to panic in this sandbox (`system-configuration` NULL object), so verification required direct `ruff` and `pytest` execution with explicit plugin/environment control.
+---
+## 2026-02-21 - US-003
+- What was implemented
+  - Added a dedicated v2 static validator module (`ea_profile.v2.validator`) for flow graph and loop contract integrity checks.
+  - Implemented mandatory flow-path validation for canonical loop edges (`infra->kernel`, `infra->flow`, `decision->needs`, `needs->kernel`, `kernel->flow`, `flow->projection`, `projection->decision`) with structured issue codes.
+  - Implemented loop contract graph validation so each `loop_contracts.path` hop must exist in the `flow_edges` graph and all referenced path layers must exist.
+  - Added structured validation contracts: `TypeSystemValidationIssue` (`code`, `field`, `message`) and `TypeSystemValidationError` (`issues` tuple) with stable codes (`FLOW_EDGE_UNKNOWN_LAYER`, `FLOW_REQUIRED_PATH_MISSING`, `LOOP_PATH_INVALID_LAYER`, `LOOP_PATH_DISCONNECTED`).
+  - Wired `TypeSystemSpec.__post_init__` to execute the new flow/loop validator at load time.
+  - Expanded v2 tests with success and failure coverage for required-path validation, disconnected loop-path validation, and invalid loop-path layer validation.
+- Files changed
+  - `packages/ea-profile/src/ea_profile/v2/validator.py`
+  - `packages/ea-profile/src/ea_profile/v2/types.py`
+  - `packages/ea-profile/src/ea_profile/v2/__init__.py`
+  - `packages/ea-profile/tests/test_v2_types.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Aggregate validators can return machine-readable issue tuples (`code/field/message`) while still raising a single ValueError-compatible exception, preserving compatibility and improving diagnostics.
+  - Gotchas encountered
+    - Mandatory path validation can conflict with partial entity-scoped specs unless it is gated to run when the canonical loop layer set is fully present.
 ---

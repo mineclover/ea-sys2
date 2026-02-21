@@ -12,6 +12,7 @@ from enum import StrEnum
 from typing import Any
 
 from ea_profile.v2.state_tokens import parse_state_reference, state_reference_aliases
+from ea_profile.v2.validator import ensure_flow_and_loop_contracts
 
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{2,63}$")
 TEAM_SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
@@ -443,6 +444,11 @@ class TypeSystemSpec:
         _ensure_unique(
             "evidence_bindings.id",
             (item.id for item in self.evidence_bindings),
+        )
+        ensure_flow_and_loop_contracts(
+            layers=self.layers,
+            flow_edges=self.flow_edges,
+            loop_contracts=self.loop_contracts,
         )
         _validate_transition_state_tokens(self.state_tokens, self.transitions)
         _validate_trace_link_evidence_bindings(

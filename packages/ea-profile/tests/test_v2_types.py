@@ -50,6 +50,7 @@ from ea_profile.v2.types import (
     TransitionSpec,
     TypeSystemSpec,
 )
+from ea_profile.v2.validator import TypeSystemValidationError
 
 _GOLDEN_FLOW_EDGES = (
     Path(__file__).parent / "golden" / "legacy_layer_stack_flow_edges.json"
@@ -79,20 +80,26 @@ def _sample_type_system() -> TypeSystemSpec:
                 responsibility="Decision causal memory",
             ),
             LayerSpec(
-                id="kernel",
+                id="needs",
                 order=20,
+                role=LayerRole.CAUSAL_MEMORY,
+                responsibility="Needs causal memory",
+            ),
+            LayerSpec(
+                id="kernel",
+                order=30,
                 role=LayerRole.BUSINESS_SKELETON,
                 responsibility="Kernel structure",
             ),
             LayerSpec(
                 id="flow",
-                order=30,
+                order=40,
                 role=LayerRole.DATA_MODELING_MEMORY,
                 responsibility="Flow execution memory",
             ),
             LayerSpec(
                 id="projection",
-                order=40,
+                order=50,
                 role=LayerRole.SURFACE_MEMORY,
                 responsibility="Surface artifact memory",
             ),
@@ -103,6 +110,27 @@ def _sample_type_system() -> TypeSystemSpec:
                 from_layer="infra",
                 to_layer="kernel",
                 kind=FlowEdgeKind.SUBSTRATE_CONSTRAINT,
+                required=True,
+            ),
+            FlowEdgeSpec(
+                id="infra_to_flow",
+                from_layer="infra",
+                to_layer="flow",
+                kind=FlowEdgeKind.RUNTIME_CAPABILITY_BINDING,
+                required=True,
+            ),
+            FlowEdgeSpec(
+                id="decision_to_needs",
+                from_layer="decision",
+                to_layer="needs",
+                kind=FlowEdgeKind.CAUSAL_HANDOFF,
+                required=True,
+            ),
+            FlowEdgeSpec(
+                id="needs_to_kernel",
+                from_layer="needs",
+                to_layer="kernel",
+                kind=FlowEdgeKind.STRUCTURE_REQUEST,
                 required=True,
             ),
             FlowEdgeSpec(
@@ -181,6 +209,7 @@ def _sample_type_system() -> TypeSystemSpec:
                 path=(
                     "projection",
                     "decision",
+                    "needs",
                     "kernel",
                     "flow",
                     "projection",
@@ -324,6 +353,92 @@ def test_v2_types_enforce_required_fields_and_enums():
             binds_to=EvidenceBindingTarget.DEPLOYMENT_RECORD,
             required_fields=("service_id", "deployment_id", "dashboard_url"),
         )
+
+
+def test_v2_flow_loop_validation_accepts_required_paths_and_closed_loop() -> None:
+    spec = _sample_type_system()
+    assert spec.loop_contracts[0].path == (
+        "projection",
+        "decision",
+        "needs",
+        "kernel",
+        "flow",
+        "projection",
+    )
+
+
+def test_v2_flow_loop_validation_rejects_missing_required_path_with_code() -> None:
+    base = _sample_type_system()
+    missing_decision_to_needs = tuple(
+        edge for edge in base.flow_edges if edge.id != "decision_to_needs"
+    )
+
+    with pytest.raises(TypeSystemValidationError) as exc_info:
+        TypeSystemSpec(
+            profile=base.profile,
+            layers=base.layers,
+            flow_edges=missing_decision_to_needs,
+        )
+
+    issues = exc_info.value.issues
+    assert "FLOW_REQUIRED_PATH_MISSING" in {issue.code for issue in issues}
+    assert any("decision->needs" in issue.message for issue in issues)
+
+
+def test_v2_flow_loop_validation_rejects_disconnected_loop_path_with_code() -> None:
+    base = _sample_type_system()
+
+    with pytest.raises(TypeSystemValidationError) as exc_info:
+        TypeSystemSpec(
+            profile=base.profile,
+            layers=base.layers,
+            flow_edges=base.flow_edges,
+            loop_contracts=(
+                LoopContractSpec(
+                    id="disconnected_loop",
+                    path=(
+                        "projection",
+                        "decision",
+                        "kernel",
+                        "flow",
+                        "projection",
+                    ),
+                    enforce_trace=True,
+                    enforce_event_chain=True,
+                ),
+            ),
+        )
+
+    issues = exc_info.value.issues
+    assert "LOOP_PATH_DISCONNECTED" in {issue.code for issue in issues}
+    assert any("decision->kernel" in issue.message for issue in issues)
+
+
+def test_v2_flow_loop_validation_rejects_invalid_loop_path_with_code() -> None:
+    base = _sample_type_system()
+
+    with pytest.raises(TypeSystemValidationError) as exc_info:
+        TypeSystemSpec(
+            profile=base.profile,
+            layers=base.layers,
+            flow_edges=base.flow_edges,
+            loop_contracts=(
+                LoopContractSpec(
+                    id="invalid_loop",
+                    path=(
+                        "projection",
+                        "unknown-layer",
+                        "projection",
+                    ),
+                    enforce_trace=True,
+                    enforce_event_chain=True,
+                ),
+            ),
+        )
+
+    issues = exc_info.value.issues
+    assert "LOOP_PATH_INVALID_LAYER" in {issue.code for issue in issues}
+    assert any("unknown-layer" in issue.message for issue in issues)
 
 
 def test_v2_transition_state_validation_accepts_alias_references() -> None:

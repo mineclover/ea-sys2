@@ -45,6 +45,12 @@ from ea_profile.v2.types import (
     TransitionSpec,
     TypeSystemSpec,
 )
+from ea_profile.v2.validator import (
+    TypeSystemValidationError,
+    TypeSystemValidationIssue,
+    ensure_flow_and_loop_contracts,
+    validate_flow_and_loop_contracts,
+)
 
 __all__ = [
     "ArtifactTier",
@@ -71,9 +77,12 @@ __all__ = [
     "TraceRelation",
     "TransitionSpec",
     "TypeSystemSpec",
+    "TypeSystemValidationError",
+    "TypeSystemValidationIssue",
     "artifact_type_spec_to_legacy",
     "artifact_type_specs_from_legacy",
     "dict_to_type_system",
+    "ensure_flow_and_loop_contracts",
     "flow_edges_from_legacy",
     "flow_edges_from_legacy_flows",
     "json_to_type_system",
@@ -82,6 +91,7 @@ __all__ = [
     "state_token_specs_from_legacy",
     "transition_spec_to_legacy",
     "transition_specs_from_legacy",
+    "validate_flow_and_loop_contracts",
     "type_system_to_dict",
     "type_system_to_json",
     "type_system_to_legacy_profile",

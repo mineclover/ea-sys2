@@ -125,6 +125,29 @@ def _query_validation_error(issues: list[dict[str, str]]) -> HTTPException:
     return HTTPException(status_code=422, detail=_query_validation_error_detail(issues))
 
 
+def _lineage_replay_validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail={
+            "error": "lineage_replay_validation_error",
+            "message": "Lineage replay request failed validation",
+            "issues": issues,
+        },
+    )
+
+
+def _lineage_replay_warning(
+    code: str,
+    message: str,
+    *,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    warning: dict[str, Any] = {"code": code, "message": message}
+    if details:
+        warning["details"] = details
+    return warning
+
+
 def _spec_validation_issues(errors: list[str]) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
     for message in errors:
@@ -343,6 +366,91 @@ def get_ops_event(
             },
         )
     return response
+
+
+@governance_router.get("/lineage-replay/{decision_id}")
+def replay_lineage(
+    decision_id: str,
+    request: Request,
+) -> dict[str, Any]:
+    """Replay decision trace lineage and expose path/warning diagnostics."""
+    container = _resolve_governance_container(request)
+    try:
+        exploration = container.explore_model_decision_trace(decision_id)
+    except ValueError as err:
+        raise _lineage_replay_validation_error(
+            [_validation_issue("decision_id", str(err))]
+        ) from err
+
+    if exploration is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "lineage_replay_not_found",
+                "message": f"decision trace {decision_id!r} not found",
+            },
+        )
+
+    lineage_raw = exploration.get("lineage")
+    lineage = lineage_raw if isinstance(lineage_raw, Mapping) else {}
+
+    replayed_nodes_raw = lineage.get("replayed_nodes", [])
+    replayed_nodes = [
+        item
+        for item in replayed_nodes_raw
+        if isinstance(item, dict)
+    ] if isinstance(replayed_nodes_raw, list) else []
+
+    path_raw = lineage.get("path_to_latest_operation", [])
+    path_to_latest_operation = [
+        item
+        for item in path_raw
+        if isinstance(item, dict)
+    ] if isinstance(path_raw, list) else []
+
+    missing_raw = lineage.get("missing_required_relations", [])
+    missing_required_relations = sorted(
+        {
+            str(item).strip()
+            for item in missing_raw
+            if isinstance(item, str) and item.strip()
+        }
+    ) if isinstance(missing_raw, list) else []
+
+    path_error_raw = lineage.get("path_error")
+    path_error = (
+        str(path_error_raw).strip()
+        if isinstance(path_error_raw, str) and path_error_raw.strip()
+        else None
+    )
+
+    warnings: list[dict[str, Any]] = []
+    if path_error is not None:
+        warnings.append(
+            _lineage_replay_warning(
+                "lineage_path_disconnected",
+                "Unable to compose lineage path to latest operation",
+                details={"path_error": path_error},
+            )
+        )
+    if missing_required_relations:
+        warnings.append(
+            _lineage_replay_warning(
+                "lineage_missing_required_relations",
+                "Required lineage relations are missing",
+                details={"relations": missing_required_relations},
+            )
+        )
+
+    return {
+        "decision_id": str(exploration.get("decision_id", decision_id)),
+        "status": "warning" if warnings else "ok",
+        "replayed_nodes": replayed_nodes,
+        "path_to_latest_operation": path_to_latest_operation,
+        "missing_required_relations": missing_required_relations,
+        "path_error": path_error,
+        "warnings": warnings,
+    }
 
 
 @governance_router.post("/ops-events/ingest")

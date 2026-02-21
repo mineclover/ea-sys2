@@ -66,6 +66,49 @@ class _FakeGovernanceContainer:
                 "ingested_at": "2026-02-21T09:00:00+00:00Z",
             },
         }
+        self._decision_explorations: dict[str, dict[str, Any]] = {
+            "decision-ok-001": {
+                "decision_id": "decision-ok-001",
+                "lineage": {
+                    "replayed_nodes": [
+                        {"node_type": "decision_record", "node_id": "decision-ok-001"},
+                        {
+                            "node_type": "kernel_model_operation",
+                            "node_id": "register:tx-api-001",
+                        },
+                        {"node_type": "kernel_model", "node_id": "OpsModel:1.0"},
+                    ],
+                    "path_to_latest_operation": [
+                        {
+                            "source_type": "decision_record",
+                            "source_id": "decision-ok-001",
+                            "relation": "drives",
+                            "target_type": "kernel_model_operation",
+                            "target_id": "register:tx-api-001",
+                        }
+                    ],
+                    "missing_required_relations": [],
+                    "path_error": None,
+                },
+            },
+            "decision-broken-001": {
+                "decision_id": "decision-broken-001",
+                "lineage": {
+                    "replayed_nodes": [
+                        {
+                            "node_type": "decision_record",
+                            "node_id": "decision-broken-001",
+                        }
+                    ],
+                    "path_to_latest_operation": [],
+                    "missing_required_relations": ["materializes"],
+                    "path_error": (
+                        "cannot compose lineage from decision_record:"
+                        "decision-broken-001 to kernel_model_operation:activate:tx-api-999"
+                    ),
+                },
+            },
+        }
 
     def ingest_service_ops_event(
         self,
@@ -139,6 +182,12 @@ class _FakeGovernanceContainer:
         if layer != "infra":
             return None
         return self._infra_snapshots.get(model_id)
+
+    def explore_model_decision_trace(self, decision_id: str) -> dict[str, Any] | None:
+        normalized = decision_id.strip()
+        if not normalized:
+            raise ValueError("decision_id must be a non-empty string")
+        return self._decision_explorations.get(normalized)
 
 
 def _build_client(container: _FakeGovernanceContainer) -> TestClient:
@@ -479,3 +528,70 @@ def test_ops_event_bulk_ingestion_endpoint_validates_trace_lineage_correlation()
         for issue in body["results"][1]["error"]["issues"]
     )
     assert len(container.calls) == 1
+
+
+def test_lineage_replay_endpoint_exposes_replay_contract() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get("/governance/lineage-replay/decision-ok-001")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision_id"] == "decision-ok-001"
+    assert body["status"] == "ok"
+    assert len(body["replayed_nodes"]) == 3
+    assert len(body["path_to_latest_operation"]) == 1
+    assert body["missing_required_relations"] == []
+    assert body["path_error"] is None
+    assert body["warnings"] == []
+
+
+def test_lineage_replay_endpoint_surfaces_disconnected_path_warning_contract() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get("/governance/lineage-replay/decision-broken-001")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision_id"] == "decision-broken-001"
+    assert body["status"] == "warning"
+    assert body["path_to_latest_operation"] == []
+    assert body["missing_required_relations"] == ["materializes"]
+    assert "cannot compose lineage" in body["path_error"]
+    assert any(
+        warning["code"] == "lineage_path_disconnected"
+        for warning in body["warnings"]
+    )
+    assert any(
+        warning["code"] == "lineage_missing_required_relations"
+        for warning in body["warnings"]
+    )
+
+
+def test_lineage_replay_endpoint_validates_decision_id() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get("/governance/lineage-replay/%20%20")
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["error"] == "lineage_replay_validation_error"
+    assert any(
+        issue["field"] == "decision_id"
+        and "non-empty string" in issue["message"]
+        for issue in detail["issues"]
+    )
+
+
+def test_lineage_replay_endpoint_returns_404_for_unknown_decision_trace() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get("/governance/lineage-replay/decision-missing-404")
+
+    assert response.status_code == 404
+    detail = response.json()["detail"]
+    assert detail["error"] == "lineage_replay_not_found"

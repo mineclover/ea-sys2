@@ -11,6 +11,7 @@ after each iteration and it's included in prompts for context.
 - Router-level write APIs can keep validation deterministic by splitting errors into typed issue entries (`field`, `message`) and returning a stable 422 envelope from the endpoint layer.
 - For bulk write APIs using fixed partial-failure strategy, keep HTTP 200 with `strategy/success_count/failed_count/results[]` and reuse the same validation envelope per failed item with `items[{index}].`-prefixed fields.
 - For ops-event list APIs backed by generic layer snapshots, parse `ingested_at` to UTC and sort by that timestamp (not `model_id`) before applying `limit/offset`, so pagination stays chronological.
+- For lineage replay APIs, return partial lineage data with `status=warning` + structured `warnings[]` on path disconnection instead of failing the whole request, while keeping 422/404 envelopes for invalid/missing decisions.
 
 ---
 
@@ -108,4 +109,25 @@ after each iteration and it's included in prompts for context.
     - Reconstructing ops-event read views from infra snapshots is reliable when `kind=service_ops_event` is treated as the boundary and response fields are normalized (`event_name` from `event_name|name`).
   - Gotchas encountered
     - Stored timestamps currently include a trailing `Z` even with an offset (`+00:00Z`), so direct `datetime.fromisoformat(...)` requires normalization before filter/sort comparisons.
+---
+
+## 2026-02-21 - US-006
+- What was implemented
+  - Added lineage replay endpoint: `GET /governance/lineage-replay/{decision_id}`.
+  - Wired the endpoint to `decision_trace_ops` exploration data via `GovernanceContainer.explore_model_decision_trace(...)`.
+  - Exposed replay contract fields required by the story: `replayed_nodes`, `path_to_latest_operation`, `missing_required_relations`.
+  - Added path disconnection diagnostics contract:
+    - `HTTP 200` with `status=warning` and structured `warnings[]` (`lineage_path_disconnected`, `lineage_missing_required_relations`).
+    - Validation and missing-trace errors use stable envelopes (`422 lineage_replay_validation_error`, `404 lineage_replay_not_found`).
+  - Added API documentation for endpoint/response/error-warning contract.
+- Files changed
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/tests/test_api_router.py`
+  - `packages/ea-governance/docs/ops-lineage-replay-api.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Path compose failure is better represented as a warning-state replay response (with partial chain payload) than a hard API failure, so clients can still render available lineage evidence.
+  - Gotchas encountered
+    - Replay output should sanitize lineage arrays defensively (`list[dict]`, `list[str]`) because exploration payloads are generic mappings and can include malformed rows.
 ---

@@ -3,6 +3,7 @@
 - For transition/state-token integrity, build a per-layer normalized reference index from `StateTokenSpec` (`id`, `canonical`, `aliases`) and validate `TransitionSpec.from/to` against that shared alias map so adapters and aggregate validators apply identical canonicalization rules.
 - For legacy→v2 migration shims, expose primitive-string conversion utilities (e.g., `LayerStack` flow strings → `FlowEdgeSpec`) and route higher-level adapters through the same helper to keep compatibility deterministic.
 - For trace/evidence contract integrity, validate `EvidenceBindingSpec.source_type` against a normalized set of `TraceLinkSpec` endpoint types and apply `surface_artifact -> required_fields includes environment` in the aggregate validator so replay/audit checks stay deterministic.
+- For read-only spec readiness APIs, use deterministic in-process sample specs per entity and return a stable `loaded/validated/errors` matrix so operators can inspect contract implementation health without mutating runtime state.
 
 {"type":"thread.started","thread_id":"019c7e2a-e53c-77d3-970f-c57133b1785c"}
 {"type":"turn.started"}
@@ -89,4 +90,21 @@
     - Reusing one normalized trace node-type index (`TraceLinkSpec.source_type|target_type`) as the join key for evidence bindings makes trace/evidence validation deterministic at the aggregate boundary.
   - Gotchas encountered
     - `uv run` still panics in this sandbox (`system-configuration` NULL object), so lint/test verification used direct `ruff`/`pytest`/`mypy` commands with explicit `PYTHONPATH`.
+---
+## 2026-02-21 - US-010
+- What was implemented
+  - Added read-only v2 spec readiness endpoint: `GET /governance/v2-spec/status`.
+  - Implemented entity-level readiness reporting for all 12 v2 entities with `loaded`, `validated`, and `errors` fields.
+  - Added `entities` query filtering with normalization (`-`/`_`) and deduplication for selective status checks.
+  - Added structured 422 validation envelope for invalid entity filters (`error`, `message`, `issues[]`) consistent with existing governance API error shape.
+  - Added API contract tests for success response, filtered response, and validation error envelope.
+- Files changed
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/tests/test_api_router.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Readiness endpoints are deterministic when they validate canonical sample instances per entity (including aggregate cross-constraints) rather than depending on external runtime data.
+  - Gotchas encountered
+    - `uv run` continues to panic in this sandbox (`system-configuration` NULL object), so verification required direct `ruff` and `pytest` execution with explicit plugin/environment control.
 ---

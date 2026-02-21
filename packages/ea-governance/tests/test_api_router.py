@@ -228,6 +228,86 @@ def _build_client(container: _FakeGovernanceContainer) -> TestClient:
     return TestClient(app)
 
 
+def test_v2_spec_status_endpoint_returns_entity_readiness() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get("/governance/v2-spec/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["spec"] == "ea_profile.v2"
+    assert body["status"] == "ok"
+    assert body["summary"]["entity_count"] == 12
+    assert body["summary"]["loaded_count"] == 12
+    assert body["summary"]["validated_count"] == 12
+    assert body["summary"]["error_count"] == 0
+
+    entities = {item["entity"]: item for item in body["entities"]}
+    assert set(entities) == {
+        "profile",
+        "layers",
+        "flow_edges",
+        "state_tokens",
+        "transitions",
+        "artifact_types",
+        "trace_links",
+        "governance_events",
+        "loop_contracts",
+        "infra_assets",
+        "service_ops_events",
+        "evidence_bindings",
+    }
+    assert all(item["loaded"] is True for item in entities.values())
+    assert all(item["validated"] is True for item in entities.values())
+    assert all(item["errors"] == [] for item in entities.values())
+
+
+def test_v2_spec_status_endpoint_supports_entity_filter() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get(
+        "/governance/v2-spec/status",
+        params=[
+            ("entities", "profile"),
+            ("entities", "evidence-bindings"),
+            ("entities", "profile"),
+        ],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["entity_count"] == 2
+    assert [item["entity"] for item in body["entities"]] == [
+        "profile",
+        "evidence_bindings",
+    ]
+    assert body["summary"]["loaded_count"] == 2
+    assert body["summary"]["validated_count"] == 2
+    assert body["summary"]["error_count"] == 0
+
+
+def test_v2_spec_status_endpoint_returns_structured_validation_error() -> None:
+    container = _FakeGovernanceContainer()
+    client = _build_client(container)
+
+    response = client.get(
+        "/governance/v2-spec/status",
+        params=[("entities", "profile"), ("entities", "unknown-entity")],
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["error"] == "v2_spec_validation_error"
+    assert detail["message"] == "V2 spec status request failed validation"
+    assert any(
+        issue["field"] == "entities[1]"
+        and "unknown entity" in issue["message"]
+        for issue in detail["issues"]
+    )
+
+
 def test_ops_event_list_endpoint_supports_limit_offset_pagination() -> None:
     container = _FakeGovernanceContainer()
     client = _build_client(container)

@@ -14,7 +14,7 @@ Operational API spec/runbook:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -139,6 +139,17 @@ def _lineage_replay_validation_error(issues: list[dict[str, str]]) -> HTTPExcept
     )
 
 
+def _v2_spec_validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail={
+            "error": "v2_spec_validation_error",
+            "message": "V2 spec status request failed validation",
+            "issues": issues,
+        },
+    )
+
+
 def _lineage_replay_warning(
     code: str,
     message: str,
@@ -257,6 +268,20 @@ def _ops_event_response(event_id: str, payload: Mapping[str, Any]) -> dict[str, 
     }
 
 
+_V2_SPEC_ENTITY_ORDER = (
+    "profile",
+    "layers",
+    "flow_edges",
+    "state_tokens",
+    "transitions",
+    "artifact_types",
+    "trace_links",
+    "governance_events",
+    "loop_contracts",
+    "infra_assets",
+    "service_ops_events",
+    "evidence_bindings",
+)
 _BULK_INGESTION_STRATEGY = "partial"
 
 
@@ -294,6 +319,254 @@ def governance_business_flow(lang: str | None = None) -> dict[str, Any]:
 def governance_dashboard_endpoint() -> dict[str, Any]:
     """Overall governance status: layers, schema, frameworks."""
     return governance_dashboard()
+
+
+def _normalize_v2_entity_name(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_")
+    return "_".join(part for part in normalized.split("_") if part)
+
+
+def _v2_spec_entity_statuses() -> list[dict[str, Any]]:
+    try:
+        from ea_profile.v2.types import (
+            ArtifactTier,
+            ArtifactTypeSpec,
+            EvidenceBindingSpec,
+            EvidenceBindingTarget,
+            FeedbackLayer,
+            FlowEdgeKind,
+            FlowEdgeSpec,
+            GovernanceEventSpec,
+            GovernanceRetentionPolicy,
+            InfraAssetSpec,
+            InfraAssetType,
+            InfraCriticality,
+            InfraEnvironment,
+            LayerRole,
+            LayerSpec,
+            LoopContractSpec,
+            ProfileSpec,
+            ServiceOpsEventSpec,
+            ServiceOpsSeverity,
+            StateTokenSpec,
+            TraceLinkSpec,
+            TraceRelation,
+            TransitionSpec,
+            TypeSystemSpec,
+        )
+    except Exception as err:
+        message = f"failed to import ea_profile.v2.types: {err}"
+        return [
+            {
+                "entity": entity,
+                "loaded": False,
+                "validated": False,
+                "errors": [message],
+            }
+            for entity in _V2_SPEC_ENTITY_ORDER
+        ]
+
+    profile = ProfileSpec(
+        id="sample.profile",
+        version="1.0.0",
+        kernel_version="2.5.0",
+        namespace="sample.ns",
+        domain="sample.domain",
+    )
+    proposed_state = StateTokenSpec(
+        id="decision.proposed",
+        layer="decision",
+        canonical="PROPOSED",
+        aliases=("DecisionStatusProposed",),
+    )
+    accepted_state = StateTokenSpec(
+        id="decision.accepted",
+        layer="decision",
+        canonical="ACCEPTED",
+        aliases=("DecisionStatusAccepted",),
+    )
+    transition = TransitionSpec(
+        id="decision.proposed_to_accepted",
+        layer="decision",
+        from_state="decision.proposed",
+        to_state="decision.accepted",
+        requires_trace=True,
+        requires_governance_event="state.transitioned",
+    )
+    trace_link = TraceLinkSpec(
+        id="trace.decision_to_op",
+        source_type="decision_record",
+        target_type="kernel_model_operation",
+        relation=TraceRelation.DERIVED_FROM,
+        required=True,
+    )
+    surface_trace_link = TraceLinkSpec(
+        id="trace.surface_to_decision",
+        source_type="surface_artifact",
+        target_type="decision_record",
+        relation=TraceRelation.INFORMED_BY,
+        required=True,
+    )
+    evidence_binding = EvidenceBindingSpec(
+        id="binding.surface",
+        source_type="surface_artifact",
+        binds_to=EvidenceBindingTarget.DASHBOARD_SNAPSHOT,
+        required_fields=("environment", "artifact_id", "captured_at"),
+    )
+
+    checks: dict[str, Callable[[], Any]] = {
+        "profile": lambda: profile,
+        "layers": lambda: LayerSpec(
+            id="decision",
+            order=1,
+            role=LayerRole.CAUSAL_MEMORY,
+            responsibility="decision lifecycle management",
+        ),
+        "flow_edges": lambda: FlowEdgeSpec(
+            id="edge.decision_to_needs",
+            from_layer="decision",
+            to_layer="needs",
+            kind=FlowEdgeKind.FEEDBACK_OBSERVATION,
+            required=True,
+        ),
+        "state_tokens": lambda: (proposed_state, accepted_state),
+        "transitions": lambda: TypeSystemSpec(
+            profile=profile,
+            state_tokens=(proposed_state, accepted_state),
+            transitions=(transition,),
+        ),
+        "artifact_types": lambda: ArtifactTypeSpec(
+            id="artifact.ui_bundle",
+            tier=ArtifactTier.UI,
+            source_layers=("projection",),
+            kernel_element_pattern="*",
+        ),
+        "trace_links": lambda: trace_link,
+        "governance_events": lambda: GovernanceEventSpec(
+            name="state.transitioned",
+            must_include=("trace_id", "lineage_id", "actor"),
+            retention_policy=GovernanceRetentionPolicy.IMMUTABLE,
+        ),
+        "loop_contracts": lambda: LoopContractSpec(
+            id="loop.closed_feedback",
+            path=("decision", "needs", "decision"),
+            enforce_trace=True,
+            enforce_event_chain=True,
+        ),
+        "infra_assets": lambda: InfraAssetSpec(
+            id="payments.api",
+            asset_type=InfraAssetType.API_GATEWAY,
+            owner="platform-data",
+            environment=InfraEnvironment.PROD,
+            criticality=InfraCriticality.TIER1,
+            exposure_refs=(
+                "url:https://api.example.com/payments",
+                "dashboard:https://grafana.example.com/d/payments",
+            ),
+        ),
+        "service_ops_events": lambda: ServiceOpsEventSpec(
+            name="slo_breached",
+            severity=ServiceOpsSeverity.HIGH,
+            must_include=("trace_id", "lineage_id", "service_id"),
+            feeds_back_to=FeedbackLayer.NEEDS,
+        ),
+        "evidence_bindings": lambda: TypeSystemSpec(
+            profile=profile,
+            trace_links=(trace_link, surface_trace_link),
+            evidence_bindings=(evidence_binding,),
+        ),
+    }
+
+    statuses: list[dict[str, Any]] = []
+    for entity in _V2_SPEC_ENTITY_ORDER:
+        check = checks.get(entity)
+        loaded = check is not None
+        errors: list[str] = []
+        validated = False
+        if check is not None:
+            try:
+                check()
+                validated = True
+            except Exception as err:
+                errors.append(str(err))
+        statuses.append(
+            {
+                "entity": entity,
+                "loaded": loaded,
+                "validated": validated,
+                "errors": errors,
+            }
+        )
+    return statuses
+
+
+@governance_router.get("/v2-spec/status")
+def get_v2_spec_status(
+    request: Request,
+) -> dict[str, Any]:
+    """Expose ea_profile.v2 spec and validator readiness by entity."""
+    entities = request.query_params.getlist("entities")
+    statuses = _v2_spec_entity_statuses()
+    by_entity = {item["entity"]: item for item in statuses}
+    selected_entities = list(_V2_SPEC_ENTITY_ORDER)
+
+    if entities:
+        issues: list[dict[str, str]] = []
+        selected_entities = []
+        seen: set[str] = set()
+        expected = ", ".join(_V2_SPEC_ENTITY_ORDER)
+        for index, raw in enumerate(entities):
+            normalized = _normalize_v2_entity_name(raw)
+            if not normalized:
+                issues.append(
+                    _validation_issue(
+                        f"entities[{index}]",
+                        "entity filter must be a non-empty string",
+                    )
+                )
+                continue
+            if normalized not in by_entity:
+                issues.append(
+                    _validation_issue(
+                        f"entities[{index}]",
+                        (
+                            f"unknown entity {raw!r}; "
+                            f"expected one of: {expected}"
+                        ),
+                    )
+                )
+                continue
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            selected_entities.append(normalized)
+
+        if issues:
+            raise _v2_spec_validation_error(issues)
+
+    selected = [by_entity[entity] for entity in selected_entities]
+    loaded_count = sum(1 for item in selected if item["loaded"])
+    validated_count = sum(1 for item in selected if item["validated"])
+    error_count = sum(len(item["errors"]) for item in selected)
+    overall_status = (
+        "ok"
+        if loaded_count == len(selected)
+        and validated_count == len(selected)
+        and error_count == 0
+        else "warning"
+    )
+
+    return {
+        "spec": "ea_profile.v2",
+        "status": overall_status,
+        "entities": selected,
+        "summary": {
+            "entity_count": len(selected),
+            "loaded_count": loaded_count,
+            "validated_count": validated_count,
+            "error_count": error_count,
+        },
+    }
 
 
 @governance_router.get("/ops-events")

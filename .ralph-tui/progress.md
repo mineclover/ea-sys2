@@ -15,6 +15,7 @@ after each iteration and it's included in prompts for context.
 - For policy-gated optional actions (like auto-express), compute a single structured decision (`requested`, `allowed`, `reason_codes`) and persist the same structure to snapshot/event/response so diagnostics stay deterministic across layers.
 - For auto-expressed ops→needs flow, reuse one `expressed_need` object (`catalog_id`, `need_id`, `lineage_id`, `version`) across transaction events and ingestion responses to keep audit/API parity deterministic.
 - For operational APIs, keep one canonical docs/runbook file under the package `docs/` directory and reference it from both module-level entrypoints and package README to prevent contract drift.
+- For M2 contract evolution, isolate new canonical specs under `ea_profile.v2` and bridge legacy `ea_profile.types` via explicit adapters + serializer round-trip tests to preserve backward compatibility.
 
 ---
 
@@ -189,4 +190,28 @@ after each iteration and it's included in prompts for context.
     - Keeping one canonical ops API/runbook document and linking it from both runtime entrypoints and README reduces drift between implementation and operations docs.
   - Gotchas encountered
     - Bulk ingestion partial failures return `HTTP 200`, so runbooks must explicitly instruct operators to treat `failed_count > 0` as failure.
+---
+
+## 2026-02-21 - US-001
+- What was implemented
+  - Added canonical M2 v2 type system under `ea_profile.v2` with all 12 required entities:
+    - `ProfileSpec`, `LayerSpec`, `FlowEdgeSpec`, `StateTokenSpec`, `TransitionSpec`, `ArtifactTypeSpec`, `TraceLinkSpec`, `GovernanceEventSpec`, `LoopContractSpec`, `InfraAssetSpec`, `ServiceOpsEventSpec`, `EvidenceBindingSpec`.
+  - Implemented enum-backed constraints and required-field enforcement in code (`__post_init__` runtime validation), including cross-field constraints for critical ops events, API gateway exposure refs, and surface artifact evidence bindings.
+  - Added backward compatibility adapter layer for legacy `ea_profile.types` interoperability:
+    - legacy profile → v2 type system conversion
+    - v2 type system → legacy profile conversion
+    - legacy transition/artifact conversion helpers.
+  - Added v2 dict/JSON serialization and deserialization utilities with full aggregate round-trip support.
+- Files changed
+  - `packages/ea-profile/src/ea_profile/v2/types.py`
+  - `packages/ea-profile/src/ea_profile/v2/serializer.py`
+  - `packages/ea-profile/src/ea_profile/v2/adapters.py`
+  - `packages/ea-profile/src/ea_profile/v2/__init__.py`
+  - `packages/ea-profile/tests/test_v2_types.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Keeping a dedicated v2 namespace and explicit adapter boundary avoids contaminating stable v1 profile contracts while still allowing deterministic migration paths.
+  - Gotchas encountered
+    - In this sandbox, `uv run` panicked and global pytest plugin auto-loading attempted restricted socket bind; tests were executed with explicit plugin control (`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`, `-p pytest_cov`) and local `PYTHONPATH`.
 ---

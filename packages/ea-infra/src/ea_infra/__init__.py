@@ -2,6 +2,12 @@
 ea-infra: Infrastructure and Resource Indexing Layer.
 """
 
+from ea_infra.asset_catalog import (
+    InfraAssetCatalogStore,
+    InfraAssetQuery,
+    InMemoryInfraAssetCatalogStore,
+    SQLiteInfraAssetCatalogStore,
+)
 from ea_infra.ops_ingestion import (
     InMemoryOpsEventStore,
     OpsEventCleanupResult,
@@ -12,6 +18,10 @@ from ea_infra.ops_ingestion import (
 )
 
 __all__ = [
+    "InfraAssetCatalogStore",
+    "InfraAssetQuery",
+    "InMemoryInfraAssetCatalogStore",
+    "SQLiteInfraAssetCatalogStore",
     "InMemoryOpsEventStore",
     "OpsEventCleanupResult",
     "OpsEventRecord",

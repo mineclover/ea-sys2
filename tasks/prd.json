@@ -1,19 +1,19 @@
 {
-  "name": "M2 v2 Core Completion (Unimplemented + Partial Specs)",
-  "description": "M2 v2 엔티티 12개를 타입/로더/검증기/런타임 훅으로 완성하고, 미구현 영역(FlowEdgeSpec, LoopContractSpec, GovernanceEventSpec, InfraAssetSpec)을 운영 가능한 계약으로 승격한다.",
-  "branchName": "ralph/m2-v2-core-completion",
+  "name": "M3-Core 도입 및 M2 전면 이관/재귀 보완",
+  "branchName": "ralph/m3-core-m2-migration",
+  "description": "M3-core(TOML)를 구현하고 저장소 내 모든 M2 변형을 레이어 단위로 이관한 뒤, M3 self-host 게이트와 M2 경유 정책을 엄격 강제한다.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "v2 Core Type System 정의",
-      "description": "As a platform architect, I want a canonical v2 type system so that all M2 entities share one source of truth.",
+      "title": "M3 범위/용어/경계 문서 확정",
+      "description": "As an architect, I want M3의 책임 경계와 핵심 용어를 먼저 고정 so that 이후 구현/이관 기준을 일관되게 유지할 수 있다.",
       "acceptanceCriteria": [
-        "ea-profile에 12개 엔티티 대응 타입(ProfileSpec, LayerSpec, FlowEdgeSpec, StateTokenSpec, TransitionSpec, ArtifactTypeSpec, TraceLinkSpec, GovernanceEventSpec, LoopContractSpec, InfraAssetSpec, ServiceOpsEventSpec, EvidenceBindingSpec)이 정의된다.",
-        "필수 필드와 enum 타입이 코드에서 강제된다.",
-        "기존 profile 타입과 병행 가능한 하위 호환 레이어(변환/어댑터)가 제공된다.",
-        "타입 직렬화/역직렬화 단위 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "docs/m3-core-draft.md를 생성하고 M3 목적, 범위, 비범위를 정의한다.",
+        "docs/system-terminology.md에 M3 관련 용어를 추가하고 M2/M3 경계를 명시한다.",
+        "docs/architecture-map.md에 M3 축을 반영한 탐색 순서를 추가한다.",
+        "문서 간 참조 링크가 끊기지 않고 docs:check에서 검증된다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 1,
       "passes": false,
@@ -22,15 +22,15 @@
     },
     {
       "id": "US-002",
-      "title": "v2 Loader 확장 (TOML -> Typed Spec)",
-      "description": "As a platform architect, I want the loader to parse v2 blocks so that profiles can declare the full contract declaratively.",
+      "title": "M3 디렉토리/엔트리포인트 골격 구성",
+      "description": "As a platform engineer, I want M3 작업 경로를 표준화 so that 모든 산출물이 동일 경로 규칙을 따르도록 한다.",
       "acceptanceCriteria": [
-        "loader가 flow_edges, state_tokens, transitions, artifact_types, trace_links, governance_events, loop_contracts, infra_assets, service_ops_events, evidence_bindings 블록을 파싱한다.",
-        "누락 필수 필드에 대해 명시적 에러 메시지를 반환한다.",
-        "기존 v1/v1.5 profile 로딩이 깨지지 않는다.",
-        "샘플 v2 TOML fixture 기반 로더 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "specs/m3-core/, tools/m3/, docs/m3/ 디렉토리 골격을 생성한다.",
+        "각 디렉토리에 README를 추가해 역할/입출력 계약을 명시한다.",
+        "package.json에 m3 관련 스크립트 자리(m3:check, m3:generate 등)를 정의한다.",
+        "docs/README.md 및 partition-registry에 신규 문서 등록을 완료한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 2,
       "passes": false,
@@ -41,220 +41,428 @@
     },
     {
       "id": "US-003",
-      "title": "FlowEdgeSpec + LoopContractSpec 정적 검증기 구현",
-      "description": "As a platform architect, I want mandatory loop path validation so that causal closed-loop guarantees are enforced at load time.",
+      "title": "M2 자산 인벤토리 추출기 구현",
+      "description": "As a spec owner, I want M2 자산 전체를 자동 추출 so that 이관 누락을 기계적으로 방지할 수 있다.",
       "acceptanceCriteria": [
-        "필수 경로(infra->kernel, infra->flow, decision->needs, needs->kernel, kernel->flow, flow->projection, projection->decision) 존재 검증이 구현된다.",
-        "loop_contracts.path가 flow graph 상 닫힌 경로인지 검증한다.",
-        "잘못된 경로/단절 경로에 대한 구조화 에러 코드를 제공한다.",
-        "validator 테스트가 성공/실패 케이스 모두 포함한다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/export_m2_inventory.py를 구현해 contracts/profiles/lint/validator/snapshot 목록을 추출한다.",
+        "출력 파일 tasks/m3/m2-inventory.json을 생성한다.",
+        "자산별 경로, 섹션, 활성 상태(enabled), 의존 파일을 포함한다.",
+        "누락/중복 경로를 오류로 보고한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 3,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
         "US-002"
       ]
     },
     {
       "id": "US-004",
-      "title": "TransitionSpec + StateTokenSpec 고도화",
-      "description": "As a platform architect, I want transition contracts to include trace/governance requirements so that state transitions are auditable.",
+      "title": "M2->M3 매핑 매트릭스 작성",
+      "description": "As a migration lead, I want 자산별 매핑 규칙을 문서화 so that 이관/검증 리뷰를 동일 기준으로 수행할 수 있다.",
       "acceptanceCriteria": [
-        "TransitionSpec에 requires_trace, requires_governance_event 계약이 반영된다.",
-        "from/to가 같은 layer의 StateTokenSpec을 참조하는지 검증된다.",
-        "alias/canonical 매핑 규칙이 공통 유틸로 정리된다.",
-        "transition 검증 테스트가 alias 포함 케이스를 검증한다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "docs/m3/m2-to-m3-mapping-matrix.md를 생성한다.",
+        "M2 섹션별로 M3 primitive(section/field/rule/reference/policy) 매핑을 표로 정의한다.",
+        "매핑 불가 항목을 explicit 예외 목록으로 기록한다.",
+        "US-003 인벤토리와 매핑 매트릭스 항목 수가 일치한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 4,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-002"
+        "US-003"
       ]
     },
     {
       "id": "US-005",
-      "title": "GovernanceEventSpec 계약 도입",
-      "description": "As a platform architect, I want typed governance event specs so that event required fields and retention policy are enforceable.",
+      "title": "M3 primitive contract 스키마 정의",
+      "description": "As a core maintainer, I want M3 primitive 자체 계약을 정의 so that M3 입력 문서가 일관된 형식을 갖도록 한다.",
       "acceptanceCriteria": [
-        "GovernanceEventSpec(name, must_include, retention_policy) 타입/validator가 구현된다.",
-        "must_include 최소 키(trace_id, lineage_id) 검증이 구현된다.",
-        "retention 정책 enum/허용값 검증이 구현된다.",
-        "governance event spec 위반 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "specs/m3-core/contracts/00-m3-primitive-contract.toml을 추가한다.",
+        "primitive별 required/enum/pattern/reference 제약을 정의한다.",
+        "activation policy와 rule expression 필드 제약을 포함한다.",
+        "샘플 m3-core 파일이 해당 계약을 통과함을 확인한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 5,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-002"
+        "US-002",
+        "US-004"
       ]
     },
     {
       "id": "US-006",
-      "title": "InfraAssetSpec 카탈로그 모델/저장소 구현",
-      "description": "As a platform architect, I want infra assets cataloged with ownership and criticality so that projection/governance can reference infrastructure consistently.",
+      "title": "M3 TOML 로더/파서 구현",
+      "description": "As a platform engineer, I want M3 TOML을 안정적으로 파싱 so that 생성기/검증기의 입력 신뢰성을 확보한다.",
       "acceptanceCriteria": [
-        "InfraAssetSpec 모델과 저장소 인터페이스(in-memory + SQLite)가 구현된다.",
-        "owner/environment/criticality/asset_type/exposure_refs 필드 제약 검증이 구현된다.",
-        "asset_type=api_gateway 교차 제약(url: 또는 api: ref 필수)이 구현된다.",
-        "저장/조회/필터(예: owner, environment, criticality) 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/load_m3_core.py를 구현한다.",
+        "구문 오류, 타입 오류, 누락 필드를 구분해 에러 코드를 반환한다.",
+        "specs/m3-core/examples/*.toml 샘플에 대한 파싱 테스트를 추가한다.",
+        "파싱 결과를 정규화 JSON으로 출력하는 --json 옵션을 제공한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 6,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001"
+        "US-005"
       ]
     },
     {
       "id": "US-007",
-      "title": "ServiceOpsEventSpec 통합 정렬",
-      "description": "As a platform architect, I want ServiceOpsEventSpec to be consumed from the unified v2 spec layer so that duplicated contracts are removed.",
+      "title": "M3 semantic validator 구현",
+      "description": "As a governance engineer, I want M3 의미 검증을 수행 so that 참조/활성화 정책 오류를 생성 전에 차단한다.",
       "acceptanceCriteria": [
-        "ea-ops의 ServiceOpsEventSpec와 ea-profile v2 spec 타입 간 매핑 또는 단일 소스 전략이 확정된다.",
-        "ea-governance ingestion API가 통합 spec 경로를 사용한다.",
-        "critical severity 교차 제약이 통합 경로에서 동일하게 보장된다.",
-        "호환성 회귀 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/validate_m3_core.py를 구현한다.",
+        "reference 대상 존재, duplicate id, cycle, activation policy 충돌을 검증한다.",
+        "오류 메시지에 source file/section/path를 포함한다.",
+        "통과/실패 fixture 테스트를 추가한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 7,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-002",
-        "US-005"
+        "US-006"
       ]
     },
     {
       "id": "US-008",
-      "title": "EvidenceBindingSpec 통합 및 TraceLinkSpec 연계",
-      "description": "As a platform architect, I want evidence and trace contracts connected so that replay and audit can validate required evidence.",
+      "title": "M3 snapshot 생성/검증 구현",
+      "description": "As a release engineer, I want M3 입력의 결정적 snapshot을 유지 so that 변경 diff를 안정적으로 리뷰할 수 있다.",
       "acceptanceCriteria": [
-        "EvidenceBindingSpec와 TraceLinkSpec 관계 검증 로직이 추가된다.",
-        "source_type=surface_artifact일 때 environment 필수 규칙이 통합 validator에서 보장된다.",
-        "lineage replay 시 evidence 누락 경고 또는 차단 모드가 선택 가능하게 구현된다.",
-        "trace/evidence 통합 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/compose_m3_snapshot.py를 구현한다.",
+        "snapshot write/check 모드를 지원한다.",
+        "정렬 규칙을 고정해 동일 입력에서 동일 snapshot을 보장한다.",
+        "specs/m3-core/snapshots/m3-core.snapshot.json을 생성한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 8,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-005",
         "US-007"
       ]
     },
     {
       "id": "US-009",
-      "title": "Runtime Contract Enforcement Hook 도입",
-      "description": "As a platform architect, I want runtime hooks for transition/event/loop checks so that static contracts are enforced during execution.",
+      "title": "M3->M2 contract 생성기 구현",
+      "description": "As a spec engineer, I want M3에서 M2 contract를 생성 so that 계약 정의 반복과 누락을 줄인다.",
       "acceptanceCriteria": [
-        "상태 전이 시 requires_trace 계약 강제 훅이 구현된다.",
-        "상태 전이/구조 변경/표층 노출 시 required governance event 발행 여부 검증 훅이 구현된다.",
-        "lineage 단절/필수 relation 누락의 warning vs block 정책을 설정 가능하게 제공한다.",
-        "runtime enforcement 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/generate_m2_contracts.py를 구현한다.",
+        "최소 00-common/10-topology/20-state-transition 생성을 지원한다.",
+        "생성 결과를 specs/m2-v2/contracts/ 경로로 출력한다.",
+        "수동 파일 대비 diff 리포트를 생성한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 9,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-003",
-        "US-004",
-        "US-005",
-        "US-008"
+        "US-007"
       ]
     },
     {
       "id": "US-010",
-      "title": "Governance API 확장 (v2 spec 조회/검증)",
-      "description": "As a platform architect, I want governance APIs to expose v2 spec status so that operators can inspect contract readiness.",
+      "title": "M3->M2 lint-rules 생성기 구현",
+      "description": "As a governance engineer, I want lint rules를 M3 정책에서 생성 so that 정책 단일 출처를 유지한다.",
       "acceptanceCriteria": [
-        "v2 spec/validator 결과를 조회하는 read-only API endpoint가 추가된다.",
-        "엔티티별 구현 상태(loaded/validated/errors)를 반환한다.",
-        "validation error envelope가 기존 API 에러 형식과 일관된다.",
-        "API contract 테스트가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/generate_m2_lint.py를 구현한다.",
+        "required_sections, required_active_contract_ids, rules 토글을 생성한다.",
+        "enforce_no_extra_active_contracts 유지가 생성 산출물에서 검증된다.",
+        "기존 lint-rules.toml과 동등성 비교 리포트를 출력한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 10,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-005",
-        "US-009"
+        "US-007"
       ]
     },
     {
       "id": "US-011",
-      "title": "Migration/Compatibility Layer",
-      "description": "As a platform architect, I want a migration path from legacy profile fields so that adoption does not require a hard cutover.",
+      "title": "M3->M2 validator scaffold 생성기 구현",
+      "description": "As a core maintainer, I want validator scaffold를 자동 생성 so that 계약 변경 시 검증기 누락을 방지한다.",
       "acceptanceCriteria": [
-        "기존 LayerStack 문자열 flow 필드를 FlowEdgeSpec로 변환하는 마이그레이션 유틸이 제공된다.",
-        "legacy profile을 로드할 때 deprecation warning이 기록된다.",
-        "변환 결과를 검증하는 golden test가 추가된다.",
-        "cutover 가이드 문서가 추가된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/generate_m2_validator.py를 구현한다.",
+        "required/enum/pattern/reference 검사 함수 scaffold를 생성한다.",
+        "contract activation 분기 코드를 scaffold에 포함한다.",
+        "생성 코드가 기존 validate_m2_v2.py와 병렬 비교 가능해야 한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 11,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-002",
-        "US-003"
+        "US-009",
+        "US-010"
       ]
     },
     {
       "id": "US-012",
-      "title": "문서/Runbook 정합화",
-      "description": "As a platform architect, I want docs and runbooks aligned with implemented v2 contracts so that teams can operate repeatably.",
+      "title": "M3 기반 compose/snapshot 생성 통합",
+      "description": "As a release engineer, I want compose/snapshot도 M3 경유로 생성 so that 릴리스 기준점을 단일화한다.",
       "acceptanceCriteria": [
-        "docs/m2-v2-draft.md의 엔티티/검증/DoD 섹션이 구현 기준으로 업데이트된다.",
-        "docs/m2-v2-package-map.md에 실제 구현 패키지 및 모듈 경로가 반영된다.",
-        "운영 검증 절차(runbook)에 정적 validator + runtime hook + replay 점검 루틴이 문서화된다.",
-        "문서 기반 수동 smoke 절차가 재현 가능하게 정리된다.",
-        "uv run ruff check <changed-files-or-packages> passes",
-        "uv run pytest <story-scoped-tests> passes"
+        "tools/m3/generate_m2_compose.py를 구현한다.",
+        "m2-v2.compose.toml 및 snapshot 생성 경로를 M3 기반으로 연결한다.",
+        "생성 후 m2:snapshot:check와의 결과가 일치한다.",
+        "생성 파이프라인 문서를 tools/m3/README.md에 추가한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
       ],
       "priority": 12,
       "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-002",
-        "US-003",
-        "US-004",
-        "US-005",
-        "US-006",
-        "US-007",
         "US-008",
         "US-009",
-        "US-010",
-        "US-011"
+        "US-010"
+      ]
+    },
+    {
+      "id": "US-013",
+      "title": "레이어 이관: infra",
+      "description": "As a migration lead, I want infra layer를 먼저 M3 경유로 이관 so that 초기 리스크를 낮춘 상태로 검증한다.",
+      "acceptanceCriteria": [
+        "infra 관련 M2 산출물(contract/profile/validator rule)이 M3 생성 결과로 대체된다.",
+        "이관 diff 리포트(tasks/m3/migration/infra.diff.md)를 남긴다.",
+        "infra 관련 실패 케이스 회귀 테스트를 추가한다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-011",
+        "US-012"
+      ]
+    },
+    {
+      "id": "US-014",
+      "title": "레이어 이관: governance",
+      "description": "As a migration lead, I want governance layer를 M3 경유로 이관 so that 이벤트/추적 기준을 동일 생성 경로로 맞춘다.",
+      "acceptanceCriteria": [
+        "governance 관련 산출물이 M3 생성 경로로 전환된다.",
+        "governance/kernel 승격 게이트 관련 규칙이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/governance.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-013"
+      ]
+    },
+    {
+      "id": "US-015",
+      "title": "레이어 이관: decision",
+      "description": "As a migration lead, I want decision layer를 M3 경유로 이관 so that 인과 판단 규칙 생성 경로를 통일한다.",
+      "acceptanceCriteria": [
+        "decision profile/transition/linkage 산출물이 M3 생성으로 전환된다.",
+        "decision canonical event/kind/subtype 규칙이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/decision.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-013"
+      ]
+    },
+    {
+      "id": "US-016",
+      "title": "레이어 이관: needs",
+      "description": "As a migration lead, I want needs layer를 M3 경유로 이관 so that 의사결정-요구 정제 경로를 동일 규칙으로 관리한다.",
+      "acceptanceCriteria": [
+        "needs profile/transition 산출물이 M3 생성으로 전환된다.",
+        "decision->needs trace/transition linkage 규칙이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/needs.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-015"
+      ]
+    },
+    {
+      "id": "US-017",
+      "title": "레이어 이관: kernel",
+      "description": "As a migration lead, I want kernel layer를 M3 경유로 이관 so that 구조 규칙 자산의 생성/검증 경로를 통일한다.",
+      "acceptanceCriteria": [
+        "kernel 관련 산출물과 승격 정책 레코드가 M3 생성으로 전환된다.",
+        "비규범 상태 정책(candidate/promoted) 표현이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/kernel.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-014",
+        "US-016"
+      ]
+    },
+    {
+      "id": "US-018",
+      "title": "레이어 이관: flow",
+      "description": "As a migration lead, I want flow layer를 M3 경유로 이관 so that 실행/데이터 기억 규칙을 자동 생성 체계로 전환한다.",
+      "acceptanceCriteria": [
+        "flow transitions/evidence bindings 산출물이 M3 생성으로 전환된다.",
+        "flow canonical event/kind/subtype 규칙이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/flow.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-017"
+      ]
+    },
+    {
+      "id": "US-019",
+      "title": "레이어 이관: projection",
+      "description": "As a migration lead, I want projection layer를 M3 경유로 이관 so that 표층 산출물/아티팩트 규칙을 단일 생성 경로로 유지한다.",
+      "acceptanceCriteria": [
+        "projection artifact/lifecycle 규칙 산출물이 M3 생성으로 전환된다.",
+        "core artifact set(api/tool/page/identifier) 제약이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/projection.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-018"
+      ]
+    },
+    {
+      "id": "US-020",
+      "title": "메타 레이어 이관: terminology",
+      "description": "As a migration lead, I want terminology 메타 레이어를 M3 경유로 이관 so that 용어/심볼 규칙을 생성 기반으로 관리한다.",
+      "acceptanceCriteria": [
+        "terminology contract/섹션 제약이 M3 생성 결과로 전환된다.",
+        "uuid immutable + uid migration 규칙이 유지된다.",
+        "이관 diff 리포트(tasks/m3/migration/terminology.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-019"
+      ]
+    },
+    {
+      "id": "US-021",
+      "title": "메타 레이어 이관: knowledge",
+      "description": "As a migration lead, I want knowledge 메타 레이어를 M3 경유로 이관 so that source/evidence/claim/link 설계를 생성 체계로 통합한다.",
+      "acceptanceCriteria": [
+        "knowledge(31~34) contracts와 관련 문서 규칙이 M3 생성 결과와 동기화된다.",
+        "baseline 비활성 정책(enabled=false) 유지와 활성화 게이트 규칙이 보존된다.",
+        "이관 diff 리포트(tasks/m3/migration/knowledge.diff.md)를 남긴다.",
+        "이관 후 quality gate가 통과한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-019"
+      ]
+    },
+    {
+      "id": "US-022",
+      "title": "M2 old/new 동등성 검증 하네스 구축",
+      "description": "As a QA owner, I want old/new 산출물을 자동 비교 so that M3 전환 회귀를 정량적으로 차단한다.",
+      "acceptanceCriteria": [
+        "tools/m3/compare_m2_equivalence.py를 구현한다.",
+        "contract/lint/validator-result/snapshot 비교를 지원한다.",
+        "diff를 tasks/m3/equivalence-report.md로 출력한다.",
+        "불일치 발생 시 non-zero exit로 CI 차단 가능해야 한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-020",
+        "US-021"
+      ]
+    },
+    {
+      "id": "US-023",
+      "title": "M3 self-host CI 엄격 게이트 적용",
+      "description": "As a governance owner, I want self-host 실패 시 merge를 차단 so that M3 정합성 훼손을 즉시 방지한다.",
+      "acceptanceCriteria": [
+        ".github/workflows에 m3 self-host job을 추가한다.",
+        "job은 생성->검증->동등성 비교를 순서대로 실행한다.",
+        "실패 시 PR merge가 차단되도록 required check로 설정한다.",
+        "우회(break-glass) 없이 strict fail 정책을 문서화한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-022"
+      ]
+    },
+    {
+      "id": "US-024",
+      "title": "Cutover 및 M2 direct-edit 차단 정책 적용",
+      "description": "As a repo maintainer, I want Go-live 이후 M2 direct edit를 차단 so that 변경 경로를 M3 경유로 강제한다.",
+      "acceptanceCriteria": [
+        "docs/m3/m3-cutover-runbook.md를 추가해 운영 절차를 고정한다.",
+        "generated target 파일 직접 수정 감지 규칙(예: CI guard)을 추가한다.",
+        "위반 시 안내 메시지와 복구 절차를 표준화한다.",
+        "M2 신규 변경은 M3 생성 경유만 허용되도록 정책을 명시한다.",
+        "pnpm -C ea-sys-ts run quality:check passes",
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-023"
       ]
     }
-  ],
-  "metadata": {
-    "sourcePrd": "tasks/prd-m2-v2-core-completion.md",
-    "updatedAt": "2026-02-21T02:58:15.617Z"
-  }
+  ]
 }

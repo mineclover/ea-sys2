@@ -1,8 +1,8 @@
 {
-  "id": "6bb92a51-8b86-4f32-a139-395b1fc280b1",
-  "status": "running",
-  "startedAt": "2026-02-21T02:58:15.145Z",
-  "updatedAt": "2026-02-21T02:58:15.145Z",
+  "id": "5a0cd35a-2f07-4250-8c8d-6d0e925925c9",
+  "status": "interrupted",
+  "startedAt": "2026-02-21T05:25:36.570Z",
+  "updatedAt": "2026-02-21T05:25:40.989Z",
   "agentPlugin": "codex",
   "trackerPlugin": "json",
   "prdPath": "tasks/prd.json",
@@ -10,5 +10,6 @@
   "maxIterations": 0,
   "totalTasks": 0,
   "tasksCompleted": 0,
-  "cwd": "/Users/junwoobang/workflow/ea-sys2"
+  "cwd": "/Users/junwoobang/workflow/ea-sys2",
+  "endedAt": "2026-02-21T05:25:40.989Z"
 }

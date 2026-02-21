@@ -4,6 +4,7 @@
 
 ## Scope
 
+- v2 스펙 readiness: `GET /governance/v2-spec/status`
 - 단건 수집: `POST /governance/ops-events/ingest`
 - 대량 수집: `POST /governance/ops-events/ingest/bulk`
 - 목록 조회: `GET /governance/ops-events`
@@ -33,7 +34,28 @@
 
 ## API 명세
 
-### 1) `POST /governance/ops-events/ingest`
+### 1) `GET /governance/v2-spec/status`
+
+v2 타입 계약 readiness를 읽기 전용으로 점검한다.
+
+Query:
+
+- `entities`(optional, repeatable): 엔티티 필터(`profile`, `flow_edges`, `evidence_bindings` 등)
+- 필터는 `-`/`_`를 정규화하며, 중복은 자동 제거한다.
+
+응답(`200`) 핵심 필드:
+
+- `spec`: `ea_profile.v2`
+- `status`: `ok` | `warning`
+- `entities[]`: `entity`, `loaded`, `validated`, `errors[]`
+- `summary`: `entity_count`, `loaded_count`, `validated_count`, `error_count`
+
+검증 오류:
+
+- 잘못된 `entities` 값은 `422 v2_spec_validation_error`
+- 오류 payload는 `issues[]`에 `entities[{index}]` 경로를 포함한다.
+
+### 2) `POST /governance/ops-events/ingest`
 
 단건 서비스 운영 이벤트를 수집한다.
 
@@ -76,7 +98,7 @@ Success (`200`) 핵심 응답 필드:
 - `auto_express_decision` (`requested`, `allowed`, `reason_codes`, `policy_found`, `catalog_id`)
 - `expressed_need` (`catalog_id`, `need_id`, `lineage_id`, `version`) 또는 `null`
 
-### 2) `POST /governance/ops-events/ingest/bulk`
+### 3) `POST /governance/ops-events/ingest/bulk`
 
 여러 이벤트를 고정 전략 `partial`로 수집한다.
 
@@ -108,7 +130,7 @@ Success/Partial (`200`) 응답:
 - 빈 리스트 요청만 `422` (`items` 최소 1개)
 - bulk 내부 trace/lineage 상관관계가 다르면 해당 항목만 실패
 
-### 3) `GET /governance/ops-events`
+### 4) `GET /governance/ops-events`
 
 운영 이벤트 목록 조회.
 
@@ -149,7 +171,7 @@ Query:
 
 - 잘못된 timestamp 형식, 또는 `ingested_from > ingested_to`이면 `422 ops_event_query_validation_error`
 
-### 4) `GET /governance/ops-events/{event_id}`
+### 5) `GET /governance/ops-events/{event_id}`
 
 단건 이벤트 조회.
 
@@ -158,17 +180,23 @@ Query:
 
 `event_id`는 infra snapshot id (`service_ops_event:*`)를 사용한다.
 
-### 5) `GET /governance/lineage-replay/{decision_id}`
+### 6) `GET /governance/lineage-replay/{decision_id}`
 
 의사결정 라인리지 재생 조회.
+
+Query:
+
+- `evidence_mode`: `warn`(default) | `block`
 
 성공 (`200`) 필드:
 
 - `decision_id`
+- `evidence_mode`
 - `status`: `ok` | `warning`
 - `replayed_nodes`
 - `path_to_latest_operation`
 - `missing_required_relations`
+- `missing_evidence_operations`
 - `path_error`
 - `warnings[]` (`code`, `message`, optional `details`)
 
@@ -176,17 +204,19 @@ Warning 계약:
 
 - 경로 단절은 실패가 아니라 `status=warning`으로 반환
 - `lineage_path_disconnected`, `lineage_missing_required_relations` 사용
+- `evidence_mode=warn`에서 필수 증거 누락 시 `lineage_missing_required_evidence` warning 반환
 
 오류 계약:
 
-- `422 lineage_replay_validation_error`
+- `422 lineage_replay_validation_error` (`decision_id`, `evidence_mode` 검증 포함)
 - `404 lineage_replay_not_found`
+- `409 lineage_replay_evidence_blocked` (`evidence_mode=block` + 증거 누락)
 
 ## 운영 Runbook
 
 ### A) 검증 실패(422) 대응
 
-1. `detail.error` 코드 확인 (`ops_event_validation_error`, `ops_event_query_validation_error`, `lineage_replay_validation_error`).
+1. `detail.error` 코드 확인 (`v2_spec_validation_error`, `ops_event_validation_error`, `ops_event_query_validation_error`, `lineage_replay_validation_error`).
 2. `detail.issues[]`를 `field` 단위로 분류해 입력 데이터 생성 경로를 수정한다.
 3. bulk의 경우 `items[{index}]`로 실패 항목만 재시도한다.
 
@@ -229,6 +259,99 @@ print("count", store.count())
 PY
 ```
 
+### D) 정적 validator 점검 루틴 (`ea_profile.v2`)
+
+운영 배포 전, v2 정적 계약이 로드 시점에 깨지지 않는지 확인한다.
+
+```bash
+UV_CACHE_DIR=.uv-cache uv run --no-sync python - <<'PY'
+from ea_profile.v2 import (
+    FlowEdgeKind,
+    FlowEdgeSpec,
+    LayerRole,
+    LayerSpec,
+    ProfileSpec,
+    TypeSystemSpec,
+    TypeSystemValidationError,
+)
+
+profile = ProfileSpec(
+    id="runbook.profile",
+    version="1.0.0",
+    kernel_version="2.5.0",
+    namespace="runbook.ns",
+    domain="runbook.domain",
+)
+layers = (
+    LayerSpec(id="infra", order=0, role=LayerRole.RUNTIME_SUBSTRATE, responsibility="infra"),
+    LayerSpec(id="decision", order=10, role=LayerRole.CAUSAL_MEMORY, responsibility="decision"),
+    LayerSpec(id="needs", order=20, role=LayerRole.CAUSAL_MEMORY, responsibility="needs"),
+    LayerSpec(id="kernel", order=30, role=LayerRole.BUSINESS_SKELETON, responsibility="kernel"),
+    LayerSpec(id="flow", order=40, role=LayerRole.DATA_MODELING_MEMORY, responsibility="flow"),
+    LayerSpec(id="projection", order=50, role=LayerRole.SURFACE_MEMORY, responsibility="projection"),
+)
+
+try:
+    TypeSystemSpec(
+        profile=profile,
+        layers=layers,
+        flow_edges=(
+            FlowEdgeSpec(
+                id="infra_to_kernel",
+                from_layer="infra",
+                to_layer="kernel",
+                kind=FlowEdgeKind.SUBSTRATE_CONSTRAINT,
+                required=True,
+            ),
+        ),
+    )
+except TypeSystemValidationError as err:
+    print("expected validation failure codes:", sorted({issue.code for issue in err.issues}))
+PY
+```
+
+검증:
+
+- 실행 결과에 `FLOW_REQUIRED_PATH_MISSING`가 포함되어야 한다.
+- 예외가 전혀 발생하지 않으면 정적 validator 점검 시나리오가 잘못 구성된 것이다.
+
+### E) runtime hook + replay 점검 루틴
+
+1. v2 readiness hook:
+
+```bash
+curl -sS "$BASE_URL/governance/v2-spec/status"
+curl -sS "$BASE_URL/governance/v2-spec/status?entities=profile&entities=evidence-bindings"
+```
+
+검증:
+
+- 첫 응답: `status == "ok"` 또는 `status == "warning"` + `entities[].loaded/validated/errors`
+- 둘째 응답: `entities`가 `profile`, `evidence_bindings`만 반환
+
+2. lineage replay validation contract:
+
+```bash
+curl -sS "$BASE_URL/governance/lineage-replay/decision-any?evidence_mode=deny"
+```
+
+검증:
+
+- HTTP `422`
+- `detail.error == "lineage_replay_validation_error"`
+- `detail.issues[].field`에 `evidence_mode`
+
+3. lineage replay evidence block contract:
+
+```bash
+curl -sS "$BASE_URL/governance/lineage-replay/decision-missing-evidence-001?evidence_mode=block"
+```
+
+검증:
+
+- 증거 누락 trace가 존재하는 환경에서는 HTTP `409 lineage_replay_evidence_blocked`
+- seed 데이터가 없는 환경에서는 HTTP `404 lineage_replay_not_found`일 수 있으므로, 해당 경우 replay fixture를 먼저 로드한 뒤 재검증한다.
+
 ## 수동 Smoke 절차 (문서 기준 재현)
 
 ### 0) 서버 기동
@@ -244,7 +367,19 @@ UV_CACHE_DIR=.uv-cache uv run --no-sync python -m ea_kernel.api.server
 BASE_URL=http://localhost:8000
 ```
 
-### 1) 단건 ingest 성공 확인
+### 1) v2 readiness hook 확인
+
+```bash
+curl -sS "$BASE_URL/governance/v2-spec/status"
+```
+
+검증:
+
+- HTTP `200`
+- `spec == "ea_profile.v2"`
+- `summary.entity_count == 12`
+
+### 2) 단건 ingest 성공 확인
 
 ```bash
 curl -sS -X POST "$BASE_URL/governance/ops-events/ingest" \
@@ -271,7 +406,7 @@ curl -sS -X POST "$BASE_URL/governance/ops-events/ingest" \
 - HTTP `200`
 - `transaction_id`, `trace_id`, `lineage_id`, `snapshot_id` 존재
 
-### 2) 단건 ingest 검증 실패 확인
+### 3) 단건 ingest 검증 실패 확인
 
 ```bash
 curl -sS -X POST "$BASE_URL/governance/ops-events/ingest" \
@@ -297,7 +432,7 @@ curl -sS -X POST "$BASE_URL/governance/ops-events/ingest" \
 - `detail.error == "ops_event_validation_error"`
 - `detail.issues`에 `payload.slo_name`
 
-### 3) bulk 부분 실패 확인
+### 4) bulk 부분 실패 확인
 
 ```bash
 curl -sS -X POST "$BASE_URL/governance/ops-events/ingest/bulk" \
@@ -340,7 +475,7 @@ curl -sS -X POST "$BASE_URL/governance/ops-events/ingest/bulk" \
 - `success_count == 1`, `failed_count == 1`
 - 실패 항목의 `issues[].field`에 `items[1].payload.slo_name`
 
-### 4) list/get 확인
+### 5) list/get 확인
 
 ```bash
 curl -sS "$BASE_URL/governance/ops-events?trace_id=trace-smoke-001&limit=10&offset=0"
@@ -361,15 +496,25 @@ curl -sS "$BASE_URL/governance/ops-events/$EVENT_ID"
 - HTTP `200`
 - `id == EVENT_ID`
 
-### 5) lineage replay 확인
+### 6) lineage replay 검증 계약 확인
 
 ```bash
-curl -sS "$BASE_URL/governance/lineage-replay/decision-ok-001"
-curl -sS "$BASE_URL/governance/lineage-replay/decision-broken-001"
+curl -sS "$BASE_URL/governance/lineage-replay/decision-any?evidence_mode=deny"
 ```
 
 검증:
 
-- 정상 케이스: `status == "ok"`
-- 단절 케이스: HTTP `200` + `status == "warning"` + `warnings[]`
+- HTTP `422`
+- `detail.error == "lineage_replay_validation_error"`
+- `detail.issues[].field`에 `evidence_mode`
 
+### 7) lineage replay evidence block 확인 (seed 환경)
+
+```bash
+curl -sS "$BASE_URL/governance/lineage-replay/decision-missing-evidence-001?evidence_mode=block"
+```
+
+검증:
+
+- 증거 누락 fixture가 있는 환경: HTTP `409` + `detail.error == "lineage_replay_evidence_blocked"`
+- fixture가 없는 환경: HTTP `404 lineage_replay_not_found` (운영 데이터 또는 fixture 적재 후 재검증)

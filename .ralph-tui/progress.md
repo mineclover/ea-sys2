@@ -5,6 +5,7 @@
 - For trace/evidence contract integrity, validate `EvidenceBindingSpec.source_type` against a normalized set of `TraceLinkSpec` endpoint types and apply `surface_artifact -> required_fields includes environment` in the aggregate validator so replay/audit checks stay deterministic.
 - For read-only spec readiness APIs, use deterministic in-process sample specs per entity and return a stable `loaded/validated/errors` matrix so operators can inspect contract implementation health without mutating runtime state.
 - For full-loop mandatory flow validation, enforce required edges only when the canonical loop layer set is fully declared, so partial entity-focused specs keep deterministic local validation without false positives.
+- For contract runbooks, document one executable triad (static validator script + runtime readiness hook + replay endpoint checks) with explicit expected status/error codes so manual smoke remains reproducible across environments.
 
 {"type":"thread.started","thread_id":"019c7e2a-e53c-77d3-970f-c57133b1785c"}
 {"type":"turn.started"}
@@ -128,4 +129,26 @@
     - Aggregate validators can return machine-readable issue tuples (`code/field/message`) while still raising a single ValueError-compatible exception, preserving compatibility and improving diagnostics.
   - Gotchas encountered
     - Mandatory path validation can conflict with partial entity-scoped specs unless it is gated to run when the canonical loop layer set is fully present.
+---
+## 2026-02-21 - US-012
+- What was implemented
+  - Updated `docs/m2-v2-draft.md` entity/validator/DoD sections to match current implementation contracts (`ea_profile.v2` static validation, `v2-spec/status` runtime hook, replay `evidence_mode` behavior).
+  - Updated `docs/m2-v2-package-map.md` from planned paths to actual package/module paths currently implementing v2 contracts.
+  - Extended canonical governance runbook with a reproducible verification triad:
+    - static validator execution routine (`TypeSystemSpec` + `TypeSystemValidationError`)
+    - runtime readiness hook checks (`GET /governance/v2-spec/status`)
+    - replay contract checks (`GET /governance/lineage-replay/{decision_id}` with `evidence_mode`)
+  - Refined manual smoke steps so document-only execution order is reproducible without hidden assumptions.
+  - Synced lineage replay reference doc with implemented query/response/error contracts (`evidence_mode`, `missing_evidence_operations`, `409 lineage_replay_evidence_blocked`).
+- Files changed
+  - `docs/m2-v2-draft.md`
+  - `docs/m2-v2-package-map.md`
+  - `packages/ea-governance/docs/ops-events-api-runbook.md`
+  - `packages/ea-governance/docs/ops-lineage-replay-api.md`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Documentation drift is reduced when runbook steps directly exercise machine-verifiable contract points (typed load-time validator, read-only readiness hook, replay error-mode switch) and pin exact status/error envelopes.
+  - Gotchas encountered
+    - Replay checks that depend on seeded lineage data need explicit fallback expectations (`404` in non-seeded env) to keep manual smoke deterministic.
 ---

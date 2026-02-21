@@ -68,9 +68,9 @@
 | --- | --- |
 | ProfileSpec | `id`, `version`, `kernel_version`, `namespace`, `domain` |
 | LayerSpec | `id`, `order`, `role`, `responsibility` |
-| FlowEdgeSpec | `id`, `from`, `to`, `kind`, `required` |
+| FlowEdgeSpec | `id`, `from_layer`, `to_layer`, `kind`, `required` (외부 직렬화 키: `from`, `to`) |
 | StateTokenSpec | `id`, `layer`, `canonical`, `aliases[]` |
-| TransitionSpec | `id`, `layer`, `from`, `to`, `requires_trace`, `requires_governance_event` |
+| TransitionSpec | `id`, `layer`, `from_state`, `to_state`, `requires_trace`, `requires_governance_event` (외부 직렬화 키: `from`, `to`) |
 | ArtifactTypeSpec | `id`, `tier`, `source_layers[]`, `kernel_element_pattern` |
 | TraceLinkSpec | `id`, `source_type`, `target_type`, `relation`, `required` |
 | GovernanceEventSpec | `name`, `must_include[]`, `retention_policy` |
@@ -78,6 +78,22 @@
 | InfraAssetSpec | `id`, `asset_type`, `owner`, `environment`, `criticality`, `exposure_refs[]` |
 | ServiceOpsEventSpec | `name`, `severity`, `must_include[]`, `feeds_back_to` |
 | EvidenceBindingSpec | `id`, `source_type`, `binds_to`, `required_fields[]` |
+
+### 4.3 엔티티 구현 모듈 매핑 (2026-02-21 기준)
+| Entity | 구현 모듈 |
+| --- | --- |
+| `ProfileSpec` | `packages/ea-profile/src/ea_profile/v2/types.py` |
+| `LayerSpec` | `packages/ea-profile/src/ea_profile/v2/types.py` |
+| `FlowEdgeSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-profile/src/ea_profile/v2/adapters.py` |
+| `StateTokenSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-profile/src/ea_profile/v2/state_tokens.py` |
+| `TransitionSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-profile/src/ea_profile/v2/state_tokens.py` |
+| `ArtifactTypeSpec` | `packages/ea-profile/src/ea_profile/v2/types.py` |
+| `TraceLinkSpec` | `packages/ea-profile/src/ea_profile/v2/types.py` |
+| `GovernanceEventSpec` | `packages/ea-profile/src/ea_profile/v2/types.py` |
+| `LoopContractSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-profile/src/ea_profile/v2/validator.py` |
+| `InfraAssetSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-infra/src/ea_infra/asset_catalog.py` |
+| `ServiceOpsEventSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-ops/src/ea_ops/events.py`, `packages/ea-governance/src/ea_governance/api_router.py` |
+| `EvidenceBindingSpec` | `packages/ea-profile/src/ea_profile/v2/types.py`, `packages/ea-trace/src/ea_trace/evidence.py`, `packages/ea-governance/src/ea_governance/api_router.py` |
 
 ## 5. 최소 TOML 스키마 (초안)
 ```toml
@@ -180,13 +196,13 @@ kind = "feedback_observation"
 required = true
 
 [[state_tokens]]
-id = "decision.PROPOSED"
+id = "decision.proposed"
 layer = "decision"
 canonical = "PROPOSED"
 aliases = ["DecisionStatusProposed"]
 
 [[state_tokens]]
-id = "decision.ACCEPTED"
+id = "decision.accepted"
 layer = "decision"
 canonical = "ACCEPTED"
 aliases = ["DecisionStatusAccepted"]
@@ -194,8 +210,8 @@ aliases = ["DecisionStatusAccepted"]
 [[transitions]]
 id = "decision.proposed_to_accepted"
 layer = "decision"
-from = "decision.PROPOSED"
-to = "decision.ACCEPTED"
+from = "decision.proposed"
+to = "decision.accepted"
 requires_trace = true
 requires_governance_event = "decision.transitioned"
 
@@ -337,38 +353,55 @@ enforce_trace = true
 enforce_event_chain = true
 ```
 
-## 6. Validator 설계 체크리스트 (v2)
+## 6. Validator 및 운영 검증 기준 (구현 기준)
 
-### 6.1 정적 검증 (load/compile 시점)
-1. `profile.id`, `namespace`, `domain` 존재 및 형식 검사.
-2. `layers.id` 유일성, `order` 유일성, `role` enum 검사.
-3. `flow_edges` 참조 무결성(`from/to`가 존재 레이어인지).
-4. `flow_edges`의 필수 경로 존재 검사:
-   - `infra -> kernel`
-   - `infra -> flow`
-   - `decision -> needs`
-   - `needs -> kernel`
-   - `kernel -> flow`
-   - `flow -> projection`
-   - `projection -> decision`
-5. `state_tokens.id` 유일성 + `layer` 존재 검사.
-6. `transitions.from/to`가 같은 layer의 `state_tokens.id`를 참조하는지 검사.
-7. `artifact_types.id` 유일성 + tier enum 검사.
-8. `trace_links` 필수 relation 집합 충족 검사.
-9. `governance_events.name` 유일성 + `must_include` 최소 키 검사.
-10. `infra_assets.id` 유일성 + `owner/environment/criticality` 필수값 검사.
-11. `service_ops_events.name` 유일성 + `severity` enum + `feeds_back_to` 레이어 참조 검사.
-12. `evidence_bindings.id` 유일성 + `source_type/binds_to/required_fields` 완결성 검사.
-13. `loop_contracts.path`가 실제 flow graph에서 닫힌 경로인지 검사.
+### 6.1 정적 검증 (`ea_profile.v2` load 시점)
+1. `ProfileSpec`, `LayerSpec`, `FlowEdgeSpec`, `StateTokenSpec`, `TransitionSpec`, `ArtifactTypeSpec`, `TraceLinkSpec`, `GovernanceEventSpec`, `LoopContractSpec`, `InfraAssetSpec`, `ServiceOpsEventSpec`, `EvidenceBindingSpec`는 각 dataclass `__post_init__`에서 형식/enum/필수 필드 검증을 수행한다.
+2. `TypeSystemSpec.__post_init__`는 각 엔티티 ID/이벤트명 유일성 검사 후, 아래 aggregate 검증을 실행한다.
+3. `packages/ea-profile/src/ea_profile/v2/validator.py`:
+   - flow edge의 레이어 참조 무결성
+   - canonical 필수 경로(`infra->kernel`, `infra->flow`, `decision->needs`, `needs->kernel`, `kernel->flow`, `flow->projection`, `projection->decision`)
+   - loop path의 레이어 유효성 및 hop 연결성
+   - canonical loop 레이어 집합이 모두 선언된 경우에만 mandatory path를 강제
+4. `state_tokens`/`transitions`:
+   - layer별 alias index(`id`, `canonical`, `aliases`)를 구성
+   - `TransitionSpec.from_state/to_state`가 같은 layer state token으로 해석 가능한지 검사
+5. `trace_links`/`evidence_bindings`:
+   - `EvidenceBindingSpec.source_type`가 trace endpoint type 집합에 포함되는지 검사
+   - `surface_artifact` source의 `required_fields`에 `environment` 포함 강제
+6. 교차 제약:
+   - `InfraAssetSpec.asset_type == api_gateway`이면 `exposure_refs`에 `url:` 또는 `api:` 필요
+   - `ServiceOpsEventSpec.severity == critical`이면 `must_include`에 `runbook_url` 또는 `incident_id` 필요
 
-### 6.2 런타임 검증 (store/execution 시점)
-1. 상태 전이 시 `requires_trace=true`면 trace link 존재 강제.
-2. 상태 전이/구조 변경/표층 노출 시 지정된 governance event 발행 강제.
-3. `kernel_change -> flow_execution -> projection.exposed` 체인 누락 감지.
-4. Projection 산출 artifact가 선언된 `artifact_types` 외 값이면 실패(`api/tool/page/url/file/identifier` 포함).
-5. 운영 이벤트(`incident_opened`, `slo_breached`, `deployment_rolled_back`) 발생 시 `feeds_back_to` 레이어로 피드백 체인 생성 강제.
-6. `kernel_change`, `flow_execution`, `surface_artifact`에 대해 대응 `evidence_bindings` 증거 누락 시 경고 또는 차단.
-7. lineage 단위 causal chain 단절 시 경고 또는 차단.
+### 6.2 정적 validator 이슈 코드 계약
+`TypeSystemValidationError.issues[*]`는 아래 코드 집합을 사용한다.
+
+| code | 의미 |
+| --- | --- |
+| `FLOW_EDGE_UNKNOWN_LAYER` | flow edge가 존재하지 않는 source/target layer를 참조 |
+| `FLOW_REQUIRED_PATH_MISSING` | canonical required flow path 누락 |
+| `LOOP_PATH_INVALID_LAYER` | loop path에 미정의 layer 포함 |
+| `LOOP_PATH_DISCONNECTED` | loop path 인접 hop이 flow graph에서 연결되지 않음 |
+
+### 6.3 런타임 훅 검증 (`ea-governance` API)
+1. `GET /governance/v2-spec/status`
+   - 12개 엔티티별 `loaded`, `validated`, `errors` 매트릭스 제공
+   - `entities` query filter(`-`/`_` 정규화, 중복 제거) 지원
+   - 잘못된 필터는 `422 v2_spec_validation_error` 반환
+2. `POST /governance/ops-events/ingest`, `POST /governance/ops-events/ingest/bulk`
+   - `ServiceOpsEventSpec`/payload 계약 위반을 구조화된 `issues[]`로 반환
+3. `GET /governance/lineage-replay/{decision_id}`
+   - `evidence_mode=warn|block` 계약 지원
+   - `warn`: `200 status=warning` + `lineage_missing_required_evidence`
+   - `block`: `409 lineage_replay_evidence_blocked` + `missing_evidence_operations`
+   - path 단절은 `200 status=warning`으로 유지(`lineage_path_disconnected`)
+
+### 6.4 운영 점검 루틴 기준 문서
+- canonical runbook: `packages/ea-governance/docs/ops-events-api-runbook.md`
+- 포함 루틴:
+  - 정적 validator 실행 루틴 (`TypeSystemSpec`/`TypeSystemValidationError`)
+  - runtime hook 점검 루틴 (`/governance/v2-spec/status`)
+  - replay warn/block 점검 루틴 (`/governance/lineage-replay`)
 
 ## 7. M1과 M2 책임 경계
 - M2가 책임지는 것:
@@ -379,22 +412,20 @@ enforce_event_chain = true
   - "선언으로 검증 가능한 제약"은 M2로 승격.
   - "실행 시점 정보가 필요한 제약"은 M1 훅으로 유지.
 
-## 8. v2 도입 우선순위
-1. **P0**: `StateTokenSpec`, `FlowEdgeSpec`, `LoopContractSpec` 도입.
-2. **P0**: `InfraAssetSpec` + `ServiceOpsEventSpec` + `EvidenceBindingSpec` 도입.
-3. **P0**: Governance 이벤트 강제 계약(`governance_events`) 도입.
-4. **P1**: Projection source/registry discovery 선언형 전환.
-5. **P1**: Namespace-aware loader/composer 1급 지원.
-6. **P2**: 경로 제약 DSL(예: Service는 Repository 경유 필수) 추가.
+## 8. v2 도입 우선순위 (업데이트)
+1. **완료**: `StateTokenSpec`, `FlowEdgeSpec`, `LoopContractSpec` 도입 및 정적 validator 통합.
+2. **완료**: `InfraAssetSpec`, `ServiceOpsEventSpec`, `EvidenceBindingSpec` 도입 및 교차 제약 반영.
+3. **완료**: runtime readiness hook(`GET /governance/v2-spec/status`) 및 lineage replay evidence mode(`warn|block`) 도입.
+4. **진행 중**: 도메인별 profile discovery/composer의 namespace-aware 확장 고도화.
+5. **후속**: 전 계층 governance event 강제/감사 정책을 단일 실행 경로로 통합.
 
 ## 9. v2 완료 기준 (Definition of Done)
-- v2 스키마로 작성된 프로파일이 정적 validator를 통과한다.
-- `projection -> decision -> needs -> kernel -> flow -> projection` 루프가 trace/event 체인으로 재생 가능하다.
-- 거버넌스 이벤트만으로 의사결정 근거와 구조 변경 이유를 역추적할 수 있다.
-- 인프라 자산(`infra_assets`)이 owner/environment/criticality 기준으로 카탈로그화되어 Projection에서 참조 가능하다.
-- 서비스 운영 이벤트(`service_ops_events`)가 Decision/Needs/Kernel 피드백 루프로 연결된다.
-- 구현 증거(`evidence_bindings`: code_commit/ci_run/deployment_record)가 trace chain에 연결되어 감사 재생이 가능하다.
-- 새 도메인 추가 시 코드 하드코딩 없이 profile 등록/검증/표층 노출이 가능하다.
+1. `TypeSystemSpec` 기준 12개 엔티티 계약이 코드/테스트에서 모두 생성 가능해야 한다.
+2. 정적 validator가 canonical flow/loop 위반을 코드화된 이슈(`FLOW_*`, `LOOP_*`)로 반환해야 한다.
+3. transition/state-token alias 참조 무결성과 trace/evidence source-type 무결성이 aggregate load에서 강제되어야 한다.
+4. runtime hook(`GET /governance/v2-spec/status`)이 엔티티별 `loaded/validated/errors`를 안정적으로 반환해야 한다.
+5. lineage replay가 `evidence_mode=warn|block` 계약을 지키고, warning/blocked 응답을 구조화된 형태로 제공해야 한다.
+6. 운영 runbook에 정적 validator + runtime hook + replay 점검 절차와 수동 smoke 절차가 재현 가능하게 문서화되어야 한다.
 
 ## 10. Enum 및 필드 제약 표준 (v2 baseline)
 
@@ -429,41 +460,26 @@ enforce_event_chain = true
 ## 11. 패키지 매핑
 - v2에서 변경/신규 코어 패키지 매핑은 `docs/m2-v2-package-map.md`를 기준으로 한다.
 
-## 12. 구현 현황 (2026-02-21 기준)
+## 12. 구현 현황 (2026-02-21, US-011까지 반영)
 
-### 12.1 `tasks/prd.json` (US-001~US-009) 구현 평가
-| User Story | 상태 | 구현 근거 |
-| --- | --- | --- |
-| `US-001` SQLite Ops Event Store | 완료 | `packages/ea-infra/src/ea_infra/ops_ingestion.py`에 `SQLiteOpsEventStore`/`InMemoryOpsEventStore`(`append/read/count`) 구현, `packages/ea-infra/tests/test_ops_ingestion.py` 저장/조회/호환 테스트 |
-| `US-002` Retention/Cleanup | 완료 | `OpsEventRetentionPolicy`, `cleanup_preview`, `cleanup` 구현 및 age/record 기준 테스트 (`packages/ea-infra/tests/test_ops_ingestion.py`) |
-| `US-003` 단건 Ingestion API | 완료 | `POST /governance/ops-events/ingest` + 구조화 검증 오류 계약 (`packages/ea-governance/src/ea_governance/api_router.py`, `packages/ea-governance/tests/test_api_router.py`) |
-| `US-004` 대량 Ingestion API | 완료 | `POST /governance/ops-events/ingest/bulk`, `strategy=partial`, 항목별 성공/실패, trace/lineage 상관관계 검증 (`packages/ea-governance/src/ea_governance/api_router.py`) |
-| `US-005` Ops Event 조회 API | 완료 | list/get 엔드포인트 + `trace_id/lineage_id/event_name/time-range` 필터 + `limit/offset` (`packages/ea-governance/src/ea_governance/api_router.py`) |
-| `US-006` Lineage Replay API | 완료 | `GET /governance/lineage-replay/{decision_id}` + `replayed_nodes`, `path_to_latest_operation`, `missing_required_relations`, warning 계약 (`packages/ea-governance/src/ea_governance/api_router.py`) |
-| `US-007` Catalog Auto-Express 정책 테이블 | 완료 | 정책 모델/평가기/SQLite 저장소(`packages/ea-governance/src/ea_governance/catalog_policy_store.py`) + ingestion 경로 연동(`packages/ea-governance/src/ea_governance/needs_ops.py`) |
-| `US-008` Needs 자동 반영 | 완료 | 정책 통과 시 `expressed_need` 생성, 트랜잭션 이벤트 기록, infra/needs snapshot 동시 생성 (`packages/ea-governance/src/ea_governance/needs_ops.py`, `packages/ea-governance/tests/test_needs_store.py`) |
-| `US-009` API 명세/Runbook | 완료 | 명세+운영 절차 문서(`packages/ea-governance/docs/ops-events-api-runbook.md`, `packages/ea-governance/docs/ops-lineage-replay-api.md`) 및 참조(`packages/ea-governance/README.md`) |
+### 12.1 핵심 결과 요약
+- `ea_profile.v2` 네임스페이스에 12개 canonical 엔티티와 aggregate validator가 구현되었다.
+- legacy profile을 v2로 이관하는 adapter/serializer/state-token normalization 경로가 구현되었다.
+- `ea-governance` API에 runtime readiness hook(`GET /governance/v2-spec/status`)과 lineage replay evidence mode(`warn|block`)가 구현되었다.
+- ops ingest/list/get/replay 운영 계약과 runbook이 `packages/ea-governance/docs/ops-events-api-runbook.md`에 통합되었다.
 
-검증 실행 결과(2026-02-21):
-- `uv run pytest packages/ea-infra/tests/test_ops_ingestion.py packages/ea-governance/tests/test_catalog_policy_store.py packages/ea-governance/tests/test_needs_store.py packages/ea-governance/tests/test_api_router.py` → **41 passed**
-- `ruff check`는 저장소 전체 기준 기존 누적 이슈가 있으나, US-001~US-009 관련 변경 파일 스코프(`ea-ops/events.py`, `ea-infra/ops_ingestion.py`, `ea-governance/api_router.py`, `ea-governance/catalog_policy_store.py`, `ea-governance/needs_ops.py`, 관련 테스트)는 **All checks passed**
+### 12.2 구현 근거(대표 모듈)
+- `packages/ea-profile/src/ea_profile/v2/types.py`
+- `packages/ea-profile/src/ea_profile/v2/validator.py`
+- `packages/ea-profile/src/ea_profile/v2/state_tokens.py`
+- `packages/ea-profile/src/ea_profile/v2/serializer.py`
+- `packages/ea-profile/src/ea_profile/v2/adapters.py`
+- `packages/ea-governance/src/ea_governance/api_router.py`
+- `packages/ea-infra/src/ea_infra/asset_catalog.py`
+- `packages/ea-ops/src/ea_ops/events.py`
+- `packages/ea-trace/src/ea_trace/evidence.py`
 
-### 12.2 M2 v2 핵심 엔티티별 도입 상태
-| 엔티티 | 상태 | 현재 구현 메모 |
-| --- | --- | --- |
-| `ProfileSpec` | 부분 구현 | `KernelProfile`에 `name/version/kernel_version` 중심 구조 존재(`packages/ea-profile/src/ea_profile/types.py`), `namespace/domain`은 1급 필드로 미정착 |
-| `LayerSpec` | 부분 구현 | `LayerDefinition`(`name/order/responsibility`) 존재하나 `role` 강제 계약은 미완료 (`packages/ea-profile/src/ea_profile/types.py`) |
-| `FlowEdgeSpec` | 미구현 | `LayerStack`가 아직 문자열 flow 필드(`definition_flow/runtime_flow/feedback_flow`) 기반 |
-| `StateTokenSpec` | 부분 구현 | 프로파일 validator에서 상태 토큰 해석/검증은 있으나 독립 spec 엔티티는 미도입 (`packages/ea-profile/src/ea_profile/profile_validator.py`) |
-| `TransitionSpec` | 부분 구현 | `ProfileStateTransition` 존재하나 `requires_trace/requires_governance_event` 계약은 미도입 |
-| `ArtifactTypeSpec` | 부분 구현 | `ProfileArtifactType` + 패턴 검증 존재 (`packages/ea-profile/src/ea_profile/types.py`, `packages/ea-profile/src/ea_profile/profile_validator.py`) |
-| `TraceLinkSpec` | 부분 구현 | trace link 직렬화/재생 로직은 존재하나 공용 스키마 계약화는 미완료 (`packages/ea-governance/src/ea_governance/decision_trace_ops.py`) |
-| `GovernanceEventSpec` | 미구현 | 트랜잭션 이벤트는 존재하나 `name/must_include/retention_policy` 기반 typed spec 부재 |
-| `LoopContractSpec` | 미구현 | 폐루프 경로(`projection -> decision -> ...`)에 대한 독립 계약/validator 부재 |
-| `InfraAssetSpec` | 미구현 | `infra_assets` 카탈로그 모델 및 owner/env/criticality 인덱스 미도입 |
-| `ServiceOpsEventSpec` | 구현 완료 | `packages/ea-ops/src/ea_ops/events.py` + `ea-governance` ingestion/list/replay API에서 실사용 |
-| `EvidenceBindingSpec` | 구현 완료 | `packages/ea-trace/src/ea_trace/evidence.py`에 spec/validator/payload 검증 구현 |
-
-### 12.3 요약
-- PRD 기준 `US-001`~`US-009` 범위 구현은 코드/테스트/문서 기준으로 완료 상태다.
-- 다만 `m2-v2` 전체 관점의 P0 잔여 항목(`FlowEdgeSpec`, `LoopContractSpec`, `GovernanceEventSpec`, `InfraAssetSpec`)은 별도 후속 작업이 필요하다.
+### 12.3 대표 회귀 테스트
+- `packages/ea-profile/tests/test_v2_types.py`
+- `packages/ea-governance/tests/test_api_router.py`
+- `packages/ea-infra/tests/test_asset_catalog.py`

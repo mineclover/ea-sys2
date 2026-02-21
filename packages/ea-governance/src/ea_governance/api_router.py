@@ -12,6 +12,7 @@ Usage in ea-kernel server:
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +23,7 @@ from ea_ops.events import (
     validate_service_ops_event_spec,
     validate_service_ops_payload,
 )
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from ea_governance.governance_service import (
@@ -112,6 +113,18 @@ def _validation_error(issues: list[dict[str, str]]) -> HTTPException:
     return HTTPException(status_code=422, detail=_validation_error_detail(issues))
 
 
+def _query_validation_error_detail(issues: list[dict[str, str]]) -> dict[str, Any]:
+    return {
+        "error": "ops_event_query_validation_error",
+        "message": "Service ops query parameters failed validation",
+        "issues": issues,
+    }
+
+
+def _query_validation_error(issues: list[dict[str, str]]) -> HTTPException:
+    return HTTPException(status_code=422, detail=_query_validation_error_detail(issues))
+
+
 def _spec_validation_issues(errors: list[str]) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
     for message in errors:
@@ -163,6 +176,43 @@ def _ingestion_response(result: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _parse_timestamp(
+    value: str,
+    *,
+    field: str,
+) -> datetime:
+    normalized = value[:-1] if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as err:
+        raise _query_validation_error(
+            [_validation_issue(field, f"invalid ISO-8601 timestamp: {value!r}")]
+        ) from err
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _ops_event_response(event_id: str, payload: Mapping[str, Any]) -> dict[str, Any] | None:
+    if str(payload.get("kind", "")).strip() != "service_ops_event":
+        return None
+
+    event_name = (
+        str(payload.get("event_name", "")).strip()
+        or str(payload.get("name", "")).strip()
+    )
+    return {
+        "id": event_id,
+        "event_name": event_name,
+        "severity": str(payload.get("severity", "")),
+        "feeds_back_to": str(payload.get("feeds_back_to", "")),
+        "trace_id": str(payload.get("trace_id", "")),
+        "lineage_id": str(payload.get("lineage_id", "")),
+        "payload": payload.get("payload", {}),
+        "ingested_at": str(payload.get("ingested_at", "")),
+    }
+
+
 _BULK_INGESTION_STRATEGY = "partial"
 
 
@@ -200,6 +250,99 @@ def governance_business_flow(lang: str | None = None) -> dict[str, Any]:
 def governance_dashboard_endpoint() -> dict[str, Any]:
     """Overall governance status: layers, schema, frameworks."""
     return governance_dashboard()
+
+
+@governance_router.get("/ops-events")
+def list_ops_events(
+    request: Request,
+    trace_id: str | None = None,
+    lineage_id: str | None = None,
+    event_name: str | None = None,
+    ingested_from: str | None = None,
+    ingested_to: str | None = None,
+    limit: int = Query(default=100, ge=0),
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    """List persisted ops events with filter and limit/offset pagination."""
+    container = _resolve_governance_container(request)
+
+    from_ts = _parse_timestamp(ingested_from, field="ingested_from") if ingested_from else None
+    to_ts = _parse_timestamp(ingested_to, field="ingested_to") if ingested_to else None
+    if from_ts is not None and to_ts is not None and from_ts > to_ts:
+        raise _query_validation_error(
+            [
+                _validation_issue(
+                    "ingested_from",
+                    "ingested_from must be less than or equal to ingested_to",
+                )
+            ]
+        )
+
+    events: list[dict[str, Any]] = []
+    snapshots = container.list_layer_snapshots("infra")
+    for snapshot in snapshots:
+        payload = snapshot.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+        response = _ops_event_response(str(snapshot.get("model_id", "")), payload)
+        if response is None:
+            continue
+
+        if trace_id and response["trace_id"] != trace_id:
+            continue
+        if lineage_id and response["lineage_id"] != lineage_id:
+            continue
+        if event_name and response["event_name"] != event_name:
+            continue
+
+        ingested_at = str(response["ingested_at"])
+        ingested_ts = _parse_timestamp(ingested_at, field="ingested_at")
+        if from_ts is not None and ingested_ts < from_ts:
+            continue
+        if to_ts is not None and ingested_ts > to_ts:
+            continue
+        events.append(response)
+
+    events.sort(
+        key=lambda item: _parse_timestamp(str(item["ingested_at"]), field="ingested_at"),
+        reverse=True,
+    )
+    total = len(events)
+    items = events[offset : offset + limit]
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "items": items,
+    }
+
+
+@governance_router.get("/ops-events/{event_id}")
+def get_ops_event(
+    event_id: str,
+    request: Request,
+) -> dict[str, Any]:
+    """Get a single persisted ops event by its snapshot ID."""
+    container = _resolve_governance_container(request)
+    payload = container.get_layer_snapshot("infra", event_id)
+    if payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "ops_event_not_found",
+                "message": f"ops event {event_id!r} not found",
+            },
+        )
+    response = _ops_event_response(event_id, payload)
+    if response is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "ops_event_not_found",
+                "message": f"ops event {event_id!r} not found",
+            },
+        )
+    return response
 
 
 @governance_router.post("/ops-events/ingest")

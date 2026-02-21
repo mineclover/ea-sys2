@@ -10,6 +10,7 @@ after each iteration and it's included in prompts for context.
 - For retention cleanup parity, compute deletion candidates from the same ordered `(id, ingested_at)` rows and expose a non-mutating `cleanup_preview(...)` alongside mutating `cleanup(...)`.
 - Router-level write APIs can keep validation deterministic by splitting errors into typed issue entries (`field`, `message`) and returning a stable 422 envelope from the endpoint layer.
 - For bulk write APIs using fixed partial-failure strategy, keep HTTP 200 with `strategy/success_count/failed_count/results[]` and reuse the same validation envelope per failed item with `items[{index}].`-prefixed fields.
+- For ops-event list APIs backed by generic layer snapshots, parse `ingested_at` to UTC and sort by that timestamp (not `model_id`) before applying `limit/offset`, so pagination stays chronological.
 
 ---
 
@@ -87,4 +88,24 @@ after each iteration and it's included in prompts for context.
     - Bulk ingestion can stay machine-friendly by embedding the exact single-item validation envelope into each failed result entry and making fields index-addressable (`items[{index}].field`).
   - Gotchas encountered
     - Correlation checks should run after per-item spec/payload validation and only compare non-empty IDs, to avoid noisy duplicate errors when required fields are already missing.
+---
+
+## 2026-02-21 - US-005
+- What was implemented
+  - Added ops event query endpoints to governance router:
+    - `GET /governance/ops-events` (list with filtering + `limit/offset`)
+    - `GET /governance/ops-events/{event_id}` (single event lookup)
+  - Implemented list filters for `trace_id`, `lineage_id`, `event_name`, and time range (`ingested_from`, `ingested_to`).
+  - Added list response pagination contract with `total`, `limit`, `offset`, and `items`.
+  - Normalized timestamp parsing for stored ops event timestamps (`...+00:00Z`) and added structured 422 query validation for invalid time parameters.
+  - Added API tests for pagination, correlation/time-range filtering, and get success/404 behavior.
+- Files changed
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/tests/test_api_router.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Reconstructing ops-event read views from infra snapshots is reliable when `kind=service_ops_event` is treated as the boundary and response fields are normalized (`event_name` from `event_name|name`).
+  - Gotchas encountered
+    - Stored timestamps currently include a trailing `Z` even with an offset (`+00:00Z`), so direct `datetime.fromisoformat(...)` requires normalization before filter/sort comparisons.
 ---

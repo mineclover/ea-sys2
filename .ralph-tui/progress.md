@@ -8,6 +8,7 @@ after each iteration and it's included in prompts for context.
 - SQLite store pattern: keep a private `_connection()` context manager with `sqlite3.Row`, initialize schema once in `__init__`, and track versions via `schema_version`.
 - For append-only `read(after=..., limit=...)`, preserve in-memory parity by using insertion order (`rowid ASC`) and treating unknown `after` IDs as "start from beginning".
 - For retention cleanup parity, compute deletion candidates from the same ordered `(id, ingested_at)` rows and expose a non-mutating `cleanup_preview(...)` alongside mutating `cleanup(...)`.
+- Router-level write APIs can keep validation deterministic by splitting errors into typed issue entries (`field`, `message`) and returning a stable 422 envelope from the endpoint layer.
 
 ---
 
@@ -48,4 +49,23 @@ after each iteration and it's included in prompts for context.
     - JSON payload fields are persisted as `*_json` text columns and materialized back to typed dicts at read boundaries.
   - Gotchas encountered
     - `uv run` attempted to use restricted cache/proxy paths in this sandbox; using `UV_CACHE_DIR=.uv-cache` and `--no-sync` stabilized lint/test execution.
+---
+
+## 2026-02-21 - US-003
+- What was implemented
+  - Added a single-event ingestion endpoint to ea-governance API router: `POST /governance/ops-events/ingest`.
+  - Added request models for `ServiceOpsEventSpec + payload` contract and validated both spec-level and payload-level rules before ingestion.
+  - Wired the endpoint to `GovernanceContainer.ingest_service_ops_event(...)` with support for optional `catalog_id`, `stakeholder_id`, `auto_express`, `tags`, and `actor`.
+  - Added a stable structured 422 validation error envelope (`error`, `message`, `issues[]`) for contract failures.
+  - Extended success response to always include `transaction_id`, `trace_id`, `lineage_id`, and `snapshot_id` (with infra/feedback snapshot IDs preserved).
+  - Added API router tests for success and structured validation failures.
+- Files changed
+  - `packages/ea-governance/src/ea_governance/api_router.py`
+  - `packages/ea-governance/tests/test_api_router.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - Endpoint-level validation can combine domain validators (`validate_service_ops_event_spec`, `validate_service_ops_payload`) with stable API error envelopes to keep contract failures machine-parseable.
+  - Gotchas encountered
+    - The shared governance router is included by `ea-kernel` and may execute before container initialization, so endpoint code must resolve `app.state.governance_container` defensively.
 ---

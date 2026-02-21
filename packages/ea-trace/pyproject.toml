@@ -3,16 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ea-governance"
+name = "ea-trace"
 version = "0.1.0"
-description = "Governance System Integration - Unifies Kernel, Decision, and Flow layers"
+description = "Trace and evidence utilities for EA System"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [
     { name = "EA System Team" }
 ]
-keywords = ["governance", "integration", "facade"]
+keywords = ["trace", "evidence", "governance"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -23,26 +23,17 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
-dependencies = [
-    "ea-kernel>=2.5.0",
-    "ea-decision>=0.1.0",
-    "ea-flow>=0.1.0",
-    "ea-needs>=0.1.0",
-    "ea-profile>=0.1.0",
-    "ea-trace>=0.1.0",
-    "ea-ops>=0.1.0",
-]
+dependencies = []
 
 [project.optional-dependencies]
-api = ["fastapi>=0.100"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ea_governance"]
+packages = ["src/ea_trace"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=ea_governance"
+addopts = "-v --cov=ea_trace"

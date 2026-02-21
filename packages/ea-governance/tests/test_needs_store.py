@@ -7,6 +7,7 @@ from ea_governance.layer_store import SQLiteGovernanceLayerStore
 from ea_governance.needs_store import GovernanceNeedsStore
 from ea_needs.catalog import NeedCatalog
 from ea_needs.types import NeedPriority, NeedPurpose
+from ea_ops.events import FeedbackLayer, ServiceOpsEventSpec, ServiceOpsSeverity
 
 
 def _build_catalog() -> NeedCatalog:
@@ -357,3 +358,85 @@ def test_evaluate_change_policy_no_needs(tmp_path: Path):
 
     assert result["passed"] is False
     assert any("no needs" in v.lower() for v in result["violations"])
+
+
+def test_ingest_service_ops_event_records_infra_and_needs_feedback(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+
+    spec = ServiceOpsEventSpec(
+        name="slo_breached",
+        severity=ServiceOpsSeverity.HIGH,
+        must_include=("trace_id", "lineage_id", "service_id", "slo_name"),
+        feeds_back_to=FeedbackLayer.NEEDS,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-1",
+            "lineage_id": "lineage-needs-1",
+            "service_id": "payments-api",
+            "slo_name": "latency_p95",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        actor="ops-bot",
+    )
+
+    assert result["event_name"] == "slo_breached"
+    assert result["infra_snapshot_id"] is not None
+    assert result["feedback_snapshot_id"] is not None
+    assert result["expressed_need"] is None
+    assert result["needs_feedback_draft"]["priority"] == "high"
+
+    infra_snapshot = container.get_layer_snapshot("infra", result["infra_snapshot_id"])
+    assert infra_snapshot is not None
+    assert infra_snapshot["kind"] == "service_ops_event"
+
+    needs_snapshot = container.get_layer_snapshot("needs", result["feedback_snapshot_id"])
+    assert needs_snapshot is not None
+    assert needs_snapshot["kind"] == "service_ops_feedback"
+
+
+def test_ingest_service_ops_event_auto_expresses_need(tmp_path: Path):
+    container, catalog_id = _container_with_catalog(tmp_path)
+    catalog = container.get_needs_catalog(catalog_id)
+    assert catalog is not None
+    stakeholder_id = catalog.stakeholders[0].id
+    before_count = len(catalog.needs)
+
+    spec = ServiceOpsEventSpec(
+        name="incident_opened",
+        severity=ServiceOpsSeverity.CRITICAL,
+        must_include=(
+            "trace_id",
+            "lineage_id",
+            "service_id",
+            "incident_id",
+            "runbook_url",
+        ),
+        feeds_back_to=FeedbackLayer.NEEDS,
+    )
+    result = container.ingest_service_ops_event(
+        spec=spec,
+        payload={
+            "trace_id": "trace-needs-2",
+            "lineage_id": "lineage-needs-2",
+            "service_id": "orders-api",
+            "incident_id": "inc-100",
+            "runbook_url": "https://runbooks/orders-api",
+        },
+        catalog_id=catalog_id,
+        stakeholder_id=stakeholder_id,
+        auto_express=True,
+        actor="ops-bot",
+    )
+
+    assert result["expressed_need"] is not None
+    assert result["expressed_need"]["catalog_id"] == catalog_id
+
+    updated = container.get_needs_catalog(catalog_id)
+    assert updated is not None
+    assert len(updated.needs) == before_count + 1

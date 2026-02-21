@@ -5,12 +5,22 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from ea_trace.chain import (
+    LineageError,
+    TraceLink,
+    TraceNodeRef,
+    compose_lineage,
+    missing_required_relations,
+    replay_lineage_nodes,
+)
+
 _DECISION_TRACE_PREFIX = "decision_trace:"
 _DECISION_TRACE_KIND = "decision_trace_contract"
 _DECISION_TRACE_VERSION = "1.0"
 _MISSING_EVIDENCE_WARNING = "missing_evidence_refs"
 _INVALID_CAUSE_TYPE_PREFIX = "invalid_cause_type:"
 _INVALID_CHANGE_PHASE_PREFIX = "invalid_change_phase:"
+_LINEAGE_REQUIRED_RELATIONS = ("drives", "materializes")
 
 _ALLOWED_CAUSE_TYPES = frozenset({"decision", "need"})
 _CAUSE_TYPE_ALIASES = {
@@ -90,6 +100,102 @@ class DecisionTraceOps:
     @staticmethod
     def decision_trace_model_id(decision_id: str) -> str:
         return f"{_DECISION_TRACE_PREFIX}{decision_id}"
+
+    @staticmethod
+    def _to_trace_node(node_type: str, node_id: str) -> TraceNodeRef:
+        return TraceNodeRef(node_type=node_type, node_id=node_id)
+
+    @classmethod
+    def _build_links_for_operation(
+        cls,
+        *,
+        decision_id: str,
+        cause_type: str,
+        cause_id: str,
+        operation_id: str,
+        model_name: str,
+        version: str,
+    ) -> list[TraceLink]:
+        links: list[TraceLink] = []
+
+        decision_node = cls._to_trace_node("decision_record", decision_id)
+        operation_node = cls._to_trace_node("kernel_model_operation", operation_id)
+        model_node = cls._to_trace_node("kernel_model", f"{model_name}:{version}")
+
+        if cause_type != "decision" or cause_id != decision_id:
+            source = cls._to_trace_node(f"{cause_type}_record", cause_id)
+            links.append(
+                TraceLink(
+                    source=source,
+                    target=decision_node,
+                    relation="causes",
+                    required=True,
+                )
+            )
+
+        links.append(
+            TraceLink(
+                source=decision_node,
+                target=operation_node,
+                relation="drives",
+                required=True,
+            )
+        )
+        links.append(
+            TraceLink(
+                source=operation_node,
+                target=model_node,
+                relation="materializes",
+                required=True,
+            )
+        )
+        return links
+
+    @staticmethod
+    def _serialize_trace_link(link: TraceLink) -> dict[str, Any]:
+        return {
+            "source_type": link.source.node_type,
+            "source_id": link.source.node_id,
+            "target_type": link.target.node_type,
+            "target_id": link.target.node_id,
+            "relation": link.relation,
+            "required": bool(link.required),
+        }
+
+    @classmethod
+    def _deserialize_trace_links(cls, rows: list[dict[str, Any]]) -> list[TraceLink]:
+        links: list[TraceLink] = []
+        for row in rows:
+            source_type = row.get("source_type")
+            source_id = row.get("source_id")
+            target_type = row.get("target_type")
+            target_id = row.get("target_id")
+            relation = row.get("relation")
+            required = row.get("required", True)
+            if not all(
+                isinstance(item, str) and item.strip()
+                for item in (source_type, source_id, target_type, target_id, relation)
+            ):
+                continue
+            links.append(
+                TraceLink(
+                    source=cls._to_trace_node(str(source_type), str(source_id)),
+                    target=cls._to_trace_node(str(target_type), str(target_id)),
+                    relation=str(relation),
+                    required=bool(required),
+                )
+            )
+        return links
+
+    @staticmethod
+    def _trace_link_key(link: dict[str, Any]) -> tuple[str, str, str, str, str]:
+        return (
+            str(link.get("source_type", "")),
+            str(link.get("source_id", "")),
+            str(link.get("target_type", "")),
+            str(link.get("target_id", "")),
+            str(link.get("relation", "")),
+        )
 
     @classmethod
     def normalize_cause_type(
@@ -178,6 +284,7 @@ class DecisionTraceOps:
                 "causes": [],
                 "phase_timeline": [],
                 "history": [],
+                "trace_links": [],
             }
         else:
             trace = dict(existing)
@@ -216,6 +323,11 @@ class DecisionTraceOps:
                 for item in trace.get("history", [])
                 if isinstance(item, dict)
             ]
+            trace["trace_links"] = [
+                item
+                for item in trace.get("trace_links", [])
+                if isinstance(item, dict)
+            ]
 
         now = _now_iso()
         merged_evidence_refs = cast(list[str], trace["evidence_refs"])
@@ -228,6 +340,7 @@ class DecisionTraceOps:
             if warning not in merged_warnings:
                 merged_warnings.append(warning)
 
+        resolved_cause_id = cause_id or decision_id
         operations = cast(list[dict[str, Any]], trace["operations"])
         op_id = f"{operation}:{transaction_id}"
         operations = [
@@ -255,6 +368,23 @@ class DecisionTraceOps:
         )
         trace["operations"] = operations
 
+        raw_trace_links = cast(list[dict[str, Any]], trace["trace_links"])
+        known_link_keys = {self._trace_link_key(link) for link in raw_trace_links}
+        for link in self._build_links_for_operation(
+            decision_id=decision_id,
+            cause_type=cause_type,
+            cause_id=resolved_cause_id,
+            operation_id=op_id,
+            model_name=model_name,
+            version=version,
+        ):
+            serialized = self._serialize_trace_link(link)
+            key = self._trace_link_key(serialized)
+            if key in known_link_keys:
+                continue
+            raw_trace_links.append(serialized)
+            known_link_keys.add(key)
+
         impact = cast(list[dict[str, Any]], trace["impact"])
         impact_entry: dict[str, Any] = {
             "operation": operation,
@@ -273,7 +403,6 @@ class DecisionTraceOps:
         impact.append(impact_entry)
 
         causes = cast(list[dict[str, Any]], trace["causes"])
-        resolved_cause_id = cause_id or decision_id
         if resolved_cause_id and not any(
             row.get("cause_type") == cause_type and row.get("cause_id") == resolved_cause_id
             for row in causes
@@ -414,12 +543,66 @@ class DecisionTraceOps:
 
             cause_type = row.get("cause_type")
             cause_id = row.get("cause_id")
-            if isinstance(cause_type, str) and isinstance(cause_id, str):
-                if not any(
+            if (
+                isinstance(cause_type, str)
+                and isinstance(cause_id, str)
+                and not any(
                     item["cause_type"] == cause_type and item["cause_id"] == cause_id
                     for item in causes
-                ):
-                    causes.append({"cause_type": cause_type, "cause_id": cause_id})
+                )
+            ):
+                causes.append({"cause_type": cause_type, "cause_id": cause_id})
+
+        serialized_links = [
+            row
+            for row in trace.get("trace_links", [])
+            if isinstance(row, dict)
+        ]
+        parsed_links = self._deserialize_trace_links(serialized_links)
+
+        start_cause_type = trace.get("cause_type")
+        start_cause_id = trace.get("cause_id")
+        if (
+            isinstance(start_cause_type, str)
+            and isinstance(start_cause_id, str)
+            and start_cause_id
+        ):
+            start_type = f"{start_cause_type}_record"
+            start_node = self._to_trace_node(start_type, start_cause_id)
+        else:
+            start_node = self._to_trace_node("decision_record", str(trace.get("decision_id", "")))
+
+        replayed_nodes = replay_lineage_nodes(parsed_links, start_node)
+        replayed = [
+            {"node_type": node.node_type, "node_id": node.node_id}
+            for node in replayed_nodes
+        ]
+
+        latest_operation_id = ""
+        if operations:
+            latest_operation_id = str(operations[-1].get("id", ""))
+
+        path_to_latest: list[dict[str, Any]] = []
+        path_error: str | None = None
+        if latest_operation_id:
+            target_node = self._to_trace_node("kernel_model_operation", latest_operation_id)
+            try:
+                for link in compose_lineage(parsed_links, start_node, target_node):
+                    path_to_latest.append(
+                        {
+                            "source_type": link.source.node_type,
+                            "source_id": link.source.node_id,
+                            "relation": link.relation,
+                            "target_type": link.target.node_type,
+                            "target_id": link.target.node_id,
+                        }
+                    )
+            except LineageError as err:
+                path_error = str(err)
+
+        missing_relations = sorted(
+            missing_required_relations(parsed_links, _LINEAGE_REQUIRED_RELATIONS)
+        )
 
         return {
             "decision_id": trace.get("decision_id"),
@@ -446,6 +629,16 @@ class DecisionTraceOps:
                         if isinstance(row.get("model_name"), str)
                     }
                 ),
+            },
+            "lineage": {
+                "start_node": {
+                    "node_type": start_node.node_type,
+                    "node_id": start_node.node_id,
+                },
+                "replayed_nodes": replayed,
+                "path_to_latest_operation": path_to_latest,
+                "missing_required_relations": missing_relations,
+                "path_error": path_error,
             },
             "history": history,
         }

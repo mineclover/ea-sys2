@@ -156,6 +156,9 @@ def test_model_registration_records_decision_trace_and_exploration(tmp_path):
     assert exploration["impact"]["total_operations"] == 3
     assert "DecisionTraceModel" in exploration["impact"]["models"]
     assert exploration["causal_context"]["latest_change_phase"] == "applied"
+    assert exploration["lineage"]["missing_required_relations"] == []
+    assert exploration["lineage"]["path_error"] is None
+    assert len(exploration["lineage"]["path_to_latest_operation"]) >= 1
     assert any(
         row["cause_type"] == "decision" and row["cause_id"] == decision_id
         for row in exploration["causal_context"]["causes"]

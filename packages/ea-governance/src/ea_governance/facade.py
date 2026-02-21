@@ -14,13 +14,18 @@ from ea_kernel.model_registration import (
 )
 from ea_kernel.types import KernelSchema
 from ea_needs.catalog import NeedCatalog
+from ea_ops.events import ServiceOpsEventSpec
 
 from ea_governance.decision_trace_ops import DecisionTraceOps
 from ea_governance.execution_service import ExecutionService
 from ea_governance.kernel_model_ops import KernelModelOps
 from ea_governance.kernel_rule_ops import KernelRuleOps
 from ea_governance.kernel_store import GovernanceKernelStore
-from ea_governance.layer_store import ALLOWED_LAYERS, GovernanceLayerStore, SQLiteGovernanceLayerStore
+from ea_governance.layer_store import (
+    ALLOWED_LAYERS,
+    GovernanceLayerStore,
+    SQLiteGovernanceLayerStore,
+)
 from ea_governance.lifecycle_ops import LifecycleOps
 from ea_governance.needs_ops import NeedsOps
 from ea_governance.needs_store import GovernanceNeedsStore
@@ -96,6 +101,7 @@ class GovernanceContainer:
             self.needs_store,
             self.execution_service,
             layer_store=self.layer_stores["needs"],
+            infra_layer_store=self.layer_stores["infra"],
         )
         self._lifecycle_ops = LifecycleOps(
             self.execution_service,
@@ -901,6 +907,27 @@ class GovernanceContainer:
             catalog_id,
             proposed_change=proposed_change,
             change_scope=change_scope,
+            actor=actor,
+        )
+
+    def ingest_service_ops_event(
+        self,
+        *,
+        spec: ServiceOpsEventSpec,
+        payload: dict[str, Any],
+        catalog_id: str | None = None,
+        stakeholder_id: str | None = None,
+        auto_express: bool = False,
+        tags: list[str] | None = None,
+        actor: str = "governance",
+    ) -> dict[str, Any]:
+        return self._needs_ops.ingest_service_ops_event(
+            spec=spec,
+            payload=payload,
+            catalog_id=catalog_id,
+            stakeholder_id=stakeholder_id,
+            auto_express=auto_express,
+            tags=tags,
             actor=actor,
         )
 

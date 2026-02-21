@@ -1,13 +1,13 @@
 {
-  "id": "0cf09e6f-4057-4442-97b7-d8c410f6bd3f",
+  "id": "20ea4c68-14d0-48fe-b3fc-5edf7df4782d",
   "status": "running",
-  "startedAt": "2026-02-20T18:29:03.055Z",
-  "updatedAt": "2026-02-20T21:22:06.915Z",
+  "startedAt": "2026-02-21T02:03:04.316Z",
+  "updatedAt": "2026-02-21T02:03:04.316Z",
   "agentPlugin": "codex",
   "trackerPlugin": "json",
-  "currentIteration": 22,
+  "currentIteration": 0,
   "maxIterations": 0,
   "totalTasks": 0,
-  "tasksCompleted": 22,
+  "tasksCompleted": 0,
   "cwd": "/Users/junwoobang/workflow/ea-sys2"
 }

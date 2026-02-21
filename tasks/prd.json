@@ -1,473 +1,184 @@
 {
-  "name": "M2 승격 및 SDLC 도메인 인스턴스화 검증",
-  "description": "M1 하드코딩(상태전이, ArtifactType, 레이어 구조, 프로세스 유닛)을 커널 M2 프로파일 선언형으로 승격하고, SDLC 도메인을 풀스택 인스턴스화하여 M2 범용성을 구조적으로 증명한다.",
-  "branchName": "ralph/m2-promotion-sdlc-validation",
+  "name": "M2 v2 Ops Ingestion, Trace Replay, Needs Policy Loop",
+  "description": "Ops 이벤트를 표준 API로 수집하고 Trace/Needs/Infra 거버넌스 루프를 완성한다.",
+  "branchName": "ralph/m2-v2-ops-ingestion-trace-needs-loop",
   "userStories": [
     {
       "id": "US-001",
-      "title": "상태전이 메타모델 프로파일 스키마 정의",
-      "description": "As a 시스템 설계자, I want 커널 프로파일에 상태전이 규칙을 선언할 수 있는 스키마 so that 도메인별 상태 머신이 Python 코드가 아닌 TOML 프로파일로 정의된다.",
+      "title": "SQLite Ops Event Store 도입",
+      "description": "As a platform architect, I want SQLite 기반 ops event store를 도입해서 운영 이벤트를 영속 저장하고 조회 가능하게 하길 원한다.",
       "acceptanceCriteria": [
-        "ea-profile/types.py에 ProfileStateTransition frozen dataclass 추가 (from_state, to_state, guard_condition, description)",
-        "KernelProfile에 state_transitions: tuple[ProfileStateTransition, ...] 필드 추가",
-        "TOML 파서가 [[state_transitions]] 섹션을 ProfileStateTransition으로 로드",
-        "ProfileBuilder에 add_state_transition(from_state, to_state, ...) 메서드 추가",
-        "빈 state_transitions일 때 기존 동작과 동일 (backward compatible at M2 level)",
-        "테스트: TOML에서 상태전이 로드 → KernelProfile.state_transitions 검증",
-        "uv run pytest packages/ -x -q passes"
+        "ea-infra에 SQLite 기반 ops event store가 추가된다.",
+        "레코드는 event_name, severity, feeds_back_to, trace_id, lineage_id, payload, ingested_at를 포함한다.",
+        "append/read/count 인터페이스가 in-memory store와 호환된다.",
+        "저장/조회 단위 테스트가 추가된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Phase 1: M2 프레임워크 확장",
+      "notes": "",
       "dependsOn": [],
       "completionNotes": "Completed by agent"
     },
     {
       "id": "US-002",
-      "title": "ArtifactType 프로파일 정의 스키마",
-      "description": "As a 시스템 설계자, I want Projection의 ArtifactType을 프로파일 TOML로 선언할 수 있게 so that 도메인별 표층 아티팩트가 Python enum 하드코딩이 아닌 선언적 정의가 된다.",
+      "title": "Retention/Cleanup 정책 구현",
+      "description": "As a platform architect, I want ops 이벤트 retention 정책을 저장소 레벨에서 적용해 데이터 수명주기를 통제하고 싶다.",
       "acceptanceCriteria": [
-        "ea-profile/types.py에 ProfileArtifactType frozen dataclass 추가 (name, tier, description, kernel_element_pattern)",
-        "KernelProfile에 artifact_types: tuple[ProfileArtifactType, ...] 필드 추가",
-        "TOML 파서가 [[artifact_types]] 섹션을 로드",
-        "ProfileBuilder에 add_artifact_type(name, tier, ...) 메서드 추가",
-        "테스트: TOML 정의 → 프로파일 아티팩트 타입 목록 검증",
-        "uv run pytest packages/ -x -q passes"
+        "retention 필드(max_age_days, max_records 등)가 정책 모델로 정의된다.",
+        "cleanup 실행 함수가 추가되어 만료 데이터 삭제가 가능하다.",
+        "cleanup 전/후 건수 확인 함수 또는 API가 제공된다.",
+        "retention/cleanup 동작 테스트가 추가된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 1,
-      "passes": true,
-      "notes": "Phase 1: M2 프레임워크 확장",
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "priority": 2,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-001"
+      ]
     },
     {
       "id": "US-003",
-      "title": "레이어 정의 메타데이터 TOML 스키마",
-      "description": "As a 시스템 설계자, I want 레이어 구조(이름, 순서, 의존 방향, 핵심 책임)를 TOML 메타데이터로 선언할 수 있게 so that 5계층 구조가 M2 강제가 아닌 M1 설계 결정임이 명시된다.",
+      "title": "단건 Ops Ingestion API 제공",
+      "description": "As a platform architect, I want 단건 ingestion API를 통해 운영 이벤트를 시스템에 표준 입력하고 싶다.",
       "acceptanceCriteria": [
-        "ea-profile/types.py에 LayerDefinition frozen dataclass 추가 (name, order, depends_on, responsibility, model_perspective)",
-        "ea-profile/types.py에 LayerStack frozen dataclass 추가 (layers, definition_flow, runtime_flow, feedback_flow)",
-        "TOML 파서가 [layer_stack] + [[layer_stack.layers]] 섹션 로드",
-        "테스트: 기존 5계층 구조를 TOML로 표현 → LayerStack 로드 → 검증",
-        "테스트: 3계층 다른 구조를 TOML로 표현 → LayerStack 로드 → 정상 동작",
-        "uv run pytest packages/ -x -q passes"
+        "ea-governance API router에 단건 ingestion endpoint가 추가된다.",
+        "요청은 ServiceOpsEventSpec + payload 계약을 검증한다.",
+        "응답에 transaction_id, trace_id, lineage_id, snapshot id가 포함된다.",
+        "실패 시 검증 오류가 구조화된 에러로 반환된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 1,
-      "passes": true,
-      "notes": "Phase 1: M2 프레임워크 확장",
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "priority": 3,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-001"
+      ]
     },
     {
       "id": "US-004",
-      "title": "프로세스 유닛 프로파일 스키마",
-      "description": "As a 시스템 설계자, I want 프로세스 유닛(IDENTIFY→QUERY→MODEL_DETAIL 같은 단계)을 프로파일 TOML로 선언할 수 있게 so that 도메인별 워크플로 단계가 선언적으로 정의된다.",
+      "title": "대량 Ops Ingestion API 제공",
+      "description": "As a platform architect, I want bulk ingestion API를 통해 다수 이벤트를 한 번에 수집하고 싶다.",
       "acceptanceCriteria": [
-        "ea-profile/types.py에 ProfileProcessUnit frozen dataclass 추가 (name, phase, description, input_artifacts, output_artifacts)",
-        "KernelProfile에 process_units: tuple[ProfileProcessUnit, ...] 필드 추가",
-        "TOML 파서가 [[process_units]] 섹션 로드",
-        "테스트: TOML 정의 → 프로파일 프로세스 유닛 목록 검증",
-        "uv run pytest packages/ -x -q passes"
+        "bulk endpoint가 추가되고 배열 입력을 지원한다.",
+        "결과는 항목별 성공/실패와 success_count, failed_count를 반환한다.",
+        "부분 실패 전략 또는 atomic 전략이 API 계약과 테스트로 고정된다.",
+        "bulk 요청의 trace/lineage 상관관계 검증이 수행된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 1,
-      "passes": true,
-      "notes": "Phase 1: M2 프레임워크 확장",
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "priority": 4,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-003"
+      ]
     },
     {
       "id": "US-005",
-      "title": "M2 프로파일 유효성 검증기",
-      "description": "As a 시스템 설계자, I want 프로파일의 상태전이/아티팩트/레이어 정의가 커널 M2 어휘와 일관되는지 정적 검증하는 validator so that 잘못된 프로파일이 조기에 거부된다.",
+      "title": "Ops Event 조회 API 제공",
+      "description": "As a platform architect, I want 저장된 ops 이벤트를 조회해 운영 상태와 감사 내역을 확인하고 싶다.",
       "acceptanceCriteria": [
-        "ea-profile에 profile_validator.py 모듈 추가",
-        "validate_state_transitions() — 참조된 상태 이름이 프로파일 elements에 존재하는지 검증",
-        "validate_artifact_types() — kernel_element_pattern이 프로파일 elements와 매칭되는지 검증",
-        "validate_layer_stack() — depends_on 순환 없음, order 고유성 검증",
-        "validate_process_units() — input/output_artifacts가 프로파일 artifact_types에 존재하는지 검증",
-        "validate_profile() — 위 4개를 통합 실행, ProfileValidationResult 반환",
-        "테스트: 유효한 프로파일 → 통과",
-        "테스트: 순환 의존 → 실패",
-        "테스트: 존재하지 않는 상태 참조 → 실패",
-        "uv run pytest packages/ -x -q passes"
+        "list/get endpoint가 추가된다.",
+        "trace_id, lineage_id, event_name, 시간 범위 필터를 지원한다.",
+        "페이지네이션 또는 limit/offset이 제공된다.",
+        "조회 API 테스트가 추가된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 2,
-      "passes": true,
-      "notes": "Phase 1: M2 프레임워크 확장 — 모든 스키마 정의 후 검증기 구현",
+      "priority": 5,
+      "passes": false,
+      "notes": "",
       "dependsOn": [
         "US-001",
-        "US-002",
-        "US-003",
-        "US-004"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-003"
+      ]
     },
     {
       "id": "US-006",
-      "title": "Decision 상태전이 프로파일화",
-      "description": "As a 시스템 설계자, I want Decision 레이어의 상태전이(PROPOSED→ACCEPTED→REJECTED→DEPRECATED)를 TOML 프로파일로 이전하고 Python 하드코딩을 제거 so that Decision 상태 머신이 M2 검증 하에 놓인다.",
+      "title": "Lineage Replay API 제공",
+      "description": "As a platform architect, I want lineage replay endpoint로 의사결정-운영-구조 인과 체인을 재생하고 싶다.",
       "acceptanceCriteria": [
-        "profiles/ea_sys/20-decision.toml에 [[state_transitions]] 섹션 추가 (PROPOSED→ACCEPTED, PROPOSED→REJECTED, *→DEPRECATED)",
-        "ea-decision/lifecycle.py의 하드코딩 전이 로직을 프로파일 기반 전이 검증으로 교체",
-        "Topic.finalize_plan(), DesignDecision.approve() 등이 프로파일 전이 규칙을 참조",
-        "기존 test_topic.py, test_lifecycle.py가 프로파일 기반으로 동일하게 동작",
-        "프로파일에 없는 전이 시도 시 명확한 에러 발생",
-        "uv run pytest packages/ -x -q passes"
+        "lineage replay endpoint가 추가된다.",
+        "decision_trace_ops lineage 결과를 API로 노출한다.",
+        "응답에 replayed_nodes, path_to_latest_operation, missing_required_relations가 포함된다.",
+        "경로 단절 시 오류/경고 규약이 문서화되고 테스트된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Phase 2: 기존 M1 승격 — Decision",
+      "priority": 6,
+      "passes": false,
+      "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-005"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-003"
+      ]
     },
     {
       "id": "US-007",
-      "title": "Needs 상태전이 프로파일화",
-      "description": "As a 시스템 설계자, I want Needs 레이어의 상태전이(DRAFT→EXPRESSED→ACKNOWLEDGED→ADDRESSED, +WITHDRAWN)를 TOML 프로파일로 이전 so that Needs 상태 머신이 M2 검증 하에 놓인다.",
+      "title": "Catalog별 Auto-Express 정책 테이블",
+      "description": "As a platform architect, I want catalog별 정책 테이블로 auto_express 허용 조건을 통제하고 싶다.",
       "acceptanceCriteria": [
-        "profiles/ea_sys/30-needs.toml에 [[state_transitions]] 섹션 추가",
-        "ea-needs/catalog.py의 Need.transition() 하드코딩 전이 로직을 프로파일 기반으로 교체",
-        "기존 test_catalog.py 상태 전이 테스트가 프로파일 기반으로 동일 동작",
-        "프로파일에 없는 전이(예: ADDRESSED→DRAFT) 시도 시 에러",
-        "uv run pytest packages/ -x -q passes"
+        "catalog 정책 모델이 정의되고 저장/조회 가능하다.",
+        "정책 기준(severity, event_name, feeds_back_to, stakeholder mapping)을 평가한다.",
+        "ingest_service_ops_event가 정책 평가를 거쳐 auto-express 실행 여부를 결정한다.",
+        "정책 미충족 시 이유 코드가 이벤트 또는 응답에 기록된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Phase 2: 기존 M1 승격 — Needs",
+      "priority": 7,
+      "passes": false,
+      "notes": "",
       "dependsOn": [
-        "US-001",
-        "US-005"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-003"
+      ]
     },
     {
       "id": "US-008",
-      "title": "Projection ArtifactType 프로파일화",
-      "description": "As a 시스템 설계자, I want ea-projection/artifacts.py의 ArtifactType enum을 프로파일 TOML 기반 동적 정의로 교체 so that 도메인별 표층 아티팩트가 선언적으로 교체 가능하다.",
+      "title": "Needs 자동 반영 실행 경로 완성",
+      "description": "As a platform architect, I want 정책 통과 이벤트가 Needs로 자동 반영되어 운영 신호가 실제 니즈로 이어지길 원한다.",
       "acceptanceCriteria": [
-        "profiles/ea_sys/에 projection 프로파일 TOML 추가하여 기존 ArtifactType 선언 (api_endpoint, page, tool, data_schema, configuration 등)",
-        "ea-projection/artifacts.py의 ArtifactType StrEnum을 프로파일에서 로드한 동적 레지스트리로 교체",
-        "기존 Projection 테스트가 프로파일 로드 기반으로 동일 동작",
-        "프로파일에 정의되지 않은 아티팩트 타입 사용 시 에러",
-        "uv run pytest packages/ -x -q passes"
+        "policy 통과 시 needs catalog에 auto-expressed need가 생성된다.",
+        "반영 결과(need_id, lineage_id, version)가 트랜잭션 이벤트와 응답에 기록된다.",
+        "infra snapshot과 needs feedback snapshot이 함께 생성된다.",
+        "E2E 테스트에서 이벤트 입력 후 need 증가가 검증된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Phase 2: 기존 M1 승격 — Projection",
+      "priority": 8,
+      "passes": false,
+      "notes": "",
       "dependsOn": [
-        "US-002",
-        "US-005"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-007"
+      ]
     },
     {
       "id": "US-009",
-      "title": "레이어 구조 TOML 정의 — 거버넌스 도메인",
-      "description": "As a 시스템 설계자, I want 현재 5계층(infra→decision→needs→kernel→flow) + governance 구조를 layer_stack.toml로 선언 so that 레이어 구조가 명시적 M1 설계 결정으로 문서화된다.",
+      "title": "API 명세 및 운영 Runbook 작성",
+      "description": "As a platform architect, I want API 명세와 운영 runbook을 문서화해 팀이 반복 운영 가능하도록 하고 싶다.",
       "acceptanceCriteria": [
-        "profiles/ea_sys/00-layer-stack.toml 생성 — 6개 레이어 정의 (name, order, depends_on, responsibility, model_perspective)",
-        "definition_flow, runtime_flow, feedback_flow 흐름 선언",
-        "ea-kernel의 ProfileGraph 또는 새 모듈이 이 TOML을 로드하여 레이어 메타데이터 제공",
-        "테스트: 레이어 정의 로드 → 의존 방향 검증 → 순환 없음 확인",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Phase 2: 기존 M1 승격 — Layer Structure",
-      "dependsOn": [
-        "US-003",
-        "US-005"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-010",
-      "title": "기존 거버넌스 도메인 프로파일 통합 검증",
-      "description": "As a 시스템 설계자, I want Phase 2 완료 후 전체 거버넌스 도메인이 M2 프로파일 기반으로 동작함을 통합 검증 so that 승격이 완전하다.",
-      "acceptanceCriteria": [
-        "모든 Decision 상태전이가 프로파일에서 유래",
-        "모든 Needs 상태전이가 프로파일에서 유래",
-        "모든 ArtifactType이 프로파일에서 유래",
-        "LayerStack이 TOML에서 로드",
-        "프로파일 validator가 전체 거버넌스 도메인 프로파일에 대해 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "Phase 2: 통합 검증 게이트",
-      "dependsOn": [
-        "US-006",
-        "US-007",
-        "US-008",
-        "US-009"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-011",
-      "title": "SDLC 레이어 스택 설계 — 1:1 대칭 매핑",
-      "description": "As a 시스템 설계자, I want 현재 거버넌스 5계층과 1:1 대응하는 SDLC 레이어 스택을 TOML로 정의 so that 동일 M2 위에서 다른 도메인이 대칭적으로 구성됨을 증명한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc/00-layer-stack.toml 생성 — DevInfra(00), ArchDecision(20), Requirements(30), DomainModel(40), Pipeline(50) + DevGovernance",
-        "각 레이어의 responsibility, model_perspective, depends_on 선언",
-        "거버넌스 도메인과 동일한 definition_flow/runtime_flow/feedback_flow 패턴",
-        "프로파일 validator 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — 대칭 매핑",
-      "dependsOn": [
-        "US-009"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-012",
-      "title": "SDLC 레이어 스택 설계 — 고유 계층 도출",
-      "description": "As a 시스템 설계자, I want SDLC 도메인에 자연스러운 고유 레이어 구조를 별도 설계 so that M2가 레이어 구조를 강제하지 않음을 증명한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc_native/00-layer-stack.toml 생성 — SDLC 고유 계층 (예: Planning, Implementation, Verification, Deployment, Monitoring)",
-        "거버넌스 도메인과 다른 레이어 수(5개가 아닐 수 있음), 다른 의존 방향",
-        "프로파일 validator 통과",
-        "동일 커널 M2 위에서 두 SDLC 레이어 스택이 모두 유효함을 증명",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — 고유 계층",
-      "dependsOn": [
-        "US-009"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-013",
-      "title": "SDLC Decision 프로파일",
-      "description": "As a 시스템 설계자, I want SDLC 도메인의 아키텍처 의사결정 모델을 프로파일로 정의 so that Decision M2가 SDLC 도메인에서도 작동한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc/20-arch-decision.toml 생성",
-        "SDLC 의사결정 elements 정의: ArchDecisionRecord(ADR), TechRadarEntry, DesignReviewItem",
-        "상태전이 정의: PROPOSED→REVIEW→ACCEPTED→SUPERSEDED→DEPRECATED",
-        "거버넌스 도메인과 다른 상태전이(REVIEW 단계 추가)가 동일 M2로 표현됨 검증",
-        "프로파일 validator 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Decision",
-      "dependsOn": [
-        "US-006",
-        "US-011"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-014",
-      "title": "SDLC Requirements 프로파일",
-      "description": "As a 시스템 설계자, I want SDLC 요구사항 모델을 프로파일로 정의 so that Needs M2가 SDLC 도메인에서도 작동한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc/30-requirements.toml 생성",
-        "SDLC 요구 elements 정의: UserStory, AcceptanceCriteria, Epic, TechnicalDebt, BugReport",
-        "상태전이 정의: BACKLOG→GROOMED→SPRINT→IN_PROGRESS→REVIEW→DONE→CLOSED",
-        "거버넌스 Needs(5상태)와 다른 전이(7상태)가 동일 M2로 표현됨 검증",
-        "프로파일 validator 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Requirements",
-      "dependsOn": [
-        "US-007",
-        "US-011"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-015",
-      "title": "SDLC DomainModel 프로파일",
-      "description": "As a 시스템 설계자, I want SDLC 도메인의 핵심 모델(코드 구조, 모듈, API)을 커널 프로파일로 정의 so that Kernel M2가 소프트웨어 도메인 모델도 표현한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc/40-domain-model.toml 생성",
-        "SDLC 커널 elements 정의: Module, Interface, Endpoint, DataModel, Repository, Service",
-        "relations 정의: implements, calls, stores, exposes, depends_on",
-        "validity rules: 'Service는 Repository를 통해서만 DataModel 접근' 같은 아키텍처 규칙",
-        "프로파일 validator + 커널 rule 검증 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Kernel",
-      "dependsOn": [
-        "US-011"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-016",
-      "title": "SDLC Pipeline 프로파일",
-      "description": "As a 시스템 설계자, I want SDLC 파이프라인(CI/CD, 테스트, 배포)을 Flow 프로파일로 정의 so that Flow M2가 SDLC 실행 흐름도 표현한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc/50-pipeline.toml 생성",
-        "SDLC flow elements 정의: BuildStep, TestSuite, DeployTarget, RollbackProcedure, ApprovalGate",
-        "상태전이: QUEUED→BUILDING→TESTING→STAGING→PRODUCTION→ROLLED_BACK",
-        "step succession (next) 규칙: Build→Test→Stage→Deploy",
-        "프로파일 validator 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Flow",
-      "dependsOn": [
-        "US-011",
-        "US-015"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-017",
-      "title": "SDLC Projection ArtifactType 정의",
-      "description": "As a 시스템 설계자, I want SDLC 도메인의 표층 아티팩트 타입을 프로파일로 정의 so that Projection M2가 SDLC 관점의 가시화를 제공한다.",
-      "acceptanceCriteria": [
-        "profiles/sdlc/60-projection.toml에 artifact_types 정의: repository, pull_request, ci_pipeline, deployment, api_doc, test_report, monitoring_dashboard",
-        "각 아티팩트의 tier 매핑 (ui→monitoring_dashboard, function→ci_pipeline, data→repository 등)",
-        "거버넌스 도메인과 완전히 다른 아티팩트 세트가 동일 Projection M2로 표현됨 검증",
-        "프로파일 validator 통과",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Projection",
-      "dependsOn": [
-        "US-008",
-        "US-011"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-018",
-      "title": "SDLC 도메인 Store 인스턴스화",
-      "description": "As a 시스템 설계자, I want SDLC 도메인의 Store 레이어를 구현 so that S3 Recording 패턴이 두 번째 도메인에서도 작동함을 검증한다.",
-      "acceptanceCriteria": [
-        "packages/sdlc-domain/ 패키지 생성 (ea-kernel, ea-profile 의존)",
-        "sdlc_store.py — SDLC 스냅샷 Store (ABC → InMemory → SQLite 3-tier, 기존 Store 패턴 준수)",
-        "SDLC 프로파일에서 상태전이 규칙을 로드하여 Store 저장 시 전이 유효성 검증",
-        "테스트: SDLC 스냅샷 CRUD + 프로파일 기반 상태 전이 검증",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Store 구현",
-      "dependsOn": [
-        "US-013",
-        "US-014",
-        "US-015",
-        "US-016"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-019",
-      "title": "SDLC 도메인 Analyzer 인스턴스화",
-      "description": "As a 시스템 설계자, I want SDLC 도메인의 S4 Analysis를 구현 so that 거버넌스 분석 패턴이 두 번째 도메인에서도 작동한다.",
-      "acceptanceCriteria": [
-        "sdlc_analyzer.py — SDLC Store 기반 분석 (요구사항 처리량, 파이프라인 성공률, ADR 효과성 등)",
-        "분석 차원이 SDLC 프로파일 elements에서 유래 (하드코딩이 아님)",
-        "테스트: SDLC 스냅샷 데이터 → 분석 리포트 검증",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Analyzer 구현",
-      "dependsOn": [
-        "US-018"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-020",
-      "title": "SDLC Projection 풀스택 표층 생성",
-      "description": "As a 시스템 설계자, I want SDLC 프로파일 기반으로 Projection이 SDLC 도메인의 표층 아티팩트를 생성 so that Projection M2가 도메인 무관하게 작동함을 증명한다.",
-      "acceptanceCriteria": [
-        "Projection이 SDLC 프로파일의 artifact_types를 로드하여 동적으로 표층 생성",
-        "SDLC 도메인 모델 → depth L0~L3 표층 생성 검증",
-        "surface_summary에 SDLC 아티팩트 (repository, pull_request 등)가 by_tier/by_type로 집계됨",
-        "거버넌스 도메인과 SDLC 도메인의 Projection이 동일 엔진으로 작동하되 다른 아티팩트 생성 확인",
-        "uv run pytest packages/ -x -q passes"
+        "단건/bulk ingestion, list/get, lineage replay API 명세가 docs에 정리된다.",
+        "운영 runbook에 검증 실패, 부분 실패, cleanup 절차가 포함된다.",
+        "문서는 docs 하위에 저장되고 관련 모듈에서 참조된다.",
+        "문서 기준 수동 smoke 절차가 재현 가능하다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "Phase 3: SDLC 도메인 — Projection 풀스택",
+      "passes": false,
+      "notes": "",
       "dependsOn": [
-        "US-017",
-        "US-019"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-021",
-      "title": "동일 커널 위 멀티 도메인 공존 검증",
-      "description": "As a 시스템 설계자, I want 거버넌스 도메인과 SDLC 도메인이 동일 커널 인스턴스 위에서 공존하며 각각 독립 검증됨을 증명 so that M2 범용성이 구조적으로 입증된다.",
-      "acceptanceCriteria": [
-        "단일 커널에 거버넌스 프로파일과 SDLC 프로파일을 동시 로드",
-        "거버넌스 도메인 rule 검증이 SDLC elements에 간섭하지 않음",
-        "SDLC 도메인 rule 검증이 거버넌스 elements에 간섭하지 않음",
-        "프로파일 네임스페이스 격리 확인",
-        "통합 테스트: 양 도메인의 전체 라이프사이클(Store→Analyze→Project) 동시 실행",
-        "uv run pytest packages/ -x -q passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Phase 4: 교차 검증 — 핵심 증명",
-      "dependsOn": [
-        "US-010",
-        "US-020"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-022",
-      "title": "M2 표현력 한계 문서화",
-      "description": "As a 시스템 설계자, I want SDLC 인스턴스화 과정에서 M2로 표현 불가능했던 항목을 체계적으로 기록 so that M2 프레임워크의 다음 확장 방향이 명확해진다.",
-      "acceptanceCriteria": [
-        "각 US 구현 시 'M2로 표현 불가 → Python 하드코딩 필요' 항목 기록",
-        "한계 분류: (a) M2 어휘 부족, (b) M2 규칙 표현력 부족, (c) 런타임 제약, (d) 도구 미지원",
-        "한계별 해소 방향 제안 (M2 확장 vs M1 허용 vs 도구 개선)",
-        "docs/m2-expressiveness-report.md 작성"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Phase 4: 교차 검증 — 한계 문서화",
-      "dependsOn": [
-        "US-020"
-      ],
-      "completionNotes": "Completed by agent"
-    },
-    {
-      "id": "US-023",
-      "title": "SDLC 대칭 매핑 vs 고유 계층 비교 분석",
-      "description": "As a 시스템 설계자, I want US-011(대칭 매핑)과 US-012(고유 계층)의 결과를 비교 분석 so that M2 위에서 레이어 설계 자유도의 실질적 범위가 문서화된다.",
-      "acceptanceCriteria": [
-        "대칭 매핑의 장점/한계 분석 (표현 가능/불가능 항목)",
-        "고유 계층의 장점/한계 분석 (표현 가능/불가능 항목)",
-        "동일 도메인을 두 가지 레이어 구조로 모델링했을 때의 프로파일 rule 차이 비교",
-        "결론: M2가 레이어 구조에 실질적 제약을 가하는가? 가한다면 어떤 종류인가?",
-        "docs/layer-freedom-analysis.md 작성"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Phase 4: 교차 검증 — 레이어 자유도 분석",
-      "dependsOn": [
-        "US-011",
-        "US-012"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-004",
+        "US-005",
+        "US-006",
+        "US-008"
+      ]
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-20T21:25:20.355Z"
+    "updatedAt": "2026-02-21T02:08:31.232Z"
   }
 }

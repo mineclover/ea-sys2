@@ -16,9 +16,11 @@ members = [
     "ea-kernel-contract",
     "ea-kernel-self",
     "ea-needs",
+    "ea-ops",
     "ea-profile",
     "ea-projection",
     "ea-sys2",
+    "ea-trace",
     "sdlc-domain",
 ]
 
@@ -386,7 +388,9 @@ dependencies = [
     { name = "ea-flow" },
     { name = "ea-kernel" },
     { name = "ea-needs" },
+    { name = "ea-ops" },
     { name = "ea-profile" },
+    { name = "ea-trace" },
 ]
 
 [package.optional-dependencies]
@@ -404,7 +408,9 @@ requires-dist = [
     { name = "ea-flow", editable = "packages/ea-flow" },
     { name = "ea-kernel", editable = "packages/ea-kernel" },
     { name = "ea-needs", editable = "packages/ea-needs" },
+    { name = "ea-ops", editable = "packages/ea-ops" },
     { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "ea-trace", editable = "packages/ea-trace" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.100" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
@@ -416,6 +422,7 @@ name = "ea-infra"
 version = "0.1.0"
 source = { editable = "packages/ea-infra" }
 dependencies = [
+    { name = "ea-ops" },
     { name = "ea-profile" },
 ]
 
@@ -427,6 +434,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ea-ops", editable = "packages/ea-ops" },
     { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
@@ -521,6 +529,7 @@ version = "0.1.0"
 source = { editable = "packages/ea-needs" }
 dependencies = [
     { name = "ea-kernel" },
+    { name = "ea-ops" },
     { name = "ea-profile" },
 ]
 
@@ -533,7 +542,26 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ea-kernel", editable = "packages/ea-kernel" },
+    { name = "ea-ops", editable = "packages/ea-ops" },
     { name = "ea-profile", editable = "packages/ea-profile" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
+name = "ea-ops"
+version = "0.1.0"
+source = { editable = "packages/ea-ops" }
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
 ]
@@ -592,8 +620,10 @@ dependencies = [
     { name = "ea-kernel-contract" },
     { name = "ea-kernel-self" },
     { name = "ea-needs" },
+    { name = "ea-ops" },
     { name = "ea-profile" },
     { name = "ea-projection" },
+    { name = "ea-trace" },
     { name = "sdlc-domain" },
 ]
 
@@ -628,8 +658,10 @@ requires-dist = [
     { name = "ea-kernel-contract", editable = "packages/ea-kernel-contract" },
     { name = "ea-kernel-self", editable = "packages/ea-kernel-self" },
     { name = "ea-needs", editable = "packages/ea-needs" },
+    { name = "ea-ops", editable = "packages/ea-ops" },
     { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "ea-projection", editable = "packages/ea-projection" },
+    { name = "ea-trace", editable = "packages/ea-trace" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
@@ -648,6 +680,24 @@ dev = [
     { name = "pytest-cov", specifier = ">=4.0" },
     { name = "ruff", specifier = ">=0.8.0" },
 ]
+
+[[package]]
+name = "ea-trace"
+version = "0.1.0"
+source = { editable = "packages/ea-trace" }
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "fastapi"

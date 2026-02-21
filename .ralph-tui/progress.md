@@ -13,6 +13,7 @@ after each iteration and it's included in prompts for context.
 - For ops-event list APIs backed by generic layer snapshots, parse `ingested_at` to UTC and sort by that timestamp (not `model_id`) before applying `limit/offset`, so pagination stays chronological.
 - For lineage replay APIs, return partial lineage data with `status=warning` + structured `warnings[]` on path disconnection instead of failing the whole request, while keeping 422/404 envelopes for invalid/missing decisions.
 - For policy-gated optional actions (like auto-express), compute a single structured decision (`requested`, `allowed`, `reason_codes`) and persist the same structure to snapshot/event/response so diagnostics stay deterministic across layers.
+- For auto-expressed ops→needs flow, reuse one `expressed_need` object (`catalog_id`, `need_id`, `lineage_id`, `version`) across transaction events and ingestion responses to keep audit/API parity deterministic.
 
 ---
 
@@ -153,4 +154,19 @@ after each iteration and it's included in prompts for context.
     - Evaluating policy once and reusing the exact serialized decision object across persistence/audit/API boundaries keeps failure reasoning stable for debugging and client parsing.
   - Gotchas encountered
     - `catalog_id`/`stakeholder_id` should be normalized (`strip`) before policy lookup; blank strings otherwise silently bypass keyed policy checks.
+---
+
+## 2026-02-21 - US-008
+- What was implemented
+  - Verified the auto-expression execution path after policy-pass already creates a need in the catalog and increments need count on ingestion.
+  - Strengthened ingest integration test assertions to verify auto-expression reflection payload (`need_id`, `lineage_id`, `version`) is consistently recorded in both response and transaction events.
+  - Verified infra snapshot and needs feedback snapshot creation behavior in the ingest flow through story-scoped tests.
+- Files changed
+  - `packages/ea-governance/tests/test_needs_store.py`
+  - `.ralph-tui/progress.md`
+- **Learnings:**
+  - Patterns discovered
+    - A single shared `expressed_need` payload reused across `service_ops_event_ingested` and `needs_expressed_from_service_ops` events plus API/container response prevents drift between audit and client-facing contracts.
+  - Gotchas encountered
+    - Existing ingest tests validated need-count increase but did not explicitly pin `need_id/lineage_id/version` parity across all emitted transaction events; adding these checks prevents silent contract regressions.
 ---

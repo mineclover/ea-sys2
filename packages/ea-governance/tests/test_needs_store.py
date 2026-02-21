@@ -446,9 +446,32 @@ def test_ingest_service_ops_event_auto_expresses_need(tmp_path: Path):
 
     assert result["expressed_need"] is not None
     assert result["expressed_need"]["catalog_id"] == catalog_id
+    assert result["expressed_need"]["need_id"]
+    assert result["expressed_need"]["lineage_id"]
+    assert result["expressed_need"]["version"] >= 1
     assert result["auto_express_decision"]["requested"] is True
     assert result["auto_express_decision"]["allowed"] is True
     assert result["auto_express_decision"]["reason_codes"] == []
+
+    tx_events = container.get_transaction_events(result["transaction_id"])
+    ingested_events = [
+        event
+        for event in tx_events
+        if event["event_type"] == "service_ops_event_ingested"
+    ]
+    assert len(ingested_events) == 1
+    assert ingested_events[0]["payload"]["expressed_need"] == result["expressed_need"]
+
+    expressed_events = [
+        event
+        for event in tx_events
+        if event["event_type"] == "needs_expressed_from_service_ops"
+    ]
+    assert len(expressed_events) == 1
+    expressed_payload = expressed_events[0]["payload"]
+    assert expressed_payload["need_id"] == result["expressed_need"]["need_id"]
+    assert expressed_payload["lineage_id"] == result["expressed_need"]["lineage_id"]
+    assert expressed_payload["version"] == result["expressed_need"]["version"]
 
     updated = container.get_needs_catalog(catalog_id)
     assert updated is not None

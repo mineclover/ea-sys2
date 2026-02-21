@@ -7,7 +7,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -17,6 +17,70 @@ from ea_ops.events import ServiceOpsEvent
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat() + "Z"
+
+
+def _normalize_now(now: datetime | None) -> datetime:
+    if now is None:
+        return datetime.now(UTC)
+    if now.tzinfo is None:
+        return now.replace(tzinfo=UTC)
+    return now.astimezone(UTC)
+
+
+def _parse_ingested_at(ingested_at: str) -> datetime:
+    normalized = ingested_at[:-1] if ingested_at.endswith("Z") else ingested_at
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+@dataclass(frozen=True)
+class OpsEventRetentionPolicy:
+    """Retention constraints for ops event rows.
+
+    Zero values disable each corresponding constraint.
+    """
+
+    max_age_days: int = 0
+    max_records: int = 0
+
+    def __post_init__(self) -> None:
+        if self.max_age_days < 0:
+            raise ValueError("max_age_days must be >= 0")
+        if self.max_records < 0:
+            raise ValueError("max_records must be >= 0")
+
+
+@dataclass(frozen=True)
+class OpsEventCleanupResult:
+    """Summary of retention cleanup impact."""
+
+    before_count: int
+    after_count: int
+    deleted_count: int
+
+
+def _retention_deletion_ids(
+    ordered_rows: list[tuple[str, str]],
+    policy: OpsEventRetentionPolicy,
+    *,
+    now: datetime | None = None,
+) -> set[str]:
+    if not ordered_rows:
+        return set()
+
+    retained = list(ordered_rows)
+    current = _normalize_now(now)
+    if policy.max_age_days > 0:
+        cutoff = current - timedelta(days=policy.max_age_days)
+        retained = [row for row in retained if _parse_ingested_at(row[1]) >= cutoff]
+
+    if policy.max_records > 0 and len(retained) > policy.max_records:
+        retained = retained[-policy.max_records :]
+
+    retained_ids = {row[0] for row in retained}
+    return {row_id for row_id, _ in ordered_rows if row_id not in retained_ids}
 
 
 @dataclass(frozen=True)
@@ -87,6 +151,40 @@ class InMemoryOpsEventStore:
 
     def count(self) -> int:
         return len(self._records)
+
+    def cleanup_preview(
+        self,
+        policy: OpsEventRetentionPolicy,
+        *,
+        now: datetime | None = None,
+    ) -> OpsEventCleanupResult:
+        ordered_rows = [(record.id, record.ingested_at) for record in self._records]
+        deletion_ids = _retention_deletion_ids(ordered_rows, policy, now=now)
+        before = len(ordered_rows)
+        deleted = len(deletion_ids)
+        return OpsEventCleanupResult(
+            before_count=before,
+            after_count=before - deleted,
+            deleted_count=deleted,
+        )
+
+    def cleanup(
+        self,
+        policy: OpsEventRetentionPolicy,
+        *,
+        now: datetime | None = None,
+    ) -> OpsEventCleanupResult:
+        ordered_rows = [(record.id, record.ingested_at) for record in self._records]
+        deletion_ids = _retention_deletion_ids(ordered_rows, policy, now=now)
+        before = len(ordered_rows)
+        deleted = len(deletion_ids)
+        if deletion_ids:
+            self._records = [record for record in self._records if record.id not in deletion_ids]
+        return OpsEventCleanupResult(
+            before_count=before,
+            after_count=before - deleted,
+            deleted_count=deleted,
+        )
 
 
 class SQLiteOpsEventStore:
@@ -215,6 +313,53 @@ class SQLiteOpsEventStore:
         with self._connection() as conn:
             row = conn.execute("SELECT COUNT(*) AS cnt FROM ops_event_records").fetchone()
         return int(row["cnt"]) if row else 0
+
+    def cleanup_preview(
+        self,
+        policy: OpsEventRetentionPolicy,
+        *,
+        now: datetime | None = None,
+    ) -> OpsEventCleanupResult:
+        with self._connection() as conn:
+            rows = conn.execute(
+                "SELECT id, ingested_at FROM ops_event_records ORDER BY rowid ASC"
+            ).fetchall()
+        ordered_rows = [(str(row["id"]), str(row["ingested_at"])) for row in rows]
+        deletion_ids = _retention_deletion_ids(ordered_rows, policy, now=now)
+        before = len(ordered_rows)
+        deleted = len(deletion_ids)
+        return OpsEventCleanupResult(
+            before_count=before,
+            after_count=before - deleted,
+            deleted_count=deleted,
+        )
+
+    def cleanup(
+        self,
+        policy: OpsEventRetentionPolicy,
+        *,
+        now: datetime | None = None,
+    ) -> OpsEventCleanupResult:
+        with self._connection() as conn:
+            rows = conn.execute(
+                "SELECT id, ingested_at FROM ops_event_records ORDER BY rowid ASC"
+            ).fetchall()
+            ordered_rows = [(str(row["id"]), str(row["ingested_at"])) for row in rows]
+            deletion_ids = _retention_deletion_ids(ordered_rows, policy, now=now)
+            if deletion_ids:
+                conn.executemany(
+                    "DELETE FROM ops_event_records WHERE id = ?",
+                    [(row_id,) for row_id in deletion_ids],
+                )
+                conn.commit()
+
+        before = len(ordered_rows)
+        deleted = len(deletion_ids)
+        return OpsEventCleanupResult(
+            before_count=before,
+            after_count=before - deleted,
+            deleted_count=deleted,
+        )
 
     @staticmethod
     def _row_to_record(row: sqlite3.Row) -> OpsEventRecord:

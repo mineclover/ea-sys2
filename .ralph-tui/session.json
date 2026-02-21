@@ -3,10 +3,10 @@
   "sessionId": "20ea4c68-14d0-48fe-b3fc-5edf7df4782d",
   "status": "running",
   "startedAt": "2026-02-21T02:03:04.364Z",
-  "updatedAt": "2026-02-21T02:08:31.234Z",
-  "currentIteration": 0,
+  "updatedAt": "2026-02-21T02:11:55.347Z",
+  "currentIteration": 1,
   "maxIterations": 0,
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
@@ -14,7 +14,18 @@
     "totalTasks": 0,
     "tasks": []
   },
-  "iterations": [],
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-001",
+      "taskTitle": "SQLite Ops Event Store 도입",
+      "taskCompleted": true,
+      "durationMs": 317991,
+      "startedAt": "2026-02-21T02:03:13.240Z",
+      "endedAt": "2026-02-21T02:08:31.231Z"
+    }
+  ],
   "skippedTaskIds": [],
   "cwd": "/Users/junwoobang/workflow/ea-sys2",
   "activeTaskIds": [],

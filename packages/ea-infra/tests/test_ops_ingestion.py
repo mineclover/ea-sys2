@@ -1,8 +1,12 @@
 """Tests for ea_infra.ops_ingestion."""
 
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from ea_infra.ops_ingestion import (
     InMemoryOpsEventStore,
+    OpsEventRetentionPolicy,
     SQLiteOpsEventStore,
     build_ops_event_record,
 )
@@ -16,6 +20,21 @@ def _event(payload: dict[str, object]) -> ServiceOpsEvent:
         feeds_back_to=FeedbackLayer.DECISION,
         payload=payload,
     )
+
+
+def _record(trace_id: str, lineage_id: str, *, ingested_at: datetime | None = None):
+    record = build_ops_event_record(
+        _event(
+            {
+                "trace_id": trace_id,
+                "lineage_id": lineage_id,
+                "service_id": "payments-api",
+            }
+        )
+    )
+    if ingested_at is None:
+        return record
+    return replace(record, ingested_at=ingested_at.isoformat() + "Z")
 
 
 def test_build_ops_event_record_requires_correlation_fields():
@@ -134,3 +153,81 @@ def test_sqlite_ops_event_store_read_rejects_negative_limit(tmp_path):
     store = SQLiteOpsEventStore(tmp_path / "ops-events.db")
     with pytest.raises(ValueError, match="limit must be >= 0"):
         store.read(limit=-1)
+
+
+def test_ops_event_retention_policy_rejects_negative_values():
+    with pytest.raises(ValueError, match="max_age_days must be >= 0"):
+        OpsEventRetentionPolicy(max_age_days=-1)
+    with pytest.raises(ValueError, match="max_records must be >= 0"):
+        OpsEventRetentionPolicy(max_records=-1)
+
+
+def test_sqlite_ops_event_store_cleanup_preview_and_cleanup_by_age(tmp_path):
+    now = datetime(2026, 2, 21, tzinfo=UTC)
+    store = SQLiteOpsEventStore(tmp_path / "ops-events.db")
+    old = _record("trace-retention-old", "lineage-ret", ingested_at=now - timedelta(days=5))
+    boundary = _record("trace-retention-boundary", "lineage-ret", ingested_at=now - timedelta(days=2))
+    fresh = _record("trace-retention-fresh", "lineage-ret", ingested_at=now - timedelta(hours=12))
+
+    store.append(old)
+    store.append(boundary)
+    store.append(fresh)
+
+    policy = OpsEventRetentionPolicy(max_age_days=2)
+    preview = store.cleanup_preview(policy, now=now)
+    assert preview.before_count == 3
+    assert preview.after_count == 2
+    assert preview.deleted_count == 1
+    assert store.count() == 3
+
+    result = store.cleanup(policy, now=now)
+    assert result.before_count == 3
+    assert result.after_count == 2
+    assert result.deleted_count == 1
+    assert store.count() == 2
+    assert [row.trace_id for row in store.read(limit=10)] == [
+        "trace-retention-boundary",
+        "trace-retention-fresh",
+    ]
+
+
+def test_sqlite_ops_event_store_cleanup_respects_max_records(tmp_path):
+    now = datetime(2026, 2, 21, tzinfo=UTC)
+    store = SQLiteOpsEventStore(tmp_path / "ops-events.db")
+    for idx in range(4):
+        store.append(
+            _record(
+                f"trace-retention-{idx}",
+                "lineage-ret",
+                ingested_at=now - timedelta(minutes=4 - idx),
+            )
+        )
+
+    policy = OpsEventRetentionPolicy(max_records=2)
+    result = store.cleanup(policy, now=now)
+    assert result.before_count == 4
+    assert result.after_count == 2
+    assert result.deleted_count == 2
+    assert [row.trace_id for row in store.read(limit=10)] == [
+        "trace-retention-2",
+        "trace-retention-3",
+    ]
+
+
+def test_in_memory_ops_event_store_cleanup_respects_max_records():
+    now = datetime(2026, 2, 21, tzinfo=UTC)
+    store = InMemoryOpsEventStore()
+    for idx in range(3):
+        store.append(
+            _record(
+                f"trace-memory-{idx}",
+                "lineage-memory",
+                ingested_at=now - timedelta(minutes=3 - idx),
+            )
+        )
+
+    result = store.cleanup(OpsEventRetentionPolicy(max_records=1), now=now)
+    assert result.before_count == 3
+    assert result.after_count == 1
+    assert result.deleted_count == 2
+    assert [row.trace_id for row in store.read(limit=10)] == ["trace-memory-2"]

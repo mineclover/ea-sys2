@@ -1,19 +1,20 @@
 {
   "name": "M3-Core 도입 및 M2 전면 이관/재귀 보완",
   "branchName": "ralph/m3-core-m2-migration",
-  "description": "M3-core(TOML)를 구현하고 저장소 내 모든 M2 변형을 레이어 단위로 이관한 뒤, M3 self-host 게이트와 M2 경유 정책을 엄격 강제한다.",
+  "description": "M3-core(TOML) 설계를 확정하고 저장소 내 모든 M2 변형의 이관 설계/검증 계획을 수립한 뒤, self-host 게이트 및 M2 경유 정책의 운영 설계를 고정한다. (본 PRD는 설계 전용이며 구현은 후속 범위)",
   "userStories": [
     {
       "id": "US-001",
       "title": "M3 범위/용어/경계 문서 확정",
-      "description": "As an architect, I want M3의 책임 경계와 핵심 용어를 먼저 고정 so that 이후 구현/이관 기준을 일관되게 유지할 수 있다.",
+      "description": "As an architect, I want M3의 책임 경계와 핵심 용어를 먼저 고정 so that 이후 설계/이관 기준을 일관되게 유지할 수 있다.",
       "acceptanceCriteria": [
         "docs/m3-core-draft.md를 생성하고 M3 목적, 범위, 비범위를 정의한다.",
         "docs/system-terminology.md에 M3 관련 용어를 추가하고 M2/M3 경계를 명시한다.",
         "docs/architecture-map.md에 M3 축을 반영한 탐색 순서를 추가한다.",
         "문서 간 참조 링크가 끊기지 않고 docs:check에서 검증된다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 1,
       "passes": false,
@@ -30,7 +31,8 @@
         "package.json에 m3 관련 스크립트 자리(m3:check, m3:generate 등)를 정의한다.",
         "docs/README.md 및 partition-registry에 신규 문서 등록을 완료한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 2,
       "passes": false,
@@ -41,15 +43,16 @@
     },
     {
       "id": "US-003",
-      "title": "M2 자산 인벤토리 추출기 구현",
+      "title": "M2 자산 인벤토리 추출기 설계",
       "description": "As a spec owner, I want M2 자산 전체를 자동 추출 so that 이관 누락을 기계적으로 방지할 수 있다.",
       "acceptanceCriteria": [
-        "tools/m3/export_m2_inventory.py를 구현해 contracts/profiles/lint/validator/snapshot 목록을 추출한다.",
+        "tools/m3/export_m2_inventory.py의 설계안을 작성해 contracts/profiles/lint/validator/snapshot 목록을 추출한다.",
         "출력 파일 tasks/m3/m2-inventory.json을 생성한다.",
         "자산별 경로, 섹션, 활성 상태(enabled), 의존 파일을 포함한다.",
         "누락/중복 경로를 오류로 보고한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 3,
       "passes": false,
@@ -68,7 +71,8 @@
         "매핑 불가 항목을 explicit 예외 목록으로 기록한다.",
         "US-003 인벤토리와 매핑 매트릭스 항목 수가 일치한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 4,
       "passes": false,
@@ -87,7 +91,8 @@
         "activation policy와 rule expression 필드 제약을 포함한다.",
         "샘플 m3-core 파일이 해당 계약을 통과함을 확인한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 5,
       "passes": false,
@@ -99,15 +104,16 @@
     },
     {
       "id": "US-006",
-      "title": "M3 TOML 로더/파서 구현",
+      "title": "M3 TOML 로더/파서 설계",
       "description": "As a platform engineer, I want M3 TOML을 안정적으로 파싱 so that 생성기/검증기의 입력 신뢰성을 확보한다.",
       "acceptanceCriteria": [
-        "tools/m3/load_m3_core.py를 구현한다.",
+        "tools/m3/load_m3_core.py의 설계 명세를 작성한다.",
         "구문 오류, 타입 오류, 누락 필드를 구분해 에러 코드를 반환한다.",
         "specs/m3-core/examples/*.toml 샘플에 대한 파싱 테스트를 추가한다.",
         "파싱 결과를 정규화 JSON으로 출력하는 --json 옵션을 제공한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 6,
       "passes": false,
@@ -118,15 +124,16 @@
     },
     {
       "id": "US-007",
-      "title": "M3 semantic validator 구현",
+      "title": "M3 semantic validator 설계",
       "description": "As a governance engineer, I want M3 의미 검증을 수행 so that 참조/활성화 정책 오류를 생성 전에 차단한다.",
       "acceptanceCriteria": [
-        "tools/m3/validate_m3_core.py를 구현한다.",
+        "tools/m3/validate_m3_core.py의 설계 명세를 작성한다.",
         "reference 대상 존재, duplicate id, cycle, activation policy 충돌을 검증한다.",
         "오류 메시지에 source file/section/path를 포함한다.",
         "통과/실패 fixture 테스트를 추가한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 7,
       "passes": false,
@@ -137,15 +144,16 @@
     },
     {
       "id": "US-008",
-      "title": "M3 snapshot 생성/검증 구현",
+      "title": "M3 snapshot 생성/검증 설계",
       "description": "As a release engineer, I want M3 입력의 결정적 snapshot을 유지 so that 변경 diff를 안정적으로 리뷰할 수 있다.",
       "acceptanceCriteria": [
-        "tools/m3/compose_m3_snapshot.py를 구현한다.",
+        "tools/m3/compose_m3_snapshot.py의 설계 명세를 작성한다.",
         "snapshot write/check 모드를 지원한다.",
         "정렬 규칙을 고정해 동일 입력에서 동일 snapshot을 보장한다.",
         "specs/m3-core/snapshots/m3-core.snapshot.json을 생성한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 8,
       "passes": false,
@@ -156,15 +164,16 @@
     },
     {
       "id": "US-009",
-      "title": "M3->M2 contract 생성기 구현",
+      "title": "M3->M2 contract 생성 규칙 설계",
       "description": "As a spec engineer, I want M3에서 M2 contract를 생성 so that 계약 정의 반복과 누락을 줄인다.",
       "acceptanceCriteria": [
-        "tools/m3/generate_m2_contracts.py를 구현한다.",
+        "tools/m3/generate_m2_contracts.py의 설계 명세를 작성한다.",
         "최소 00-common/10-topology/20-state-transition 생성을 지원한다.",
         "생성 결과를 specs/m2-v2/contracts/ 경로로 출력한다.",
         "수동 파일 대비 diff 리포트를 생성한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 9,
       "passes": false,
@@ -175,15 +184,16 @@
     },
     {
       "id": "US-010",
-      "title": "M3->M2 lint-rules 생성기 구현",
+      "title": "M3->M2 lint-rules 생성 규칙 설계",
       "description": "As a governance engineer, I want lint rules를 M3 정책에서 생성 so that 정책 단일 출처를 유지한다.",
       "acceptanceCriteria": [
-        "tools/m3/generate_m2_lint.py를 구현한다.",
+        "tools/m3/generate_m2_lint.py의 설계 명세를 작성한다.",
         "required_sections, required_active_contract_ids, rules 토글을 생성한다.",
         "enforce_no_extra_active_contracts 유지가 생성 산출물에서 검증된다.",
         "기존 lint-rules.toml과 동등성 비교 리포트를 출력한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 10,
       "passes": false,
@@ -194,15 +204,16 @@
     },
     {
       "id": "US-011",
-      "title": "M3->M2 validator scaffold 생성기 구현",
+      "title": "M3->M2 validator scaffold 생성 규칙 설계",
       "description": "As a core maintainer, I want validator scaffold를 자동 생성 so that 계약 변경 시 검증기 누락을 방지한다.",
       "acceptanceCriteria": [
-        "tools/m3/generate_m2_validator.py를 구현한다.",
+        "tools/m3/generate_m2_validator.py의 설계 명세를 작성한다.",
         "required/enum/pattern/reference 검사 함수 scaffold를 생성한다.",
         "contract activation 분기 코드를 scaffold에 포함한다.",
         "생성 코드가 기존 validate_m2_v2.py와 병렬 비교 가능해야 한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 11,
       "passes": false,
@@ -217,12 +228,13 @@
       "title": "M3 기반 compose/snapshot 생성 통합",
       "description": "As a release engineer, I want compose/snapshot도 M3 경유로 생성 so that 릴리스 기준점을 단일화한다.",
       "acceptanceCriteria": [
-        "tools/m3/generate_m2_compose.py를 구현한다.",
+        "tools/m3/generate_m2_compose.py의 설계 명세를 작성한다.",
         "m2-v2.compose.toml 및 snapshot 생성 경로를 M3 기반으로 연결한다.",
         "생성 후 m2:snapshot:check와의 결과가 일치한다.",
         "생성 파이프라인 문서를 tools/m3/README.md에 추가한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 12,
       "passes": false,
@@ -243,7 +255,8 @@
         "infra 관련 실패 케이스 회귀 테스트를 추가한다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 13,
       "passes": false,
@@ -263,7 +276,8 @@
         "이관 diff 리포트(tasks/m3/migration/governance.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 14,
       "passes": false,
@@ -282,7 +296,8 @@
         "이관 diff 리포트(tasks/m3/migration/decision.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 15,
       "passes": false,
@@ -301,7 +316,8 @@
         "이관 diff 리포트(tasks/m3/migration/needs.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 16,
       "passes": false,
@@ -320,7 +336,8 @@
         "이관 diff 리포트(tasks/m3/migration/kernel.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 17,
       "passes": false,
@@ -340,7 +357,8 @@
         "이관 diff 리포트(tasks/m3/migration/flow.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 18,
       "passes": false,
@@ -359,7 +377,8 @@
         "이관 diff 리포트(tasks/m3/migration/projection.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 19,
       "passes": false,
@@ -378,7 +397,8 @@
         "이관 diff 리포트(tasks/m3/migration/terminology.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 20,
       "passes": false,
@@ -397,7 +417,8 @@
         "이관 diff 리포트(tasks/m3/migration/knowledge.diff.md)를 남긴다.",
         "이관 후 quality gate가 통과한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 21,
       "passes": false,
@@ -411,12 +432,13 @@
       "title": "M2 old/new 동등성 검증 하네스 구축",
       "description": "As a QA owner, I want old/new 산출물을 자동 비교 so that M3 전환 회귀를 정량적으로 차단한다.",
       "acceptanceCriteria": [
-        "tools/m3/compare_m2_equivalence.py를 구현한다.",
+        "tools/m3/compare_m2_equivalence.py의 설계 명세를 작성한다.",
         "contract/lint/validator-result/snapshot 비교를 지원한다.",
         "diff를 tasks/m3/equivalence-report.md로 출력한다.",
         "불일치 발생 시 non-zero exit로 CI 차단 가능해야 한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 22,
       "passes": false,
@@ -433,10 +455,11 @@
       "acceptanceCriteria": [
         ".github/workflows에 m3 self-host job을 추가한다.",
         "job은 생성->검증->동등성 비교를 순서대로 실행한다.",
-        "실패 시 PR merge가 차단되도록 required check로 설정한다.",
+        "실패 시 PR merge가 차단되도록 required check 정책으로 고정한다.",
         "우회(break-glass) 없이 strict fail 정책을 문서화한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 23,
       "passes": false,
@@ -451,11 +474,12 @@
       "description": "As a repo maintainer, I want Go-live 이후 M2 direct edit를 차단 so that 변경 경로를 M3 경유로 강제한다.",
       "acceptanceCriteria": [
         "docs/m3/m3-cutover-runbook.md를 추가해 운영 절차를 고정한다.",
-        "generated target 파일 직접 수정 감지 규칙(예: CI guard)을 추가한다.",
+        "generated target 파일 직접 수정 감지 규칙(예: CI 정책)을 추가한다.",
         "위반 시 안내 메시지와 복구 절차를 표준화한다.",
         "M2 신규 변경은 M3 생성 경유만 허용되도록 정책을 명시한다.",
         "pnpm -C ea-sys-ts run quality:check passes",
-        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes"
+        "pnpm -C ea-sys-ts run m2:contracts:report --check --markdown passes",
+        "본 스토리는 문서/명세/검증계획 산출만 포함하며 프로덕션 코드 구현은 제외한다."
       ],
       "priority": 24,
       "passes": false,

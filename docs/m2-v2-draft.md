@@ -428,3 +428,42 @@ enforce_event_chain = true
 
 ## 11. 패키지 매핑
 - v2에서 변경/신규 코어 패키지 매핑은 `docs/m2-v2-package-map.md`를 기준으로 한다.
+
+## 12. 구현 현황 (2026-02-21 기준)
+
+### 12.1 `tasks/prd.json` (US-001~US-009) 구현 평가
+| User Story | 상태 | 구현 근거 |
+| --- | --- | --- |
+| `US-001` SQLite Ops Event Store | 완료 | `packages/ea-infra/src/ea_infra/ops_ingestion.py`에 `SQLiteOpsEventStore`/`InMemoryOpsEventStore`(`append/read/count`) 구현, `packages/ea-infra/tests/test_ops_ingestion.py` 저장/조회/호환 테스트 |
+| `US-002` Retention/Cleanup | 완료 | `OpsEventRetentionPolicy`, `cleanup_preview`, `cleanup` 구현 및 age/record 기준 테스트 (`packages/ea-infra/tests/test_ops_ingestion.py`) |
+| `US-003` 단건 Ingestion API | 완료 | `POST /governance/ops-events/ingest` + 구조화 검증 오류 계약 (`packages/ea-governance/src/ea_governance/api_router.py`, `packages/ea-governance/tests/test_api_router.py`) |
+| `US-004` 대량 Ingestion API | 완료 | `POST /governance/ops-events/ingest/bulk`, `strategy=partial`, 항목별 성공/실패, trace/lineage 상관관계 검증 (`packages/ea-governance/src/ea_governance/api_router.py`) |
+| `US-005` Ops Event 조회 API | 완료 | list/get 엔드포인트 + `trace_id/lineage_id/event_name/time-range` 필터 + `limit/offset` (`packages/ea-governance/src/ea_governance/api_router.py`) |
+| `US-006` Lineage Replay API | 완료 | `GET /governance/lineage-replay/{decision_id}` + `replayed_nodes`, `path_to_latest_operation`, `missing_required_relations`, warning 계약 (`packages/ea-governance/src/ea_governance/api_router.py`) |
+| `US-007` Catalog Auto-Express 정책 테이블 | 완료 | 정책 모델/평가기/SQLite 저장소(`packages/ea-governance/src/ea_governance/catalog_policy_store.py`) + ingestion 경로 연동(`packages/ea-governance/src/ea_governance/needs_ops.py`) |
+| `US-008` Needs 자동 반영 | 완료 | 정책 통과 시 `expressed_need` 생성, 트랜잭션 이벤트 기록, infra/needs snapshot 동시 생성 (`packages/ea-governance/src/ea_governance/needs_ops.py`, `packages/ea-governance/tests/test_needs_store.py`) |
+| `US-009` API 명세/Runbook | 완료 | 명세+운영 절차 문서(`packages/ea-governance/docs/ops-events-api-runbook.md`, `packages/ea-governance/docs/ops-lineage-replay-api.md`) 및 참조(`packages/ea-governance/README.md`) |
+
+검증 실행 결과(2026-02-21):
+- `uv run pytest packages/ea-infra/tests/test_ops_ingestion.py packages/ea-governance/tests/test_catalog_policy_store.py packages/ea-governance/tests/test_needs_store.py packages/ea-governance/tests/test_api_router.py` → **41 passed**
+- `ruff check`는 저장소 전체 기준 기존 누적 이슈가 있으나, US-001~US-009 관련 변경 파일 스코프(`ea-ops/events.py`, `ea-infra/ops_ingestion.py`, `ea-governance/api_router.py`, `ea-governance/catalog_policy_store.py`, `ea-governance/needs_ops.py`, 관련 테스트)는 **All checks passed**
+
+### 12.2 M2 v2 핵심 엔티티별 도입 상태
+| 엔티티 | 상태 | 현재 구현 메모 |
+| --- | --- | --- |
+| `ProfileSpec` | 부분 구현 | `KernelProfile`에 `name/version/kernel_version` 중심 구조 존재(`packages/ea-profile/src/ea_profile/types.py`), `namespace/domain`은 1급 필드로 미정착 |
+| `LayerSpec` | 부분 구현 | `LayerDefinition`(`name/order/responsibility`) 존재하나 `role` 강제 계약은 미완료 (`packages/ea-profile/src/ea_profile/types.py`) |
+| `FlowEdgeSpec` | 미구현 | `LayerStack`가 아직 문자열 flow 필드(`definition_flow/runtime_flow/feedback_flow`) 기반 |
+| `StateTokenSpec` | 부분 구현 | 프로파일 validator에서 상태 토큰 해석/검증은 있으나 독립 spec 엔티티는 미도입 (`packages/ea-profile/src/ea_profile/profile_validator.py`) |
+| `TransitionSpec` | 부분 구현 | `ProfileStateTransition` 존재하나 `requires_trace/requires_governance_event` 계약은 미도입 |
+| `ArtifactTypeSpec` | 부분 구현 | `ProfileArtifactType` + 패턴 검증 존재 (`packages/ea-profile/src/ea_profile/types.py`, `packages/ea-profile/src/ea_profile/profile_validator.py`) |
+| `TraceLinkSpec` | 부분 구현 | trace link 직렬화/재생 로직은 존재하나 공용 스키마 계약화는 미완료 (`packages/ea-governance/src/ea_governance/decision_trace_ops.py`) |
+| `GovernanceEventSpec` | 미구현 | 트랜잭션 이벤트는 존재하나 `name/must_include/retention_policy` 기반 typed spec 부재 |
+| `LoopContractSpec` | 미구현 | 폐루프 경로(`projection -> decision -> ...`)에 대한 독립 계약/validator 부재 |
+| `InfraAssetSpec` | 미구현 | `infra_assets` 카탈로그 모델 및 owner/env/criticality 인덱스 미도입 |
+| `ServiceOpsEventSpec` | 구현 완료 | `packages/ea-ops/src/ea_ops/events.py` + `ea-governance` ingestion/list/replay API에서 실사용 |
+| `EvidenceBindingSpec` | 구현 완료 | `packages/ea-trace/src/ea_trace/evidence.py`에 spec/validator/payload 검증 구현 |
+
+### 12.3 요약
+- PRD 기준 `US-001`~`US-009` 범위 구현은 코드/테스트/문서 기준으로 완료 상태다.
+- 다만 `m2-v2` 전체 관점의 P0 잔여 항목(`FlowEdgeSpec`, `LoopContractSpec`, `GovernanceEventSpec`, `InfraAssetSpec`)은 별도 후속 작업이 필요하다.

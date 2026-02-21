@@ -1,192 +1,260 @@
 {
-  "name": "M2 v2 Ops Ingestion, Trace Replay, Needs Policy Loop",
-  "description": "Ops 이벤트를 표준 API로 수집하고 Trace/Needs/Infra 거버넌스 루프를 완성한다.",
-  "branchName": "ralph/m2-v2-ops-ingestion-trace-needs-loop",
+  "name": "M2 v2 Core Completion (Unimplemented + Partial Specs)",
+  "description": "M2 v2 엔티티 12개를 타입/로더/검증기/런타임 훅으로 완성하고, 미구현 영역(FlowEdgeSpec, LoopContractSpec, GovernanceEventSpec, InfraAssetSpec)을 운영 가능한 계약으로 승격한다.",
+  "branchName": "ralph/m2-v2-core-completion",
   "userStories": [
     {
       "id": "US-001",
-      "title": "SQLite Ops Event Store 도입",
-      "description": "As a platform architect, I want SQLite 기반 ops event store를 도입해서 운영 이벤트를 영속 저장하고 조회 가능하게 하길 원한다.",
+      "title": "v2 Core Type System 정의",
+      "description": "As a platform architect, I want a canonical v2 type system so that all M2 entities share one source of truth.",
       "acceptanceCriteria": [
-        "ea-infra에 SQLite 기반 ops event store가 추가된다.",
-        "레코드는 event_name, severity, feeds_back_to, trace_id, lineage_id, payload, ingested_at를 포함한다.",
-        "append/read/count 인터페이스가 in-memory store와 호환된다.",
-        "저장/조회 단위 테스트가 추가된다.",
+        "ea-profile에 12개 엔티티 대응 타입(ProfileSpec, LayerSpec, FlowEdgeSpec, StateTokenSpec, TransitionSpec, ArtifactTypeSpec, TraceLinkSpec, GovernanceEventSpec, LoopContractSpec, InfraAssetSpec, ServiceOpsEventSpec, EvidenceBindingSpec)이 정의된다.",
+        "필수 필드와 enum 타입이 코드에서 강제된다.",
+        "기존 profile 타입과 병행 가능한 하위 호환 레이어(변환/어댑터)가 제공된다.",
+        "타입 직렬화/역직렬화 단위 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "notes": "",
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-002",
-      "title": "Retention/Cleanup 정책 구현",
-      "description": "As a platform architect, I want ops 이벤트 retention 정책을 저장소 레벨에서 적용해 데이터 수명주기를 통제하고 싶다.",
+      "title": "v2 Loader 확장 (TOML -> Typed Spec)",
+      "description": "As a platform architect, I want the loader to parse v2 blocks so that profiles can declare the full contract declaratively.",
       "acceptanceCriteria": [
-        "retention 필드(max_age_days, max_records 등)가 정책 모델로 정의된다.",
-        "cleanup 실행 함수가 추가되어 만료 데이터 삭제가 가능하다.",
-        "cleanup 전/후 건수 확인 함수 또는 API가 제공된다.",
-        "retention/cleanup 동작 테스트가 추가된다.",
+        "loader가 flow_edges, state_tokens, transitions, artifact_types, trace_links, governance_events, loop_contracts, infra_assets, service_ops_events, evidence_bindings 블록을 파싱한다.",
+        "누락 필수 필드에 대해 명시적 에러 메시지를 반환한다.",
+        "기존 v1/v1.5 profile 로딩이 깨지지 않는다.",
+        "샘플 v2 TOML fixture 기반 로더 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
         "US-001"
-      ],
-      "completionNotes": "Completed by agent"
+      ]
     },
     {
       "id": "US-003",
-      "title": "단건 Ops Ingestion API 제공",
-      "description": "As a platform architect, I want 단건 ingestion API를 통해 운영 이벤트를 시스템에 표준 입력하고 싶다.",
+      "title": "FlowEdgeSpec + LoopContractSpec 정적 검증기 구현",
+      "description": "As a platform architect, I want mandatory loop path validation so that causal closed-loop guarantees are enforced at load time.",
       "acceptanceCriteria": [
-        "ea-governance API router에 단건 ingestion endpoint가 추가된다.",
-        "요청은 ServiceOpsEventSpec + payload 계약을 검증한다.",
-        "응답에 transaction_id, trace_id, lineage_id, snapshot id가 포함된다.",
-        "실패 시 검증 오류가 구조화된 에러로 반환된다.",
+        "필수 경로(infra->kernel, infra->flow, decision->needs, needs->kernel, kernel->flow, flow->projection, projection->decision) 존재 검증이 구현된다.",
+        "loop_contracts.path가 flow graph 상 닫힌 경로인지 검증한다.",
+        "잘못된 경로/단절 경로에 대한 구조화 에러 코드를 제공한다.",
+        "validator 테스트가 성공/실패 케이스 모두 포함한다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-001"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-001",
+        "US-002"
+      ]
     },
     {
       "id": "US-004",
-      "title": "대량 Ops Ingestion API 제공",
-      "description": "As a platform architect, I want bulk ingestion API를 통해 다수 이벤트를 한 번에 수집하고 싶다.",
+      "title": "TransitionSpec + StateTokenSpec 고도화",
+      "description": "As a platform architect, I want transition contracts to include trace/governance requirements so that state transitions are auditable.",
       "acceptanceCriteria": [
-        "bulk endpoint가 추가되고 배열 입력을 지원한다.",
-        "결과는 항목별 성공/실패와 success_count, failed_count를 반환한다.",
-        "부분 실패 전략 또는 atomic 전략이 API 계약과 테스트로 고정된다.",
-        "bulk 요청의 trace/lineage 상관관계 검증이 수행된다.",
+        "TransitionSpec에 requires_trace, requires_governance_event 계약이 반영된다.",
+        "from/to가 같은 layer의 StateTokenSpec을 참조하는지 검증된다.",
+        "alias/canonical 매핑 규칙이 공통 유틸로 정리된다.",
+        "transition 검증 테스트가 alias 포함 케이스를 검증한다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-003"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-001",
+        "US-002"
+      ]
     },
     {
       "id": "US-005",
-      "title": "Ops Event 조회 API 제공",
-      "description": "As a platform architect, I want 저장된 ops 이벤트를 조회해 운영 상태와 감사 내역을 확인하고 싶다.",
+      "title": "GovernanceEventSpec 계약 도입",
+      "description": "As a platform architect, I want typed governance event specs so that event required fields and retention policy are enforceable.",
       "acceptanceCriteria": [
-        "list/get endpoint가 추가된다.",
-        "trace_id, lineage_id, event_name, 시간 범위 필터를 지원한다.",
-        "페이지네이션 또는 limit/offset이 제공된다.",
-        "조회 API 테스트가 추가된다.",
+        "GovernanceEventSpec(name, must_include, retention_policy) 타입/validator가 구현된다.",
+        "must_include 최소 키(trace_id, lineage_id) 검증이 구현된다.",
+        "retention 정책 enum/허용값 검증이 구현된다.",
+        "governance event spec 위반 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 5,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
         "US-001",
-        "US-003"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-002"
+      ]
     },
     {
       "id": "US-006",
-      "title": "Lineage Replay API 제공",
-      "description": "As a platform architect, I want lineage replay endpoint로 의사결정-운영-구조 인과 체인을 재생하고 싶다.",
+      "title": "InfraAssetSpec 카탈로그 모델/저장소 구현",
+      "description": "As a platform architect, I want infra assets cataloged with ownership and criticality so that projection/governance can reference infrastructure consistently.",
       "acceptanceCriteria": [
-        "lineage replay endpoint가 추가된다.",
-        "decision_trace_ops lineage 결과를 API로 노출한다.",
-        "응답에 replayed_nodes, path_to_latest_operation, missing_required_relations가 포함된다.",
-        "경로 단절 시 오류/경고 규약이 문서화되고 테스트된다.",
+        "InfraAssetSpec 모델과 저장소 인터페이스(in-memory + SQLite)가 구현된다.",
+        "owner/environment/criticality/asset_type/exposure_refs 필드 제약 검증이 구현된다.",
+        "asset_type=api_gateway 교차 제약(url: 또는 api: ref 필수)이 구현된다.",
+        "저장/조회/필터(예: owner, environment, criticality) 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 6,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-003"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-001"
+      ]
     },
     {
       "id": "US-007",
-      "title": "Catalog별 Auto-Express 정책 테이블",
-      "description": "As a platform architect, I want catalog별 정책 테이블로 auto_express 허용 조건을 통제하고 싶다.",
+      "title": "ServiceOpsEventSpec 통합 정렬",
+      "description": "As a platform architect, I want ServiceOpsEventSpec to be consumed from the unified v2 spec layer so that duplicated contracts are removed.",
       "acceptanceCriteria": [
-        "catalog 정책 모델이 정의되고 저장/조회 가능하다.",
-        "정책 기준(severity, event_name, feeds_back_to, stakeholder mapping)을 평가한다.",
-        "ingest_service_ops_event가 정책 평가를 거쳐 auto-express 실행 여부를 결정한다.",
-        "정책 미충족 시 이유 코드가 이벤트 또는 응답에 기록된다.",
+        "ea-ops의 ServiceOpsEventSpec와 ea-profile v2 spec 타입 간 매핑 또는 단일 소스 전략이 확정된다.",
+        "ea-governance ingestion API가 통합 spec 경로를 사용한다.",
+        "critical severity 교차 제약이 통합 경로에서 동일하게 보장된다.",
+        "호환성 회귀 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 7,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
-        "US-003"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-001",
+        "US-002",
+        "US-005"
+      ]
     },
     {
       "id": "US-008",
-      "title": "Needs 자동 반영 실행 경로 완성",
-      "description": "As a platform architect, I want 정책 통과 이벤트가 Needs로 자동 반영되어 운영 신호가 실제 니즈로 이어지길 원한다.",
+      "title": "EvidenceBindingSpec 통합 및 TraceLinkSpec 연계",
+      "description": "As a platform architect, I want evidence and trace contracts connected so that replay and audit can validate required evidence.",
       "acceptanceCriteria": [
-        "policy 통과 시 needs catalog에 auto-expressed need가 생성된다.",
-        "반영 결과(need_id, lineage_id, version)가 트랜잭션 이벤트와 응답에 기록된다.",
-        "infra snapshot과 needs feedback snapshot이 함께 생성된다.",
-        "E2E 테스트에서 이벤트 입력 후 need 증가가 검증된다.",
+        "EvidenceBindingSpec와 TraceLinkSpec 관계 검증 로직이 추가된다.",
+        "source_type=surface_artifact일 때 environment 필수 규칙이 통합 validator에서 보장된다.",
+        "lineage replay 시 evidence 누락 경고 또는 차단 모드가 선택 가능하게 구현된다.",
+        "trace/evidence 통합 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 8,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
+        "US-001",
+        "US-005",
         "US-007"
-      ],
-      "completionNotes": "Completed by agent"
+      ]
     },
     {
       "id": "US-009",
-      "title": "API 명세 및 운영 Runbook 작성",
-      "description": "As a platform architect, I want API 명세와 운영 runbook을 문서화해 팀이 반복 운영 가능하도록 하고 싶다.",
+      "title": "Runtime Contract Enforcement Hook 도입",
+      "description": "As a platform architect, I want runtime hooks for transition/event/loop checks so that static contracts are enforced during execution.",
       "acceptanceCriteria": [
-        "단건/bulk ingestion, list/get, lineage replay API 명세가 docs에 정리된다.",
-        "운영 runbook에 검증 실패, 부분 실패, cleanup 절차가 포함된다.",
-        "문서는 docs 하위에 저장되고 관련 모듈에서 참조된다.",
-        "문서 기준 수동 smoke 절차가 재현 가능하다.",
+        "상태 전이 시 requires_trace 계약 강제 훅이 구현된다.",
+        "상태 전이/구조 변경/표층 노출 시 required governance event 발행 여부 검증 훅이 구현된다.",
+        "lineage 단절/필수 relation 누락의 warning vs block 정책을 설정 가능하게 제공한다.",
+        "runtime enforcement 테스트가 추가된다.",
         "uv run ruff check <changed-files-or-packages> passes",
         "uv run pytest <story-scoped-tests> passes"
       ],
       "priority": 9,
-      "passes": true,
+      "passes": false,
       "notes": "",
       "dependsOn": [
+        "US-003",
+        "US-004",
+        "US-005",
+        "US-008"
+      ]
+    },
+    {
+      "id": "US-010",
+      "title": "Governance API 확장 (v2 spec 조회/검증)",
+      "description": "As a platform architect, I want governance APIs to expose v2 spec status so that operators can inspect contract readiness.",
+      "acceptanceCriteria": [
+        "v2 spec/validator 결과를 조회하는 read-only API endpoint가 추가된다.",
+        "엔티티별 구현 상태(loaded/validated/errors)를 반환한다.",
+        "validation error envelope가 기존 API 에러 형식과 일관된다.",
+        "API contract 테스트가 추가된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-005",
+        "US-009"
+      ]
+    },
+    {
+      "id": "US-011",
+      "title": "Migration/Compatibility Layer",
+      "description": "As a platform architect, I want a migration path from legacy profile fields so that adoption does not require a hard cutover.",
+      "acceptanceCriteria": [
+        "기존 LayerStack 문자열 flow 필드를 FlowEdgeSpec로 변환하는 마이그레이션 유틸이 제공된다.",
+        "legacy profile을 로드할 때 deprecation warning이 기록된다.",
+        "변환 결과를 검증하는 golden test가 추가된다.",
+        "cutover 가이드 문서가 추가된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "문서/Runbook 정합화",
+      "description": "As a platform architect, I want docs and runbooks aligned with implemented v2 contracts so that teams can operate repeatably.",
+      "acceptanceCriteria": [
+        "docs/m2-v2-draft.md의 엔티티/검증/DoD 섹션이 구현 기준으로 업데이트된다.",
+        "docs/m2-v2-package-map.md에 실제 구현 패키지 및 모듈 경로가 반영된다.",
+        "운영 검증 절차(runbook)에 정적 validator + runtime hook + replay 점검 루틴이 문서화된다.",
+        "문서 기반 수동 smoke 절차가 재현 가능하게 정리된다.",
+        "uv run ruff check <changed-files-or-packages> passes",
+        "uv run pytest <story-scoped-tests> passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "",
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003",
         "US-004",
         "US-005",
         "US-006",
-        "US-008"
-      ],
-      "completionNotes": "Completed by agent"
+        "US-007",
+        "US-008",
+        "US-009",
+        "US-010",
+        "US-011"
+      ]
     }
   ],
   "metadata": {
-    "updatedAt": "2026-02-21T02:40:48.834Z"
+    "sourcePrd": "tasks/prd-m2-v2-core-completion.md",
+    "updatedAt": "2026-02-21T02:58:15.617Z"
   }
 }

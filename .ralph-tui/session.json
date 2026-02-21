@@ -1,103 +1,98 @@
 {
   "version": 1,
-  "sessionId": "20ea4c68-14d0-48fe-b3fc-5edf7df4782d",
+  "sessionId": "6bb92a51-8b86-4f32-a139-395b1fc280b1",
   "status": "running",
-  "startedAt": "2026-02-21T02:03:04.364Z",
-  "updatedAt": "2026-02-21T02:40:48.835Z",
-  "currentIteration": 8,
+  "startedAt": "2026-02-21T02:58:15.199Z",
+  "updatedAt": "2026-02-21T02:58:15.617Z",
+  "currentIteration": 0,
   "maxIterations": 0,
-  "tasksCompleted": 8,
+  "tasksCompleted": 0,
   "isPaused": false,
   "agentPlugin": "codex",
   "trackerState": {
     "plugin": "json",
-    "totalTasks": 0,
-    "tasks": []
+    "prdPath": "tasks/prd.json",
+    "totalTasks": 12,
+    "tasks": [
+      {
+        "id": "US-001",
+        "title": "v2 Core Type System 정의",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-002",
+        "title": "v2 Loader 확장 (TOML -> Typed Spec)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-003",
+        "title": "FlowEdgeSpec + LoopContractSpec 정적 검증기 구현",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-004",
+        "title": "TransitionSpec + StateTokenSpec 고도화",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-005",
+        "title": "GovernanceEventSpec 계약 도입",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-006",
+        "title": "InfraAssetSpec 카탈로그 모델/저장소 구현",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-007",
+        "title": "ServiceOpsEventSpec 통합 정렬",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-008",
+        "title": "EvidenceBindingSpec 통합 및 TraceLinkSpec 연계",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-009",
+        "title": "Runtime Contract Enforcement Hook 도입",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-010",
+        "title": "Governance API 확장 (v2 spec 조회/검증)",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-011",
+        "title": "Migration/Compatibility Layer",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "US-012",
+        "title": "문서/Runbook 정합화",
+        "status": "open",
+        "completedInSession": false
+      }
+    ]
   },
-  "iterations": [
-    {
-      "iteration": 1,
-      "status": "completed",
-      "taskId": "US-001",
-      "taskTitle": "SQLite Ops Event Store 도입",
-      "taskCompleted": true,
-      "durationMs": 317991,
-      "startedAt": "2026-02-21T02:03:13.240Z",
-      "endedAt": "2026-02-21T02:08:31.231Z"
-    },
-    {
-      "iteration": 2,
-      "status": "completed",
-      "taskId": "US-002",
-      "taskTitle": "Retention/Cleanup 정책 구현",
-      "taskCompleted": true,
-      "durationMs": 202971,
-      "startedAt": "2026-02-21T02:08:32.375Z",
-      "endedAt": "2026-02-21T02:11:55.346Z"
-    },
-    {
-      "iteration": 3,
-      "status": "completed",
-      "taskId": "US-003",
-      "taskTitle": "단건 Ops Ingestion API 제공",
-      "taskCompleted": true,
-      "durationMs": 282881,
-      "startedAt": "2026-02-21T02:11:56.440Z",
-      "endedAt": "2026-02-21T02:16:39.321Z"
-    },
-    {
-      "iteration": 4,
-      "status": "completed",
-      "taskId": "US-004",
-      "taskTitle": "대량 Ops Ingestion API 제공",
-      "taskCompleted": true,
-      "durationMs": 194774,
-      "startedAt": "2026-02-21T02:16:40.429Z",
-      "endedAt": "2026-02-21T02:19:55.203Z"
-    },
-    {
-      "iteration": 5,
-      "status": "completed",
-      "taskId": "US-005",
-      "taskTitle": "Ops Event 조회 API 제공",
-      "taskCompleted": true,
-      "durationMs": 261302,
-      "startedAt": "2026-02-21T02:19:56.313Z",
-      "endedAt": "2026-02-21T02:24:17.615Z"
-    },
-    {
-      "iteration": 6,
-      "status": "completed",
-      "taskId": "US-006",
-      "taskTitle": "Lineage Replay API 제공",
-      "taskCompleted": true,
-      "durationMs": 229771,
-      "startedAt": "2026-02-21T02:24:18.721Z",
-      "endedAt": "2026-02-21T02:28:08.492Z"
-    },
-    {
-      "iteration": 7,
-      "status": "completed",
-      "taskId": "US-007",
-      "taskTitle": "Catalog별 Auto-Express 정책 테이블",
-      "taskCompleted": true,
-      "durationMs": 425489,
-      "startedAt": "2026-02-21T02:28:09.596Z",
-      "endedAt": "2026-02-21T02:35:15.085Z"
-    },
-    {
-      "iteration": 8,
-      "status": "completed",
-      "taskId": "US-008",
-      "taskTitle": "Needs 자동 반영 실행 경로 완성",
-      "taskCompleted": true,
-      "durationMs": 107674,
-      "startedAt": "2026-02-21T02:35:16.186Z",
-      "endedAt": "2026-02-21T02:37:03.860Z"
-    }
-  ],
+  "iterations": [],
   "skippedTaskIds": [],
   "cwd": "/Users/junwoobang/workflow/ea-sys2",
-  "activeTaskIds": [],
+  "activeTaskIds": [
+    "US-001"
+  ],
   "subagentPanelVisible": false
 }

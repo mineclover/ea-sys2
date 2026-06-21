@@ -360,6 +360,7 @@ source = { editable = "packages/ea-flow" }
 dependencies = [
     { name = "ea-decision" },
     { name = "ea-kernel" },
+    { name = "ea-needs" },
     { name = "ea-profile" },
 ]
 
@@ -373,6 +374,7 @@ dev = [
 requires-dist = [
     { name = "ea-decision", editable = "packages/ea-decision" },
     { name = "ea-kernel", editable = "packages/ea-kernel" },
+    { name = "ea-needs", editable = "packages/ea-needs" },
     { name = "ea-profile", editable = "packages/ea-profile" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },

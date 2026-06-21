@@ -8,21 +8,26 @@
 
 ## Layer Architecture
 
-### 메인 모델 (5계층)
+### 메인 모델 (6계층 · 2 도메인)
 
-모델 정의 순서: `infra > decision > needs > kernel > flow` — 구현 호출 순서가 아니라 모델 정의 책임의 상위-하위 체계.
+#### 의사결정 도메인 — 경험 관찰 → 판단 → 설계
 
 | 계층 | 핵심 책임 | 모델 관점 |
 |------|----------|----------|
-| **Infra** (00) | row 데이터 설계 | 저장소, 상태, 인덱싱, 입출력 데이터 관리 모델 |
-| **Decision** (20) | 의사결정 메타-메타 모델 정의 | 의사결정 활동/상태/옵션/평가/결론 구조 어휘와 전이 규칙 |
-| **Needs** (30) | 요구 모델 정의 | 목표/요구/백로그/컨텍스트의 정형 표현 |
-| **Kernel** (40) | 도메인 핵심 모델 정의 | 존재론(요소/관계)과 유효성 규칙 |
-| **Flow** (50) | 실행/데이터 흐름 모델 + 구체적 데이터 스키마 스펙 소유 | 단계 순서, 입출력 소비/생산, 트리거/전이, **구체적 데이터 형상(JSON Schema·DB Schema·I/O 계약·데이터 카탈로그)**. 6x6 계약 소유(`FlowLayerContractMatrix`) |
+| **Projection** (60) | 경험 관찰·확인 | 테스트/실행 결과를 경험적 근거로 추상화, 의사결정 피드백 |
+| **Decision** (20) | 의사결정 모델 정의 | 관찰 근거 기반 판단·옵션·평가·결론 구조 |
+| **Needs** (30) | 경험 설계 | 목표/요구/백로그/컨텍스트의 정형 표현 |
+
+#### 구현 도메인 — 로직 구조화 → 데이터 흐름 일반화
+
+| 계층 | 핵심 책임 | 모델 관점 |
+|------|----------|----------|
+| **Kernel** (40) | 로직의 구조화 | 존재론(요소/관계)과 유효성 규칙 |
+| **Flow** (50) | 데이터 흐름 일반화 | 단계 순서, 입출력, 트리거/전이, 구체적 데이터 스키마 스펙. 6x6 계약 소유(`FlowLayerContractMatrix`) |
 
 ### Governance (별도 관리 시스템)
 
-`Governance`는 위 5개 레이어 전체를 관리하는 별도 관리 시스템이다. 거버넌스 자체의 운영 방식도 메타-메타 모델로 먼저 설계하고, 그 모델대로 운영한다. 즉 거버넌스는 다른 레이어의 관리자인 동시에 자기 운영 모델의 메타-메타 모델 설계이기도 하다.
+`Governance`는 위 6개 레이어 전체를 관리하는 별도 관리 시스템이다. 거버넌스 자체의 운영 방식도 메타-메타 모델로 먼저 설계하고, 그 모델대로 운영한다. 즉 거버넌스는 다른 레이어의 관리자인 동시에 자기 운영 모델의 메타-메타 모델 설계이기도 하다.
 
 - 각 레이어 스펙을 이해하고 입력 인터페이스 제공·레이어별 데이터 적합화·진입점 설계를 담당
 - 모델 등록/버전/활성 상태 관리, 검증 실행 이력 및 진화(승격/폐기) 관리
@@ -36,22 +41,23 @@
 ### 계층 흐름
 
 ```
-모델 정의 흐름:       infra -> decision -> needs -> kernel -> flow
-거버넌스 관리 흐름:    governance -> {infra, decision, needs, kernel, flow}
-런타임 엔트리포인트:   decision -> needs -> kernel -> flow
-피드백 흐름:          flow -> kernel -> governance -> decision
+의사결정 흐름:     projection → decision → needs
+구현 흐름:         kernel → flow
+도메인 경계:       needs → kernel (설계→구현), flow → projection (구현→관찰)
+거버넌스 관리:     governance → {모든 레이어}
 ```
 
-- **모델 정의**: infra가 데이터 관리 모델을 제공 → decision이 메타-메타 구조 정형화 → needs가 요구 정형화 → kernel이 핵심 의미 체계 고정 → flow가 실행 가능한 절차/데이터 전이 표현 + **구체적 데이터 스키마 스펙**(JSON Schema, DB Schema, I/O 계약, 데이터 카탈로그) 소유
-- **런타임 엔트리포인트**: infra/governance는 체인 노드가 아니라 각각 row 데이터 설계/시스템 진입점 설계 담당
-- **피드백**: flow 이력/결과 → kernel 제약 해석 → governance 버전/검증 이력 축적 → decision 모델 보정 환류
+- **의사결정 도메인**: projection이 실행 결과를 경험적 근거로 확인 → decision이 관찰 근거 기반으로 판단 → needs가 경험을 설계
+- **구현 도메인**: kernel이 로직을 구조화 → flow가 구조화된 로직의 데이터 흐름을 일반화
+- **도메인 경계**: needs→kernel은 설계가 구현으로 넘어가는 확정 경계, flow→projection은 구현 결과가 관찰로 환류하는 피드백 경계
+- **교차 시스템**: infra는 row 데이터 설계, governance는 시스템 진입점 설계 — 도메인 체인 노드가 아니라 전 레이어 교차
 
 ### 시뮬레이션 우선 검증
 
 런타임 실행 이전에 모델 자체의 정합성을 정적 시뮬레이션으로 검증한다.
 
 - **Layer-local relation integrity**: 각 레이어 규칙이 내부 relation 정의와 일치하는지
-- **Decision coverage**: flow 주요 단계가 decision 메타-메타 규칙으로 통제되는지
+- **Needs coverage**: kernel 구조 변경이 need_record로 추적되는지
 - **Data availability**: `consumes` 입력이 `produces`/초기 데이터로 충족되는지
 - **Sequence integrity**: `next` 체인이 단절되지 않는지
 
@@ -64,8 +70,9 @@
 | `packages/ea-needs` | Needs — 목표/요구/백로그/컨텍스트 정형 표현 | ea-kernel | → `packages/ea-needs/CLAUDE.md` |
 | `packages/ea-decision` | Decision — 의사결정 활동/상태/옵션/평가/결론 어휘·전이 규칙 | ea-kernel, ea-needs | → `packages/ea-decision/CLAUDE.md` |
 | `packages/ea-flow` | Flow — 실행 흐름 + 구체적 데이터 스키마 스펙, 6x6 계약 소유 | ea-kernel, ea-decision | → `packages/ea-flow/CLAUDE.md` |
-| `packages/ea-governance` | Governance — 5개 레이어 관리 시스템 (등록/버전/활성/진입점) | ea-kernel, ea-decision, ea-flow, ea-needs | → `packages/ea-governance/CLAUDE.md` |
+| `packages/ea-governance` | Governance — 6개 레이어 관리 시스템 (등록/버전/활성/진입점) | ea-kernel, ea-decision, ea-flow, ea-needs | → `packages/ea-governance/CLAUDE.md` |
 | `packages/ea-infra` | Infra — row 데이터 설계, 저장소/인덱싱/입출력 관리 모델 | ea-profile | → `packages/ea-infra/CLAUDE.md` |
+| *(미구현)* | Projection — 경험 관찰·확인 (패키지 미생성) | — | — |
 | `web-kernel-viz/` | 커널 토폴로지 시각화 (독립 프론트엔드) | Vite + React + @xyflow/react | |
 
 ## Dependency Graph
@@ -75,15 +82,17 @@ web-kernel-viz (독립, Node)
 
 ea-profile (프로파일 프레임워크, zero dep)
     ↑                  ↑
-ea-infra (row 데이터)   ea-kernel (도메인 핵심 모델)
+ea-infra (row 데이터)   ea-kernel (로직 구조화)          ← 구현 도메인
                            ↑
-                       ea-needs (요구 모델)
-                           ↑
-                       ea-decision (의사결정 메타-메타 모델, + needs)
-                           ↑
-                       ea-flow (실행/데이터 흐름 모델, + decision)
+                       ea-needs (경험 설계)              ┐
+                           ↑                            │ 의사결정 도메인
+                       ea-decision (의사결정 모델, + needs) │
+                           ↑                            │
+                       ea-flow (데이터 흐름 일반화, + decision) ← 구현 도메인
                            ↑
                        ea-governance (관리 시스템, + decision + flow + needs)
+
+  * projection 레이어는 모델로 정의되어 있으나 패키지 미생성 상태
 ```
 
 ## Workspace Setup
@@ -100,4 +109,4 @@ make test-kernel # ea-kernel만
 
 - ea-infra는 row 데이터 설계를 담당하며 ea-profile에만 의존 (M1 파이프라인용)
 - web-kernel-viz는 Python 패키지와 무관 (독립 Node 앱)
-- ea-governance는 5개 레이어 전체를 관리하는 별도 시스템 (단순 파사드가 아님)
+- ea-governance는 6개 레이어 전체를 관리하는 별도 시스템 (단순 파사드가 아님)

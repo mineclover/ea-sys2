@@ -11,10 +11,10 @@ class TestNeedsSchemaPort:
         assert isinstance(NEEDS_SCHEMA, SchemaPort)
 
     def test_entity_count(self):
-        assert len(NEEDS_SCHEMA.entities) == 20
+        assert len(NEEDS_SCHEMA.entities) == 23
 
     def test_relation_count(self):
-        assert len(NEEDS_SCHEMA.relations) == 10
+        assert len(NEEDS_SCHEMA.relations) == 11
 
     def test_entities_are_needs_entity(self):
         for e in NEEDS_SCHEMA.entities:
@@ -60,6 +60,8 @@ class TestNeedsSchemaPort:
             "need_resolution_complexity", "need_process_stage", "justification_type",
             # S3/S4/S5
             "need_store", "needs_analyzer", "needs_simulator", "need_promotion_engine",
+            # Scenario flow
+            "scenario_flow", "scenario_step", "scenario_type",
         }
         assert names == expected
 
@@ -69,6 +71,7 @@ class TestNeedsSchemaPort:
             "depends_on", "conflicts_with", "supports", "refines", "supersedes",
             "contains", "expresses", "justifies",
             "addresses", "withdraws",
+            "branches_from",
         }
         assert names == expected
 

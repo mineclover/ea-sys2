@@ -61,3 +61,30 @@ def kernel_entity_summary(
         return None
     except ImportError:
         return None
+
+
+def validate_scenario_kernel_refs(
+    scenario: "ScenarioFlow",
+    schema: Any = None,
+) -> dict[str, bool]:
+    """Validate kernel_ref fields from scenario steps.
+
+    Extracts non-None kernel_refs from scenario steps and delegates
+    to validate_kernel_refs for validation.
+
+    Args:
+        scenario: A ScenarioFlow instance with steps.
+        schema: Optional KernelSchema instance.
+
+    Returns:
+        Dict mapping each kernel_ref to True (found) or False (not found).
+        Returns empty dict if no kernel_refs are present.
+    """
+    refs = [
+        step.kernel_ref
+        for step in scenario.steps
+        if step.kernel_ref is not None
+    ]
+    if not refs:
+        return {}
+    return validate_kernel_refs(refs, schema=schema)

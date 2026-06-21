@@ -113,6 +113,13 @@ class NeedProcessStage(StrEnum):
     MODEL_DETAIL = "model_detail"
 
 
+class ScenarioType(StrEnum):
+    """Type of scenario flow for a use case."""
+    MAIN = "main"
+    ALTERNATIVE = "alternative"
+    EXCEPTION = "exception"
+
+
 # ---------------------------------------------------------------------------
 # Frozen value objects
 # ---------------------------------------------------------------------------
@@ -164,9 +171,37 @@ class UseCase:
     purpose: str
     outcome: str = ""
     tags: list[str] = field(default_factory=list)
+    preconditions: tuple[str, ...] = ()
+    postconditions: tuple[str, ...] = ()
     version: int = 1
     created_at: str = field(default_factory=_now)
     updated_at: str = field(default_factory=_now)
+
+
+@dataclass(frozen=True)
+class ScenarioStep:
+    """A single step in a scenario flow."""
+    order: int
+    actor: str
+    action: str
+    system_response: str
+    kernel_ref: str | None = None
+
+
+@dataclass(frozen=True)
+class ScenarioFlow:
+    """A scenario flow describing use-case interaction sequences."""
+    id: str
+    use_case_id: str
+    title: str
+    scenario_type: ScenarioType
+    steps: tuple[ScenarioStep, ...]
+    preconditions: tuple[str, ...] = ()
+    postconditions: tuple[str, ...] = ()
+    trigger: str = ""
+    branch_from_step: int | None = None
+    version: int = 1
+    created_at: str = field(default_factory=_now)
 
 
 @dataclass(frozen=True)

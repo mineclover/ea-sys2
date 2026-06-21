@@ -6,11 +6,14 @@ from ea_needs.catalog import NeedCatalog
 from ea_needs.needs_service import (
     catalog_summary,
     describe_need,
+    describe_scenario,
     list_needs,
+    list_scenarios,
     list_stakeholders,
     list_use_cases,
     need_lineage,
 )
+from ea_needs.types import ScenarioStep, ScenarioType
 from ea_needs.types import NeedPriority
 
 
@@ -183,3 +186,77 @@ class TestCatalogSummary:
         dist = result["status_distribution"]
         assert dist["expressed"] == 1
         assert dist["draft"] == 1
+
+
+
+# ---------------------------------------------------------------------------
+# list_scenarios
+# ---------------------------------------------------------------------------
+
+class TestListScenarios:
+    def test_empty_catalog(self, empty_catalog: NeedCatalog):
+        result = list_scenarios(catalog=empty_catalog)
+        assert result["count"] == 0
+        assert result["filter"]["use_case_id"] is None
+        assert result["scenarios"] == []
+
+    def test_all_scenarios(self, populated_catalog: NeedCatalog):
+        uc = populated_catalog.use_cases[0]
+        steps = (
+            ScenarioStep(order=1, actor="User", action="login", system_response="ok"),
+        )
+        populated_catalog.add_scenario(
+            uc.id, "Main", ScenarioType.MAIN, steps,
+        )
+        result = list_scenarios(catalog=populated_catalog)
+        assert result["count"] == 1
+        assert result["scenarios"][0]["title"] == "Main"
+
+    def test_filter_by_use_case(self, populated_catalog: NeedCatalog):
+        uc = populated_catalog.use_cases[0]
+        steps = (
+            ScenarioStep(order=1, actor="User", action="login", system_response="ok"),
+        )
+        populated_catalog.add_scenario(
+            uc.id, "Main", ScenarioType.MAIN, steps,
+        )
+        result = list_scenarios(catalog=populated_catalog, use_case_id=uc.id)
+        assert result["count"] == 1
+        assert result["filter"]["use_case_id"] == uc.id
+
+    def test_filter_no_match(self, populated_catalog: NeedCatalog):
+        result = list_scenarios(catalog=populated_catalog, use_case_id="uc-nonexistent")
+        assert result["count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# describe_scenario
+# ---------------------------------------------------------------------------
+
+class TestDescribeScenario:
+    def test_not_found(self, empty_catalog: NeedCatalog):
+        result = describe_scenario(catalog=empty_catalog, scenario_id="sf-nonexistent")
+        assert result is None
+
+    def test_describe(self, populated_catalog: NeedCatalog):
+        uc = populated_catalog.use_cases[0]
+        steps = (
+            ScenarioStep(order=1, actor="User", action="login", system_response="ok"),
+            ScenarioStep(order=2, actor="System", action="auth", system_response="session"),
+        )
+        scenario = populated_catalog.add_scenario(
+            uc.id, "Main Login", ScenarioType.MAIN, steps,
+            preconditions=("User has account",),
+            postconditions=("User is authenticated",),
+            trigger="User clicks login",
+        )
+        result = describe_scenario(catalog=populated_catalog, scenario_id=scenario.id)
+        assert result is not None
+        assert result["title"] == "Main Login"
+        assert result["scenario_type"] == "main"
+        assert result["preconditions"] == ["User has account"]
+        assert result["postconditions"] == ["User is authenticated"]
+        assert result["trigger"] == "User clicks login"
+        assert len(result["steps"]) == 2
+        assert result["steps"][0]["order"] == 1
+        assert result["steps"][0]["actor"] == "User"

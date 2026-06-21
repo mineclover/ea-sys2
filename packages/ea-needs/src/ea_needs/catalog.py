@@ -25,6 +25,9 @@ from ea_needs.types import (
     NeedResolutionComplexity,
     NeedStatement,
     NeedStatus,
+    ScenarioFlow,
+    ScenarioStep,
+    ScenarioType,
     Stakeholder,
     UseCase,
     _generate_id,
@@ -263,6 +266,7 @@ class NeedCatalog:
     needs: list[Need] = field(default_factory=list)
     relations: list[NeedRelation] = field(default_factory=list)
     process_units: list[NeedProcessUnit] = field(default_factory=list)
+    scenarios: list[ScenarioFlow] = field(default_factory=list)
     created_at: str = field(default_factory=_now)
     updated_at: str = field(default_factory=_now)
     id: str = field(default_factory=lambda: _generate_id("catalog"))
@@ -277,6 +281,8 @@ class NeedCatalog:
         purpose: str,
         outcome: str = "",
         tags: list[str] | None = None,
+        preconditions: tuple[str, ...] | None = None,
+        postconditions: tuple[str, ...] | None = None,
     ) -> UseCase:
         """Register a structured use-case for downstream need expression."""
         use_case = UseCase(
@@ -287,6 +293,8 @@ class NeedCatalog:
             purpose=purpose,
             outcome=outcome,
             tags=list(tags or []),
+            preconditions=preconditions if preconditions is not None else (),
+            postconditions=postconditions if postconditions is not None else (),
         )
         self.use_cases.append(use_case)
         self.updated_at = _now()
@@ -295,7 +303,95 @@ class NeedCatalog:
     def get_use_case(self, use_case_id: str) -> UseCase | None:
         return next((u for u in self.use_cases if u.id == use_case_id), None)
 
-    # -- Stakeholder management --
+    # -- Scenario flow management --
+
+    def add_scenario(
+        self,
+        use_case_id: str,
+        title: str,
+        scenario_type: ScenarioType | str,
+        steps: tuple[ScenarioStep, ...],
+        preconditions: tuple[str, ...] = (),
+        postconditions: tuple[str, ...] = (),
+        trigger: str = "",
+        branch_from_step: int | None = None,
+    ) -> ScenarioFlow:
+        """Create and register a scenario flow for a use case."""
+        if not self.get_use_case(use_case_id):
+            raise ValueError(f"Use-case {use_case_id} not found in catalog")
+
+        if isinstance(scenario_type, str):
+            scenario_type = ScenarioType(scenario_type)
+
+        # Validate steps are not empty
+        if not steps:
+            raise ValueError("Scenario must have at least one step")
+
+        # Validate step order integrity: must be sequential 1, 2, 3, ..., n
+        orders = [s.order for s in steps]
+        expected = list(range(1, len(steps) + 1))
+        if sorted(orders) != expected or orders != expected:
+            raise ValueError(
+                f"Step orders must be sequential starting from 1 with no gaps or duplicates. "
+                f"Got: {orders}, expected: {expected}"
+            )
+
+        # Main scenario uniqueness
+        if scenario_type == ScenarioType.MAIN:
+            existing_main = self.main_scenario_for(use_case_id)
+            if existing_main is not None:
+                raise ValueError(
+                    f"Use-case {use_case_id} already has a MAIN scenario: {existing_main.id}"
+                )
+
+        # Branch validation for ALTERNATIVE/EXCEPTION
+        if scenario_type in (ScenarioType.ALTERNATIVE, ScenarioType.EXCEPTION):
+            main = self.main_scenario_for(use_case_id)
+            if main is None:
+                raise ValueError(
+                    f"Cannot create {scenario_type.value} scenario without a MAIN scenario "
+                    f"for use-case {use_case_id}"
+                )
+            if branch_from_step is not None:
+                main_orders = {s.order for s in main.steps}
+                if branch_from_step not in main_orders:
+                    raise ValueError(
+                        f"branch_from_step={branch_from_step} does not reference a valid "
+                        f"step in the MAIN scenario (valid orders: {sorted(main_orders)})"
+                    )
+
+        scenario = ScenarioFlow(
+            id=_generate_id("sf"),
+            use_case_id=use_case_id,
+            title=title,
+            scenario_type=scenario_type,
+            steps=steps,
+            preconditions=preconditions,
+            postconditions=postconditions,
+            trigger=trigger,
+            branch_from_step=branch_from_step,
+        )
+        self.scenarios.append(scenario)
+        self.updated_at = _now()
+        return scenario
+
+    def get_scenario(self, scenario_id: str) -> ScenarioFlow | None:
+        """Find a scenario by ID."""
+        return next((s for s in self.scenarios if s.id == scenario_id), None)
+
+    def scenarios_for_use_case(self, use_case_id: str) -> list[ScenarioFlow]:
+        """List all scenarios for a given use case."""
+        return [s for s in self.scenarios if s.use_case_id == use_case_id]
+
+    def main_scenario_for(self, use_case_id: str) -> ScenarioFlow | None:
+        """Return the MAIN scenario for a use case, or None."""
+        return next(
+            (s for s in self.scenarios
+             if s.use_case_id == use_case_id and s.scenario_type == ScenarioType.MAIN),
+            None,
+        )
+
+        # -- Stakeholder management --
 
     def add_stakeholder(self, name: str, role: str, context: str = "") -> Stakeholder:
         """Register a stakeholder in this catalog."""
@@ -761,6 +857,8 @@ class NeedCatalog:
                     "purpose": use_case.purpose,
                     "outcome": use_case.outcome,
                     "tags": list(use_case.tags),
+                    "preconditions": list(use_case.preconditions),
+                    "postconditions": list(use_case.postconditions),
                     "version": use_case.version,
                     "created_at": use_case.created_at,
                     "updated_at": use_case.updated_at,
@@ -831,6 +929,31 @@ class NeedCatalog:
                 }
                 for unit in self.process_units
             ],
+            "scenarios": [
+                {
+                    "id": s.id,
+                    "use_case_id": s.use_case_id,
+                    "title": s.title,
+                    "scenario_type": s.scenario_type.value,
+                    "steps": [
+                        {
+                            "order": step.order,
+                            "actor": step.actor,
+                            "action": step.action,
+                            "system_response": step.system_response,
+                            "kernel_ref": step.kernel_ref,
+                        }
+                        for step in s.steps
+                    ],
+                    "preconditions": list(s.preconditions),
+                    "postconditions": list(s.postconditions),
+                    "trigger": s.trigger,
+                    "branch_from_step": s.branch_from_step,
+                    "version": s.version,
+                    "created_at": s.created_at,
+                }
+                for s in self.scenarios
+            ],
         }
         return json.dumps(data, indent=2, ensure_ascii=False)
 
@@ -858,6 +981,8 @@ class NeedCatalog:
                     purpose=use_case_data.get("purpose", ""),
                     outcome=use_case_data.get("outcome", ""),
                     tags=list(use_case_data.get("tags", [])),
+                    preconditions=tuple(use_case_data.get("preconditions", [])),
+                    postconditions=tuple(use_case_data.get("postconditions", [])),
                     version=use_case_data.get("version", 1),
                     created_at=use_case_data.get("created_at", ""),
                     updated_at=use_case_data.get("updated_at", ""),
@@ -953,6 +1078,34 @@ class NeedCatalog:
                     sequence=unit_data.get("sequence", 0),
                     metadata=dict(unit_data.get("metadata", {})),
                     created_at=unit_data.get("created_at", ""),
+                )
+            )
+
+        # Hydrate scenarios
+        for scenario_data in data.get("scenarios", []):
+            steps = tuple(
+                ScenarioStep(
+                    order=step_data["order"],
+                    actor=step_data["actor"],
+                    action=step_data["action"],
+                    system_response=step_data["system_response"],
+                    kernel_ref=step_data.get("kernel_ref"),
+                )
+                for step_data in scenario_data.get("steps", [])
+            )
+            catalog.scenarios.append(
+                ScenarioFlow(
+                    id=scenario_data["id"],
+                    use_case_id=scenario_data["use_case_id"],
+                    title=scenario_data["title"],
+                    scenario_type=ScenarioType(scenario_data["scenario_type"]),
+                    steps=steps,
+                    preconditions=tuple(scenario_data.get("preconditions", [])),
+                    postconditions=tuple(scenario_data.get("postconditions", [])),
+                    trigger=scenario_data.get("trigger", ""),
+                    branch_from_step=scenario_data.get("branch_from_step"),
+                    version=scenario_data.get("version", 1),
+                    created_at=scenario_data.get("created_at", ""),
                 )
             )
 

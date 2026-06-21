@@ -13,7 +13,11 @@ from ea_needs.types import (
     NeedRelationType,
     NeedStatement,
     NeedStatus,
+    ScenarioFlow,
+    ScenarioStep,
+    ScenarioType,
     Stakeholder,
+    UseCase,
     _generate_id,
     _now,
 )
@@ -181,3 +185,158 @@ class TestNeedStatement:
         assert ns.kernel_refs == []
         assert ns.tags == []
         assert ns.purpose == NeedPurpose.UNSPECIFIED
+
+
+# ---------------------------------------------------------------------------
+# ScenarioType enum
+# ---------------------------------------------------------------------------
+
+class TestScenarioType:
+    def test_values(self):
+        assert ScenarioType.MAIN.value == "main"
+        assert ScenarioType.ALTERNATIVE.value == "alternative"
+        assert ScenarioType.EXCEPTION.value == "exception"
+
+    def test_is_str(self):
+        assert isinstance(ScenarioType.MAIN, str)
+
+
+# ---------------------------------------------------------------------------
+# ScenarioStep frozen dataclass
+# ---------------------------------------------------------------------------
+
+class TestScenarioStep:
+    def test_creation(self):
+        step = ScenarioStep(
+            order=1,
+            actor="User",
+            action="submits login form",
+            system_response="validates credentials",
+        )
+        assert step.order == 1
+        assert step.actor == "User"
+        assert step.action == "submits login form"
+        assert step.system_response == "validates credentials"
+        assert step.kernel_ref is None
+
+    def test_creation_with_kernel_ref(self):
+        step = ScenarioStep(
+            order=2,
+            actor="System",
+            action="sends notification",
+            system_response="email delivered",
+            kernel_ref="entity:notification-service",
+        )
+        assert step.kernel_ref == "entity:notification-service"
+
+    def test_frozen(self):
+        step = ScenarioStep(order=1, actor="User", action="click", system_response="ok")
+        with pytest.raises(FrozenInstanceError):
+            step.order = 2
+
+
+# ---------------------------------------------------------------------------
+# ScenarioFlow frozen dataclass
+# ---------------------------------------------------------------------------
+
+class TestScenarioFlow:
+    def test_creation(self):
+        steps = (
+            ScenarioStep(order=1, actor="User", action="login", system_response="show dashboard"),
+            ScenarioStep(order=2, actor="User", action="click report", system_response="show report"),
+        )
+        flow = ScenarioFlow(
+            id="sf-abc12345",
+            use_case_id="uc-xyz",
+            title="Happy path login",
+            scenario_type=ScenarioType.MAIN,
+            steps=steps,
+        )
+        assert flow.id == "sf-abc12345"
+        assert flow.use_case_id == "uc-xyz"
+        assert flow.title == "Happy path login"
+        assert flow.scenario_type == ScenarioType.MAIN
+        assert len(flow.steps) == 2
+        assert flow.preconditions == ()
+        assert flow.postconditions == ()
+        assert flow.trigger == ""
+        assert flow.branch_from_step is None
+        assert flow.version == 1
+        assert flow.created_at.endswith("Z")
+
+    def test_creation_with_all_fields(self):
+        steps = (
+            ScenarioStep(order=1, actor="User", action="login", system_response="show dashboard"),
+        )
+        flow = ScenarioFlow(
+            id="sf-abc12345",
+            use_case_id="uc-xyz",
+            title="Alternative login",
+            scenario_type=ScenarioType.ALTERNATIVE,
+            steps=steps,
+            preconditions=("User has account",),
+            postconditions=("User is logged in",),
+            trigger="User clicks login",
+            branch_from_step=1,
+            version=2,
+        )
+        assert flow.preconditions == ("User has account",)
+        assert flow.postconditions == ("User is logged in",)
+        assert flow.trigger == "User clicks login"
+        assert flow.branch_from_step == 1
+        assert flow.version == 2
+
+    def test_frozen(self):
+        steps = (ScenarioStep(order=1, actor="User", action="a", system_response="b"),)
+        flow = ScenarioFlow(
+            id="sf-test",
+            use_case_id="uc-test",
+            title="Test",
+            scenario_type=ScenarioType.MAIN,
+            steps=steps,
+        )
+        with pytest.raises(FrozenInstanceError):
+            flow.title = "Changed"
+
+
+# ---------------------------------------------------------------------------
+# UseCase pre/postconditions extension
+# ---------------------------------------------------------------------------
+
+class TestUseCaseExtended:
+    def test_backward_compatible_creation(self):
+        """UseCase without pre/postconditions still works."""
+        uc = UseCase(
+            id="uc-test",
+            title="Test",
+            actor="User",
+            situation="testing",
+            purpose="verify",
+        )
+        assert uc.preconditions == ()
+        assert uc.postconditions == ()
+
+    def test_with_preconditions_postconditions(self):
+        uc = UseCase(
+            id="uc-test",
+            title="Login",
+            actor="User",
+            situation="unauthenticated",
+            purpose="access system",
+            preconditions=("User has valid account",),
+            postconditions=("User is authenticated", "Session created"),
+        )
+        assert uc.preconditions == ("User has valid account",)
+        assert uc.postconditions == ("User is authenticated", "Session created")
+
+    def test_frozen_preconditions(self):
+        uc = UseCase(
+            id="uc-test",
+            title="Test",
+            actor="User",
+            situation="testing",
+            purpose="verify",
+            preconditions=("pre",),
+        )
+        with pytest.raises(FrozenInstanceError):
+            uc.preconditions = ()

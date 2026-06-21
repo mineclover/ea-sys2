@@ -78,6 +78,10 @@ NEEDS_SCHEMA = NeedsSchema(
         # S5 Evolution
         NeedsEntity("needs_simulator", description="S5 stakeholder/need change what-if simulator"),
         NeedsEntity("need_promotion_engine", description="S5 need promotion/deprecation workflow engine"),
+        # Scenario flow entities
+        NeedsEntity("scenario_flow", description="Scenario flow describing use-case interaction sequences"),
+        NeedsEntity("scenario_step", description="A single step in a scenario flow"),
+        NeedsEntity("scenario_type", description="Scenario type enum (MAIN/ALTERNATIVE/EXCEPTION)"),
     ),
     relations=(
         # NeedRelationType relations (5)
@@ -93,5 +97,7 @@ NEEDS_SCHEMA = NeedsSchema(
         # Additional semantic relations (2)
         NeedsRelation("addresses", description="Need addresses a stakeholder desire or use case"),
         NeedsRelation("withdraws", description="Need withdrawal supersedes an active need"),
+        # Scenario relations
+        NeedsRelation("branches_from", description="Scenario flow branches from a main scenario step"),
     ),
 )

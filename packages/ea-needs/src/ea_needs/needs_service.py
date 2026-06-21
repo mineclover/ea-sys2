@@ -172,3 +172,61 @@ def catalog_summary(*, catalog: NeedCatalog) -> dict[str, Any]:
         "process_unit_count": len(catalog.process_units),
         "status_distribution": status_dist,
     }
+
+
+def list_scenarios(
+    *, catalog: NeedCatalog, use_case_id: str | None = None,
+) -> dict[str, Any]:
+    """List scenarios in the catalog, optionally filtered by use case."""
+    if use_case_id is not None:
+        scenarios = catalog.scenarios_for_use_case(use_case_id)
+    else:
+        scenarios = catalog.scenarios
+    return {
+        "count": len(scenarios),
+        "filter": {"use_case_id": use_case_id},
+        "scenarios": [
+            {
+                "id": s.id,
+                "use_case_id": s.use_case_id,
+                "title": s.title,
+                "scenario_type": s.scenario_type.value,
+                "step_count": len(s.steps),
+                "trigger": s.trigger,
+                "branch_from_step": s.branch_from_step,
+            }
+            for s in scenarios
+        ],
+    }
+
+
+def describe_scenario(
+    *, catalog: NeedCatalog, scenario_id: str,
+) -> dict[str, Any] | None:
+    """Describe a single scenario with full step details."""
+    scenario = catalog.get_scenario(scenario_id)
+    if scenario is None:
+        return None
+
+    return {
+        "id": scenario.id,
+        "use_case_id": scenario.use_case_id,
+        "title": scenario.title,
+        "scenario_type": scenario.scenario_type.value,
+        "preconditions": list(scenario.preconditions),
+        "postconditions": list(scenario.postconditions),
+        "trigger": scenario.trigger,
+        "branch_from_step": scenario.branch_from_step,
+        "version": scenario.version,
+        "created_at": scenario.created_at,
+        "steps": [
+            {
+                "order": step.order,
+                "actor": step.actor,
+                "action": step.action,
+                "system_response": step.system_response,
+                "kernel_ref": step.kernel_ref,
+            }
+            for step in scenario.steps
+        ],
+    }

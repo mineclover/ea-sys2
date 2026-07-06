@@ -306,7 +306,7 @@ must_include = ["trace_id", "lineage_id", "actor", "diff_ref", "approved_by"]
 retention_policy = "immutable"
 
 [[governance_events]]
-name = "projection.exposed"
+name = "projection.artifact_exposed"
 must_include = ["trace_id", "lineage_id", "artifact_type", "artifact_id"]
 retention_policy = "immutable"
 

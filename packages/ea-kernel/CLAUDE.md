@@ -15,6 +15,23 @@
 
 핵심 원칙: **행위는 구조와 별개가 아니라, 관계의 자격(qualification)**
 
+## 원천 개념 및 참고 표준
+
+커널의 메타모델은 **UML 2.5.1의 구조**와 **KerML의 설계 철학**을 바탕으로 한다. 이 관계는
+정규 스키마와 규칙 metadata에도 유지한다.
+
+- UML 2.5.1: Namespaces(§7.4), Classifier/Generalization(§9.9), Associations(§11.5),
+  StateMachine(§14.2)
+- KerML: Feature Typing/Redefinition/Subsetting(§7.3), Connectors/Interactions(§8.2),
+  Successions(§8.3), Transfers(§8.4)
+- KerML+UML: Triggers(§13.3)
+
+구체적인 규칙별 근거는 `src/ea_kernel/specs/kernel_rules.toml`의
+`[rules.*.metadata] source` 필드에 기록한다. `ArchiMate`, `TOGAF`, `Zachman`, `SysML 2`,
+`BPMN 2.0`은 커널 위에 매핑되는 프로파일 표준이다. 저장소의 `reference/` Ralph TUI
+서브모듈은 개념 원천이 아니라 구현 구조와 커널 모델의 정합성을 검토하기 위한 비교
+대상이며, 그 결과는 `docs/kernel_ralph_tui_alignment_review.md`에 보존한다.
+
 ## Kernel Schema
 
 정규 스키마: `src/ea_kernel/specs/kernel_schema.toml` (20 attributes / 15 entities / 14 relations)
